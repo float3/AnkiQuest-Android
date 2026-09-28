@@ -22,7 +22,7 @@ internal object AnkiquestAki {
         @DrawableRes val image: Int,
         @StringRes val message: Int,
     ) {
-        WELCOME(R.drawable.aki_welcome, R.string.aki_review),
+        WELCOME(R.drawable.aki_welcome, R.string.aki_welcome),
         REVIEW(R.drawable.aki_review, R.string.aki_review),
         CELEBRATE(R.drawable.aki_celebrate, R.string.aki_complete),
         STREAK(R.drawable.aki_streak, R.string.aki_streak),
