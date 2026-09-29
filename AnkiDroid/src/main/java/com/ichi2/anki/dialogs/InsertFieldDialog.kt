@@ -4,6 +4,7 @@
 package com.ichi2.anki.dialogs
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.text.Spanned
 import android.view.LayoutInflater
@@ -14,6 +15,10 @@ import androidx.annotation.CheckResult
 import androidx.annotation.StringRes
 import androidx.core.text.HtmlCompat
 import androidx.core.text.parseAsHtml
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat.Type.displayCutout
+import androidx.core.view.WindowInsetsCompat.Type.systemBars
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -24,6 +29,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.ichi2.anki.CardTemplateEditor
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.Flag
 import com.ichi2.anki.R
 import com.ichi2.anki.databinding.DialogGenericRecyclerViewBinding
@@ -37,6 +43,7 @@ import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.model.SpecialField
 import com.ichi2.anki.model.SpecialFields
 import com.ichi2.anki.utils.ext.requireString
+import com.ichi2.themes.Themes
 import dev.androidbroadcast.vbpd.viewBinding
 import org.jetbrains.annotations.VisibleForTesting
 
@@ -63,8 +70,9 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
     ) {
         super.onViewCreated(view, savedInstanceState)
         val binding = DialogInsertFieldBinding.bind(view)
+        setupEdgeToEdge(binding)
 
-        binding.toolbar.title = getString(R.string.card_template_editor_select_field)
+        binding.toolbar.title = getString(CommonString.card_template_editor_select_field)
         binding.toolbar.setNavigationOnClickListener { dismiss() }
 
         binding.viewPager.adapter = InsertFieldDialogAdapter(this)
@@ -103,6 +111,18 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
                 )
                 dismiss()
             }
+        }
+    }
+
+    private fun setupEdgeToEdge(binding: DialogInsertFieldBinding) {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val bars = insets.getInsets(systemBars() or displayCutout())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            val window = dialog?.window ?: return
+            WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !Themes.isNightTheme
         }
     }
 
@@ -242,19 +262,19 @@ fun SpecialField.buildDescription(
 ): Spanned {
     fun buildSuffix(value: String?): String {
         if (value == null) return ""
-        return context.getString(R.string.special_field_example_suffix, value)
+        return context.getString(CommonString.special_field_example_suffix, value)
     }
     return when (this) {
-        SpecialFields.FrontSide -> context.getString(R.string.special_field_front_side_help)
+        SpecialFields.FrontSide -> context.getString(CommonString.special_field_front_side_help)
         SpecialFields.Deck ->
-            context.getString(R.string.special_field_deck_help, buildSuffix(metadata.deck))
+            context.getString(CommonString.special_field_deck_help, buildSuffix(metadata.deck))
 
         SpecialFields.Subdeck ->
-            context.getString(R.string.special_field_subdeck_help, buildSuffix(metadata.subdeck))
+            context.getString(CommonString.special_field_subdeck_help, buildSuffix(metadata.subdeck))
         SpecialFields.Flag -> {
             val code = metadata.flag ?: "N"
             context.getString(
-                R.string.special_field_flag_help,
+                CommonString.special_field_flag_help,
                 if (code == "N") "flag$code" else "<b>flag$code</b>",
                 "<b>$code</b>",
                 Flag.entries.minOf { it.code }.toString(),
@@ -263,20 +283,20 @@ fun SpecialField.buildDescription(
         }
         SpecialFields.Tags -> {
             val tags = if (metadata.tags.isNullOrBlank()) null else metadata.tags
-            context.getString(R.string.special_field_tags_help, buildSuffix(tags))
+            context.getString(CommonString.special_field_tags_help, buildSuffix(tags))
         }
         SpecialFields.CardId ->
-            context.getString(R.string.special_field_card_id_help, buildSuffix(metadata.cardId?.toString()))
+            context.getString(CommonString.special_field_card_id_help, buildSuffix(metadata.cardId?.toString()))
 
         SpecialFields.CardTemplate ->
             context.getString(
-                R.string.special_field_card_help,
+                CommonString.special_field_card_help,
                 buildSuffix(metadata.cardTemplateName),
             )
 
         SpecialFields.NoteType ->
             context.getString(
-                R.string.special_field_type_help,
+                CommonString.special_field_type_help,
                 buildSuffix(metadata.noteTypeName),
             )
         // this shouldn't happen
@@ -290,7 +310,7 @@ private val Tab.title: String
     get() =
         dialog.requireContext().getString(
             when (this) {
-                Tab.FIELDS -> R.string.standard_fields_tab_header
-                Tab.SPECIAL -> R.string.special_fields_tab_header
+                Tab.FIELDS -> CommonString.standard_fields_tab_header
+                Tab.SPECIAL -> CommonString.special_fields_tab_header
             },
         )

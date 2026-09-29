@@ -1,3 +1,5 @@
+import com.ichi2.anki.gradle.VersionCodeTasks
+
 plugins {
     // Gradle plugin portal
     alias(libs.plugins.tripletPlay)
@@ -116,7 +118,7 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode=22500202
+        versionCode=22600100
         // Quest tags have their own monotonic upgrade sequence, independent of
         // the upstream beta version. Keep the eight-digit ABI-split budget.
         // quest-<n> is 5nnnn000; nightly builds after it add their commit count,
@@ -136,7 +138,7 @@ android {
             }
         }
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName="2.25.0beta2"
+        versionName="2.26.0alpha0"
         minSdk = libs.versions.minSdk.get().toInteger()
 
         // After #13695: change .tests_emulator.yml
@@ -392,6 +394,15 @@ android {
         resources {
             excludes += ['META-INF/DEPENDENCIES']
         }
+    }
+}
+
+// register `validateVersionCode` with our (potentially new versionCode).
+androidComponents.finalizeDsl { androidDsl ->
+    def validation = VersionCodeTasks.registerValidationTask(project, androidDsl.defaultConfig.versionCode)
+    // handle all 'publish' calls, even if run directly
+    tasks.matching { it.name.startsWith("publish") }.configureEach {
+        dependsOn(validation)
     }
 }
 

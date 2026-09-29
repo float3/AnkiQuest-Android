@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.awaitDeckHolder
@@ -186,7 +187,7 @@ class DeckAdapterTest : RobolectricTest() {
                 assertTrue(changePayloads.all { it != null }, "A full row update interrupts the arrow ripple")
                 assertSame(parent, deckPicker.awaitDeckHolder(parentDeck))
                 assertEquals(
-                    deckPicker.getString(if (wasCollapsed) R.string.collapse else R.string.expand),
+                    deckPicker.getString(if (wasCollapsed) CommonString.collapse else CommonString.expand),
                     parent.binding.deckExpander.contentDescription,
                 )
                 changePayloads.clear()

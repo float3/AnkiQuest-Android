@@ -28,7 +28,7 @@ function fixture({ milestoneError, updateError, issues = [] } = {}) {
       getMilestone: async args => {
         reads.push(args);
         if (milestoneError) throw milestoneError;
-        return { data: { number: 77 } };
+        return { data: { number: 79 } };
       },
       update: async args => {
         updates.push(args);
@@ -54,14 +54,14 @@ test('a missing milestone skips all PR and issue writes', async () => {
   assert.deepEqual(f.updates, []);
   assert.deepEqual(f.queries, []);
   assert.equal(f.reads.length, 1);
-  assert.ok(f.messages.some(message => /77/.test(message)));
+  assert.ok(f.messages.some(message => /79/.test(message)));
 });
 
 test('an existing milestone updates the actual PR and its local linked issues', async () => {
   const f = fixture({ issues: [{ number: 12, repository: { nameWithOwner: 'float3/Anki-Android' } }] });
   await f.run();
-  assert.deepEqual(f.reads, [{ owner: 'float3', repo: 'Anki-Android', milestone_number: 77 }]);
-  assert.deepEqual(f.updates, [7, 12].map(issue_number => ({ ...f.context.repo, issue_number, milestone: 77 })));
+  assert.deepEqual(f.reads, [{ owner: 'float3', repo: 'Anki-Android', milestone_number: 79 }]);
+  assert.deepEqual(f.updates, [7, 12].map(issue_number => ({ ...f.context.repo, issue_number, milestone: 79 })));
   assert.equal(f.queries[0].variables._url, f.context.payload.pull_request.html_url);
   assert.match(f.queries[0].query, /repository\s*\{\s*nameWithOwner\s*\}/);
 });
