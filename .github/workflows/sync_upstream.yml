@@ -22,47 +22,35 @@ jobs:
           UPSTREAM_SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
         run: |
           if [ -z "$UPSTREAM_SYNC_TOKEN" ]; then
-            echo "::error::Set UPSTREAM_SYNC_TOKEN: a fine-grained token for this repository with Contents, Pull requests and Workflows read and write. GITHUB_TOKEN cannot push upstream's workflow changes, and pull requests it opens start no CI."
+            echo "::error::Set UPSTREAM_SYNC_TOKEN: a token for this repository with Pull requests read and write. Pull requests opened with GITHUB_TOKEN start no CI."
             exit 1
           fi
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ankiquest
           fetch-depth: 0
-          token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
 
-      - name: Fast-forward main to upstream
-        run: |
-          git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main:refs/remotes/upstream/main
-          if git fetch --no-tags origin main:refs/remotes/origin/main; then
-            if ! git merge-base --is-ancestor refs/remotes/origin/main refs/remotes/upstream/main; then
-              echo "::error::main has commits that are not upstream's. It must stay a mirror of ankidroid/Anki-Android main."
-              exit 1
-            fi
-          else
-            echo "::warning::main was missing (deleted after a merge?); recreating it from upstream"
-          fi
-          git push origin refs/remotes/upstream/main:refs/heads/main
-
-      - name: Open a pull request from main into ankiquest
+      - name: Open a pull request from ankidroid:main into ankiquest
         env:
           GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
         run: |
-          git fetch --no-tags origin ankiquest:refs/remotes/origin/ankiquest
-          behind=$(git rev-list --count refs/remotes/origin/ankiquest..refs/remotes/upstream/main)
+          git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main:refs/remotes/upstream/main
+          behind=$(git rev-list --count HEAD..refs/remotes/upstream/main)
           if [ "$behind" -eq 0 ]; then
             echo "ankiquest already contains every upstream commit"
             exit 0
           fi
-          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --base ankiquest --head main --state open --json number --jq '.[].number')
+          open=$(gh api "repos/$GITHUB_REPOSITORY/pulls?head=ankidroid:main&base=ankiquest&state=open" --jq '.[0].number // empty')
           if [ -n "$open" ]; then
             echo "Pull request #$open is open and now includes the new commits"
             exit 0
           fi
-          gh pr create --repo "$GITHUB_REPOSITORY" --base ankiquest --head main \
-            --title "Merge upstream AnkiDroid" \
-            --body "$behind new commits from ankidroid/Anki-Android main.
+          gh api "repos/$GITHUB_REPOSITORY/pulls" --jq .html_url \
+            -f base=ankiquest -f head=ankidroid:main \
+            -f title="Merge upstream AnkiDroid" \
+            -f body="$behind new commits from ankidroid/Anki-Android main.
 
-          Merge with a merge commit, never squash or rebase, so ankiquest keeps upstream's history. Keep the main branch after merging: it mirrors upstream.
+          Merge with a merge commit, never squash or rebase, so ankiquest keeps upstream's history.
 
-          If this conflicts, merge main into a branch from ankiquest, resolve there, and merge that branch instead. Never commit to main: it mirrors upstream."
+          If this conflicts, merge ankidroid/Anki-Android main into a branch from ankiquest, resolve there, and merge that branch instead; this pull request then shows as merged."
