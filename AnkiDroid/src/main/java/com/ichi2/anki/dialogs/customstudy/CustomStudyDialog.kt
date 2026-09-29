@@ -33,11 +33,15 @@ import anki.scheduler.CustomStudyRequest.Cram.CramKind
 import anki.scheduler.copy
 import anki.scheduler.customStudyRequest
 import anki.search.SearchNode
+import anki.search.searchNode
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
+import com.ichi2.anki.CommonPlurals
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.asyncIO
+import com.ichi2.anki.browser.search.CardState
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
@@ -191,7 +195,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         if (item.checkAvailability != null) {
             val defaults = withProgress { deferredDefaults.await() }
             if (!item.checkAvailability(defaults)) {
-                showSnackbar(getString((R.string.studyoptions_no_cards_due)))
+                showSnackbar(getString((CommonString.studyoptions_no_cards_due)))
                 return
             }
         }
@@ -286,7 +290,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
 
         binding.detailsText1.text = text1
         // 'review ahead' has a dialog title, so the empty label would only add a blank line
-        binding.detailsText1.isVisible = contextMenuOption != STUDY_AHEAD
+        binding.detailsText1.isVisible = contextMenuOption != STUDY_AHEAD && contextMenuOption != STUDY_PREVIEW
         binding.detailsText2.text = text2
 
         binding.cardsStateSelectorLayout.isVisible = contextMenuOption == STUDY_TAGS
@@ -326,7 +330,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
             if (contextMenuOption == EXTEND_NEW || contextMenuOption == EXTEND_REV) {
                 inputType = EditorInfo.TYPE_CLASS_NUMBER or EditorInfo.TYPE_NUMBER_FLAG_SIGNED
             }
-            if (contextMenuOption == STUDY_AHEAD) {
+            if (contextMenuOption == STUDY_AHEAD || contextMenuOption == STUDY_PREVIEW) {
                 inputType = EditorInfo.TYPE_CLASS_NUMBER
                 filters += arrayOf(InputFilter.LengthFilter(5), NonLeadingZeroInputFilter)
                 setSuffixText(defaultValue.toInt())
@@ -335,10 +339,10 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         val positiveBtnLabel =
             if (contextMenuOption == STUDY_TAGS) {
                 TR.sentenceCase.chooseTags
-            } else if (contextMenuOption == STUDY_AHEAD) {
-                getString(R.string.dialog_positive_create)
+            } else if (contextMenuOption == STUDY_AHEAD || contextMenuOption == STUDY_PREVIEW) {
+                getString(CommonString.dialog_positive_create)
             } else {
-                getString(R.string.dialog_ok)
+                getString(CommonString.dialog_ok)
             }
 
         // Set material dialog parameters
@@ -349,7 +353,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
             AlertDialog
                 .Builder(requireActivity())
                 .apply {
-                    if (contextMenuOption == STUDY_AHEAD) {
+                    if (contextMenuOption == STUDY_AHEAD || contextMenuOption == STUDY_PREVIEW) {
                         title(text = contextMenuOption.getTitle(resources))
                     }
                 }.customView(
@@ -359,7 +363,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
                     paddingTop = verticalPadding,
                     paddingBottom = verticalPadding,
                 ).positiveButton(text = positiveBtnLabel, click = null)
-                .negativeButton(R.string.dialog_cancel) {
+                .negativeButton(CommonString.dialog_cancel) {
                     requireActivity().dismissAllDialogFragments()
                 }.create()
 
@@ -421,7 +425,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
                 }
                 launchCustomStudy(contextMenuOption, n)
             }
-            if (contextMenuOption == STUDY_AHEAD) {
+            if (contextMenuOption == STUDY_AHEAD || contextMenuOption == STUDY_PREVIEW) {
                 // the stored default may match no cards
                 searchJob = launchCatchingTask { updateCreateButtonState(dialog, userInputValue) }
             }
@@ -429,7 +433,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
 
         binding.detailsEditText2.doAfterTextChanged {
             val value = userInputValue
-            if (contextMenuOption != STUDY_AHEAD) {
+            if (contextMenuOption != STUDY_AHEAD && contextMenuOption != STUDY_PREVIEW) {
                 dialog.positiveButton.isEnabled = value != null && value != 0
                 return@doAfterTextChanged
             }
@@ -445,8 +449,24 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
 
     /** Sets the suffix of the days input: `[1] day`, `[3] days` */
     private fun setSuffixText(days: Int) {
-        binding.detailsEditText2Layout.suffixText = resources.getQuantityString(R.plurals.set_due_date_label_suffix, days)
+        binding.detailsEditText2Layout.suffixText = resources.getQuantityString(CommonPlurals.set_due_date_label_suffix, days)
     }
+
+    /**
+     * Whether the deck has new cards added in the last [days] days.
+     *
+     * Upstream: https://github.com/ankitects/anki/blob/618c1787c83ac9baace0527a2f572631b86b7aee/qt/aqt/customstudy.py
+     */
+    private suspend fun hasPreviewCards(days: Int): Boolean =
+        withCol {
+            val search =
+                listOf(
+                    searchNode { deck = decks.name(viewModel.deckId) },
+                    CardState.New.toSearchNode(),
+                    searchNode { addedInDays = days },
+                )
+            findCards(buildSearchString(search)).isNotEmpty()
+        }
 
     /** Enables 'Create' only if some cards would be reviewed ahead by [days] */
     private suspend fun updateCreateButtonState(
@@ -454,11 +474,15 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         days: Int?,
     ) {
         if (days == null || days == 0) {
-            binding.detailsEditText2Layout.error = if (days == 0) getString(R.string.minimum_value_is, 1) else null
+            binding.detailsEditText2Layout.error = if (days == 0) getString(CommonString.minimum_value_is, 1) else null
             dialog.positiveButton.isEnabled = false
             return
         }
-        val hasCards = hasCardsDueWithin(days)
+        val hasCards =
+            when (selectedSubDialog) {
+                STUDY_PREVIEW -> hasPreviewCards(days)
+                else -> hasCardsDueWithin(days)
+            }
         binding.detailsEditText2Layout.error = if (hasCards) null else TR.customStudyNoCardsMatchedTheCriteriaYou()
         dialog.positiveButton.isEnabled = hasCards
     }
@@ -566,12 +590,12 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         get() {
             val res = resources
             return when (selectedSubDialog) {
-                EXTEND_NEW -> res.getString(R.string.custom_study_new_extend)
-                EXTEND_REV -> res.getString(R.string.custom_study_rev_extend)
-                STUDY_FORGOT -> res.getString(R.string.custom_study_forgotten)
-                STUDY_AHEAD -> res.getString(R.string.custom_study_ahead_description)
-                STUDY_PREVIEW -> res.getString(R.string.custom_study_preview)
-                STUDY_TAGS -> res.getString(R.string.custom_study_tags)
+                EXTEND_NEW -> res.getString(CommonString.custom_study_new_extend)
+                EXTEND_REV -> res.getString(CommonString.custom_study_rev_extend)
+                STUDY_FORGOT -> res.getString(CommonString.custom_study_forgotten)
+                STUDY_AHEAD -> res.getString(CommonString.custom_study_ahead_description)
+                STUDY_PREVIEW -> res.getString(CommonString.custom_study_preview)
+                STUDY_TAGS -> res.getString(CommonString.custom_study_tags)
                 null -> ""
             }
         }

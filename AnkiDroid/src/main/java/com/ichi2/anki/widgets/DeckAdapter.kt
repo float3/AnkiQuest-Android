@@ -18,6 +18,7 @@ import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.databinding.ItemDeckBinding
 import com.ichi2.anki.deckpicker.DisplayDeckNode
@@ -234,10 +235,10 @@ class DeckAdapter(
             expander.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             if (node.collapsed) {
                 expander.setImageDrawable(expandImage)
-                expander.contentDescription = expander.context.getString(R.string.expand)
+                expander.contentDescription = expander.context.getString(CommonString.expand)
             } else {
                 expander.setImageDrawable(collapseImage)
-                expander.contentDescription = expander.context.getString(R.string.collapse)
+                expander.contentDescription = expander.context.getString(CommonString.collapse)
             }
         } else {
             // Siblings must perfectly align their text with each other regardless of whether they have children.
