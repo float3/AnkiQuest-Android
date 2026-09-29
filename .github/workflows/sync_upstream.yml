@@ -28,16 +28,19 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
           fetch-depth: 0
           token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
 
       - name: Fast-forward main to upstream
         run: |
           git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main:refs/remotes/upstream/main
-          if ! git merge-base --is-ancestor HEAD refs/remotes/upstream/main; then
-            echo "::error::main has commits that are not upstream's. It must stay a mirror of ankidroid/Anki-Android main."
-            exit 1
+          if git fetch --no-tags origin main:refs/remotes/origin/main; then
+            if ! git merge-base --is-ancestor refs/remotes/origin/main refs/remotes/upstream/main; then
+              echo "::error::main has commits that are not upstream's. It must stay a mirror of ankidroid/Anki-Android main."
+              exit 1
+            fi
+          else
+            echo "::warning::main was missing (deleted after a merge?); recreating it from upstream"
           fi
           git push origin refs/remotes/upstream/main:refs/heads/main
 
@@ -60,6 +63,6 @@ jobs:
             --title "Merge upstream AnkiDroid" \
             --body "$behind new commits from ankidroid/Anki-Android main.
 
-          Merge with a merge commit, never squash or rebase, so ankiquest keeps upstream's history.
+          Merge with a merge commit, never squash or rebase, so ankiquest keeps upstream's history. Keep the main branch after merging: it mirrors upstream.
 
           If this conflicts, merge main into a branch from ankiquest, resolve there, and merge that branch instead. Never commit to main: it mirrors upstream."
