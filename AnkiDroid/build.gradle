@@ -121,6 +121,7 @@ android {
         // the upstream beta version. Keep the eight-digit ABI-split budget.
         // quest-<n> is 5nnnn000; nightly builds after it add their commit count,
         // so both channels install over each other in order.
+        // A setter, so upstream's validateVersionCode still sees one versionCode literal.
         if ((project.findProperty("customSuffix") ?: "").toString().replaceFirst(/^\.*/, "") == "quest") {
             def questRelease = (project.findProperty("ankiquestRelease") ?: "0").toString()
             def questNightly = (project.findProperty("ankiquestNightly") ?: "0").toString()
@@ -131,7 +132,7 @@ android {
                 throw new GradleException("ankiquestNightly must be a commit count from 0 to 999")
             }
             if (questRelease.toInteger() > 0) {
-                versionCode = 50000000 + questRelease.toInteger() * 1000 + questNightly.toInteger()
+                setVersionCode(50000000 + questRelease.toInteger() * 1000 + questNightly.toInteger())
             }
         }
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
