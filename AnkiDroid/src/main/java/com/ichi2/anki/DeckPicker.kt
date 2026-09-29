@@ -974,6 +974,7 @@ open class DeckPicker :
         }
 
         viewModel.deckDeletedNotification.launchCollectionInLifecycleScope(::onDeckDeleted)
+        viewModel.flowOfDeleteDeckConfirmation.launchCollectionInLifecycleScope(::showDeleteDeckConfirmationDialog)
         viewModel.emptyCardsNotification.launchCollectionInLifecycleScope(::onCardsEmptied)
         viewModel.flowOfDeckCountsChanged.launchCollectionInLifecycleScope(::onDeckCountsChanged)
         viewModel.flowOfDestination.launchCollectionInLifecycleScope(::onDestinationChanged)
@@ -1852,7 +1853,7 @@ open class DeckPicker :
                     } else {
                         // Shortcut: DEL
                         Timber.i("Delete Deck from keypress")
-                        showDeleteDeckConfirmationDialog()
+                        viewModel.requestDeleteDeckConfirmation()
                     }
                     return true
                 }
@@ -1909,31 +1910,16 @@ open class DeckPicker :
     /**
      * Displays a confirmation dialog for deleting deck.
      */
-    private fun showDeleteDeckConfirmationDialog() =
-        launchCatchingTask {
-            val focusedDeck =
-                viewModel.focusedDeck ?: run {
-                    Timber.w("no focused deck")
-                    return@launchCatchingTask
-                }
-
-            val (deckName, totalCards, isFilteredDeck) =
-                withCol {
-                    Triple(
-                        decks.name(focusedDeck),
-                        decks.cardCount(focusedDeck, includeSubdecks = true),
-                        decks.isFiltered(focusedDeck),
-                    )
-                }
-            val confirmDeleteDeckDialog =
-                DeckPickerConfirmDeleteDeckDialog.newInstance(
-                    deckName = deckName,
-                    deckId = focusedDeck,
-                    totalCards = totalCards,
-                    isFilteredDeck = isFilteredDeck,
-                )
-            showDialogFragment(confirmDeleteDeckDialog)
-        }
+    private fun showDeleteDeckConfirmationDialog(request: DeckPickerViewModel.DeleteDeckConfirmationRequest) {
+        val confirmDeleteDeckDialog =
+            DeckPickerConfirmDeleteDeckDialog.newInstance(
+                deckName = request.deckName,
+                deckId = request.deckId,
+                totalCards = request.totalCards,
+                isFilteredDeck = request.isFilteredDeck,
+            )
+        showDialogFragment(confirmDeleteDeckDialog)
+    }
 
     /**
      * Perform the following tasks:
