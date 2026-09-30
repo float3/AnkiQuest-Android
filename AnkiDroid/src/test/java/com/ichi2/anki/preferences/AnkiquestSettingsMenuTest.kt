@@ -47,6 +47,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                 R.string.ankiquest_test_key,
                 R.string.ankiquest_open_today_key,
                 R.string.ankiquest_summary_preference_key,
+                R.string.ankiquest_deck_status_key,
                 R.string.ankiquest_streak_protection_key,
                 R.string.ankiquest_notify_rank_key,
                 R.string.ankiquest_streak_hours_key,
