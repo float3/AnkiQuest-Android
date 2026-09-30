@@ -4,6 +4,7 @@ package com.ichi2.anki.pages
 
 import androidx.core.content.edit
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import com.ichi2.anki.CollectionManager.TR
@@ -15,6 +16,8 @@ import com.ichi2.anki.tests.InstrumentedTest
 import com.ichi2.anki.testutil.waitUntil
 import com.ichi2.testutils.ext.defaultDeckNewCardsPerDay
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
@@ -71,38 +74,116 @@ class DeckOptionsTest : InstrumentedTest() {
     fun optimizingAllPresetsSavesAndReloadsOptions() {
         withDeckOptions {
             saveAndOptimize(newPerDay = 43)
+            assertSavedAndReloaded(newPerDay = 43)
+        }
+    }
 
-            waitUntil(timeout = 30.seconds, message = { "optimization did not save the changed limit" }) {
-                col.defaultDeckNewCardsPerDay == 43
-            }
-            val optionsReloaded = AtomicBoolean(false)
-            waitUntil(timeout = 30.seconds, message = { "options did not reload after optimization" }) {
-                // Reloading can discard an evaluation callback. Retry without waiting for each one.
-                InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                    webViewLayout.evaluateJavascript(
-                        "globalThis.beforeOptimization === undefined && Array.from(document.querySelectorAll('input[type=number]')).find(input => input.offsetParent !== null)?.value === '43'",
-                    ) {
-                        if (it == "true") optionsReloaded.set(true)
-                    }
+    @Test
+    fun optimizingAllPresetsWaitsForSlowSave() {
+        withDelayedSave {
+            saveAndOptimize(newPerDay = 43)
+            assertSavedAndReloaded(newPerDay = 43)
+        }
+    }
+
+    @Test
+    fun failedOptimizationKeepsEditsAndAllowsRetry() {
+        val originalLimit = col.defaultDeckNewCardsPerDay
+        withDelayedSave(failFirstAttempt = true) {
+            // Capture the error without leaving a dialog blocking the retry.
+            evaluateJavascript("window.alert = message => { globalThis.saveError = String(message); }")
+            saveAndOptimize(newPerDay = 43)
+
+            waitForPageCondition(
+                condition = "globalThis.saveError?.includes('Optimization failed for test') === true",
+                message = "save error was not displayed",
+            )
+            assertEquals("true", evaluateJavascript("globalThis.beforeOptimization === true"), "failed save reloaded the page")
+            assertEquals(originalLimit, col.defaultDeckNewCardsPerDay)
+
+            saveAndOptimize(newPerDay = 43)
+            assertSavedAndReloaded(newPerDay = 43)
+        }
+    }
+
+    /** Exercise a pending response, optionally rejecting the first save so the test can retry. */
+    private fun withDelayedSave(
+        failFirstAttempt: Boolean = false,
+        block: DeckOptions.() -> Unit,
+    ) {
+        val originalHandler = uiMethods.getValue("updateDeckConfigs")
+        var failNextSave = failFirstAttempt
+        uiMethods["updateDeckConfigs"] = { input ->
+            val activity = this
+            lifecycleScope.async {
+                // explicitly reproduce the reload race
+                delay(1.seconds)
+                if (failNextSave) {
+                    failNextSave = false
+                    error("Optimization failed for test")
                 }
-                optionsReloaded.get()
+                originalHandler.invoke(activity, input).await()
             }
-            assertFalse(requireActivity().isFinishing)
+        }
+        try {
+            withDeckOptions(block)
+        } finally {
+            uiMethods["updateDeckConfigs"] = originalHandler
+        }
+    }
+
+    private fun DeckOptions.assertSavedAndReloaded(newPerDay: Int) {
+        waitUntil(timeout = 30.seconds, message = { "optimization did not save the changed limit" }) {
+            col.defaultDeckNewCardsPerDay == newPerDay
+        }
+
+        // The edited field already has the expected value. The marker disappearing proves
+        // that a new document was loaded and the value came back from the saved settings.
+        waitForPageCondition(
+            condition =
+                """
+                (() => {
+                    const newCardsPerDay = Array.from(document.querySelectorAll('input[type="number"]'))
+                        .find(input => input.offsetParent !== null);
+                    return globalThis.beforeOptimization === undefined && newCardsPerDay?.value === '$newPerDay';
+                })();
+                """.trimIndent(),
+            message = "options did not reload after optimization",
+        )
+        assertFalse(requireActivity().isFinishing)
+    }
+
+    /** Poll across page reloads, which can discard an individual JavaScript evaluation callback. */
+    private fun DeckOptions.waitForPageCondition(
+        condition: String,
+        message: String,
+    ) {
+        val satisfied = AtomicBoolean(false)
+        waitUntil(timeout = 30.seconds, message = { message }) {
+            // Reloading can discard an evaluation callback. Retry without waiting for each one.
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                webViewLayout.evaluateJavascript(condition) {
+                    if (it == "true") satisfied.set(true)
+                }
+            }
+            satisfied.get()
         }
     }
 
     private fun DeckOptions.saveAndOptimize(newPerDay: Int) {
         val script =
             """
-            globalThis.beforeOptimization = true;
-            window.confirm = () => true;
-            const input = Array.from(document.querySelectorAll('input[type="number"]')).find(input => input.offsetParent !== null);
-            input.focus();
-            input.value = '$newPerDay';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            Array.from(document.querySelectorAll('button'))
-                .find(button => button.textContent.trim() === ${JSONObject.quote(TR.deckConfigSaveAndOptimize())}).click();
+            (() => {
+                globalThis.beforeOptimization = true;
+                window.confirm = () => true;
+                const input = Array.from(document.querySelectorAll('input[type="number"]')).find(input => input.offsetParent !== null);
+                input.focus();
+                input.value = '$newPerDay';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                Array.from(document.querySelectorAll('button'))
+                    .find(button => button.textContent.trim() === ${JSONObject.quote(TR.deckConfigSaveAndOptimize())}).click();
+            })();
             """.trimIndent()
         // The action navigates away from its JavaScript context, which can discard the
         // evaluation callback. Observe the persisted settings and the new page instead.

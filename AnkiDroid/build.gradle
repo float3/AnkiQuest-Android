@@ -118,7 +118,17 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode=22600100
+        versionCode=22600101
+        // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
+        versionName="2.26.0alpha1"
+        minSdk = libs.versions.minSdk.get().toInteger()
+
+        // After #13695: change .tests_emulator.yml
+        targetSdk = libs.versions.targetSdk.get().toInteger()
+        testApplicationId = "com.ichi2.anki.tests"
+        vectorDrawables.useSupportLibrary = true
+        testInstrumentationRunner = 'com.ichi2.testutils.NewCollectionPathTestRunner'
+
         // Quest tags have their own monotonic upgrade sequence, independent of
         // the upstream beta version. Keep the eight-digit ABI-split budget.
         // quest-<n> is 5nnnn000; nightly builds after it add their commit count,
@@ -137,15 +147,6 @@ android {
                 setVersionCode(50000000 + questRelease.toInteger() * 1000 + questNightly.toInteger())
             }
         }
-        // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName="2.26.0alpha0"
-        minSdk = libs.versions.minSdk.get().toInteger()
-
-        // After #13695: change .tests_emulator.yml
-        targetSdk = libs.versions.targetSdk.get().toInteger()
-        testApplicationId = "com.ichi2.anki.tests"
-        vectorDrawables.useSupportLibrary = true
-        testInstrumentationRunner = 'com.ichi2.testutils.NewCollectionPathTestRunner'
 
         // GA4 Measurement Protocol api_secret. Sourced from `local.properties`
         // (ANALYTICS_API_KEY) or the ANALYTICS_API_KEY env var; falls back to
@@ -686,6 +687,15 @@ afterEvaluate {
 apply from: "./robolectricDownloader.gradle"
 apply from: "./jacoco.gradle.kts"
 apply from: "../lint.gradle"
+
+android {
+    lint {
+        // Analyze project-local dependencies (:common:android etc.) as part of this
+        // module's lint run.
+        // Required for whole-app UnusedResources and StringFormatMatches coverage
+        checkDependencies = true
+    }
+}
 
 dependencies {
     configurations.configureEach {

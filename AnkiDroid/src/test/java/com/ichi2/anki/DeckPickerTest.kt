@@ -350,7 +350,7 @@ class DeckPickerTest : RobolectricTest() {
                     .filterIsInstance<DeckPickerConfirmDeleteDeckDialog>()
                     .single()
                     .requireDialog() as AlertDialog
-            assertEquals(getString(R.string.delete_deck_title), dialog.title)
+            assertEquals(getString(CommonString.delete_deck_title), dialog.title)
             assertThat(dialog.message, containsString(deckName))
             assertEquals(deckId, col.decks.byName(deckName)?.id)
             assertEquals(1, col.cardCount())
@@ -364,7 +364,9 @@ class DeckPickerTest : RobolectricTest() {
     @Test
     fun databaseLockedTest() {
         // don't call .onCreate
-        val deckPicker = Robolectric.buildActivity(DeckPickerEx::class.java, Intent()).get()
+        val controller = Robolectric.buildActivity(DeckPickerEx::class.java, Intent())
+        saveControllerForCleanup(controller)
+        val deckPicker = controller.get()
         deckPicker.handleStartupFailure(InitialActivity.StartupFailure.DatabaseLocked)
         assertThat(
             deckPicker.databaseErrorDialog,
@@ -376,7 +378,9 @@ class DeckPickerTest : RobolectricTest() {
     @Test
     fun `storage undecided shows load-failure options rather than crashing`() {
         // don't call .onCreate
-        val deckPicker = Robolectric.buildActivity(DeckPickerEx::class.java, Intent()).get()
+        val controller = Robolectric.buildActivity(DeckPickerEx::class.java, Intent())
+        saveControllerForCleanup(controller)
+        val deckPicker = controller.get()
         deckPicker.handleStartupFailure(InitialActivity.StartupFailure.StorageUndecided)
         assertThat(
             deckPicker.databaseErrorDialog,
@@ -807,31 +811,32 @@ class DeckPickerTest : RobolectricTest() {
     @Test
     fun `restored study options fragment is pruned when recreated into single pane`() {
         assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
-        val scenario = ActivityScenario.launch(DeckPicker::class.java)
-        advanceRobolectricLooper()
-        scenario.onActivity { deckPicker ->
-            assertThat(
-                "side panel fragment should be displayed on tablet",
-                deckPicker.supportFragmentManager.findFragmentById(R.id.studyoptions_fragment),
-                notNullValue(),
-            )
-        }
-        // Fold the device: the activity recreates into the single-pane layout, while
-        // FragmentManager restores the saved side panel fragment into it.
-        RuntimeEnvironment.setQualifiers("sw320dp")
-        scenario.recreate()
-        advanceRobolectricLooper()
-        scenario.onActivity { deckPicker ->
-            assertThat(
-                "restored side panel fragment must be pruned in single-pane layout",
-                deckPicker.supportFragmentManager.findFragmentById(R.id.studyoptions_fragment),
-                nullValue(),
-            )
-            assertThat(
-                "study options menu items must not leak into the single-pane toolbar",
-                deckPicker.menu().findItem(R.id.action_custom_study),
-                nullValue(),
-            )
+        ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
+            advanceRobolectricLooper()
+            scenario.onActivity { deckPicker ->
+                assertThat(
+                    "side panel fragment should be displayed on tablet",
+                    deckPicker.supportFragmentManager.findFragmentById(R.id.studyoptions_fragment),
+                    notNullValue(),
+                )
+            }
+            // Fold the device: the activity recreates into the single-pane layout, while
+            // FragmentManager restores the saved side panel fragment into it.
+            RuntimeEnvironment.setQualifiers("sw320dp")
+            scenario.recreate()
+            advanceRobolectricLooper()
+            scenario.onActivity { deckPicker ->
+                assertThat(
+                    "restored side panel fragment must be pruned in single-pane layout",
+                    deckPicker.supportFragmentManager.findFragmentById(R.id.studyoptions_fragment),
+                    nullValue(),
+                )
+                assertThat(
+                    "study options menu items must not leak into the single-pane toolbar",
+                    deckPicker.menu().findItem(R.id.action_custom_study),
+                    nullValue(),
+                )
+            }
         }
     }
 
