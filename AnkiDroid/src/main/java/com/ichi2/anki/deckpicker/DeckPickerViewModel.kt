@@ -415,13 +415,19 @@ class DeckPickerViewModel :
                         Pair(sched.deckDueTree(), isEmpty)
                     }
                 dailyDeckStates.value =
-                    withCol {
-                        com.ichi2.anki.ankiquest.AnkiquestDecks.dailyStates(
-                            this,
-                            com.ichi2.anki.common.time.TimeManager.time
-                                .intTimeMS(),
-                            deckDueTree,
-                        )
+                    if (com.ichi2.anki.ankiquest.AnkiquestDecks
+                            .statusInDeckList()
+                    ) {
+                        withCol {
+                            com.ichi2.anki.ankiquest.AnkiquestDecks.dailyStates(
+                                this,
+                                com.ichi2.anki.common.time.TimeManager.time
+                                    .intTimeMS(),
+                                deckDueTree,
+                            )
+                        }
+                    } else {
+                        emptyMap()
                     }
                 dueTree = deckDueTree
 

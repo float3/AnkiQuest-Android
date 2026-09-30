@@ -9,6 +9,13 @@ import org.json.JSONObject
 /** Deck completion uses Anki's daily limits, including subdecks and learning later today. */
 internal object AnkiquestDecks {
     private const val DAY_MS = 86_400_000L
+    const val DECK_STATUS_KEY = "ankiquestDeckStatus"
+
+    /** Whether the deck list marks decks finished today and learning due later. */
+    fun statusInDeckList(): Boolean =
+        com.ichi2.anki.AnkiDroidApp
+            .sharedPrefs()
+            .getBoolean(DECK_STATUS_KEY, true)
 
     fun dailyStates(
         col: Collection,
