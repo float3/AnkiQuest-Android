@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="ankiquest_deck_status_title">Tagesstatus in der Stapelliste</string>
+    <string name="ankiquest_deck_status_summary">Markiert heute erledigte Stapel und später heute fälliges Lernen</string>
     <string name="aq_deck_later">Lernen später heute · nächste Wiederholung um %1$s</string>
     <string name="aq_deck_done">Für heute erledigt</string>
     <string name="aq_deck_nothing">Heute nichts geplant</string>
