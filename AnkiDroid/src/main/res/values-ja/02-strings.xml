@@ -69,7 +69,7 @@
     <string name="leech_notification">このカードに \"leech\" (苦戦、忘却多発) というタグを付けました</string>
     <string name="webview_crash_unknown">原因不明のエラー</string>
     <string name="webview_crash_unknwon_detailed">これはWebViewの内部エラーによって引き起こされました。</string>
-    <string name="webview_crash_oom">Out of memory</string>
+    <string name="webview_crash_oom">メモリが不足しています</string>
     <string name="webview_crash_oom_details">WebViewはシステムによって終了されました。これは通常、アプリケーションがメモリ不足時に発生します。多くの場合、データ量の多いフォントやメディアが原因です。</string>
     <string name="webview_crash_nonfatal">WebViewレンダラーがクラッシュしました。原因: %s</string>
     <string name="webview_crash_fatal">Fatal error: WebView renderer crashed. Cause: %s</string>
@@ -233,6 +233,8 @@
     <string name="edit_toolbar_item">アイテムを編集</string>
     <string name="toolbar_item_explain_edit_or_remove">選択した文字列の前後に挿入するHTMLをそれぞれ入力してください\n\n作成したツールバーアイテムを編集または削除したい場合は、そのアイテムのボタンを長押ししてください</string>
     <string name="remove_toolbar_item">このツールバーアイテムを削除しますか？</string>
+    <string name="note_editor_toolbar_icon_requirement_error">Button text is required</string>
+    <string name="before_after_text_requirement_error">At least one HTML field is required</string>
     <string name="note_editor_image_too_large">画像が大きすぎます。手動で画像を挿入してください</string>
     <string name="note_editor_video_too_large">動画ファイルが大きすぎます。手動で動画を挿入してください</string>
     <string name="note_editor_audio_too_large">音声ファイルが大きすぎます。手動で音声を挿入してください</string>
@@ -267,6 +269,11 @@
     <string name="import_deck">デッキをインポート</string>
     <string name="something_wrong">問題が発生しました。もう一度やり直してください。</string>
     <string name="download_failed">ダウンロードに失敗しました</string>
+    <string name="download_speed_unit" comment="Download speed. %1$s is an amount of data, e.g. \'1.2 MB\', giving \'1.2 MB/s\'">%1$s/s</string>
+    <string name="download_speed_unknown" comment="Placeholder shown when the current download speed is unknown">-/s</string>
+    <string name="download_time_unknown" comment="Placeholder when the remaining download time is unknown">-</string>
+    <string name="download_speed_label">Speed</string>
+    <string name="download_time_left_label">Time left</string>
     <string name="deck_download_progress_message">ダウンロード中、他のアプリを使用できます</string>
     <string name="check_network">ネットワーク接続を確認してください</string>
     <string name="external_storage_unavailable">ダウンロードが中止されました。この外部ストレージは利用できません。</string>
@@ -325,7 +332,7 @@
     <string name="shared_decks_login_required">さらにデッキをダウンロードするにはログインしてください</string>
     <string name="deck_description_field_hint">デッキ説明文</string>
     <string name="deck_description_saved">説明を更新しました</string>
-    <string name="format_deck_description_as_markdown">Format as Markdown</string>
+    <string name="format_deck_description_as_markdown">Markdown形式でフォーマット</string>
     <string name="help_button_content_description">「%s」のヘルプを開く</string>
     <string name="failed_to_copy">コピーに失敗しました</string>
     <plurals name="unbury_cards_feedback">

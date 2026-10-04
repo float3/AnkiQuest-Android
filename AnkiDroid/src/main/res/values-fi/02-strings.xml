@@ -236,6 +236,8 @@
     <string name="edit_toolbar_item">Edit toolbar item</string>
     <string name="toolbar_item_explain_edit_or_remove">Kirjoita HTML, joka lisätään ennen ja jälkeen valitun tekstin\n\nPaina työkalupalkin kohdetta pitkään muokataksesi sitä tai poistaaksesi sen</string>
     <string name="remove_toolbar_item">Remove toolbar item?</string>
+    <string name="note_editor_toolbar_icon_requirement_error">Button text is required</string>
+    <string name="before_after_text_requirement_error">At least one HTML field is required</string>
     <string name="note_editor_image_too_large">Kuva on liian suuri, aseta kuva käsin</string>
     <string name="note_editor_video_too_large">Videotiedosto on liian suuri, aseta video käsin</string>
     <string name="note_editor_audio_too_large">Äänitiedosto on liian suuri, aseta ääni käsin</string>
@@ -270,6 +272,11 @@
     <string name="import_deck">Import deck</string>
     <string name="something_wrong">Jokin meni pieleen, yritä uudelleen</string>
     <string name="download_failed">Lataus epäonnistui</string>
+    <string name="download_speed_unit" comment="Download speed. %1$s is an amount of data, e.g. \'1.2 MB\', giving \'1.2 MB/s\'">%1$s/s</string>
+    <string name="download_speed_unknown" comment="Placeholder shown when the current download speed is unknown">-/s</string>
+    <string name="download_time_unknown" comment="Placeholder when the remaining download time is unknown">-</string>
+    <string name="download_speed_label">Speed</string>
+    <string name="download_time_left_label">Time left</string>
     <string name="deck_download_progress_message">Voit käyttää muita sovelluksia latauksen aikana</string>
     <string name="check_network">Tarkista verkkoyhteytesi</string>
     <string name="external_storage_unavailable">Lataus keskeytetty, ulkoinen tallennustila ei ole käytettävissä</string>

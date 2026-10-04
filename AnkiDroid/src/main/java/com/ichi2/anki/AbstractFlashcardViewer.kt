@@ -23,7 +23,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.text.InputType
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.KeyEvent
@@ -242,9 +241,6 @@ abstract class AbstractFlashcardViewer :
     private var touchLayer: FrameLayout? = null
     protected var answerField: FixedEditText? = null
 
-    /** Layout-provided default `inputType` for [answerField], captured once and used to restore
-     *  state when moving off a card that used `{{nosuggest:type:}}`. See issue #10352. */
-    private var defaultAnswerFieldInputType: Int? = null
     protected var flipCardLayout: FrameLayout? = null
     private var easeButtonsLayout: LinearLayout? = null
 
@@ -742,14 +738,13 @@ abstract class AbstractFlashcardViewer :
 
     /**
      * Apply or restore the `{{nosuggest:type:}}` flag set on [answerField].
+     *
+     * @see FixedEditText.noSuggest
      */
-    private fun applyTypeAnswerSuggestionFlags(noSuggest: Boolean) {
+    private fun updateTypeAnswerNoSuggest(noSuggest: Boolean) {
         val field = answerField ?: return
-        // see ReviewerFragment for why `TYPE_NULL` was selected
-        val targetInputType =
-            if (noSuggest) InputType.TYPE_NULL else (defaultAnswerFieldInputType ?: field.inputType)
-        if (field.inputType != targetInputType) {
-            field.inputType = targetInputType
+        if (field.noSuggest != noSuggest) {
+            field.noSuggest = noSuggest
             getSystemService<InputMethodManager>()?.restartInput(field)
         }
     }
@@ -996,10 +991,7 @@ abstract class AbstractFlashcardViewer :
             val params = flipCardLayout!!.layoutParams
             params.height = initialFlipCardHeight * 2
         }
-        answerField =
-            findViewById<FixedEditText>(R.id.answer_field).also { answerField ->
-                defaultAnswerFieldInputType = answerField.inputType
-            }
+        answerField = findViewById(R.id.answer_field)
         initControls()
 
         // Position answer buttons
@@ -1363,7 +1355,7 @@ abstract class AbstractFlashcardViewer :
             // Show text entry based on if the user wants to write the answer
             answerField?.visibility = View.VISIBLE
             answerField?.applyLanguageHint(typeAnswer?.languageHint)
-            applyTypeAnswerSuggestionFlags(typeAnswer?.noSuggest == true)
+            updateTypeAnswerNoSuggest(typeAnswer?.noSuggest == true)
         } else {
             answerField?.visibility = View.GONE
         }
@@ -2003,7 +1995,7 @@ abstract class AbstractFlashcardViewer :
                 // Show text entry based on if the user wants to write the answer
                 answerField?.visibility = View.VISIBLE
                 answerField?.applyLanguageHint(typeAnswer?.languageHint)
-                applyTypeAnswerSuggestionFlags(typeAnswer?.noSuggest == true)
+                updateTypeAnswerNoSuggest(typeAnswer?.noSuggest == true)
             } else {
                 answerField?.visibility = View.GONE
             }
@@ -2441,6 +2433,8 @@ abstract class AbstractFlashcardViewer :
             error: WebResourceError,
         ) {
             super.onReceivedError(view, request, error)
+            Timber.w("WebView error received")
+            Timber.d("WebView error %d (%s): %s %s", error.errorCode, error.description, request.method, request.url)
             mediaErrorHandler.processFailure(request) { filename: String ->
                 displayCouldNotFindMediaSnackbar(
                     filename,
@@ -2454,6 +2448,14 @@ abstract class AbstractFlashcardViewer :
             errorResponse: WebResourceResponse,
         ) {
             super.onReceivedHttpError(view, request, errorResponse)
+            Timber.w("WebView HTTP error received")
+            Timber.d(
+                "WebView HTTP error %d (%s): %s %s",
+                errorResponse.statusCode,
+                errorResponse.reasonPhrase,
+                request.method,
+                request.url,
+            )
             mediaErrorHandler.processFailure(request) { filename: String ->
                 displayCouldNotFindMediaSnackbar(
                     filename,
@@ -2793,7 +2795,8 @@ abstract class AbstractFlashcardViewer :
         const val DEFAULT_DOUBLE_TAP_TIME_INTERVAL = 200
 
         /** Handle providing help for "Image Not Found"  */
-        internal val mediaErrorHandler = MediaErrorHandler()
+        @set:VisibleForTesting(otherwise = VisibleForTesting.NONE)
+        internal var mediaErrorHandler = MediaErrorHandler()
 
         // Android design spec for the size of the status bar.
         private const val NO_GESTURE_BORDER_DIP = 24

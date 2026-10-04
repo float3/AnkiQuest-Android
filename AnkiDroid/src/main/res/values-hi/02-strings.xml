@@ -236,6 +236,8 @@
     <string name="edit_toolbar_item">Edit toolbar item</string>
     <string name="toolbar_item_explain_edit_or_remove">चयनित टेक्स्ट के पहले और बाद में डालने के लिए हटम्ल दर्ज करें\n\nकिसी टूलबार आइटम को संपादित करने या हटाने के लिए उसे देर तक दबाएँ.</string>
     <string name="remove_toolbar_item">Remove toolbar item?</string>
+    <string name="note_editor_toolbar_icon_requirement_error">Button text is required</string>
+    <string name="before_after_text_requirement_error">At least one HTML field is required</string>
     <string name="note_editor_image_too_large">छवि बहुत बड़ी है, कृपया छवि को मैन्युअल रूप से डालें</string>
     <string name="note_editor_video_too_large">वीडियो फ़ाइल बहुत बड़ी है, कृपया वीडियो को मैन्युअल रूप से डालें</string>
     <string name="note_editor_audio_too_large">ऑडियो फ़ाइल बहुत बड़ी है, कृपया ऑडियो मैन्युअल रूप से डालें</string>
@@ -270,6 +272,11 @@
     <string name="import_deck">Import deck</string>
     <string name="something_wrong">कुछ गलत हो गया, कृपया फिर से प्रयास करें</string>
     <string name="download_failed">डाउनलोड विफल हुआ</string>
+    <string name="download_speed_unit" comment="Download speed. %1$s is an amount of data, e.g. \'1.2 MB\', giving \'1.2 MB/s\'">%1$s/s</string>
+    <string name="download_speed_unknown" comment="Placeholder shown when the current download speed is unknown">-/s</string>
+    <string name="download_time_unknown" comment="Placeholder when the remaining download time is unknown">-</string>
+    <string name="download_speed_label">Speed</string>
+    <string name="download_time_left_label">Time left</string>
     <string name="deck_download_progress_message">डाउनलोड चलने के दौरान आप अन्य ऐप्स का उपयोग कर सकते हैं</string>
     <string name="check_network">कृपया अपने नेटवर्क कनेक्शन की जांच करें</string>
     <string name="external_storage_unavailable">डाउनलोड निरस्त हो गया, बाह्य स्टोरेज  उपलब्ध नहीं है</string>

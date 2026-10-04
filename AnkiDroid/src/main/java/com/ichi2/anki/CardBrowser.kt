@@ -57,6 +57,7 @@ import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.destinations.NoteEditorDestination
 import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
+import com.ichi2.anki.common.utils.ext.onPermanentDismissal
 import com.ichi2.anki.databinding.ActivityCardBrowserBinding
 import com.ichi2.anki.dialogs.DiscardChangesDialog
 import com.ichi2.anki.dialogs.SavedBrowserSearchesDialogFragment
@@ -127,8 +128,8 @@ open class CardBrowser :
 
     val menuHost: MenuHost?
         get() =
-            if (useSearchView) {
-                if (this::cardBrowserFragment.isInitialized) cardBrowserFragment else null
+            if (this::cardBrowserFragment.isInitialized && useSearchView) {
+                cardBrowserFragment
             } else {
                 null
             }
@@ -231,6 +232,7 @@ open class CardBrowser :
 
         // must be called once we have an accessible collection
         viewModel = createViewModel(launchOptions, fragmented)
+        onPermanentDismissal { viewModel.deleteSavedSelectionFile() }
 
         cardBrowserFragment = supportFragmentManager.findFragmentById(R.id.card_browser_frame) as? CardBrowserFragment
             ?: CardBrowserFragment().also { fragment ->

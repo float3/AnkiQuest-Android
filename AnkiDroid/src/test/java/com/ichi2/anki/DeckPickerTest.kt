@@ -113,6 +113,7 @@ import timber.log.Timber
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -1019,6 +1020,38 @@ class DeckPickerTest : RobolectricTest() {
         }
 
     @Test
+    fun `expanded FAB menu is restored after recreation`() {
+        ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
+            lateinit var originalActivity: DeckPicker
+            scenario.onActivity { deckPicker ->
+                originalActivity = deckPicker
+                deckPicker.floatingActionMenu.showFloatingActionMenu()
+            }
+
+            scenario.recreate()
+            advanceRobolectricLooper()
+
+            scenario.onActivity { deckPicker ->
+                assertNotSame(originalActivity, deckPicker)
+                assertTrue(deckPicker.floatingActionMenu.isFABOpen)
+                with(deckPicker.floatingActionButtonBinding) {
+                    assertEquals(View.VISIBLE, addSharedButton.visibility)
+                    assertEquals(View.VISIBLE, addDeckButton.visibility)
+                    assertEquals(View.VISIBLE, addFilteredDeckButton.visibility)
+                }
+
+                deckPicker.invalidateOptionsMenu()
+                advanceRobolectricLooper()
+                assertTrue(deckPicker.floatingActionMenu.isFABOpen)
+
+                deckPicker.onBackPressedDispatcher.onBackPressed()
+
+                assertFalse(deckPicker.floatingActionMenu.isFABOpen)
+            }
+        }
+    }
+
+    @Test
     fun `expanding the FAB menu shows the correct labels`() =
         deckPicker {
             floatingActionMenu.showFloatingActionMenu()
@@ -1055,6 +1088,37 @@ class DeckPickerTest : RobolectricTest() {
                 addDeckButton.isExtended,
                 "Create deck button must be extended so its label is visible",
             )
+        }
+
+    @Test
+    fun `bottom navigation features are disabled on tablets`() =
+        withBottomNavigationEnabled {
+            deckPicker {
+                assumeTrue("Running on tablet", fragmented)
+
+                assertThat(Prefs.devBottomNavEnabled, equalTo(true))
+                assertThat(bottomNavigationEnabled, equalTo(false))
+                assertThat(resources.getBoolean(R.bool.bottom_navigation_available), equalTo(false))
+                val bottomNavigation = ActivityHomescreenBinding.bind(findViewById(R.id.root_layout)).bottomNavigation
+                assertThat(bottomNavigation, nullValue())
+                assertThat(deckPickerBinding.decks.itemDecorationCount, equalTo(0))
+            }
+        }
+
+    @Test
+    fun `bottom navigation follows the single pane layout on large screens`() =
+        withBottomNavigationEnabled {
+            assumeTrue("Only run once", qualifiers == "normal")
+            RuntimeEnvironment.setQualifiers("sw480dp-large")
+            deckPicker {
+                assertThat(fragmented, equalTo(false))
+                assertThat(Prefs.devBottomNavEnabled, equalTo(true))
+                assertThat(bottomNavigationEnabled, equalTo(true))
+                assertThat(resources.getBoolean(R.bool.bottom_navigation_available), equalTo(true))
+                assertThat(binding.bottomNavigation, notNullValue())
+                assertThat(binding.bottomNavigation!!.visibility, equalTo(View.VISIBLE))
+                assertThat(deckPickerBinding.decks.itemDecorationCount, equalTo(1))
+            }
         }
 
     @Test

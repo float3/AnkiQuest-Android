@@ -236,6 +236,8 @@
     <string name="edit_toolbar_item">Muuda tööriista kirjet</string>
     <string name="toolbar_item_explain_edit_or_remove">Enter HTML to be inserted before and after the selected text\n\nLong press a toolbar item to edit or remove it</string>
     <string name="remove_toolbar_item">Kas eemaldada tööriista kirje?</string>
+    <string name="note_editor_toolbar_icon_requirement_error">Button text is required</string>
+    <string name="before_after_text_requirement_error">At least one HTML field is required</string>
     <string name="note_editor_image_too_large">Pildifail on liiga suur. Palun sisesta pilt käsitsi</string>
     <string name="note_editor_video_too_large">Videofail on liiga suur. Palun sisesta video käsitsi</string>
     <string name="note_editor_audio_too_large">Helifail on liiga suur. Palun sisesta heli käsitsi</string>
@@ -270,6 +272,11 @@
     <string name="import_deck">Impordi kaardipakk</string>
     <string name="something_wrong">Midagi läks valesti. Palun proovi uuesti</string>
     <string name="download_failed">Allalaadimine ebaõnnestus</string>
+    <string name="download_speed_unit" comment="Download speed. %1$s is an amount of data, e.g. \'1.2 MB\', giving \'1.2 MB/s\'">%1$s/s</string>
+    <string name="download_speed_unknown" comment="Placeholder shown when the current download speed is unknown">-/s</string>
+    <string name="download_time_unknown" comment="Placeholder when the remaining download time is unknown">-</string>
+    <string name="download_speed_label">Speed</string>
+    <string name="download_time_left_label">Time left</string>
     <string name="deck_download_progress_message">You can use other apps while the download is running</string>
     <string name="check_network">Palun kontrolli oma internetiühendust</string>
     <string name="external_storage_unavailable">Allalaadimine tühistati. Väline salvestusruum pole saadaval</string>

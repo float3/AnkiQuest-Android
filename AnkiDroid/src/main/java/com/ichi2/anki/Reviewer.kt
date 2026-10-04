@@ -247,7 +247,7 @@ open class Reviewer :
         if (!ensureStorageIsReady()) {
             return
         }
-        if (Prefs.devBottomNavEnabled) {
+        if (Prefs.devBottomNavEnabled && resources.getBoolean(R.bool.bottom_navigation_available)) {
             showBackIcon()
         }
         colorPalette = findViewById(R.id.whiteboard_editor)
@@ -1127,11 +1127,10 @@ open class Reviewer :
         }
     }
 
-    private fun showDueDateDialog() =
-        launchCatchingTask {
-            Timber.i("showing due date dialog")
-            SetDueDateDialog.show(this@Reviewer, listOf(currentCardId!!))
-        }
+    private fun showDueDateDialog() {
+        Timber.i("showing due date dialog")
+        SetDueDateDialog.show(this, listOf(currentCardId!!))
+    }
 
     private fun showResetCardDialog() {
         Timber.i("showResetCardDialog() Reset progress button pressed")
@@ -1935,6 +1934,24 @@ open class Reviewer :
                 },
             )
     }
+
+    @Suppress("deprecation") // #9332: UI Visibility -> Insets
+    private fun isImmersiveSystemUiVisible(
+        activity: AnkiActivity,
+    ): Boolean = activity.window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_HIDE_NAVIGATION == 0
+
+    fun setFullscreenMode(mode: FullScreenMode): Boolean =
+        try {
+            val prefs = sharedPrefs()
+            if (FullScreenMode.fromPreference(prefs) != mode) {
+                FullScreenMode.setPreference(prefs, mode)
+                ActivityCompat.recreate(this)
+            }
+            true
+        } catch (e: Exception) {
+            Timber.w(e, "Error setting fullscreen mode")
+            false
+        }
 
     override suspend fun handlePostRequest(
         uri: PostRequestUri,

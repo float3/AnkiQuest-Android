@@ -19,12 +19,15 @@ dependencies {
     implementation("com.android.tools.build:gradle:${libs.versions.androidGradlePlugin.get()}")
     // Force the catalog version of KGP, otherwise it's overridden by AGP.
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.versions.kotlin.get()}")
+    testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {
     useJUnitPlatform()
+    // Rerun the path guard if the app build file is moved.
+    inputs.files("../AnkiDroid/build.gradle")
 }
 
 configure<KtlintExtension> {

@@ -188,6 +188,7 @@ import com.ichi2.anki.snackbar.SnackbarBuilder
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.sync.MeteredSyncPolicy
 import com.ichi2.anki.sync.launchCatchingRequiringOneWaySyncDiscardUndo
+import com.ichi2.anki.sync.syncStatus
 import com.ichi2.anki.ui.BottomFadeFrameLayout
 import com.ichi2.anki.ui.ResizablePaneManager
 import com.ichi2.anki.ui.animations.fadeIn
@@ -299,6 +300,9 @@ open class DeckPicker :
 
     override val analyticsScreenName: String
         get() = selectedBottomNavItem()?.analyticsScreenName ?: super.analyticsScreenName
+
+    internal val bottomNavigationEnabled: Boolean
+        get() = Prefs.devBottomNavEnabled && !fragmented
 
     // Short animation duration from system
     private var shortAnimDuration = 0
@@ -558,7 +562,7 @@ open class DeckPicker :
 
         // create inherited navigation drawer layout here so that it can be used by parent class
         initNavigationDrawer()
-        if (Prefs.devBottomNavEnabled && !AnkiquestNavigation.enabled() && !fragmented) {
+        if (bottomNavigationEnabled && !AnkiquestNavigation.enabled()) {
             disableDrawerSwipe()
             disableDrawerIndicator()
         }
@@ -604,7 +608,7 @@ open class DeckPicker :
                 onRetry = { heatmapViewModel.refresh() },
             )
         deckPickerBinding.decks.adapter = ConcatAdapter(deckListAdapter, heatmapAdapter)
-        if (Prefs.devBottomNavEnabled) {
+        if (bottomNavigationEnabled) {
             deckPickerBinding.decks.addItemDecoration(
                 DeckHierarchyLinesDecoration(this, deckListAdapter),
             )
@@ -615,12 +619,16 @@ open class DeckPicker :
         setupPullToSync()
         // Setup the FloatingActionButtons
         floatingActionMenu =
-            DeckPickerFloatingActionMenu(this, binding, this).apply {
+            DeckPickerFloatingActionMenu(
+                context = this,
+                homescreenBinding = binding,
+                deckPicker = this,
                 toggleListener =
                     FloatingActionBarToggleListener { isOpening ->
                         closeFloatingActionBarBackPressCallback.isEnabled = isOpening
-                    }
-            }
+                    },
+                initiallyOpen = savedInstanceState?.getBoolean("mIsFABOpen") == true,
+            )
 
         shortAnimDuration = resources.getInteger(android.R.integer.config_shortAnimTime)
 
@@ -1232,7 +1240,9 @@ open class DeckPicker :
         }
 
         Timber.d("onCreateOptionsMenu()")
-        floatingActionMenu.closeFloatingActionMenu(applyRiseAndShrinkAnimation = false)
+        if (isDrawerOpen) {
+            floatingActionMenu.closeFloatingActionMenu(applyRiseAndShrinkAnimation = false)
+        }
         // Fragments own their menus: each fragment registers a MenuProvider against this
         // activity (see StudyOptionsFragment), and the menu host dispatches creation,
         // preparation and selection to them. This activity never drives a fragment's menu.
@@ -1515,14 +1525,16 @@ open class DeckPicker :
         }
     }
 
-    private fun createBackup() {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    internal fun createBackup(): Job =
         launchCatchingTask {
-            withProgress(message = TR.sentenceCase.creatingBackup) {
-                performBackupInBackground(true)
-            }
-            showThemedToast(this@DeckPicker, TR.profilesBackupCreated(), false)
+            val created =
+                withProgress(message = TR.sentenceCase.creatingBackup) {
+                    performBackupInBackground(true)
+                }
+            val message = if (created) TR.profilesBackupCreated() else TR.profilesBackupUnchanged()
+            showThemedToast(this@DeckPicker, message, false)
         }
-    }
 
     private fun showMediaCheckDialog() {
         Timber.i("showing media check dialog")
@@ -1634,6 +1646,7 @@ open class DeckPicker :
         // Due to the App Introduction, this may be called before permission has been granted.
         if (syncOnResume && hasCollectionStoragePermissions()) {
             syncOnResume = false
+            intent.removeExtra(INTENT_SYNC_FROM_LOGIN)
             Timber.i("Performing Sync on Resume")
             Permissions.requestNotificationPermissionsForSyncing(this)
             sync()
@@ -1651,7 +1664,7 @@ open class DeckPicker :
         outState.putBoolean("mIsFABOpen", floatingActionMenu.isFABOpen)
         importColpkgListener?.let {
             if (it is DatabaseRestorationListener) {
-                outState.getString("dbRestorationPath", it.newAnkiDroidDirectory.absolutePath)
+                outState.putString("dbRestorationPath", it.newAnkiDroidDirectory.absolutePath)
             }
         }
         outState.putSerializable("mediaUsnOnConflict", mediaUsnOnConflict)
@@ -1660,7 +1673,6 @@ open class DeckPicker :
 
     public override fun onRestoreInstanceState(savedInstanceState: Bundle) {
         super.onRestoreInstanceState(savedInstanceState)
-        floatingActionMenu.isFABOpen = savedInstanceState.getBoolean("mIsFABOpen")
         savedInstanceState.getString("dbRestorationPath")?.let { path ->
             val path = File(path)
             CollectionHelper.ankiDroidDirectoryOverride = path
@@ -1740,7 +1752,8 @@ open class DeckPicker :
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if ((!Prefs.devBottomNavEnabled && !AnkiquestNavigation.enabled()) || fragmented || event.action != KeyEvent.ACTION_DOWN ||
+        if ((!bottomNavigationEnabled && (!AnkiquestNavigation.enabled() || fragmented)) ||
+            event.action != KeyEvent.ACTION_DOWN ||
             !event.isAltPressed
         ) {
             return super.dispatchKeyEvent(event)
@@ -2534,7 +2547,7 @@ open class DeckPicker :
             fun bottomNavShortcut(
                 keys: String,
                 destination: NavigationItem,
-            ) = if ((Prefs.devBottomNavEnabled || AnkiquestNavigation.enabled()) && !fragmented) {
+            ) = if (bottomNavigationEnabled || (AnkiquestNavigation.enabled() && !fragmented)) {
                 val label =
                     if (AnkiquestNavigation.enabled()) {
                         when (destination) {
