@@ -327,7 +327,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
-    @Config(sdk = [24])
+    @Config(sdk = [25])
     @Suppress("DEPRECATION") // pre-O alerts are configured on the notification itself
     fun `reply acknowledgements stay silent when incoming notifications become alerts`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
@@ -372,7 +372,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
-    @Config(sdk = [24])
+    @Config(sdk = [25])
     @Suppress("DEPRECATION") // Notification.vibrate is how a pre-O phone buzzes
     fun `all incoming alerts request sound buzz and heads up before channels existed`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
@@ -562,7 +562,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
-    @Config(sdk = [24])
+    @Config(sdk = [25])
     fun `alert settings open app details on phones without channels`() {
         val intent = AnkiquestNotifier.alertSettingsIntent(targetContext, false)
         assertEquals(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, intent.action)

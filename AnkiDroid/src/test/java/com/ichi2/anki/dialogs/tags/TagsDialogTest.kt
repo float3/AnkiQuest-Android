@@ -15,7 +15,10 @@
  */
 package com.ichi2.anki.dialogs.tags
 
+import android.content.res.Configuration
 import android.os.Bundle
+import android.view.View
+import android.view.WindowManager
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.testing.FragmentScenario
@@ -30,11 +33,15 @@ import com.ichi2.testutils.RecyclerViewUtils
 import com.ichi2.ui.CheckBoxTriStates
 import com.ichi2.utils.ListUtil
 import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.greaterThanOrEqualTo
+import org.hamcrest.Matchers.lessThan
 import org.hamcrest.core.IsNull
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito
+import org.robolectric.annotation.Config
 import timber.log.Timber
 
 @RunWith(AndroidJUnit4::class)
@@ -574,6 +581,70 @@ class TagsDialogTest : RobolectricTest() {
             scenario.onFragment { Timber.d("Dialog successfully opened") }
         }
     }
+
+    @Test
+    fun `squeezed dialog does not inflate every tag 22082`() {
+        val allTags = (1..50).map { "tag$it" }
+        val args =
+            TagsDialog(ParametersUtils.whatever())
+                .withTestArguments(TagsDialog.DialogType.FILTER_BY_TAG, arrayListOf(), allTags)
+                .requireArguments()
+        runTagsDialogScenario(args) { f: TagsDialog ->
+            val dialog = f.requireDialog()
+            val recycler: RecyclerView = dialog.findViewById(R.id.tags_list)!!
+            val content = dialog.findViewById<View>(R.id.toolbar)!!.parent as View
+
+            content.measure(
+                View.MeasureSpec.makeMeasureSpec(500, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(50, View.MeasureSpec.AT_MOST),
+            )
+            content.layout(0, 0, content.measuredWidth, content.measuredHeight)
+
+            assertThat(recycler.height, greaterThanOrEqualTo(0))
+            assertThat(recycler.childCount, lessThan(allTags.size))
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w731dp-h411dp")
+    fun `keyboard pans the dialog on a short screen 22082`() {
+        runTagsDialogScenario(editTagsArguments()) { f: TagsDialog ->
+            assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN))
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h914dp")
+    @Suppress("DEPRECATION")
+    fun `keyboard resizes the dialog on a tall screen`() {
+        runTagsDialogScenario(editTagsArguments()) { f: TagsDialog ->
+            assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE))
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h914dp")
+    fun `rotating to a short screen pans the dialog 22082`() {
+        runTagsDialogScenario(editTagsArguments()) { f: TagsDialog ->
+            val landscape =
+                Configuration(f.resources.configuration).apply {
+                    screenWidthDp = 914
+                    screenHeightDp = 411
+                    orientation = Configuration.ORIENTATION_LANDSCAPE
+                }
+            f.onConfigurationChanged(landscape)
+
+            assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN))
+        }
+    }
+
+    private val TagsDialog.softInputAdjustment: Int
+        get() = requireDialog().window!!.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST
+
+    private fun editTagsArguments() =
+        TagsDialog(ParametersUtils.whatever())
+            .withTestArguments(TagsDialog.DialogType.EDIT_TAGS, arrayListOf(), listOf("a"))
+            .requireArguments()
 
     // these are called 'withTestArguments' due to "extension is shadowed by a member" warnings
     // this is needed so we can pass in 'targetContext' for context.cacheDir
