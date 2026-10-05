@@ -166,8 +166,16 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         submit.setOnClickListener {
             val credentials =
                 AnkiquestAccount.Credentials(
-                    url = server.text.toString().trim().trimEnd('/'),
-                    user = user.text.toString().trim().lowercase(),
+                    url =
+                        server.text
+                            .toString()
+                            .trim()
+                            .trimEnd('/'),
+                    user =
+                        user.text
+                            .toString()
+                            .trim()
+                            .lowercase(),
                     password = password.text.toString(),
                     display = display.text.toString().trim(),
                     create = create.isChecked,
