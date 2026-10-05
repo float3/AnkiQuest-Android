@@ -4,6 +4,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/ankiquest_account_title"
     android:key="@string/ankiquest_account_screen_key">
+    <Preference
+        android:key="@string/ankiquest_sign_in_key"
+        android:persistent="false"
+        android:title="@string/ankiquest_sign_in_title"
+        android:summary="@string/ankiquest_sign_in_summary" />
     <com.ichi2.preferences.VersatileTextPreference
         android:key="@string/ankiquest_url_key"
         android:title="@string/ankiquest_url_title"
