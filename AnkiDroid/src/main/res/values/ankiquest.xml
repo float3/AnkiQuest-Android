@@ -90,7 +90,6 @@
     <string name="ankiquest_sign_in_summary">Use a username and password instead of copying a token</string>
     <string name="ankiquest_sign_in_server">Server</string>
     <string name="ankiquest_sign_in_user">Username</string>
-    <string name="ankiquest_sign_in_password">Password</string>
     <string name="ankiquest_sign_in_display">Display name (optional)</string>
     <string name="ankiquest_sign_in_create">Create a new account</string>
     <string name="ankiquest_sign_in_hint">Usernames use lowercase letters, numbers, - and _. Passwords need at least 10 characters.</string>

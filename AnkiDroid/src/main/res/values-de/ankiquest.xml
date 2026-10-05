@@ -67,7 +67,6 @@
     <string name="ankiquest_sign_in_summary">Benutzername und Passwort statt eines kopierten Tokens verwenden</string>
     <string name="ankiquest_sign_in_server">Server</string>
     <string name="ankiquest_sign_in_user">Benutzername</string>
-    <string name="ankiquest_sign_in_password">Passwort</string>
     <string name="ankiquest_sign_in_display">Anzeigename (optional)</string>
     <string name="ankiquest_sign_in_create">Neues Konto erstellen</string>
     <string name="ankiquest_sign_in_hint">Benutzernamen bestehen aus Kleinbuchstaben, Ziffern, - und _. Passwörter brauchen mindestens 10 Zeichen.</string>

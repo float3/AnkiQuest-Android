@@ -78,7 +78,6 @@
     <string name="ankiquest_sign_in_summary">Usa un nombre de usuario y una contraseña en lugar de copiar un token</string>
     <string name="ankiquest_sign_in_server">Servidor</string>
     <string name="ankiquest_sign_in_user">Nombre de usuario</string>
-    <string name="ankiquest_sign_in_password">Contraseña</string>
     <string name="ankiquest_sign_in_display">Nombre visible (opcional)</string>
     <string name="ankiquest_sign_in_create">Crear una cuenta nueva</string>
     <string name="ankiquest_sign_in_hint">Los nombres de usuario usan minúsculas, números, - y _. Las contraseñas necesitan al menos 10 caracteres.</string>

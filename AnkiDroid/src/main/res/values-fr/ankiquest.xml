@@ -67,7 +67,6 @@
     <string name="ankiquest_sign_in_summary">Utilise un nom d’utilisateur et un mot de passe au lieu de copier un jeton</string>
     <string name="ankiquest_sign_in_server">Serveur</string>
     <string name="ankiquest_sign_in_user">Nom d’utilisateur</string>
-    <string name="ankiquest_sign_in_password">Mot de passe</string>
     <string name="ankiquest_sign_in_display">Nom affiché (facultatif)</string>
     <string name="ankiquest_sign_in_create">Créer un nouveau compte</string>
     <string name="ankiquest_sign_in_hint">Les noms d’utilisateur utilisent des minuscules, des chiffres, - et _. Les mots de passe font au moins 10 caractères.</string>

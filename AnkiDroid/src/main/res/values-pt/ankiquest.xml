@@ -67,7 +67,6 @@
     <string name="ankiquest_sign_in_summary">Usa um nome de utilizador e uma palavra-passe em vez de copiar um token</string>
     <string name="ankiquest_sign_in_server">Servidor</string>
     <string name="ankiquest_sign_in_user">Nome de utilizador</string>
-    <string name="ankiquest_sign_in_password">Palavra-passe</string>
     <string name="ankiquest_sign_in_display">Nome visível (opcional)</string>
     <string name="ankiquest_sign_in_create">Criar uma conta nova</string>
     <string name="ankiquest_sign_in_hint">Os nomes de utilizador usam minúsculas, números, - e _. As palavras-passe precisam de pelo menos 10 caracteres.</string>
