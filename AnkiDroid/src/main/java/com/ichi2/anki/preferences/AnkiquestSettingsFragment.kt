@@ -9,6 +9,10 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.text.format.DateFormat
+import android.view.View
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -21,6 +25,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestAccount
 import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
@@ -33,6 +38,7 @@ import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
+import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.preferences.VersatileTextPreference
 import com.ichi2.utils.Permissions.openAppSettingsScreen
 import kotlinx.coroutines.CancellationException
@@ -88,6 +94,10 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 if (value.isNotEmpty()) value.toHttpUrl()
             }
         bindCompanion()
+        requirePreference<Preference>(R.string.ankiquest_sign_in_key).setOnPreferenceClickListener {
+            showSignIn()
+            true
+        }
         requirePreference<Preference>(R.string.ankiquest_avatar_key).setOnPreferenceClickListener {
             pictureAction {
                 val account = checkNotNull(AnkiquestAvatars.account()) { getString(R.string.ankiquest_nudges_unavailable) }
@@ -125,6 +135,68 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             true
         }
         bindAction(R.string.ankiquest_test_key) { Ankiquest.runFromSettings(requireContext(), uploadAll = false) }
+    }
+
+    /** Asks for a username and password, and fills in the server, player and token from the answer. */
+    private fun showSignIn() {
+        val view = layoutInflater.inflate(R.layout.dialog_ankiquest_sign_in, null)
+        val server = view.findViewById<EditText>(R.id.ankiquest_sign_in_server)
+        val user = view.findViewById<EditText>(R.id.ankiquest_sign_in_user)
+        val password = view.findViewById<EditText>(R.id.ankiquest_sign_in_password)
+        val create = view.findViewById<CheckBox>(R.id.ankiquest_sign_in_create)
+        val display = view.findViewById<EditText>(R.id.ankiquest_sign_in_display)
+        val hint = view.findViewById<TextView>(R.id.ankiquest_sign_in_hint)
+        val status = view.findViewById<TextView>(R.id.ankiquest_sign_in_status)
+        val urlPreference = requirePreference<VersatileTextPreference>(R.string.ankiquest_url_key)
+        server.setText(urlPreference.text?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
+        val dialog =
+            AlertDialog
+                .Builder(requireContext())
+                .setTitle(R.string.ankiquest_sign_in_title)
+                .setView(view)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.ankiquest_sign_in_submit, null)
+                .show()
+        val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+        create.setOnCheckedChangeListener { _, creating ->
+            display.visibility = if (creating) View.VISIBLE else View.GONE
+            hint.visibility = if (creating) View.VISIBLE else View.GONE
+            submit.setText(if (creating) R.string.ankiquest_sign_in_submit_create else R.string.ankiquest_sign_in_submit)
+        }
+        submit.setOnClickListener {
+            val credentials =
+                AnkiquestAccount.Credentials(
+                    url = server.text.toString().trim().trimEnd('/'),
+                    user = user.text.toString().trim().lowercase(),
+                    password = password.text.toString(),
+                    display = display.text.toString().trim(),
+                    create = create.isChecked,
+                )
+            if (credentials.url.isEmpty() || credentials.user.isEmpty() || credentials.password.isEmpty()) {
+                status.setText(R.string.ankiquest_sign_in_missing)
+                return@setOnClickListener
+            }
+            submit.isEnabled = false
+            status.setText(R.string.ankiquest_sign_in_connecting)
+            lifecycleScope.launch {
+                try {
+                    val signed = AnkiquestAccount.submit(credentials)
+                    if (!isAdded) return@launch
+                    urlPreference.text = signed.url
+                    requirePreference<VersatileTextPreference>(R.string.ankiquest_user_key).text = signed.user
+                    requirePreference<VersatileTextPreference>(R.string.ankiquest_token_key).text = signed.token
+                    dialog.dismiss()
+                    showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
+                    AnkiquestPoll.refreshNow(requireContext())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (!isAdded) return@launch
+                    submit.isEnabled = true
+                    status.text = AnkiquestAccount.message(requireContext(), e, credentials.url)
+                }
+            }
+        }
     }
 
     protected fun bindStudy() {

@@ -85,6 +85,25 @@
     <string name="ankiquest_upload_all_key" translatable="false">ankiquestUploadAll</string>
     <string name="ankiquest_test_title" maxLength="41">Test connection</string>
     <string name="ankiquest_test_summary">Check the URL, player and token</string>
+    <string name="ankiquest_sign_in_key" translatable="false">ankiquestSignIn</string>
+    <string name="ankiquest_sign_in_title" maxLength="41">Sign in or create account</string>
+    <string name="ankiquest_sign_in_summary">Use a username and password instead of copying a token</string>
+    <string name="ankiquest_sign_in_server">Server</string>
+    <string name="ankiquest_sign_in_user">Username</string>
+    <string name="ankiquest_sign_in_password">Password</string>
+    <string name="ankiquest_sign_in_display">Display name (optional)</string>
+    <string name="ankiquest_sign_in_create">Create a new account</string>
+    <string name="ankiquest_sign_in_hint">Usernames use lowercase letters, numbers, - and _. Passwords need at least 10 characters.</string>
+    <string name="ankiquest_sign_in_submit">Sign in</string>
+    <string name="ankiquest_sign_in_submit_create">Create account</string>
+    <string name="ankiquest_sign_in_missing">Fill in the server, username and password.</string>
+    <string name="ankiquest_sign_in_wrong">Username or password not recognized.</string>
+    <string name="ankiquest_sign_in_closed">This server does not take new accounts. Ask whoever runs it for a token.</string>
+    <string name="ankiquest_sign_in_taken">That username is taken. Pick another one.</string>
+    <string name="ankiquest_sign_in_limited">Too many attempts. Try again later.</string>
+    <string name="ankiquest_sign_in_invalid">Check the username (3 to 32 lowercase letters, numbers, - or _) and use a password of at least 10 characters.</string>
+    <string name="ankiquest_sign_in_connecting">Connecting…</string>
+    <string name="ankiquest_sign_in_done">Signed in as %1$s.</string>
     <string name="ankiquest_upload_all_title" maxLength="41">Upload all reviews now</string>
     <string name="ankiquest_upload_all_summary">Send your whole review history. Already uploaded reviews are skipped by the server.</string>
     <string name="ankiquest_check_running">Contacting the server…</string>

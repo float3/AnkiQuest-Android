@@ -106,6 +106,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.ankiquest_user_key,
             R.string.ankiquest_token_key,
             R.string.ankiquest_test_key,
+            R.string.ankiquest_sign_in_key,
             R.string.ankiquest_upload_all_key,
             R.string.ankiquest_check_updates_key,
             R.string.ankiquest_update_channel_key,

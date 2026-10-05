@@ -39,6 +39,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
         val expected =
             listOf(
                 R.string.ankiquest_dashboard_key,
+                R.string.ankiquest_sign_in_key,
                 R.string.ankiquest_url_key,
                 R.string.ankiquest_user_key,
                 R.string.ankiquest_token_key,
