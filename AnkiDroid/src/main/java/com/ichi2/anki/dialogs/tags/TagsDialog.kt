@@ -39,6 +39,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.browser.IdsFile
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.databinding.DialogTagsBinding
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.libanki.NoteId
@@ -65,6 +66,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import timber.log.Timber
+import java.io.IOException
 
 class TagsDialog : AnalyticsDialogFragment {
     /**
@@ -85,7 +87,10 @@ class TagsDialog : AnalyticsDialogFragment {
         CUSTOM_STUDY,
     }
 
-    private lateinit var binding: DialogTagsBinding
+    @VisibleForTesting
+    internal lateinit var binding: DialogTagsBinding
+        private set
+
     private var type: DialogType? = null
     internal val isEditingTags: Boolean get() = type == DialogType.EDIT_TAGS
     private var tagsArrayAdapter: TagsArrayAdapter? = null
@@ -97,16 +102,16 @@ class TagsDialog : AnalyticsDialogFragment {
 
     @VisibleForTesting
     val viewModel: TagsDialogViewModel by viewModels {
-        val idsFile = requireArguments().requireParcelable<IdsFile>(ARG_TAGS_FILE)
-        val noteIds = idsFile.getIds()
-        val checkedTags =
-            requireNotNull(requireArguments().getStringArrayList(ARG_CHECKED_TAGS)) {
-                "$ARG_CHECKED_TAGS is required"
-            }
-        val type = BundleCompat.getParcelable(requireArguments(), ARG_DIALOG_TYPE, DialogType::class.java)
-        val isCustomStudying = type != null && type == DialogType.CUSTOM_STUDY
         viewModelFactory {
             initializer {
+                val idsFile = requireArguments().requireParcelable<IdsFile>(ARG_TAGS_FILE)
+                val noteIds = idsFile.getIds()
+                val checkedTags =
+                    requireNotNull(requireArguments().getStringArrayList(ARG_CHECKED_TAGS)) {
+                        "$ARG_CHECKED_TAGS is required"
+                    }
+                val type = BundleCompat.getParcelable(requireArguments(), ARG_DIALOG_TYPE, DialogType::class.java)
+                val isCustomStudying = type != null && type == DialogType.CUSTOM_STUDY
                 TagsDialogViewModel(
                     noteIds = noteIds,
                     checkedTags = checkedTags,
@@ -172,6 +177,15 @@ class TagsDialog : AnalyticsDialogFragment {
             " filled as prefix properly. In other dialog types, long-clicking a tag behaves like a short click.",
     )
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        // Resolve the selection before creating any controls that could submit an operation.
+        try {
+            viewModel
+        } catch (e: IOException) {
+            Timber.w(e, "Failed to read tag dialog IDs")
+            showThemedToast(requireContext(), CommonString.something_wrong, false)
+            dismiss()
+            return super.onCreateDialog(savedInstanceState)
+        }
         binding = DialogTagsBinding.inflate(layoutInflater)
 
         val positiveText =
@@ -280,7 +294,7 @@ class TagsDialog : AnalyticsDialogFragment {
             val tags = viewModel.tags.await()
             tagsDialogListener.onSelectedTags(
                 tags.copyOfCheckedTagList(),
-                tags.copyOfIndeterminateTagList(),
+                tags.copyOfPartiallySelectedTagList(),
                 selectedOption,
             )
         }
@@ -360,7 +374,7 @@ class TagsDialog : AnalyticsDialogFragment {
                 val tags = viewModel.tags.await()
                 val didChange = tags.toggleAllCheckedStatuses()
                 if (didChange) {
-                    tagsArrayAdapter?.notifyDataSetChanged()
+                    tagsArrayAdapter?.notifyCheckedStatusesChanged()
                     view?.showMaxTagSelectedNotice(tags)
                 }
             }
@@ -476,9 +490,6 @@ class TagsDialog : AnalyticsDialogFragment {
             binding.tagsDialogSnackbar.showSnackbar(feedbackText)
         }
     }
-
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    internal fun getSearchView(): AccessibleSearchView? = toolbarSearchView
 
     companion object {
         const val ARG_TAGS_FILE = "tagsFile"

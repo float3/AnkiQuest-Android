@@ -24,7 +24,6 @@ import com.ichi2.anki.browser.CardBrowserViewModel
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.pages.Statistics
-import com.ichi2.anki.settings.Prefs
 
 /**
  * Manages the bottom navigation bar for the home screen.
@@ -39,7 +38,7 @@ fun setupBottomNavigation() {
     if (deckPicker.supportFragmentManager.findFragmentByTag(NavigationItem.BROWSER.tag) != null) {
         ensureBrowserViewModel()
     }
-    if ((!Prefs.devBottomNavEnabled && !AnkiquestNavigation.enabled()) || deckPicker.fragmented) return
+    if (!deckPicker.bottomNavigationEnabled && (!AnkiquestNavigation.enabled() || deckPicker.fragmented)) return
 
     val bottomNav = deckPicker.findViewById<BottomNavigationView>(R.id.bottom_navigation)
     val fragmentContainer = deckPicker.findViewById<View>(R.id.bottom_nav_fragment_container)
@@ -105,14 +104,14 @@ fun showRestoredBottomNavTab() {
         deckPicker.binding.bottomNavigation?.selectedItemId = R.id.ankiquest_nav_decks
         return
     }
-    if (!Prefs.devBottomNavEnabled || deckPicker.fragmented) return
+    if (!deckPicker.bottomNavigationEnabled) return
     val bottomNav = deckPicker.binding.bottomNavigation ?: return
     bottomNav.selectedItemId = bottomNav.selectedItemId
 }
 
 context(deckPicker: DeckPicker)
 fun selectedBottomNavItem(): NavigationItem? {
-    if (!Prefs.devBottomNavEnabled || deckPicker.fragmented) return null
+    if (!deckPicker.bottomNavigationEnabled) return null
     val bottomNav = deckPicker.binding.bottomNavigation ?: return null
     return NavigationItem.fromId(bottomNav.selectedItemId)
 }

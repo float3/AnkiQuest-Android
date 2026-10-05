@@ -88,6 +88,8 @@ import java.io.IOException
 //  to avoid potential OOM for large queries.
 //  Tracked in: https://github.com/ankidroid/Anki-Android/issues/20253
 class CardContentProvider : ContentProvider() {
+    private val applicationStartup = ContentProviderStartup()
+
     companion object {
         // URI types
         private const val NOTES = 1000
@@ -108,7 +110,7 @@ class CardContentProvider : ContentProvider() {
         private const val MEDIA = 5000
         private const val CARDS = 6000
         private const val CARD_ID = 6001
-        private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH)
+        private val uriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
         /**
          * The names of the columns returned by this content provider differ slightly from the names
@@ -119,17 +121,18 @@ class CardContentProvider : ContentProvider() {
          * This is currently only "_id" (projection) vs. "id" (Anki DB). But should probably be
          * applied to more columns. "MID", "USN", "MOD" are not really user friendly.
          */
-        private val sDefaultNoteProjectionDBAccess = FlashCardsContract.Note.DEFAULT_PROJECTION.clone()
+        private val defaultNoteProjectionDbAccess = FlashCardsContract.Note.DEFAULT_COLUMNS
 
         private fun sanitizeNoteProjection(projection: Array<String>?): Array<String> {
             if (projection.isNullOrEmpty()) {
-                return sDefaultNoteProjectionDBAccess
+                return defaultNoteProjectionDbAccess
             }
+            val defaultColumns = FlashCardsContract.Note.DEFAULT_COLUMNS
             val sanitized = ArrayList<String>(projection.size)
             for (column in projection) {
-                val idx = FlashCardsContract.Note.DEFAULT_PROJECTION.indexOf(column)
+                val idx = defaultColumns.indexOf(column)
                 if (idx >= 0) {
-                    sanitized.add(sDefaultNoteProjectionDBAccess[idx])
+                    sanitized.add(defaultNoteProjectionDbAccess[idx])
                 } else {
                     throw IllegalArgumentException("Unknown column $column")
                 }
@@ -141,7 +144,7 @@ class CardContentProvider : ContentProvider() {
             fun addUri(
                 path: String,
                 code: Int,
-            ) = sUriMatcher.addURI(FlashCardsContract.AUTHORITY, path, code)
+            ) = uriMatcher.addURI(FlashCardsContract.AUTHORITY, path, code)
             // Here you can see all the URIs at a glance
             addUri("notes", NOTES)
             addUri("notes_v2", NOTES_V2)
@@ -162,9 +165,9 @@ class CardContentProvider : ContentProvider() {
             addUri("cards", CARDS)
             addUri("cards/#", CARD_ID)
 
-            for (idx in sDefaultNoteProjectionDBAccess.indices) {
-                if (sDefaultNoteProjectionDBAccess[idx] == FlashCardsContract.Note._ID) {
-                    sDefaultNoteProjectionDBAccess[idx] = "id as _id"
+            for (idx in defaultNoteProjectionDbAccess.indices) {
+                if (defaultNoteProjectionDbAccess[idx] == FlashCardsContract.Note._ID) {
+                    defaultNoteProjectionDbAccess[idx] = "id as _id"
                 }
             }
         }
@@ -174,6 +177,7 @@ class CardContentProvider : ContentProvider() {
         // Initialize content provider on startup.
         Timber.d("CardContentProvider: onCreate")
         AnkiDroidApp.makeBackendUsable(context!!)
+        applicationStartup.onProviderCreate()
         return true
     }
 
@@ -181,7 +185,7 @@ class CardContentProvider : ContentProvider() {
     @Suppress("RedundantNullableReturnType")
     override fun getType(uri: Uri): String? {
         // Find out what data the user is requesting
-        return when (sUriMatcher.match(uri)) {
+        return when (uriMatcher.match(uri)) {
             NOTES_V2, NOTES -> FlashCardsContract.Note.CONTENT_TYPE
             NOTES_ID -> FlashCardsContract.Note.CONTENT_ITEM_TYPE
             NOTES_ID_CARDS, NOTE_TYPES_ID_EMPTY_CARDS -> FlashCardsContract.Card.CONTENT_TYPE
@@ -218,6 +222,7 @@ class CardContentProvider : ContentProvider() {
      */
     private fun getColUnsafe(): Collection =
         try {
+            applicationStartup.awaitCompletion()
             CollectionManager.getColUnsafe()
         } catch (e: StorageNotConfiguredException) {
             // StorageNotConfiguredException is not supported by Parcel.writeException
@@ -238,7 +243,7 @@ class CardContentProvider : ContentProvider() {
         Timber.d(getLogMessage("query", uri))
 
         // Find out what data the user is requesting
-        return when (sUriMatcher.match(uri)) {
+        return when (uriMatcher.match(uri)) {
             NOTES_V2 -> {
                 // Search for notes using direct SQL query
                 val proj = sanitizeNoteProjection(projection)
@@ -267,7 +272,7 @@ class CardContentProvider : ContentProvider() {
             }
             NOTES_ID_CARDS -> {
                 val currentNote = getNoteFromUri(uri, col)
-                val columns = projection ?: FlashCardsContract.Card.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Card.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 for (currentCard: Card in currentNote.cards(col)) {
                     addCardToCursor(currentCard, rv, col, columns)
@@ -276,13 +281,13 @@ class CardContentProvider : ContentProvider() {
             }
             NOTES_ID_CARDS_ORD -> {
                 val currentCard = getCardFromUri(uri, col)
-                val columns = projection ?: FlashCardsContract.Card.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Card.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 addCardToCursor(currentCard, rv, col, columns)
                 rv
             }
             NOTE_TYPES -> {
-                val columns = projection ?: FlashCardsContract.Model.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Model.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 for (noteTypeId: NoteTypeId in col.notetypes.ids()) {
                     addNoteTypeToCursor(noteTypeId, col.notetypes, rv, columns)
@@ -291,7 +296,7 @@ class CardContentProvider : ContentProvider() {
             }
             NOTE_TYPES_ID -> {
                 val noteTypeId = getNoteTypeIdFromUri(uri, col)
-                val columns = projection ?: FlashCardsContract.Model.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Model.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 addNoteTypeToCursor(noteTypeId, col.notetypes, rv, columns)
                 rv
@@ -299,7 +304,7 @@ class CardContentProvider : ContentProvider() {
             NOTE_TYPES_ID_TEMPLATES -> {
                 // Direct access note type templates
                 val currentNoteType = col.notetypes.get(getNoteTypeIdFromUri(uri, col))
-                val columns = projection ?: FlashCardsContract.CardTemplate.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.CardTemplate.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 try {
                     for ((ord, template) in currentNoteType!!.templates.withIndex()) {
@@ -314,7 +319,7 @@ class CardContentProvider : ContentProvider() {
                 // Direct access note type template with specific ID
                 val ord = uri.lastPathSegment!!.toInt()
                 val currentNoteType = col.notetypes.get(getNoteTypeIdFromUri(uri, col))
-                val columns = projection ?: FlashCardsContract.CardTemplate.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.CardTemplate.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 try {
                     val template = getTemplateFromUri(uri, col)
@@ -325,7 +330,7 @@ class CardContentProvider : ContentProvider() {
                 rv
             }
             SCHEDULE -> {
-                val columns = projection ?: FlashCardsContract.ReviewInfo.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.ReviewInfo.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 val selectedDeckBeforeQuery = col.decks.selected()
                 var deckIdOfTemporarilySelectedDeck: Long = -1
@@ -388,7 +393,7 @@ class CardContentProvider : ContentProvider() {
                 rv
             }
             DECKS -> {
-                val columns = projection ?: FlashCardsContract.Deck.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Deck.DEFAULT_COLUMNS
                 val allDecks = col.sched.deckDueTree()
                 val rv = MatrixCursor(columns, 1)
                 allDecks.forEach {
@@ -405,7 +410,7 @@ class CardContentProvider : ContentProvider() {
             }
             DECKS_ID -> {
                 // Direct access deck
-                val columns = projection ?: FlashCardsContract.Deck.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Deck.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 val allDecks = col.sched.deckDueTree()
                 val desiredDeckId = uri.pathSegments[1].toLong()
@@ -417,7 +422,7 @@ class CardContentProvider : ContentProvider() {
             DECK_SELECTED -> {
                 val id = col.decks.selected()
                 val name = col.decks.name(id)
-                val columns = projection ?: FlashCardsContract.Deck.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Deck.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 val counts = JSONArray(listOf(col.sched.counts()))
                 addDeckToCursor(id, name, counts, rv, col, columns)
@@ -425,7 +430,7 @@ class CardContentProvider : ContentProvider() {
             }
             CARDS -> {
                 // Search for cards using Anki browser syntax
-                val columns = projection ?: FlashCardsContract.Card.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Card.DEFAULT_COLUMNS
                 val query = selection ?: ""
 
                 val cardIds =
@@ -461,7 +466,7 @@ class CardContentProvider : ContentProvider() {
             CARD_ID -> {
                 // Direct access to specific card by ID
                 val cardId = uri.pathSegments[1].toLong()
-                val columns = projection ?: FlashCardsContract.Card.DEFAULT_PROJECTION
+                val columns = projection ?: FlashCardsContract.Card.DEFAULT_COLUMNS
                 val rv = MatrixCursor(columns, 1)
                 val card = col.getCard(cardId)
                 addCardToCursor(card, rv, col, columns)
@@ -492,7 +497,7 @@ class CardContentProvider : ContentProvider() {
         Timber.d(getLogMessage("update", uri))
 
         // Find out what data the user is requesting
-        val match = sUriMatcher.match(uri)
+        val match = uriMatcher.match(uri)
         var updated = 0 // Number of updated entries (return value)
         when (match) {
             NOTES_V2, NOTES -> throw IllegalArgumentException("Not possible to update notes directly (only through data URI)")
@@ -765,7 +770,7 @@ class CardContentProvider : ContentProvider() {
         Timber.d(getLogMessage("delete", uri))
 
         val deletedCount =
-            when (sUriMatcher.match(uri)) {
+            when (uriMatcher.match(uri)) {
                 NOTES_ID -> {
                     col.removeNotes(noteIds = listOf(uri.pathSegments[1].toLong())).count
                 }
@@ -804,7 +809,7 @@ class CardContentProvider : ContentProvider() {
 
         // by default, #bulkInsert simply calls insert for each item in #values
         // but in some cases, we want to override this behavior
-        val match = sUriMatcher.match(uri)
+        val match = uriMatcher.match(uri)
         val deckIdStr = uri.getQueryParameter(FlashCardsContract.Note.DECK_ID_QUERY_PARAM)
 
         val deckId =
@@ -896,7 +901,7 @@ class CardContentProvider : ContentProvider() {
 
         // Find out what data the user is requesting
         val insertedUri =
-            when (sUriMatcher.match(uri)) {
+            when (uriMatcher.match(uri)) {
                 NOTES -> {
                 /* Insert new note with specified fields and tags
                  */

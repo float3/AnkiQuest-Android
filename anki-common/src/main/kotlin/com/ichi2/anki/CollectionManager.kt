@@ -36,13 +36,18 @@ import com.ichi2.anki.libanki.Storage.collection
 import com.ichi2.anki.libanki.importCollectionPackage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import net.ankiweb.rsdroid.Backend
 import net.ankiweb.rsdroid.BackendException
+import net.ankiweb.rsdroid.BackendException.BackendImportException
 import net.ankiweb.rsdroid.BackendFactory
 import net.ankiweb.rsdroid.Translations
+import net.ankiweb.rsdroid.exceptions.BackendIoException
+import net.ankiweb.rsdroid.exceptions.BackendSyncException
 import timber.log.Timber
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -88,6 +93,10 @@ object CollectionManager {
     @VisibleForTesting
     var emulatedOpenFailure: CollectionOpenFailure? = null
 
+    /** Storage for collections opened in tests, including after closing and reopening. */
+    @VisibleForTesting
+    var collectionFilesTestOverride: CollectionFiles? = null
+
     private val testMutex = ReentrantLock()
 
     private var useTestMutex = true
@@ -121,7 +130,10 @@ object CollectionManager {
     ): T {
         if (isRobolectric && useTestMutex) {
             // #16253 Robolectric Windows: `withContext(queue)` is insufficient for serial execution
+            val context = currentCoroutineContext()
             return testMutex.withLock {
+                // ReentrantLock does not check cancellation, which may happen while waiting for it.
+                context.ensureActive()
                 this@CollectionManager.block()
             }
         }
@@ -383,7 +395,7 @@ object CollectionManager {
         ensureBackendInner()
         emulatedOpenFailure?.triggerFailure()
         if (collection == null || collection!!.dbClosed) {
-            val collectionPath = collectionPathInValidFolder()
+            val collectionPath = collectionFilesTestOverride ?: collectionPathInValidFolder()
             collection =
                 collection(
                     collectionFiles = collectionPath,
@@ -518,12 +530,30 @@ object CollectionManager {
 
     /**
      * Replace the collection with the provided colpkg file if it is valid.
+     * On success, leave the replacement collection closed; callers must reopen it, for example with [withCol].
+     * On failure, try to reopen the original collection before rethrowing the import error.
+     * If reopening also fails, attach that failure as a suppressed exception to the import error.
+     *
+     * @throws BackendIoException if the colpkg file is missing or an I/O error occurs.
+     * @throws BackendSyncException if the colpkg file is not a valid archive.
+     * The backend maps ZIP errors to sync errors, even during a local import.
+     * TODO: to be fixed in https://github.com/ankitects/anki/issues/5732
+     * @throws BackendImportException if the archive contains an invalid collection database.
      */
     suspend fun importColpkg(colpkgPath: String) {
         withQueue {
             ensureClosedInner()
             ensureBackendInner()
-            importCollectionPackage(backend!!, collectionPathInValidFolder(), colpkgPath)
+            try {
+                importCollectionPackage(backend!!, collectionPathInValidFolder(), colpkgPath)
+            } catch (importError: Exception) {
+                try {
+                    ensureOpenInner()
+                } catch (reopenError: Exception) {
+                    importError.addSuppressed(reopenError)
+                }
+                throw importError
+            }
         }
     }
 

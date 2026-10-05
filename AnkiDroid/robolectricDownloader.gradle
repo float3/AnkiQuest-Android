@@ -18,7 +18,7 @@
 // Run `./gradlew jacocoUnitTestReport` to check that all SDKs used by the tests are included.
 def robolectricAndroidSdkVersions = [
 //        [androidVersion: "6.0.1_r3", frameworkSdkBuildVersion: "r1"],
-//        [androidVersion: "7.0.0_r1", frameworkSdkBuildVersion: "r1"],
+        [androidVersion: "7.0.0_r1", frameworkSdkBuildVersion: "r1"],
         [androidVersion: "7.1.0_r7", frameworkSdkBuildVersion: "r1"],
 //        [androidVersion: "8.0.0_r4", frameworkSdkBuildVersion: "r1"],
         [androidVersion: "8.1.0", frameworkSdkBuildVersion: "4611349"],
@@ -32,6 +32,7 @@ def robolectricAndroidSdkVersions = [
         [androidVersion: "15", frameworkSdkBuildVersion: "13954326"],
         // TODO: check TarArchiveInputStream.forEachEntry when this is updated
         [androidVersion: "16", frameworkSdkBuildVersion: "13921718"], // current targetSdk
+        [androidVersion: "17", frameworkSdkBuildVersion: "15733970"],
 ]
 
 def robolectricSdkDownload = tasks.register('robolectricSdkDownload', WriteProperties) {
@@ -56,4 +57,3 @@ robolectricAndroidSdkVersions.forEach { robolectricSdkVersion ->
                 sdkConfig.elements.map { it.iterator().next().asFile.absolutePath })
     }
 }
-

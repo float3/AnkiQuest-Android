@@ -242,6 +242,8 @@
     <string name="edit_toolbar_item">Редагувати елемент панелі інструментів</string>
     <string name="toolbar_item_explain_edit_or_remove">Введіть HTML, який буде вставлений до і після виділеного тексту\n\nДовго натискайте на елемент панелі інструментів, щоб його редагувати або видалити</string>
     <string name="remove_toolbar_item">Видалити елемент панелі інструментів?</string>
+    <string name="note_editor_toolbar_icon_requirement_error">Button text is required</string>
+    <string name="before_after_text_requirement_error">At least one HTML field is required</string>
     <string name="note_editor_image_too_large">Зображення завелике, будь ласка, вставте зображення вручну</string>
     <string name="note_editor_video_too_large">Відеофайл завеликий, будь ласка, вставте відео вручну</string>
     <string name="note_editor_audio_too_large">Аудіофайл завеликий, будь ласка, вставте аудіо вручну</string>
@@ -276,6 +278,11 @@
     <string name="import_deck">Імпортувати колоду</string>
     <string name="something_wrong">Щось пішло не так. Будь ласка, спробуйте ще раз</string>
     <string name="download_failed">Не вдалося завантажити</string>
+    <string name="download_speed_unit" comment="Download speed. %1$s is an amount of data, e.g. \'1.2 MB\', giving \'1.2 MB/s\'">%1$s/s</string>
+    <string name="download_speed_unknown" comment="Placeholder shown when the current download speed is unknown">-/s</string>
+    <string name="download_time_unknown" comment="Placeholder when the remaining download time is unknown">-</string>
+    <string name="download_speed_label">Speed</string>
+    <string name="download_time_left_label">Time left</string>
     <string name="deck_download_progress_message">Ви можете використовувати інші додатки під час завантаження</string>
     <string name="check_network">Будь ласка, перевірте підключення до мережі</string>
     <string name="external_storage_unavailable">Завантаження перервано, зовнішнє сховище недоступне</string>

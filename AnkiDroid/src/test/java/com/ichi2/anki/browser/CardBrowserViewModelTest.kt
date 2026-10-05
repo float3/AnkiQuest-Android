@@ -104,15 +104,18 @@ import org.hamcrest.Matchers.instanceOf
 import org.hamcrest.Matchers.lessThan
 import org.hamcrest.Matchers.not
 import org.hamcrest.Matchers.nullValue
+import org.hamcrest.Matchers.sameInstance
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertInstanceOf
 import org.junit.runner.RunWith
 import timber.log.Timber
 import java.io.File
+import java.io.IOException
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.pathString
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -1403,7 +1406,27 @@ class CardBrowserViewModelTest : JvmTest() {
             col.reopenWithLanguage("de")
             onReinit()
 
+            assertThat(col, sameInstance(CollectionManager.withCol { this }))
             assertThat("German", firstHeading(), equalTo("Sortierfeld"))
+            assertThat(
+                "Changing the backend language keeps the collection in memory",
+                CollectionManager.withCol { db.queryString("select file from pragma_database_list where name = 'main'") },
+                equalTo(""),
+            )
+        }
+
+    @Suppress("SpellCheckingInspection")
+    @Test
+    fun `current sort - language change`() =
+        runViewModelTest {
+            fun sortField(label: String) = SortChangeNotification.CollectionOrdering(label, ColumnType.TEXT, reverse = false)
+
+            assertEquals(sortField("Sort Field"), flowOfCurrentSort.value, "English")
+
+            col.reopenWithLanguage("de")
+            onReinit()
+
+            assertEquals(sortField("Sortierfeld"), flowOfCurrentSort.value, "German")
         }
 
     @Test
@@ -1799,6 +1822,23 @@ class CardBrowserViewModelTest : JvmTest() {
     }
 
     @Test
+    fun `corrupt multiselect state file results in an empty selection`() {
+        val handle = SavedStateHandle()
+        runViewModelTest(savedStateHandle = handle, notes = 2, initMode = InitMode.NO_DELAY) {
+            selectRowAtPosition(1)
+            handle[STATE_MULTISELECT_VALUES] = generateExpensiveSavedState()
+        }
+
+        // A negative count must be treated as corrupt data, not a programming error.
+        handle.multiselectStateFile!!.writeBytes(ByteArray(4) { -1 })
+
+        runViewModelTest(savedStateHandle = handle, initMode = InitMode.NO_DELAY) {
+            assertThat("no rows are selected", selectedRows, empty())
+            assertThat("multiselect mode is preserved", isInMultiSelectMode, equalTo(true))
+        }
+    }
+
+    @Test
     fun `multiselect state is kept if saved before the selection is restored`() {
         val handle = SavedStateHandle()
         runViewModelTest(savedStateHandle = handle, notes = 2, initMode = InitMode.NO_DELAY) {
@@ -1838,6 +1878,70 @@ class CardBrowserViewModelTest : JvmTest() {
             assertThat("saved selection matches the rows", savedIds, containsInAnyOrder(*expectedIds.toTypedArray()))
         }
     }
+
+    @Test
+    fun `superseded multiselect state file is deleted`() =
+        runViewModelTest(notes = 2, initMode = InitMode.NO_DELAY) {
+            selectRowAtPosition(1)
+            val firstFile = generateExpensiveSavedState().multiselectStateFile!!
+            assertThat("first state file exists", firstFile.exists(), equalTo(true))
+
+            val secondFile = generateExpensiveSavedState().multiselectStateFile!!
+            assertThat("second state file exists", secondFile.exists(), equalTo(true))
+            assertThat("first state file was deleted", firstFile.exists(), equalTo(false))
+        }
+
+    @Test
+    fun `restored multiselect state file is deleted when superseded`() {
+        val handle = SavedStateHandle()
+        runViewModelTest(savedStateHandle = handle, notes = 2, initMode = InitMode.NO_DELAY) {
+            selectRowAtPosition(1)
+            // Simulate the saved-state provider saving its bundle.
+            handle[STATE_MULTISELECT_VALUES] = generateExpensiveSavedState()
+        }
+
+        val restoredFile = handle.multiselectStateFile!!
+        runViewModelTest(savedStateHandle = handle, initMode = InitMode.NO_DELAY) {
+            assertThat("row is selected after restore", selectedRows, hasSize(1))
+
+            val newFile = generateExpensiveSavedState().multiselectStateFile!!
+            assertThat("new state file exists", newFile.exists(), equalTo(true))
+            assertThat("restored state file was deleted", restoredFile.exists(), equalTo(false))
+        }
+    }
+
+    @Test
+    fun `failed replacement preserves restored multiselect state file`() {
+        val handle = SavedStateHandle()
+        runViewModelTest(savedStateHandle = handle, notes = 2, initMode = InitMode.NO_DELAY) {
+            selectRowAtPosition(1)
+            handle[STATE_MULTISELECT_VALUES] = generateExpensiveSavedState()
+        }
+        val restoredFile = assertNotNull(handle.multiselectStateFile)
+        val savedIds = restoredFile.getIds()
+
+        // A missing cache directory makes the replacement write fail without affecting the old file.
+        runViewModelTest(
+            savedStateHandle = handle,
+            initMode = InitMode.NO_DELAY,
+            cacheDir = File(createTransientDirectory(), "missing"),
+        ) {
+            assertThat("selection is restored", selectedRows, hasSize(1))
+            assertFailsWith<IOException> { generateExpensiveSavedState() }
+            assertThat("previous snapshot remains readable", restoredFile.getIds(), equalTo(savedIds))
+        }
+    }
+
+    @Test
+    fun `multiselect state file is deleted when an empty selection is saved`() =
+        runViewModelTest(notes = 2, initMode = InitMode.NO_DELAY) {
+            selectRowAtPosition(1)
+            val file = generateExpensiveSavedState().multiselectStateFile!!
+            endMultiSelectMode(SingleSelectCause.NavigateBack)
+
+            assertNull(generateExpensiveSavedState().multiselectStateFile)
+            assertThat("previous state file was deleted", file.exists(), equalTo(false))
+        }
 
     @Test
     fun `change note type - no selection`() =
@@ -2152,6 +2256,22 @@ class CardBrowserViewModelTest : JvmTest() {
         }
     }
 
+    @Test
+    fun `sort state follows the cards or notes mode`() {
+        col.config.set("noteSortType", "noteCrt")
+        col.config.set("browserNoteSortBackwards", true)
+
+        runViewModelTest(initMode = InitMode.NO_DELAY) {
+            setCardsOrNotes(CardsOrNotes.NOTES).join()
+            assertEquals(true, flowOfReverseDirection.value)
+            assertEquals(SortChangeNotification.CollectionOrdering("Created", ColumnType.DATE, reverse = true), flowOfCurrentSort.value)
+
+            setCardsOrNotes(CardsOrNotes.CARDS).join()
+            assertEquals(false, flowOfReverseDirection.value)
+            assertEquals(SortChangeNotification.CollectionOrdering("Sort Field", ColumnType.TEXT, reverse = false), flowOfCurrentSort.value)
+        }
+    }
+
     private fun assertDate(str: String?) {
         // 2025-01-09 @ 18:06
         assertNotNull(str)
@@ -2200,6 +2320,7 @@ class CardBrowserViewModelTest : JvmTest() {
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
         options: CardBrowserLaunchOptions? = null,
         isFragmented: Boolean = false,
+        cacheDir: File = createTransientDirectory(),
         testBody: suspend CardBrowserViewModel.() -> Unit,
     ) = runTest {
         repeat(notes) {
@@ -2209,7 +2330,7 @@ class CardBrowserViewModelTest : JvmTest() {
         val viewModel =
             CardBrowserViewModel(
                 lastDeckIdRepository = SharedPreferencesLastDeckIdRepository(),
-                cacheDir = createTransientDirectory(),
+                cacheDir = cacheDir,
                 options = options,
                 preferences = AnkiDroidApp.sharedPreferencesProvider,
                 isFragmented = isFragmented,
@@ -2451,11 +2572,11 @@ fun CardOrNoteId.toRowSelection() = RowSelection(rowId = this, topOffset = 0)
 private val SavedStateHandle.multiselectMode
     get() = get<ChangeMultiSelectMode>("multiselect")
 
+private val Bundle.multiselectStateFile: IdsFile?
+    get() = BundleCompat.getParcelable(this, CardBrowserViewModel.STATE_MULTISELECT_VALUES, IdsFile::class.java)
+
 private val SavedStateHandle.multiselectStateFile: IdsFile?
-    get() =
-        get<Bundle>(CardBrowserViewModel.STATE_MULTISELECT_VALUES)?.let { bundle ->
-            BundleCompat.getParcelable(bundle, CardBrowserViewModel.STATE_MULTISELECT_VALUES, IdsFile::class.java)
-        }
+    get() = get<Bundle>(CardBrowserViewModel.STATE_MULTISELECT_VALUES)?.multiselectStateFile
 
 /**
  * Helper function to move a card to the review queue with review history.

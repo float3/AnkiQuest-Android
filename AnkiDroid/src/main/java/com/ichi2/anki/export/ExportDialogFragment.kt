@@ -33,6 +33,7 @@ import com.ichi2.anki.browser.removeSafely
 import com.ichi2.anki.common.ALL_DECKS_ID
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.time.getTimestamp
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.compat.CompatHelper.Companion.getSerializableCompat
 import com.ichi2.anki.databinding.DialogExportOptionsBinding
 import com.ichi2.anki.exportApkgPackage
@@ -48,7 +49,9 @@ import com.ichi2.anki.utils.ext.requireParcelable
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.io.File
+import java.io.IOException
 
 /**
  * Shows the possible options for exporting(collection, decks or notes/card selection).
@@ -103,9 +106,9 @@ class ExportDialogFragment : AnalyticsDialogFragment() {
                 if (selectedIndex != 0 && !binding.deckSelector.isEnabled) return@positiveButton
                 when (ExportConfiguration.from(selectedIndex)) {
                     ExportConfiguration.Collection -> handleCollectionExport()
-                    ExportConfiguration.Apkg -> handleAnkiPackageExport()
-                    ExportConfiguration.Notes -> handleNotesInPlainTextExport()
-                    ExportConfiguration.Cards -> handleCardsInPlainTextExport()
+                    ExportConfiguration.Apkg -> withExportLimit(::handleAnkiPackageExport)
+                    ExportConfiguration.Notes -> withExportLimit(::handleNotesInPlainTextExport)
+                    ExportConfiguration.Cards -> withExportLimit(::handleCardsInPlainTextExport)
                 }
             }.create()
     }
@@ -262,8 +265,19 @@ class ExportDialogFragment : AnalyticsDialogFragment() {
         requireAnkiActivity().exportCollectionPackage(exportPath, includeMedia, legacy)
     }
 
-    private fun handleAnkiPackageExport() {
-        val limits = buildExportLimit()
+    private fun withExportLimit(export: (ExportLimit) -> Unit) {
+        val exportLimit =
+            try {
+                buildExportLimit()
+            } catch (e: IOException) {
+                Timber.w(e, "Failed to read export IDs")
+                showThemedToast(requireContext(), CommonString.something_wrong, false)
+                return
+            }
+        export(exportLimit)
+    }
+
+    private fun handleAnkiPackageExport(exportLimit: ExportLimit) {
         val exportPath =
             File(
                 getExportRootFile(),
@@ -274,7 +288,7 @@ class ExportDialogFragment : AnalyticsDialogFragment() {
             withScheduling = binding.apkgIncludeSchedule.isChecked,
             withDeckConfigs = binding.apkgIncludeDeckConfigs.isChecked,
             withMedia = binding.apkgIncludeMedia.isChecked,
-            limit = limits,
+            limit = exportLimit,
             legacy = binding.apkgExportLegacy.isChecked,
         )
     }
@@ -296,8 +310,7 @@ class ExportDialogFragment : AnalyticsDialogFragment() {
         return filename.value
     }
 
-    private fun handleNotesInPlainTextExport() {
-        val exportLimit = buildExportLimit()
+    private fun handleNotesInPlainTextExport(exportLimit: ExportLimit) {
         val exportPath =
             File(
                 getExportRootFile(),
@@ -314,8 +327,7 @@ class ExportDialogFragment : AnalyticsDialogFragment() {
         )
     }
 
-    private fun handleCardsInPlainTextExport() {
-        val exportLimit = buildExportLimit()
+    private fun handleCardsInPlainTextExport(exportLimit: ExportLimit) {
         val exportPath =
             File(
                 getExportRootFile(),
