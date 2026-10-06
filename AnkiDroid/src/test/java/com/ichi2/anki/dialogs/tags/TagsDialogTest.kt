@@ -15,9 +15,11 @@
  */
 package com.ichi2.anki.dialogs.tags
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
@@ -237,6 +239,132 @@ class TagsDialogTest : RobolectricTest() {
             parent.performClick()
             assertThat(parent.state, equalTo(UNCHECKED))
             assertThat(child.state, equalTo(UNCHECKED))
+        }
+    }
+
+    @Test
+    fun `partially selected hierarchical tags are visible at the top`() {
+        val first = addBasicNote("first")
+        val second = addBasicNote("second")
+        val unrelated = addBasicNote("unrelated")
+        col.tags.bulkAdd(listOf(first.id), "B::B")
+        col.tags.bulkAdd(listOf(second.id), "C::child::leaf")
+        col.tags.bulkAdd(listOf(unrelated.id), "aaa")
+        val args =
+            TagsDialog()
+                .withArguments(targetContext, TagsDialog.DialogType.EDIT_TAGS, listOf(first.id, second.id))
+                .requireArguments()
+
+        runTagsDialogScenario(args) { fragment ->
+            val recycler = fragment.binding.tagsList
+            recycler.measure(0, 0)
+            recycler.layout(0, 0, 100, 1000)
+            val expected = listOf("B", "B::B", "C", "C::child", "C::child::leaf", "aaa")
+            assertEquals(expected.size, recycler.adapter!!.itemCount)
+            expected.forEachIndexed { index, tag ->
+                val holder = RecyclerViewUtils.viewHolderAt<TagsArrayAdapter.ViewHolder>(recycler, index)
+                assertEquals(tag, holder.text)
+                assertEquals(if (tag == "aaa") UNCHECKED else INDETERMINATE, holder.checkboxState)
+            }
+        }
+    }
+
+    @Test
+    fun `unchecking a partially selected child clears its parent and allows rechecking`() {
+        withPartiallySelectedTags("B::B") { holders ->
+            val parent = holders.getValue("B")
+            val child = holders.getValue("B::B")
+            child.checkBoxView.performClick()
+            assertEquals(UNCHECKED, child.checkboxState)
+            assertEquals(UNCHECKED, parent.checkboxState)
+
+            child.checkBoxView.performClick()
+            assertEquals(CHECKED, child.checkboxState)
+            assertEquals(INDETERMINATE, parent.checkboxState)
+
+            child.checkBoxView.performClick()
+            assertEquals(UNCHECKED, parent.checkboxState)
+        }
+    }
+
+    @Test
+    fun `parent stays indeterminate until all partially selected children are unchecked`() {
+        withPartiallySelectedTags("B::one B::two") { holders ->
+            val parent = holders.getValue("B")
+            holders.getValue("B::one").checkBoxView.performClick()
+            assertEquals(INDETERMINATE, parent.checkboxState)
+            holders.getValue("B::two").checkBoxView.performClick()
+            assertEquals(UNCHECKED, parent.checkboxState)
+        }
+    }
+
+    @Test
+    fun `unchecking a partially selected descendant clears every ancestor`() {
+        withPartiallySelectedTags("B::child::leaf") { holders ->
+            holders.getValue("B::child::leaf").checkBoxView.performClick()
+            assertEquals(UNCHECKED, holders.getValue("B::child").checkboxState)
+            assertEquals(UNCHECKED, holders.getValue("B").checkboxState)
+        }
+    }
+
+    @Test
+    fun `unchecking a child preserves a parent tag present on some notes`() {
+        withPartiallySelectedTags("B B::child") { holders ->
+            val parent = holders.getValue("B")
+            holders.getValue("B::child").checkBoxView.performClick()
+            assertEquals(INDETERMINATE, parent.checkboxState)
+            parent.checkBoxView.performClick()
+            assertEquals(UNCHECKED, parent.checkboxState)
+        }
+    }
+
+    @Test
+    fun `explicitly changing a partially selected parent replaces its original selection`() {
+        withPartiallySelectedTags("B B::child") { holders ->
+            val parent = holders.getValue("B")
+            parent.checkBoxView.performClick()
+            assertEquals(CHECKED, parent.checkboxState)
+            parent.checkBoxView.performClick()
+            assertEquals(INDETERMINATE, parent.checkboxState)
+            holders.getValue("B::child").checkBoxView.performClick()
+            assertEquals(UNCHECKED, parent.checkboxState)
+        }
+    }
+
+    @Test
+    fun `unchecking a fully selected child preserves partially selected siblings`() {
+        withPartiallySelectedTags("B::one B::two", "B::one") { holders ->
+            val parent = holders.getValue("B")
+            holders.getValue("B::one").checkBoxView.performClick()
+            assertEquals(INDETERMINATE, parent.checkboxState)
+            assertEquals(INDETERMINATE, holders.getValue("B::two").checkboxState)
+            holders.getValue("B::two").checkBoxView.performClick()
+            assertEquals(UNCHECKED, parent.checkboxState)
+        }
+    }
+
+    private fun withPartiallySelectedTags(
+        tags: String,
+        secondTags: String = "",
+        block: (Map<String, TagsArrayAdapter.ViewHolder>) -> Unit,
+    ) {
+        val first = addBasicNote("first")
+        val second = addBasicNote("second")
+        col.tags.bulkAdd(listOf(first.id), tags)
+        col.tags.bulkAdd(listOf(second.id), secondTags)
+        val args =
+            TagsDialog()
+                .withArguments(targetContext, TagsDialog.DialogType.EDIT_TAGS, listOf(first.id, second.id))
+                .requireArguments()
+        runTagsDialogScenario(args) { fragment ->
+            val recycler = fragment.binding.tagsList
+            recycler.measure(0, 0)
+            recycler.layout(0, 0, 100, 1000)
+            val holders =
+                (0 until recycler.adapter!!.itemCount)
+                    .map { RecyclerViewUtils.viewHolderAt<TagsArrayAdapter.ViewHolder>(recycler, it) }
+                    .associateBy { it.text }
+            block(holders)
         }
     }
 
@@ -718,19 +846,20 @@ class TagsDialogTest : RobolectricTest() {
 
     @Test
     @Config(qualifiers = "w411dp-h914dp")
-    @Suppress("DEPRECATION")
-    fun `keyboard resizes the dialog on a tall screen`() {
+    fun `keyboard fits the dialog using IME insets on a tall screen`() {
         runTagsDialogScenario(editTagsArguments()) { f: TagsDialog ->
-            assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE))
+            assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING))
+            assertThat(f.fitsKeyboardInsets, equalTo(true))
         }
     }
 
     @Test
     @Config(qualifiers = "w411dp-h914dp")
-    fun `rotating to a short screen pans the dialog 22082`() {
+    fun `rotation switches between fitting the IME and panning 22082`() {
         runTagsDialogScenario(editTagsArguments()) { f: TagsDialog ->
+            val portrait = Configuration(f.resources.configuration)
             val landscape =
-                Configuration(f.resources.configuration).apply {
+                Configuration(portrait).apply {
                     screenWidthDp = 914
                     screenHeightDp = 411
                     orientation = Configuration.ORIENTATION_LANDSCAPE
@@ -738,8 +867,17 @@ class TagsDialogTest : RobolectricTest() {
             f.onConfigurationChanged(landscape)
 
             assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN))
+            assertThat(f.fitsKeyboardInsets, equalTo(false))
+
+            f.onConfigurationChanged(portrait)
+            assertThat(f.softInputAdjustment, equalTo(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING))
+            assertThat(f.fitsKeyboardInsets, equalTo(true))
         }
     }
+
+    @get:SuppressLint("NewApi") // These dialog tests run on the target SDK (API 30+).
+    private val TagsDialog.fitsKeyboardInsets: Boolean
+        get() = requireDialog().window!!.attributes.fitInsetsTypes and WindowInsets.Type.ime() != 0
 
     private val TagsDialog.softInputAdjustment: Int
         get() = requireDialog().window!!.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST
