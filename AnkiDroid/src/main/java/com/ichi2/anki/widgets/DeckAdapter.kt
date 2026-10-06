@@ -169,7 +169,20 @@ class DeckAdapter(
         binding.deckName.text = node.lastDeckNameComponent
         binding.deckName.setTextColor(if (node.filtered) deckNameDynColor else deckNameDefaultColor)
 
-        binding.deckDailyStatus.isVisible = node.dailyState != null
+        val dailyStatus = node.dailyState?.status
+        binding.deckDailyStatus.isVisible = dailyStatus == com.ichi2.anki.ankiquest.DailyDeckStatus.LEARNING_LATER
+        val finished = dailyStatus == com.ichi2.anki.ankiquest.DailyDeckStatus.DONE
+        binding.deckName.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, if (finished) R.drawable.ic_done else 0, 0)
+        TextViewCompat.setCompoundDrawableTintList(
+            binding.deckName,
+            if (finished) {
+                android.content.res.ColorStateList
+                    .valueOf(binding.deckName.context.getColor(R.color.aq_deck_green))
+            } else {
+                null
+            },
+        )
+        binding.deckName.compoundDrawablePadding = 4.dp.toPx(binding.deckName.context)
         node.dailyState?.let { daily ->
             val status = binding.deckDailyStatus
             status.text = daily.label(status.context)
