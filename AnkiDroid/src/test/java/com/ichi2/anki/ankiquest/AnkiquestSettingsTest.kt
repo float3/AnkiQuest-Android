@@ -10,6 +10,7 @@ import android.webkit.WebView
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import io.mockk.coEvery
@@ -102,7 +103,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
         saveControllerForCleanup(controller)
         val menu = RoboMenu()
         controller.get().onCreateOptionsMenu(menu)
-        assertTrue((0 until menu.size()).any { menu.getItem(it).title == targetContext.getString(R.string.settings) })
+        assertTrue((0 until menu.size()).any { menu.getItem(it).title == targetContext.getString(CommonString.settings) })
     }
 
     @Test
