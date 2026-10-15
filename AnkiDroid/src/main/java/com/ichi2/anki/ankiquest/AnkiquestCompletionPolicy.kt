@@ -50,6 +50,7 @@ internal object AnkiquestCompletionPolicy {
         id: Long,
         cid: Long,
         lastIvl: Long,
+        ivl: Long,
         timeMs: Long,
         kind: Int,
     ): JSONObject =
@@ -57,6 +58,7 @@ internal object AnkiquestCompletionPolicy {
             .put("id", id)
             .put("cid", cid)
             .put("last_ivl", lastIvl)
+            .put("ivl", ivl)
             .put("time_ms", timeMs)
             .put("kind", kind)
 }

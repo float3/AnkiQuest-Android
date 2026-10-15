@@ -576,7 +576,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             val rows = JSONArray()
             db
                 .query(
-                    "select id, cid, lastIvl, time, type from revlog " +
+                    "select id, cid, lastIvl, ivl, time, type from revlog " +
                         "where id > ? and ease > 0 and type < 4 order by id limit $MAX_PENDING",
                     afterId,
                 ).use { cursor ->
@@ -587,7 +587,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                                 cursor.getLong(1),
                                 cursor.getLong(2),
                                 cursor.getLong(3),
-                                cursor.getInt(4),
+                                cursor.getLong(4),
+                                cursor.getInt(5),
                             ),
                         )
                     }

@@ -58,7 +58,15 @@ class AnkiquestSharedFixturesTest {
         check(cases.isNotEmpty())
         for (case in cases) {
             val row = case.getJSONArray("row")
-            val review = AnkiquestCompletionPolicy.review(row.getLong(0), row.getLong(1), row.getLong(2), row.getLong(3), row.getInt(4))
+            val review =
+                AnkiquestCompletionPolicy.review(
+                    row.getLong(0),
+                    row.getLong(1),
+                    row.getLong(2),
+                    row.getLong(3),
+                    row.getLong(4),
+                    row.getInt(5),
+                )
             val expected = case.getJSONObject("review")
             val keys = expected.keys().asSequence().toSet()
             assertEquals(keys, review.keys().asSequence().toSet(), case.toString())
