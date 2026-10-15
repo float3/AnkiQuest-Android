@@ -22,6 +22,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.widget.getAppWidgetManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
@@ -143,9 +144,9 @@ open class AnkiquestWidget : AppWidgetProvider() {
             context: Context,
             style: Style,
         ): IntArray =
-            AppWidgetManager
-                .getInstance(context)
-                .getAppWidgetIds(ComponentName(context, style.provider))
+            getAppWidgetManager(context)
+                ?.getAppWidgetIds(ComponentName(context, style.provider))
+                ?: IntArray(0)
 
         internal fun widgetDestination(context: Context): Intent =
             Intent(context, DeckPicker::class.java)
@@ -158,7 +159,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 if (ids.isEmpty()) continue
                 val views = RemoteViews(context.packageName, style.layout)
                 views.setTextViewText(R.id.ankiquest_widget_updated, "…")
-                AppWidgetManager.getInstance(context).partiallyUpdateAppWidget(ids, views)
+                getAppWidgetManager(context)?.partiallyUpdateAppWidget(ids, views)
             }
         }
 
@@ -175,7 +176,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             fetchedAt: Long,
             offline: Boolean,
         ) {
-            val manager = AppWidgetManager.getInstance(context)
+            val manager = getAppWidgetManager(context) ?: return
             for (style in styles) {
                 val ids = widgetIds(context, style)
                 if (ids.isEmpty()) continue
