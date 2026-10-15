@@ -108,6 +108,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     fun init(app: Application) {
         this.app = app
         app.registerActivityLifecycleCallbacks(this)
+        // This is a JVM singleton and subscribes without a lifecycle owner, so
+        // nothing ever takes it off the list. A second Application in the same
+        // process -- every Robolectric test builds one -- would subscribe it
+        // twice, which ChangeManager refuses in a debug build. Dropping any
+        // earlier registration first also survives resetForTesting().
+        ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
         AnkiquestPoll.schedule(app)
     }
