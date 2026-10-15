@@ -15,6 +15,11 @@
         android:summary="@string/ankiquest_summary_preference_summary"
         android:title="@string/ankiquest_summary_preference_title" />
     <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="@string/ankiquest_deck_status_key"
+        android:summary="@string/ankiquest_deck_status_summary"
+        android:title="@string/ankiquest_deck_status_title" />
+    <SwitchPreferenceCompat
         android:key="@string/ankiquest_streak_protection_key"
         android:persistent="false"
         android:summary="@string/ankiquest_streak_protection_summary"

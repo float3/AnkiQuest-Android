@@ -110,6 +110,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.ankiquest_upload_all_key,
             R.string.ankiquest_check_updates_key,
             R.string.ankiquest_update_channel_key,
+            R.string.ankiquest_deck_status_key,
             R.string.ankiquest_deck_notifications_key,
             R.string.ankiquest_avatar_key,
             R.string.ankiquest_companion_key,

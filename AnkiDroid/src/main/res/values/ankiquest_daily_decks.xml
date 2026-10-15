@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="ankiquest_deck_status_key" translatable="false">ankiquestDeckStatus</string>
+    <string name="ankiquest_deck_status_title" maxLength="41">Daily status in the deck list</string>
+    <string name="ankiquest_deck_status_summary">Mark decks finished today, and learning due later today</string>
     <string name="aq_deck_later">Learning later today · next at %1$s</string>
     <string name="aq_deck_done">Done today</string>
     <string name="aq_deck_nothing">Nothing scheduled today</string>
