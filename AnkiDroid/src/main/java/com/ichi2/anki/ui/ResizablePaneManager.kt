@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2025 Hari Srinivasan <harisrini21@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 Hari Srinivasan <harisrini21@gmail.com>
 
 package com.ichi2.anki.ui
 
@@ -32,14 +19,15 @@ import timber.log.Timber
 class ResizablePaneManager(
     private val parentLayout: LinearLayout,
     private val divider: View,
-    private val leftPane: View,
-    private val rightPane: View,
+    private val startPane: View,
+    private val endPane: View,
     private val sharedPrefs: SharedPreferences,
-    private val leftPaneWeightKey: String,
-    private val rightPaneWeightKey: String,
+    private val startPaneWeightKey: String,
+    private val endPaneWeightKey: String,
     private val minWeight: Float = 0.5f, // Minimum weight for each pane
     private val dragColor: Int = divider.context.getColor(R.color.drag_divider_color),
     private val idleColor: Int = divider.context.getColor(R.color.idle_divider_color),
+    private val onResizingChanged: (Boolean) -> Unit = {},
 ) {
     init {
         setupResizableDivider()
@@ -50,8 +38,8 @@ class ResizablePaneManager(
         loadSavedWeights()
 
         var initialTouchX = 0f
-        var initialLeftWeight = 0f
-        var initialRightWeight = 0f
+        var initialStartWeight = 0f
+        var initialEndWeight = 0f
 
         divider.setOnHoverListener { _, event ->
             when (event.action) {
@@ -74,8 +62,8 @@ class ResizablePaneManager(
         }
 
         divider.setOnTouchListener { v, event ->
-            val leftParams = leftPane.layoutParams as LinearLayout.LayoutParams
-            val rightParams = rightPane.layoutParams as LinearLayout.LayoutParams
+            val startParams = startPane.layoutParams as LinearLayout.LayoutParams
+            val endParams = endPane.layoutParams as LinearLayout.LayoutParams
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -87,36 +75,38 @@ class ResizablePaneManager(
 
                     v.setBackgroundColor(dragColor)
                     initialTouchX = event.rawX
-                    initialLeftWeight = leftParams.weight
-                    initialRightWeight = rightParams.weight
+                    initialStartWeight = startParams.weight
+                    initialEndWeight = endParams.weight
+                    onResizingChanged(true)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     v.parent.requestDisallowInterceptTouchEvent(true)
 
-                    val deltaX = event.rawX - initialTouchX
+                    // The start pane is on the right in RTL layouts, so it shrinks when dragging right.
+                    val deltaX = (event.rawX - initialTouchX).invertIfRtl(parentLayout)
                     val totalParentWidth = parentLayout.width.toFloat()
 
                     if (totalParentWidth > 0) { // Avoid division by zero
-                        val sumOfInitialWeights = initialLeftWeight + initialRightWeight
+                        val sumOfInitialWeights = initialStartWeight + initialEndWeight
 
                         // Calculate the change in weight based on the drag distance
                         val weightDelta = (deltaX / totalParentWidth) * sumOfInitialWeights
 
-                        var newLeftWeight = initialLeftWeight + weightDelta
+                        var newStartWeight = initialStartWeight + weightDelta
 
-                        // Clamp the new weight for the left pane
+                        // Clamp the new weight for the start pane
                         // Ensures it's not too small and not too large (leaving space for the other pane's minWeight)
-                        newLeftWeight = newLeftWeight.coerceIn(minWeight, sumOfInitialWeights - minWeight)
+                        newStartWeight = newStartWeight.coerceIn(minWeight, sumOfInitialWeights - minWeight)
 
-                        val newRightWeight = sumOfInitialWeights - newLeftWeight
+                        val newEndWeight = sumOfInitialWeights - newStartWeight
 
                         // Apply the new weights
-                        leftParams.weight = newLeftWeight
-                        rightParams.weight = newRightWeight
+                        startParams.weight = newStartWeight
+                        endParams.weight = newEndWeight
 
-                        leftPane.layoutParams = leftParams
-                        rightPane.layoutParams = rightParams
+                        startPane.layoutParams = startParams
+                        endPane.layoutParams = endParams
 
                         // Request layout update for the parent
                         parentLayout.requestLayout()
@@ -125,11 +115,12 @@ class ResizablePaneManager(
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     v.setBackgroundColor(idleColor)
+                    onResizingChanged(false)
 
                     // Save the new weights to SharedPreferences
                     sharedPrefs.edit {
-                        putFloat(leftPaneWeightKey, leftParams.weight)
-                        putFloat(rightPaneWeightKey, rightParams.weight)
+                        putFloat(startPaneWeightKey, startParams.weight)
+                        putFloat(endPaneWeightKey, endParams.weight)
                     }
                     true
                 }
@@ -140,19 +131,19 @@ class ResizablePaneManager(
 
     private fun loadSavedWeights() {
         try {
-            val leftParams = leftPane.layoutParams as LinearLayout.LayoutParams
-            val rightParams = rightPane.layoutParams as LinearLayout.LayoutParams
+            val startParams = startPane.layoutParams as LinearLayout.LayoutParams
+            val endParams = endPane.layoutParams as LinearLayout.LayoutParams
 
             // Load saved weights from SharedPreferences
-            val savedLeftWeight = sharedPrefs.getFloat(leftPaneWeightKey, leftParams.weight)
-            val savedRightWeight = sharedPrefs.getFloat(rightPaneWeightKey, rightParams.weight)
+            val savedStartWeight = sharedPrefs.getFloat(startPaneWeightKey, startParams.weight)
+            val savedEndWeight = sharedPrefs.getFloat(endPaneWeightKey, endParams.weight)
 
             // Apply the saved weights
-            leftParams.weight = savedLeftWeight
-            rightParams.weight = savedRightWeight
+            startParams.weight = savedStartWeight
+            endParams.weight = savedEndWeight
 
-            leftPane.layoutParams = leftParams
-            rightPane.layoutParams = rightParams
+            startPane.layoutParams = startParams
+            endPane.layoutParams = endParams
 
             // Request layout update for the parent
             parentLayout.requestLayout()
@@ -161,3 +152,5 @@ class ResizablePaneManager(
         }
     }
 }
+
+private fun Float.invertIfRtl(view: View): Float = if (view.layoutDirection == View.LAYOUT_DIRECTION_RTL) -this else this

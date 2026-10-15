@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.tripletPlay)
     id("ankidroid.android.app")
     id("ankidroid.plugins.jacoco")
+    id("ankidroid.plugins.robolectric-downloader")
     alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
@@ -132,9 +133,9 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode = 22600102
+        versionCode = 22600104
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName = "2.26.0alpha2"
+        versionName = "2.26.0alpha4"
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "com.ichi2.testutils.NewCollectionPathTestRunner"
@@ -739,8 +740,6 @@ afterEvaluate {
     }
 }
 
-apply(from = "./robolectricDownloader.gradle")
-
 android {
     lint {
         // Analyze project-local dependencies (:common:android etc.) as part of this
@@ -794,7 +793,8 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.browser)
-    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.concurrent.futures.ktx)
+    implementation(libs.androidx.core)
     implementation(libs.androidx.core.remoteviews)
     implementation(libs.androidx.draganddrop)
     implementation(libs.androidx.exifinterface)
@@ -844,7 +844,7 @@ dependencies {
     implementation(libs.commons.collections4) // SetUniqueList
     implementation(libs.commons.io) // FileUtils.contentEquals
     implementation(libs.okhttp)
-    implementation(libs.slf4j.timber)
+    implementation(libs.slf4j.api)
     implementation(libs.jakewharton.timber)
     implementation(libs.jsoup)
     implementation(libs.java.semver) // For AnkiDroid JS API Versioning
@@ -874,7 +874,8 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.hamcrest)
     testImplementation(libs.test.parameter.injector)
-    // robolectricDownloader.gradle *may* need a new SDK jar entry if they release one or if we change targetSdk. Instructions in that gradle file.
+    // ankidroid.plugins.robolectric-downloader may need a new SDK jar entry
+    // when Robolectric or targetSdk changes. See the instructions in that plugin.
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.compose.ui.test.junit4)
     // Needed for createComposeRule(), but not for createAndroidComposeRule<YourActivity>()

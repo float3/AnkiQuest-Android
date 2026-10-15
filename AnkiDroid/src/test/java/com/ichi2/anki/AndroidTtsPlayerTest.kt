@@ -28,11 +28,18 @@ import org.hamcrest.Matchers.nullValue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Locale
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /** Test for [AndroidTtsPlayer] */
 @RunWith(AndroidJUnit4::class)
 class AndroidTtsPlayerTest {
+    @Test
+    fun `network timeout is reported with its specific error code`() {
+        val error = AndroidTtsError.fromErrorCode(TextToSpeech.ERROR_NETWORK_TIMEOUT)
+
+        assertThat(error.developerString, equalTo("ERROR_NETWORK_TIMEOUT"))
+    }
+
     @Test
     fun `locale fallback prefers the first installed voice`() {
         val unavailable = frenchVoice("unavailable", installed = false)
@@ -97,7 +104,7 @@ class AndroidTtsPlayerTest {
             player.init(this)
 
             try {
-                val result = withTimeout(PLAYBACK_TIMEOUT_MS.milliseconds) { player.play("bonjour", unavailable) }
+                val result = withTimeout(PLAYBACK_TIMEOUT) { player.play("bonjour", unavailable) }
 
                 assertThat(result.success, equalTo(true))
                 verify(exactly = 1) { tts.voice = unavailable.voice }
@@ -165,8 +172,8 @@ class AndroidTtsPlayerTest {
                 speed = null,
                 otherArgs = emptyList(),
             )
-        val first = runBlocking { withTimeout(PLAYBACK_TIMEOUT_MS.milliseconds) { player.play(tag) } }
-        val second = runBlocking { withTimeout(PLAYBACK_TIMEOUT_MS.milliseconds) { player.play(tag) } }
+        val first = runBlocking { withTimeout(PLAYBACK_TIMEOUT) { player.play(tag) } }
+        val second = runBlocking { withTimeout(PLAYBACK_TIMEOUT) { player.play(tag) } }
 
         assertThat("first playback fails", first.success, equalTo(false))
         assertThat("second playback fails", second.success, equalTo(false))
@@ -216,7 +223,7 @@ class AndroidTtsPlayerTest {
     ) {
         fun play(voice: AndroidTtsVoice): TtsCompletionStatus =
             runBlocking {
-                withTimeout(PLAYBACK_TIMEOUT_MS.milliseconds) {
+                withTimeout(PLAYBACK_TIMEOUT) {
                     player.play(
                         TTSTag(
                             fieldText = "hello world",
@@ -259,6 +266,6 @@ class AndroidTtsPlayerTest {
         private const val ENGINE_A = "com.example.engine.a"
         private const val ENGINE_B = "com.example.engine.b"
         private const val ENGINE_FAILING = "com.example.engine.failing"
-        private const val PLAYBACK_TIMEOUT_MS = 5_000L
+        private val PLAYBACK_TIMEOUT = 5.seconds
     }
 }

@@ -28,6 +28,8 @@ on:
       - 'gh-readonly-queue/**'
       # Dependabot branches are already checked by the pull_request trigger.
       - 'dependabot/**'
+      # Crowdin translations are already checked by the pull_request trigger.
+      - 'i18n_sync'
   merge_group:
 
 permissions:
@@ -176,6 +178,10 @@ jobs:
       - name: De-flake EmptyApplication Tests (schedule/manual run only)
         if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.iteration == 1 && matrix.os == 'ubuntu-latest'
         run: ./gradlew testFullDebugUnitTest -PemptyApplication --daemon
+
+      - name: Report Unit Test Results
+        if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''
+        run: python3 .github/report_test_failures.py . --pattern "build/test-results/**/TEST-*.xml" --title "Unit test failures"
 
       - name: Store Logcat as Artifact
         # cancelled() handles test timeouts

@@ -71,6 +71,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.work.NetworkType
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import anki.collection.OpChanges
@@ -127,6 +128,7 @@ import com.ichi2.anki.databinding.IncludeDeckPickerBinding
 import com.ichi2.anki.databinding.IncludeFloatingAddButtonBinding
 import com.ichi2.anki.deckpicker.BackgroundImage
 import com.ichi2.anki.deckpicker.DeckDeletionResult
+import com.ichi2.anki.deckpicker.DeckPickerProgress
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
 import com.ichi2.anki.deckpicker.DeckPickerViewModel.AnkiDroidEnvironment
 import com.ichi2.anki.deckpicker.DeckPickerViewModel.FlattenedDeckList
@@ -148,6 +150,8 @@ import com.ichi2.anki.dialogs.DeckPickerBackupNoSpaceLeftDialog
 import com.ichi2.anki.dialogs.DeckPickerConfirmDeleteDeckDialog
 import com.ichi2.anki.dialogs.DeckPickerContextMenu
 import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
+import com.ichi2.anki.dialogs.DeckPickerMaintenanceDialog
+import com.ichi2.anki.dialogs.DeckPickerMaintenanceDialog.Check
 import com.ichi2.anki.dialogs.DeckPickerNoSpaceLeftDialog
 import com.ichi2.anki.dialogs.DialogHandlerMessage
 import com.ichi2.anki.dialogs.EditDeckDescriptionDialog
@@ -175,6 +179,7 @@ import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.pages.CongratsPage
 import com.ichi2.anki.pages.CongratsPage.Companion.onDeckCompleted
+import com.ichi2.anki.progress.observeProgress
 import com.ichi2.anki.receiver.SdCardReceiver
 import com.ichi2.anki.reviewreminders.ReviewReminderScope
 import com.ichi2.anki.reviewreminders.ReviewRemindersDatabase
@@ -200,6 +205,7 @@ import com.ichi2.anki.utils.ShortcutUtils
 import com.ichi2.anki.utils.ext.dismissAllDialogFragments
 import com.ichi2.anki.utils.ext.doOnScrolled
 import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
+import com.ichi2.anki.utils.ext.onGlobalLayout
 import com.ichi2.anki.utils.ext.positionIsVisible
 import com.ichi2.anki.utils.ext.setFragmentResultListener
 import com.ichi2.anki.utils.ext.setImageDrawableSafe
@@ -221,7 +227,6 @@ import com.ichi2.utils.configureView
 import com.ichi2.utils.customView
 import com.ichi2.utils.dp
 import com.ichi2.utils.message
-import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
 import com.ichi2.utils.show
 import com.ichi2.utils.showDialogIfWebViewOutdated
@@ -233,6 +238,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.ankiweb.rsdroid.Translations
+import net.ankiweb.rsdroid.exceptions.BackendInvalidInputException.BackendCollectionNotOpenException
 import timber.log.Timber
 import java.io.File
 import kotlin.time.Duration
@@ -657,6 +663,14 @@ open class DeckPicker :
             handleContextMenuSelection(result.option, result.deckId)
         }
 
+        setFragmentResultListener(Check.MEDIA.requestKey) { _, _ ->
+            Timber.i("Starting media check")
+            startActivity(MediaCheckFragment.getIntent(this))
+        }
+        setFragmentResultListener(Check.DATABASE.requestKey) { _, _ ->
+            performIntegrityCheck()
+        }
+
         registerStudyOptionsStudyHandler {
             Timber.d("Opening study screen from DeckPicker's study options panel")
             openReviewer()
@@ -678,6 +692,7 @@ open class DeckPicker :
             onReceiveContentListener,
         )
 
+        observeProgress(viewModel) { progress -> progressMessage(progress) }
         setupFlows()
     }
 
@@ -758,7 +773,7 @@ open class DeckPicker :
         }
         // Insets move the FAB's ancestors without changing the FAB's bounds within its parent.
         // Wait until the whole hierarchy is laid out before reading positions in the window.
-        deckPickerBinding.root.viewTreeObserver.addOnGlobalLayoutListener {
+        deckPickerBinding.root.onGlobalLayout(this) {
             setRecyclerViewBottomPaddingAbove(listAnchor())
         }
         deckPickerBinding.reviewSummaryTextView.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
@@ -938,7 +953,8 @@ open class DeckPicker :
         fun onDecksReloaded(param: Unit) {
             hideProgressBar()
             heatmapViewModel.refresh()
-            tryShowStudyOptionsPanel()
+            // TODO: Refresh deck metadata in the reminder pane
+            fragment?.refreshInterface()
         }
 
         fun onStartupResponse(response: StartupResponse) {
@@ -955,21 +971,29 @@ open class DeckPicker :
                     // Set flowOfStartupResponse to null after handling so it isn't re-emitted on resume.
                     // Must stay here: clearing in ViewModel would break cold start (collector is only active at RESUMED).
                     viewModel.flowOfStartupResponse.value = null
+                    invalidateOptionsMenu()
                     showStartupScreensAndDialogs(sharedPrefs(), 0)
 
                     if (tryShowStudyOptionsPanel()) {
                         ResizablePaneManager(
                             parentLayout = requireNotNull(binding.deckpickerXlView) { "deckpickerXlView" },
                             divider = requireNotNull(binding.resizingDivider) { "resizingDivider" },
-                            leftPane = deckPickerBinding.root,
-                            rightPane = requireNotNull(binding.studyoptionsFragment) { "studyoptionsFragment" },
+                            startPane = deckPickerBinding.root,
+                            endPane = requireNotNull(binding.studyoptionsFragment) { "studyoptionsFragment" },
                             sharedPrefs = Prefs.getUiConfig(this),
-                            leftPaneWeightKey = PREF_DECK_PICKER_PANE_WEIGHT,
-                            rightPaneWeightKey = PREF_STUDY_OPTIONS_PANE_WEIGHT,
+                            startPaneWeightKey = PREF_DECK_PICKER_PANE_WEIGHT,
+                            endPaneWeightKey = PREF_STUDY_OPTIONS_PANE_WEIGHT,
+                            onResizingChanged = { isResizing -> fragment?.onResizingChanged(isResizing) },
                         )
                     }
                 }
-                is StartupResponse.FatalError -> handleStartupFailure(response.failure)
+                is StartupResponse.FatalError -> {
+                    // the startup check is asynchronous, so the menu may already have been
+                    // built by the time a failure arrives; rebuild it so onCreateOptionsMenu
+                    // sees the error and blanks it
+                    invalidateOptionsMenu()
+                    handleStartupFailure(response.failure)
+                }
             }
         }
 
@@ -983,6 +1007,12 @@ open class DeckPicker :
 
         viewModel.deckDeletedNotification.launchCollectionInLifecycleScope(::onDeckDeleted)
         viewModel.flowOfDeleteDeckConfirmation.launchCollectionInLifecycleScope(::showDeleteDeckConfirmationDialog)
+        viewModel.flowOfRenameDeck.launchCollectionInLifecycleScope(::renameDeckDialog)
+        viewModel.flowOfStudyDeck.launchCollectionInLifecycleScope { deckId ->
+            launchCatchingTask {
+                handleDeckSelection(deckId, DeckSelectionType.SKIP_STUDY_OPTIONS)
+            }
+        }
         viewModel.emptyCardsNotification.launchCollectionInLifecycleScope(::onCardsEmptied)
         viewModel.flowOfDeckCountsChanged.launchCollectionInLifecycleScope(::onDeckCountsChanged)
         viewModel.flowOfDestination.launchCollectionInLifecycleScope(::onDestinationChanged)
@@ -1138,6 +1168,8 @@ open class DeckPicker :
                 override val preferences: SharedPreferences
                     get() = context.sharedPrefs()
 
+                override fun decideStorageIfUndecided() = InitialActivity.decideStorageIfUndecided(context)
+
                 override fun initializeAnkiDroidFolder(): Boolean = CollectionHelper.isCurrentAnkiDroidDirAccessible(context)
             }
 
@@ -1249,7 +1281,7 @@ open class DeckPicker :
         menuInflater.inflate(R.menu.deck_picker, menu)
         if (AnkiquestNavigation.enabled() && !fragmented) {
             menu.findItem(R.id.action_ankiquest)?.apply {
-                setTitle(R.string.browse_cards)
+                setTitle(CommonString.browse_cards)
                 setIcon(R.drawable.ic_flashcard_black)
                 setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             }
@@ -1272,6 +1304,7 @@ open class DeckPicker :
         // redraw menu synchronously to avoid flicker
         updateMenuFromState(menu)
         updateSearchVisibilityFromState(menu)
+        restoreSearchState(menu)
         // ...then launch a task to possibly update the visible icons.
         // Store the job so that tests can easily await it. In the future
         // this may be better done by injecting a custom test scheduler
@@ -1280,6 +1313,7 @@ open class DeckPicker :
             launchCatchingTask {
                 viewModel.refreshMenuState()
                 updateSearchVisibilityFromState(menu)
+                restoreSearchState(menu)
                 updateDeckRelatedMenuItems(menu)
                 updateMenuFromState(menu)
             }
@@ -1319,6 +1353,7 @@ open class DeckPicker :
                 // When SearchItem is expanded
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
                     Timber.i("DeckPicker:: SearchItem opened")
+                    viewModel.updateDeckSearchExpanded(true)
                     // Hide the floating action button if it is visible
                     floatingActionMenu.hideFloatingActionButton()
                     activeSnackBar?.anchorView = null
@@ -1328,6 +1363,8 @@ open class DeckPicker :
                 // When SearchItem is collapsed
                 override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
                     Timber.i("DeckPicker:: SearchItem closed")
+                    viewModel.updateDeckSearchExpanded(false)
+                    viewModel.updateDeckFilter("")
                     // Show the floating action button if it is hidden
                     floatingActionMenu.showFloatingActionButton()
                     activeSnackBar?.anchorView = floatingActionButtonBinding.fabMain
@@ -1336,7 +1373,8 @@ open class DeckPicker :
             },
         )
 
-        (menuItem.actionView as AccessibleSearchView).run {
+        val searchView = menuItem.actionView as AccessibleSearchView
+        searchView.run {
             queryHint = getString(CommonString.search_decks)
             setOnQueryTextListener(
                 object : SearchView.OnQueryTextListener {
@@ -1346,7 +1384,21 @@ open class DeckPicker :
                     }
 
                     override fun onQueryTextChange(newText: String): Boolean {
-                        viewModel.updateDeckFilter(newText)
+                        if (newText.isNotEmpty()) {
+                            viewModel.updateDeckFilter(newText)
+                        } else {
+                            // Ignore empty callbacks from a replaced action view.
+                            searchView.post {
+                                if (
+                                    !isDestroyed &&
+                                    toolbarSearchView === searchView &&
+                                    menuItem.isActionViewExpanded &&
+                                    searchView.query.isEmpty()
+                                ) {
+                                    viewModel.updateDeckFilter("")
+                                }
+                            }
+                        }
                         return true
                     }
                 },
@@ -1355,23 +1407,35 @@ open class DeckPicker :
         searchDecksIcon = menuItem
     }
 
+    private fun restoreSearchState(menu: Menu) {
+        val searchItem = menu.findItem(R.id.deck_picker_action_filter)
+        if (viewModel.isDeckSearchExpanded && searchItem.isVisible) {
+            val searchView = searchItem.actionView as AccessibleSearchView
+            val query = viewModel.deckSearchQuery
+            // Expanding the action view clears its text, so restore the query afterwards.
+            searchItem.expandActionView()
+            searchView.setQuery(query, false)
+        }
+    }
+
     fun updateMenuFromState(menu: Menu) {
         viewModel.optionsMenuState?.run {
-            updateUndoLabelFromState(menu.findItem(R.id.action_undo), undoLabel, undoAvailable)
-            updateSyncIconFromState(menu.findItem(R.id.action_sync), this)
+            // The menu may have been cleared while refreshMenuState was suspended.
+            menu.findItem(R.id.action_undo)?.let { updateUndoLabelFromState(it, undoLabel, undoAvailable) }
+            menu.findItem(R.id.action_sync)?.let { updateSyncIconFromState(it, this) }
         }
         updateDeckRelatedMenuItems(menu)
     }
 
     /**
-     * Shows/hides deck related menu items based on the collection being empty or not.
+     * Shows/hides deck related menu items using the ViewModel's action eligibility.
      */
     private fun updateDeckRelatedMenuItems(menu: Menu) {
         viewModel.optionsMenuState?.run {
-            menu.findItem(R.id.action_deck_rename)?.isVisible = !isColEmpty
-            menu.findItem(R.id.action_deck_delete)?.isVisible = !isColEmpty
+            menu.findItem(R.id.action_deck_rename)?.isVisible = showDeckActions
+            menu.findItem(R.id.action_deck_delete)?.isVisible = showDeckActions
             // added to the menu by StudyOptionsFragment
-            menu.findItem(R.id.action_deck_or_study_options)?.isVisible = !isColEmpty
+            menu.findItem(R.id.action_deck_or_study_options)?.isVisible = showDeckActions
         }
     }
 
@@ -1497,17 +1561,12 @@ open class DeckPicker :
                 return true
             }
             R.id.action_deck_rename -> {
-                launchCatchingTask {
-                    val targetDeckId = withCol { decks.selected() }
-                    renameDeckDialog(targetDeckId)
-                }
+                viewModel.requestRenameSelectedDeck()
                 return true
             }
             R.id.action_deck_delete -> {
                 launchCatchingTask {
-                    withProgress(resources.getString(CommonString.delete_deck)) {
-                        viewModel.deleteSelectedDeck().join()
-                    }
+                    viewModel.deleteSelectedDeck().join()
                 }
                 return true
             }
@@ -1528,25 +1587,14 @@ open class DeckPicker :
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     internal fun createBackup(): Job =
         launchCatchingTask {
-            val created =
-                withProgress(message = TR.sentenceCase.creatingBackup) {
-                    performBackupInBackground(true)
-                }
+            val created = viewModel.createBackup()
             val message = if (created) TR.profilesBackupCreated() else TR.profilesBackupUnchanged()
             showThemedToast(this@DeckPicker, message, false)
         }
 
     private fun showMediaCheckDialog() {
         Timber.i("showing media check dialog")
-        AlertDialog.Builder(this).show {
-            title(text = TR.sentenceCase.checkMediaTitle)
-            message(text = getString(CommonString.check_media_warning))
-            positiveButton(CommonString.dialog_ok) {
-                Timber.i("Starting media check")
-                startActivity(MediaCheckFragment.getIntent(this@DeckPicker))
-            }
-            negativeButton(CommonString.dialog_cancel)
-        }
+        DeckPickerMaintenanceDialog.newInstance(Check.MEDIA).show(supportFragmentManager, DeckPickerMaintenanceDialog.TAG)
     }
 
     fun showCreateFilteredDeckDialog() {
@@ -1601,7 +1649,7 @@ open class DeckPicker :
                                     summary.duration(this@DeckPicker),
                                     summary.remaining,
                                 ),
-                            ).setNegativeButton(R.string.multimedia_editor_field_editing_done, null)
+                            ).setNegativeButton(CommonString.multimedia_editor_field_editing_done, null)
                             .setNeutralButton(R.string.ankiquest_summary_progress) { _, _ ->
                                 startActivity(AnkiquestActivity.intent(this@DeckPicker, null))
                             }
@@ -1639,6 +1687,7 @@ open class DeckPicker :
         if (navDrawerIsReady() && hasCollectionStoragePermissions()) {
             refreshState()
         }
+        viewModel.onScreenResumed()
         message?.let { dialogHandler.sendStoredMessage(it) }
     }
 
@@ -1668,6 +1717,7 @@ open class DeckPicker :
             }
         }
         outState.putSerializable("mediaUsnOnConflict", mediaUsnOnConflict)
+        outState.putSerializable("mediaNetworkTypeOnConflict", mediaNetworkTypeOnConflict)
         floatingActionMenu.showFloatingActionButton()
     }
 
@@ -1679,6 +1729,8 @@ open class DeckPicker :
             importColpkgListener = DatabaseRestorationListener(this, path)
         }
         mediaUsnOnConflict = savedInstanceState.getSerializableCompat("mediaUsnOnConflict")
+        mediaNetworkTypeOnConflict =
+            savedInstanceState.getSerializableCompat<NetworkType>("mediaNetworkTypeOnConflict") ?: NetworkType.UNMETERED
         showRestoredBottomNavTab()
     }
 
@@ -1697,18 +1749,23 @@ open class DeckPicker :
      */
     private suspend fun automaticSync(runInBackground: Boolean = false): Boolean {
         /**
-         * @return whether there are collection changes to be sync.
+         * @return whether there are collection changes to sync, or null if the collection is closed.
          *
          * It DOES NOT include if there are media to be synced.
          */
-        suspend fun areThereChangesToSync(): Boolean {
+        suspend fun areThereChangesToSync(): Boolean? {
             val auth = syncAuth() ?: return false
             val status =
                 withContext(Dispatchers.IO) {
-                    CollectionManager.getBackend().syncStatus(auth)
-                }.required
+                    // The status check may wait for the network. Do not hold the collection queue.
+                    try {
+                        CollectionManager.getBackend().syncStatus(auth)
+                    } catch (_: BackendCollectionNotOpenException) {
+                        null
+                    }
+                } ?: return null
 
-            return when (status) {
+            return when (status.required) {
                 SyncStatusResponse.Required.NO_CHANGES,
                 SyncStatusResponse.Required.UNRECOGNIZED,
                 null,
@@ -1728,24 +1785,31 @@ open class DeckPicker :
             !NetworkUtils.isOnline -> Timber.d("autoSync: offline")
             !runInBackground && !syncIntervalPassed() -> Timber.d("autoSync: interval not passed")
             !isLoggedIn() -> Timber.d("autoSync: not logged in")
-            !areThereChangesToSync() -> {
-                Timber.d("autoSync: no collection changes to sync. Syncing media if set")
-                if (shouldFetchMedia()) {
-                    val auth = syncAuth() ?: return false
-                    SyncMediaWorker.start(this, auth)
-                }
-                setLastSyncTimeToNow()
-            }
             else -> {
-                if (runInBackground) {
-                    Timber.i("autoSync: starting background")
-                    val auth = syncAuth() ?: return false
-                    SyncWorker.start(this, auth, shouldFetchMedia())
-                } else {
-                    Timber.i("autoSync: starting foreground")
-                    sync()
+                // Startup may have failed to open the collection. Do not sync on exit in that case.
+                val hasChanges = areThereChangesToSync()
+                if (hasChanges == null) {
+                    Timber.d("autoSync: collection not open")
+                    return false
                 }
-                return true
+                if (!hasChanges) {
+                    Timber.d("autoSync: no collection changes to sync. Syncing media if set")
+                    if (shouldFetchMedia()) {
+                        val auth = syncAuth() ?: return false
+                        SyncMediaWorker.start(this, auth)
+                    }
+                    setLastSyncTimeToNow()
+                } else {
+                    if (runInBackground) {
+                        Timber.i("autoSync: starting background")
+                        val auth = syncAuth() ?: return false
+                        SyncWorker.start(this, auth, shouldFetchMedia())
+                    } else {
+                        Timber.i("autoSync: starting foreground")
+                        sync()
+                    }
+                    return true
+                }
             }
         }
         return false
@@ -1828,9 +1892,7 @@ open class DeckPicker :
             }
             KeyEvent.KEYCODE_S -> {
                 Timber.i("Study from keypress")
-                launchCatchingTask {
-                    handleDeckSelection(withCol { decks.selected() }, DeckSelectionType.SKIP_STUDY_OPTIONS)
-                }
+                viewModel.requestStudySelectedDeck()
                 return true
             }
             KeyEvent.KEYCODE_T -> {
@@ -2105,14 +2167,9 @@ open class DeckPicker :
         val status = CollectionIntegrityStorageCheck.createInstance(this)
         if (status.shouldWarnOnIntegrityCheck()) {
             Timber.d("Displaying File Size confirmation")
-            AlertDialog.Builder(this).show {
-                title(text = TR.sentenceCase.checkDatabase)
-                message(text = status.getWarningDetails(this@DeckPicker))
-                positiveButton(CommonString.integrity_check_continue_anyway) {
-                    performIntegrityCheck()
-                }
-                negativeButton(CommonString.dialog_cancel)
-            }
+            DeckPickerMaintenanceDialog
+                .newInstance(Check.DATABASE, status.getWarningDetails(this))
+                .show(supportFragmentManager, DeckPickerMaintenanceDialog.TAG)
         } else {
             performIntegrityCheck()
         }
@@ -2146,9 +2203,15 @@ open class DeckPicker :
         return false
     }
 
+    // TODO: Move both conflict fields into pending full-sync context carried by dialog arguments,
+    //  confirmation callbacks, and deferred dialog messages.
+
     /** In the conflict case, we need to store the USN received from the initial sync, and reuse
      it after the user has decided. */
     var mediaUsnOnConflict: Int? = null
+
+    /** Preserve the original attempt's network restriction while the user chooses upload/download. */
+    var mediaNetworkTypeOnConflict: NetworkType = NetworkType.UNMETERED
 
     /**
      * The mother of all syncing attempts. This might be called from sync() as first attempt to sync a collection OR
@@ -2168,8 +2231,8 @@ open class DeckPicker :
             skipPrompt = conflict != null,
             // TODO: why is this needed? 1f91b2868d
             onDialogShown = ::refreshState,
-        ) {
-            handleNewSync(conflict, shouldFetchMedia())
+        ) { permission ->
+            handleNewSync(conflict, shouldFetchMedia(), meteredSyncPermission = permission)
         }
     }
 
@@ -2199,9 +2262,20 @@ open class DeckPicker :
      */
     private fun tryShowStudyOptionsPanel(): Boolean {
         val containerId = binding.studyoptionsFragment?.id ?: return false
-        supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-        supportFragmentManager.commit {
-            replace(containerId, StudyOptionsFragment())
+
+        // Close other panels before looking for restored study options.
+        supportFragmentManager.popBackStackImmediate(
+            null,
+            FragmentManager.POP_BACK_STACK_INCLUSIVE,
+        )
+
+        val studyOptions = fragment
+        if (studyOptions != null) {
+            studyOptions.refreshInterface()
+        } else {
+            supportFragmentManager.commitNow {
+                replace(containerId, StudyOptionsFragment())
+            }
         }
         return true
     }
@@ -2434,17 +2508,13 @@ open class DeckPicker :
      */
     fun deleteDeck(did: DeckId) =
         launchCatchingTask {
-            withProgress(resources.getString(CommonString.delete_deck)) {
-                viewModel.deleteDeck(did).join()
-            }
+            viewModel.deleteDeck(did).join()
         }
 
     @NeedsTest("14285: regression test to ensure UI is updated after this call")
     fun rebuildFiltered(did: DeckId) {
         launchCatchingTask {
-            withProgress(resources.getString(CommonString.rebuild_filtered_deck)) {
-                viewModel.rebuildFilteredDeck(did).join()
-            }
+            viewModel.rebuildFilteredDeck(did).join()
             updateDeckList()
             tryShowStudyOptionsPanel()
         }
@@ -2452,9 +2522,7 @@ open class DeckPicker :
 
     private fun emptyFiltered(did: DeckId) {
         launchCatchingTask {
-            withProgress {
-                viewModel.emptyFilteredDeck(did).join()
-            }
+            viewModel.emptyFilteredDeck(did).join()
         }
     }
 
@@ -2710,3 +2778,11 @@ class CollectionLoadingErrorDialog :
 
 val ActivityHomescreenBinding.studyoptionsFrame: FragmentContainerView?
     get() = studyoptionsFragment
+
+private fun Context.progressMessage(progress: DeckPickerProgress): String =
+    when (progress) {
+        DeckPickerProgress.DELETING_DECK -> getString(CommonString.delete_deck)
+        DeckPickerProgress.REBUILDING_FILTERED_DECK -> getString(CommonString.rebuild_filtered_deck)
+        DeckPickerProgress.DELETING_EMPTY_CARDS -> TR.emptyCardsDeleting()
+        DeckPickerProgress.CREATING_BACKUP -> TR.sentenceCase.creatingBackup
+    }

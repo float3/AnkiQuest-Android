@@ -10,6 +10,8 @@ import androidx.recyclerview.widget.ConcatAdapter
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooper
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooperUntil
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.deckpicker.DeckPickerViewModel
+import com.ichi2.anki.deckpicker.DeckPickerViewModel.StartupResponse
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackupManagerTestUtilities
@@ -91,3 +93,8 @@ private fun DeckPicker.awaitDeckHolder(
     }
     return checkNotNull(holder)
 }
+
+fun DeckPickerViewModel.awaitStartup() =
+    advanceRobolectricLooperUntil {
+        startupJob?.isActive != true && flowOfStartupResponse.value !is StartupResponse.Success
+    }

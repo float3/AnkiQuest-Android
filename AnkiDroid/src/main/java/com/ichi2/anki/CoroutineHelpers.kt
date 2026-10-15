@@ -11,7 +11,6 @@ import android.content.DialogInterface
 import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.net.Uri
 import android.text.format.Formatter
-import android.view.WindowManager
 import android.view.WindowManager.BadTokenException
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
@@ -32,6 +31,7 @@ import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.destinations.DeckOptionsDestination
 import com.ichi2.anki.common.destinations.PreferencesDestination
+import com.ichi2.anki.common.utils.android.isRobolectric
 import com.ichi2.anki.dialogs.DatabaseErrorDialog
 import com.ichi2.anki.dialogs.DatabaseErrorDialog.DatabaseErrorDialogType
 import com.ichi2.anki.exception.CollectionLockedException
@@ -39,6 +39,8 @@ import com.ichi2.anki.exception.StorageAccessException
 import com.ichi2.anki.exception.StorageNotConfiguredException
 import com.ichi2.anki.pages.toIntent
 import com.ichi2.anki.preferences.toIntent
+import com.ichi2.anki.progress.blockTouches
+import com.ichi2.anki.progress.unblockTouches
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.startup.redirectToMainEntryPoint
 import com.ichi2.anki.ui.internationalization.sentenceCase
@@ -75,6 +77,7 @@ import net.ankiweb.rsdroid.exceptions.BackendSyncException
 import org.jetbrains.annotations.VisibleForTesting
 import timber.log.Timber
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /** Overridable reference to [Dispatchers.IO]. Useful if tests can't use it */
@@ -227,14 +230,49 @@ fun <T> FragmentActivity.asyncCatching(
         runCatching(errorMessage, skipCrashReport = skipCrashReport) { block() }
     }
 
-/** See [FragmentActivity.launchCatchingTask] */
+/**
+ * Launch a job that catches any uncaught errors and reports them to the user.
+ * Errors from the backend contain localized text that is often suitable to show to the user as-is.
+ * Other errors should ideally be handled in the block.
+ *
+ * A valid, non-finishing activity must be used when running this.
+ */
 fun Fragment.launchCatchingTask(
     errorMessage: String? = null,
     skipCrashReport: ((Exception) -> Boolean)? = null,
     block: suspend CoroutineScope.() -> Unit,
 ): Job =
     lifecycle.coroutineScope.launch {
-        requireActivity().runCatching(errorMessage, skipCrashReport = skipCrashReport) { block() }
+        // It's a bug to call this if the activity is invalid or finishing.
+        val validActivity =
+            kotlin
+                .runCatching {
+                    requireActivity(simpleName = true).also { activity ->
+                        check(!activity.isFinishing) {
+                            "Cannot launch task for ${this@launchCatchingTask.javaClass.simpleName}: activity is finishing"
+                        }
+                    }
+                }.getOrElse {
+                    Timber.w(it, "Fragment.launchCatchingTask")
+                    if (isRobolectric) throw it
+                    return@launch
+                }
+        validActivity.runCatching(errorMessage, skipCrashReport = skipCrashReport) { block() }
+    }
+
+/**
+ * [Fragment.requireActivity], with a short stable name so crash reports can be grouped together.
+ *
+ * ```diff
+ * - Fragment <name>{afc1c3c} (f8db5cf7-13f5-495f-8195-79e0be3aff68) not attached to an activity.
+ * + Fragment <name> not attached to an activity.
+ * ```
+ */
+fun Fragment.requireActivity(simpleName: Boolean): FragmentActivity =
+    if (simpleName) {
+        checkNotNull(activity) { "Fragment ${javaClass.simpleName} not attached to an activity." }
+    } else {
+        requireActivity()
     }
 
 /**
@@ -396,7 +434,7 @@ suspend fun <T> Fragment.withProgress(
 suspend fun <T> withProgressDialog(
     context: Activity,
     onCancel: (() -> Unit)?,
-    delayMillis: Long = 600,
+    delayDuration: Duration = 600.milliseconds,
     @StringRes manualCancelButton: Int? = null,
     op: suspend (android.app.ProgressDialog) -> T,
 ): T =
@@ -421,17 +459,15 @@ suspend fun <T> withProgressDialog(
                 }
             }
         // disable taps immediately
-        context.runOnUiThread {
-            context.window.setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
-        }
+        context.runOnUiThread { context.window.blockTouches() }
         // reveal the dialog after 600ms
         var dialogIsOurs = false
         val dialogJob =
             launch {
-                delay(delayMillis)
+                delay(delayDuration)
                 if (!AnkiDroidApp.instance.progressDialogShown) {
                     Timber.i(
-                        """Displaying progress dialog: ${delayMillis}ms elapsed; 
+                        """Displaying progress dialog: $delayDuration elapsed;
                 |cancellable: ${onCancel != null}; 
                 |manualCancel: ${manualCancelButton != null}
                 |
@@ -455,7 +491,7 @@ suspend fun <T> withProgressDialog(
         } finally {
             dialogJob.cancel()
             dismissDialogIfShowing(dialog)
-            context.runOnUiThread { context.window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) }
+            context.runOnUiThread { context.window.unblockTouches() }
             if (dialogIsOurs) {
                 AnkiDroidApp.instance.progressDialogShown = false
             }
@@ -494,7 +530,7 @@ private suspend fun ProgressContext.monitorProgress(
         withContext(Dispatchers.Main) {
             state.updateUi()
         }
-        delay(100)
+        delay(100.milliseconds)
     }
 }
 

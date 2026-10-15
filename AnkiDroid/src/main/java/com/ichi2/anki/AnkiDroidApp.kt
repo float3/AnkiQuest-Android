@@ -24,6 +24,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import anki.collection.OpChanges
 import com.ichi2.anki.AnkiDroidApp.Companion.sharedPreferencesTestingOverride
 import com.ichi2.anki.analytics.initializeAnalytics
+import com.ichi2.anki.analytics.launchPreviousAnrReporting
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.browser.SharedPreferencesLastDeckIdRepository
 import com.ichi2.anki.common.android.AdaptionUtil
@@ -70,7 +71,6 @@ import com.ichi2.anki.startup.ensureCollectionPathSet
 import com.ichi2.anki.startup.getDefaultAnkiDroidDirectory
 import com.ichi2.anki.ui.dialogs.ActivityAgnosticDialogs
 import com.ichi2.anki.widget.RECURRING_WIDGETS
-import com.ichi2.utils.AlarmManagement
 import com.ichi2.utils.ExceptionUtil
 import com.ichi2.utils.LanguageUtil
 import com.ichi2.utils.measureTime
@@ -130,7 +130,8 @@ open class AnkiDroidApp :
         }
     }
 
-    private var profileManager: ProfileManager? = null
+    var profileManager: ProfileManager? = null
+        private set
 
     private val profileContext: Context?
         get() = profileManager?.activeProfileContext
@@ -142,7 +143,7 @@ open class AnkiDroidApp :
      */
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
-        if (isAcraSenderProcess()) return
+        if (isAcraSenderProcess() || isPhoenixProcess()) return
         profileManager = ProfileManager.createOrNull(base)
     }
 
@@ -192,6 +193,7 @@ open class AnkiDroidApp :
         CollectionLockedException.messageProvider = {
             getString(CommonString.database_locked_summary_new, getString(CommonString.col_path))
         }
+        ChangeManager.throwOnDuplicateSubscription = BuildConfig.DEBUG
         val logType = LogType.value
         when (logType) {
             LogType.DEBUG -> Timber.plant(DebugTree())
@@ -223,6 +225,7 @@ open class AnkiDroidApp :
             Timber.d("Skipping AnkiDroidApp.onCreate from ACRA sender process")
             return
         }
+        launchPreviousAnrReporting()
         ProfileManager.attachError?.let {
             Timber.w(it, "Failed to load the profile environment, running on the base context")
         }
@@ -409,13 +412,13 @@ open class AnkiDroidApp :
             setupNotificationChannels(applicationContext)
 
             val context = this.withAppLocale()
-            // In the future, if more notifications are added to AnkiDroid, AlarmManagement.scheduleAllNotifications
+            // In the future, if more notifications are added to AnkiDroid, scheduleAllNotifications
             // should be extended to handle them, but since for now the only modernized notifications are review reminder
             // notifications, we block this behind the review-reminder-specific feature flag.
             if (Prefs.newReviewRemindersEnabled) {
                 Timber.i("Setting notifications if they have not already been set")
                 applicationScope.launch {
-                    AlarmManagement.scheduleAllNotifications(context)
+                    scheduleAllNotifications(context)
                 }
             } else {
                 // Register for notifications

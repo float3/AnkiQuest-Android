@@ -18,6 +18,8 @@ on:
       - 'gh-readonly-queue/**'
       # Dependabot branches are already checked by the pull_request trigger.
       - 'dependabot/**'
+      # Crowdin translations are already checked by the pull_request trigger.
+      - 'i18n_sync'
   merge_group:
 
 permissions:
@@ -66,10 +68,13 @@ jobs:
             // try different architectures, targets, delays etc
             let arch = ['x86_64'];
             let target = ['google_apis', 'google_apis_ps16k'];
-            // Keep the 16 KB emulator off the per-change CI path.
-            // Scheduled and manual runs exercise both targets.
+            // Keep API 37 and the 16 KB emulator off the per-change CI path.
+            // Scheduled and manual runs exercise both API levels and targets.
             if (context.eventName !== 'schedule' && context.eventName !== 'workflow_dispatch') {
               target = ['google_apis'];
+            } else {
+              // Keep the minor version: SDK 37 packages use android-37.0.
+              apiLevel.push('37.0');
             }
             let firstBootDelay = [600];
 
@@ -93,6 +98,14 @@ jobs:
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       TEST_RELEASE_BUILD: true
+      # Capture startup and kernel logs before ADB is ready; -logcat conflicts with -show-kernel.
+      EMULATOR_OPTIONS: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -verbose -show-kernel
+      # API 37 otherwise defaults to 96 MiB and panics during init with an OOM.
+      EMULATOR_RAM_SIZE: ${{ matrix.api-level == '37.0' && '2560M' || '' }}
+      # Keep the SDK package at 37.0, but ensure the AVD is recognized as API 37.
+      # API 3 fallback disables the DMA readback required by API 37's graphics mapper.
+      EMULATOR_PRE_LAUNCH_SCRIPT: >-
+        if [ '${{ matrix.api-level }}' = '37.0' ]; then sed -i 's/^target=.*/target=android-37/' "$ANDROID_AVD_HOME/test.ini" "$ANDROID_AVD_HOME/test.avd/config.ini"; fi
     strategy:
       fail-fast: false
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
@@ -157,7 +170,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 60
           max_attempts: 3
-          command: ./gradlew packagePlayRelease packagePlayReleaseAndroidTest --daemon
+          command: ./gradlew packagePlayRelease packagePlayReleaseAndroidTest :baselineprofile:packageBenchmarkBenchmark --daemon
 
       - name: Install Android Emulator
         # Retry to work around https://github.com/ReactiveCircus/android-emulator-runner/issues/496
@@ -198,7 +211,9 @@ jobs:
           force-avd-creation: false
           target: ${{ matrix.target }}
           arch: ${{ matrix.arch }}
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          ram-size: ${{ env.EMULATOR_RAM_SIZE }}
+          pre-emulator-launch-script: ${{ env.EMULATOR_PRE_LAUNCH_SCRIPT }}
           sdcard-path-or-size: 100M
           disable-animations: true
           # Give the emulator a little time to run and do first boot stuff before taking snapshot
@@ -222,7 +237,9 @@ jobs:
           force-avd-creation: false
           target: ${{ matrix.target }}
           arch: ${{ matrix.arch }}
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          ram-size: ${{ env.EMULATOR_RAM_SIZE }}
+          pre-emulator-launch-script: ${{ env.EMULATOR_PRE_LAUNCH_SCRIPT }}
           sdcard-path-or-size: 100M
           disable-animations: true
           # Restart zygote to win a config race / Give emulator time to run and do first boot stuff before taking snapshot
@@ -243,7 +260,9 @@ jobs:
           force-avd-creation: false
           target: ${{ matrix.target }}
           arch: ${{ matrix.arch }}
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save ${{ env.EMULATOR_OPTIONS }}
+          ram-size: ${{ env.EMULATOR_RAM_SIZE }}
+          pre-emulator-launch-script: ${{ env.EMULATOR_PRE_LAUNCH_SCRIPT }}
           sdcard-path-or-size: 100M
           disable-animations: true
           # update workflows/README.md when modifying this script
@@ -255,10 +274,11 @@ jobs:
             bash .github/adb_retry.sh emu screenrecord start --time-limit 1800 video.webm
             sleep 5
             bash .github/with_emulator_log.sh adb-log.txt python3 .github/run_emulator_tests.py
+            TEST_RELEASE_BUILD=false ./gradlew :baselineprofile:connectedBenchmarkBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.baselineprofile.ReleaseSmokeTest -Pandroid.testInstrumentationRunnerArguments.releaseSmokeTest=true --daemon
 
       - name: Report Emulator Test Results
         if: always() && hashFiles('AnkiDroid/build/outputs/androidTest-results/connected/**/TEST-*.xml') != ''
-        run: python3 .github/report_emulator_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected adb-log.txt
+        run: python3 .github/report_test_failures.py AnkiDroid/build/outputs/androidTest-results/connected adb-log.txt --title "Emulator test failures"
 
       - name: Configure NDK tools PATH for alignment checking
         run: |

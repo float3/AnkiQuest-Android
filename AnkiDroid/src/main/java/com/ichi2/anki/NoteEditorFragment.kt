@@ -70,7 +70,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import anki.config.ConfigKey
 import anki.notes.NoteFieldsCheckResponse
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -99,8 +98,9 @@ import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.common.utils.ext.AddingDefaultsMode
 import com.ichi2.anki.common.utils.ext.addingDefaultsMode
+import com.ichi2.anki.common.utils.ext.currentDeckId
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
-import com.ichi2.anki.common.utils.ext.ifZero
+import com.ichi2.anki.common.utils.ext.pasteImagesAsPng
 import com.ichi2.anki.compat.CompatHelper.Companion.getSerializableCompat
 import com.ichi2.anki.compat.setTooltipTextCompat
 import com.ichi2.anki.databinding.FragmentNoteEditorBinding
@@ -118,7 +118,6 @@ import com.ichi2.anki.libanki.CardOrdinal
 import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.libanki.Consts
 import com.ichi2.anki.libanki.DeckId
-import com.ichi2.anki.libanki.Decks.Companion.CURRENT_DECK
 import com.ichi2.anki.libanki.Field
 import com.ichi2.anki.libanki.Fields
 import com.ichi2.anki.libanki.Note
@@ -282,6 +281,9 @@ class NoteEditorFragment :
     @get:VisibleForTesting
     var deckId: DeckId = 0
         private set
+
+    /** Local selection while adding; [Collection.addNote] remembers it after a successful save. */
+    private var selectedNoteTypeId: NoteTypeId? = null
     private var allNoteTypeIds: List<Long>? = null
 
     private val customViewIds = ArrayList<Int>()
@@ -540,6 +542,8 @@ class NoteEditorFragment :
             caller = fromValue(savedInstanceState.getInt(CALLER_KEY))
             addNote = savedInstanceState.getBoolean("addNote")
             deckId = savedInstanceState.getLong("did")
+            selectedNoteTypeId =
+                if (savedInstanceState.containsKey("noteTypeId")) savedInstanceState.getLong("noteTypeId") else null
             selectedTags = savedInstanceState.getStringArrayList("tags")
             reloadRequired = savedInstanceState.getBoolean(EXTRA_RELOAD_REQUIRED)
             multimediaController.onRestoreInstanceState(savedInstanceState)
@@ -614,6 +618,7 @@ class NoteEditorFragment :
         savedInstanceState.putInt(CALLER_KEY, caller.value)
         savedInstanceState.putBoolean("addNote", addNote)
         savedInstanceState.putLong("did", deckId)
+        selectedNoteTypeId?.let { savedInstanceState.putLong("noteTypeId", it) }
         savedInstanceState.putBoolean(EXTRA_NOTE_CHANGED, changed)
         savedInstanceState.putBoolean(EXTRA_RELOAD_REQUIRED, reloadRequired)
         savedInstanceState.putIntegerArrayList("customViewIds", customViewIds)
@@ -758,14 +763,15 @@ class NoteEditorFragment :
 
         deckId = requireArguments().getLong(EXTRA_DID, deckId)
         if (addNote) {
-            // When adding and if we didn't receive a valid deck id or it's the 'Default' deck,
-            // use the recommended deck for adding
-            deckId = deckId.ifZero { col.defaultsForAdding().deckId }
-
-            // Also guard against adding to a filtered deck
+            // Initialize both selections from the same defaults
+            // https://github.com/ankitects/anki/blob/754ce3a25f608010c0249e074e5d7fe95bda035f/qt/aqt/addcards_legacy.py#L91-L108
+            val defaults = col.defaultsForAdding()
+            if (selectedNoteTypeId?.let { col.notetypes.get(it) } == null) {
+                selectedNoteTypeId = defaults.notetypeId
+            }
             val deck = col.decks.getLegacy(deckId)
             if (deck == null || deck.isFiltered) {
-                deckId = col.defaultsForAdding().deckId
+                deckId = defaults.deckId
             }
         } else {
             // When editing we always have a valid currentEditCard. Check to see if it's from a normal
@@ -1858,7 +1864,7 @@ class NoteEditorFragment :
     }
 
     /** Determines whether pasted images should be handled as PNG format. **/
-    private suspend fun shouldPasteAsPng() = withCol { config.getBool(ConfigKey.Bool.PASTE_IMAGES_AS_PNG) }
+    private suspend fun shouldPasteAsPng() = withCol { config.pasteImagesAsPng }
 
     val currentFields: Fields
         get() = editorNote!!.notetype.fields
@@ -2207,7 +2213,7 @@ class NoteEditorFragment :
                 }
             }
 
-            val currentDeckId = getColUnsafe.config.get(CURRENT_DECK) ?: 1L
+            val currentDeckId = getColUnsafe.config.currentDeckId
             return if (getColUnsafe.decks.isFiltered(currentDeckId)) {
                 /*
                  * If the deck in mCurrentDid is a filtered (dynamic) deck, then we can't create cards in it,
@@ -2237,15 +2243,7 @@ class NoteEditorFragment :
         note: Note?,
         changeType: FieldChangeType,
     ) {
-        editorNote =
-            if (note == null || addNote) {
-                getColUnsafe.run {
-                    val notetype = notetypes.current()
-                    Note.fromNotetypeId(this@run, notetype.id)
-                }
-            } else {
-                note
-            }
+        editorNote = note ?: Note.fromNotetypeId(getColUnsafe, checkNotNull(selectedNoteTypeId))
         if (selectedTags == null) {
             selectedTags = editorNote!!.tags
         }
@@ -2528,14 +2526,14 @@ class NoteEditorFragment :
             if (hasIcon) {
                 etIconLayout.isErrorEnabled = false
             } else {
-                etIconLayout.setErrorIfChanged(getString(R.string.note_editor_toolbar_icon_requirement_error))
+                etIconLayout.setErrorIfChanged(getString(CommonString.note_editor_toolbar_icon_requirement_error))
             }
 
             if (hasHtml) {
                 etBeforeLayout.isErrorEnabled = false
                 etAfterLayout.isErrorEnabled = false
             } else {
-                val message = getString(R.string.before_after_text_requirement_error)
+                val message = getString(CommonString.before_after_text_requirement_error)
                 etBeforeLayout.setErrorIfChanged(message)
                 etAfterLayout.setErrorIfChanged(message)
             }
@@ -2697,24 +2695,18 @@ class NoteEditorFragment :
     }
 
     private fun changeNoteType(newId: NoteTypeId) {
-        val oldNoteTypeId = getColUnsafe.notetypes.current().id
         Timber.i("Changing note type to '%d", newId)
 
-        if (oldNoteTypeId == newId) {
+        if (editorNote!!.noteTypeId == newId) {
             return
         }
 
-        val noteType = getColUnsafe.notetypes.get(newId)
-        if (noteType == null) {
+        if (getColUnsafe.notetypes.get(newId) == null) {
             Timber.w("New note type %s not found, not changing note type", newId)
             return
         }
 
-        getColUnsafe.notetypes.setCurrent(noteType)
-        val currentDeck = getColUnsafe.decks.current()
-        currentDeck.put("mid", newId)
-        getColUnsafe.decks.save(currentDeck)
-
+        selectedNoteTypeId = newId
         // Preserves the editor's deck when the new note type has no remembered destination.
         getColUnsafe.defaultDeckForNoteType(newId)?.let { deckId = it }
 

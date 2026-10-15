@@ -66,6 +66,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import timber.log.Timber
 import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
+import com.ichi2.anki.common.android.R as CommonR
 
 class TagsDialog : AnalyticsDialogFragment {
     /**
@@ -149,7 +151,7 @@ class TagsDialog : AnalyticsDialogFragment {
         checkedTags: ArrayList<String> = arrayListOf(),
     ): TagsDialog {
         // TODO: checkedTags is unbounded and could exceed the bundle size
-        val file = IdsFile(context.cacheDir, noteIds)
+        val file = IdsFile(IdsFile.getDirectory(context), noteIds, IdsFile.Purpose.TAGS)
         arguments = this.arguments ?: Bundle().apply {
             putParcelable(ARG_TAGS_FILE, file)
             putParcelable(ARG_DIALOG_TYPE, type)
@@ -223,7 +225,7 @@ class TagsDialog : AnalyticsDialogFragment {
         lifecycleScope.launch {
             val showProgressJob =
                 launch {
-                    delay(600)
+                    delay(600.milliseconds)
                     withContext(Dispatchers.Main) {
                         binding.loadingContainer.visibility = View.VISIBLE
                         viewModel.initProgress
@@ -329,7 +331,7 @@ class TagsDialog : AnalyticsDialogFragment {
         toolbar.setTitle(titleRes)
 
         val toolbarAddItem = toolbar.menu.findItem(R.id.tags_dialog_action_add)
-        val drawable = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
+        val drawable = ContextCompat.getDrawable(requireContext(), CommonR.drawable.ic_add)
         drawable?.setTint(requireContext().getColor(R.color.white))
         toolbarAddItem.icon = drawable
 

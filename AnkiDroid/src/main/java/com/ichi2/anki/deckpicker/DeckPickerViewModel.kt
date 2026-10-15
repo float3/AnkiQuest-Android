@@ -24,10 +24,10 @@ import com.ichi2.anki.StoragePermissionSet
 import com.ichi2.anki.common.destinations.BrowserDestination
 import com.ichi2.anki.common.destinations.DeckOptionsDestination
 import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.utils.ext.schedulerVersion
 import com.ichi2.anki.configureRenderingMode
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.libanki.CardId
-import com.ichi2.anki.libanki.Consts
 import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.Decks
@@ -38,6 +38,8 @@ import com.ichi2.anki.libanki.utils.extend
 import com.ichi2.anki.notetype.ManageNoteTypesDestination
 import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.performBackupInBackground
+import com.ichi2.anki.progress.HasProgress
+import com.ichi2.anki.progress.ProgressManager
 import com.ichi2.anki.reviewreminders.ScheduleRemindersDestination
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.sync.syncStatus
@@ -64,7 +66,10 @@ import com.ichi2.anki.common.destinations.Destination as NavigateDestination
  */
 class DeckPickerViewModel :
     ViewModel(),
-    OnErrorListener {
+    OnErrorListener,
+    HasProgress<DeckPickerProgress> {
+    override val progressManager = ProgressManager<DeckPickerProgress>()
+
     val flowOfStartupResponse = MutableStateFlow<StartupResponse?>(null)
 
     private val flowOfDeckDueTree = MutableStateFlow<DeckNode?>(null)
@@ -77,7 +82,13 @@ class DeckPickerViewModel :
         }
 
     /** User filter of the deck list. Shown as a search in the UI */
-    private val flowOfCurrentDeckFilter = MutableStateFlow(DeckFilters.create(""))
+    private val flowOfDeckSearchQuery = MutableStateFlow("")
+
+    val deckSearchQuery: String
+        get() = flowOfDeckSearchQuery.value
+
+    var isDeckSearchExpanded: Boolean = false
+        private set
 
     /**
      * Keep track of which deck was last given focus in the deck list. If we find that this value
@@ -102,11 +113,11 @@ class DeckPickerViewModel :
     val flowOfDeckList =
         combine(
             flowOfDeckDueTree,
-            flowOfCurrentDeckFilter,
+            flowOfDeckSearchQuery,
             flowOfFocusedDeck,
             flowOfRefreshDeckList.onStart { emit(Unit) },
             dailyDeckStates,
-        ) { tree, filter, _, _, daily ->
+        ) { tree, query, _, _, daily ->
             if (tree == null) return@combine FlattenedDeckList.empty
 
             // TODO: use flowOfFocusedDeck once it's set on all instances
@@ -114,7 +125,7 @@ class DeckPickerViewModel :
             Timber.i("currentDeckId: %d", currentDeckId)
 
             FlattenedDeckList(
-                data = tree.filterAndFlattenDisplay(filter, currentDeckId).map { it.withDailyState(daily[it.did]) },
+                data = tree.filterAndFlattenDisplay(DeckFilters.create(query), currentDeckId).map { it.withDailyState(daily[it.did]) },
                 hasSubDecks = tree.children.any { it.children.any() },
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, initialValue = FlattenedDeckList.empty)
@@ -125,6 +136,8 @@ class DeckPickerViewModel :
      */
     val deckDeletedNotification = MutableSharedFlow<DeckDeletionResult>(extraBufferCapacity = 1)
     val flowOfDeleteDeckConfirmation = MutableSharedFlow<DeleteDeckConfirmationRequest>(extraBufferCapacity = 1)
+    val flowOfRenameDeck = MutableSharedFlow<DeckId>(extraBufferCapacity = 1)
+    val flowOfStudyDeck = MutableSharedFlow<DeckId>(extraBufferCapacity = 1)
     val emptyCardsNotification = MutableSharedFlow<EmptyCardsResult>(extraBufferCapacity = 1)
     val flowOfDestination = MutableSharedFlow<Destination>(extraBufferCapacity = 1)
     val flowOfNavigate = MutableSharedFlow<NavigateDestination>(extraBufferCapacity = 1)
@@ -217,37 +230,54 @@ class DeckPickerViewModel :
             flowOfDeleteDeckConfirmation.emit(request)
         }
 
+    fun requestRenameSelectedDeck() =
+        launchCatchingIO {
+            val deckId = withCol { decks.selected() }
+            flowOfRenameDeck.emit(deckId)
+        }
+
+    fun requestStudySelectedDeck() =
+        launchCatchingIO {
+            val deckId = withCol { decks.selected() }
+            flowOfStudyDeck.emit(deckId)
+        }
+
     /**
      * Deletes the provided deck, child decks. and all cards inside.
      *
-     * This is a slow operation and should be inside `withProgress`
-     *
      * @param did ID of the deck to delete
      */
-    @CheckResult // This is a slow operation and should be inside `withProgress`
+    @CheckResult
     fun deleteDeck(did: DeckId) =
         viewModelScope.launch {
-            val deckName = withCol { decks.getLegacy(did)!!.name }
-            val changes = undoableOp { decks.remove(listOf(did)) }
-            // After deletion: decks.current() reverts to Default, necessitating `focusedDeck`
-            // to match and avoid unnecessary scrolls in `renderPage()`.
-            focusedDeck = Consts.DEFAULT_DECK_ID
+            progressManager.withProgress(message = DeckPickerProgress.DELETING_DECK) {
+                val deckName = withCol { decks.getLegacy(did)!!.name }
+                val changes =
+                    undoableOp {
+                        removeDeckAndSelectAdjacent(
+                            deckId = did,
+                            visibleDeckIds = flowOfDeckList.value.data.map { it.did },
+                            filter = DeckFilters.create(flowOfDeckSearchQuery.value),
+                        )
+                    }
+                focusedDeck = withCol { decks.selected() }
 
-            deckDeletedNotification.emit(
-                DeckDeletionResult(deckName = deckName, cardsDeleted = changes.count),
-            )
+                deckDeletedNotification.emit(
+                    DeckDeletionResult(deckName = deckName, cardsDeleted = changes.count),
+                )
+            }
         }
 
     /**
      * Deletes the currently selected deck
-     *
-     * This is a slow operation and should be inside `withProgress`
      */
     @CheckResult
     fun deleteSelectedDeck() =
         viewModelScope.launch {
-            val targetDeckId = withCol { decks.selected() }
-            deleteDeck(targetDeckId).join()
+            progressManager.withProgress(message = DeckPickerProgress.DELETING_DECK) {
+                val targetDeckId = withCol { decks.selected() }
+                deleteDeck(targetDeckId).join()
+            }
         }
 
     /**
@@ -261,28 +291,31 @@ class DeckPickerViewModel :
         report: EmptyCardsReport,
         preserveNotes: Boolean,
     ) = viewModelScope.launch {
-        // https://github.com/ankitects/anki/blob/39e293b27d36318e00131fd10144755eec8d1922/qt/aqt/emptycards.py#L98-L109
-        val toDelete = mutableListOf<CardId>()
+        progressManager.withProgress(message = DeckPickerProgress.DELETING_EMPTY_CARDS) {
+            // https://github.com/ankitects/anki/blob/39e293b27d36318e00131fd10144755eec8d1922/qt/aqt/emptycards.py#L98-L109
+            val toDelete = mutableListOf<CardId>()
 
-        for (note in report.notesList) {
-            if (preserveNotes && note.willDeleteNote) {
-                // leave first card
-                toDelete.extend(note.cardIdsList.drop(1))
-            } else {
-                toDelete.extend(note.cardIdsList)
+            for (note in report.notesList) {
+                if (preserveNotes && note.willDeleteNote) {
+                    // leave first card
+                    toDelete.extend(note.cardIdsList.drop(1))
+                } else {
+                    toDelete.extend(note.cardIdsList)
+                }
             }
+            val result = undoableOp { removeCardsAndOrphanedNotes(toDelete) }
+            emptyCardsNotification.emit(EmptyCardsResult(cardsDeleted = result.count))
         }
-        val result = undoableOp { removeCardsAndOrphanedNotes(toDelete) }
-        emptyCardsNotification.emit(EmptyCardsResult(cardsDeleted = result.count))
     }
 
-    // TODO: move withProgress to the ViewModel, so we don't return 'Job'
     fun emptyFilteredDeck(deckId: DeckId): Job =
         viewModelScope.launch {
-            Timber.i("empty filtered deck %s", deckId)
-            withCol { decks.select(deckId) }
-            undoableOp { sched.emptyFilteredDeck(decks.selected()) }
-            flowOfDeckCountsChanged.emit(Unit)
+            progressManager.withProgress {
+                Timber.i("empty filtered deck %s", deckId)
+                withCol { decks.select(deckId) }
+                undoableOp { sched.emptyFilteredDeck(decks.selected()) }
+                flowOfDeckCountsChanged.emit(Unit)
+            }
         }
 
     /**
@@ -291,12 +324,14 @@ class DeckPickerViewModel :
     @CheckResult
     fun rebuildFilteredDeck(deckId: DeckId): Job =
         viewModelScope.launch {
-            Timber.i("rebuilding filtered deck %s", deckId)
-            withCol {
-                decks.select(deckId)
-                sched.rebuildFilteredDeck(decks.selected())
+            progressManager.withProgress(message = DeckPickerProgress.REBUILDING_FILTERED_DECK) {
+                Timber.i("rebuilding filtered deck %s", deckId)
+                withCol {
+                    decks.select(deckId)
+                    sched.rebuildFilteredDeck(decks.selected())
+                }
+                flowOfDeckCountsChanged.emit(Unit)
             }
-            flowOfDeckCountsChanged.emit(Unit)
         }
 
     /**
@@ -381,6 +416,11 @@ class DeckPickerViewModel :
             flowOfDestination.emit(ScheduleRemindersDestination(deckId))
         }
 
+    suspend fun createBackup() =
+        progressManager.withProgress(message = DeckPickerProgress.CREATING_BACKUP) {
+            performBackupInBackground(force = true)
+        }
+
     /**
      * Launch an asynchronous task to rebuild the deck list and recalculate the deck counts. Use this
      * after any change to a deck (e.g., rename, importing, add/delete) that needs to be reflected
@@ -390,21 +430,33 @@ class DeckPickerViewModel :
      */
     // TODO: #17551 use tryWithCol, refresh via `ChangeManager` and collapse into one collection read.
     @RustCleanup("backup with 5 minute timer, instead of deck list refresh")
-    fun updateDeckList(): Job =
-        viewModelScope.launch(Dispatchers.IO) {
-            // WARN: On a regular sync, this blocks until the sync completes
-            // On a full sync, the collection is closed
-            if (!CollectionManager.isOpenUnsafe()) {
-                return@launch
-            }
-            if (Build.FINGERPRINT != "robolectric") {
-                // uses user's desktop settings to determine whether a backup
-                // actually happens
-                launchCatchingIO { performBackupInBackground() }
-            }
-            Timber.d("updateDeckList")
-            reloadDeckCounts().join()
+    fun updateDeckList(): Job {
+        if (startupJob?.isActive == true) return Job().apply { complete() }
+        if (startupServesFirstRefresh) {
+            startupServesFirstRefresh = false
+            return Job().apply { complete() }
         }
+        return viewModelScope.launch(Dispatchers.IO) { loadDeckList() }
+    }
+
+    fun onScreenResumed() {
+        startupServesFirstRefresh = false
+    }
+
+    private suspend fun loadDeckList() {
+        // WARN: On a regular sync, this blocks until the sync completes
+        // On a full sync, the collection is closed
+        if (!CollectionManager.isOpenUnsafe()) {
+            return
+        }
+        if (Build.FINGERPRINT != "robolectric") {
+            // uses user's desktop settings to determine whether a backup
+            // actually happens
+            launchCatchingIO { performBackupInBackground() }
+        }
+        Timber.d("updateDeckList")
+        reloadDeckCounts().join()
+    }
 
     fun reloadDeckCounts(): Job {
         loadDeckCounts?.cancel()
@@ -436,7 +488,7 @@ class DeckPickerViewModel :
                  * Checks the current scheduler version and prompts the upgrade dialog if using the legacy version.
                  * Ensures the dialog is only shown once per collection load, even if [updateDeckList()] is called multiple times.
                  */
-                val currentSchedulerVersion = withCol { config.get("schedVer") as? Long ?: 1L }
+                val currentSchedulerVersion = withCol { config.schedulerVersion }
 
                 if (currentSchedulerVersion == 1L && schedulerUpgradeDialogShownForVersion != 1L) {
                     schedulerUpgradeDialogShownForVersion = 1L
@@ -458,7 +510,11 @@ class DeckPickerViewModel :
 
     fun updateDeckFilter(filterText: String) {
         Timber.d("filter: %s", filterText)
-        flowOfCurrentDeckFilter.value = DeckFilters.create(filterText)
+        flowOfDeckSearchQuery.value = filterText
+    }
+
+    fun updateDeckSearchExpanded(isExpanded: Boolean) {
+        isDeckSearchExpanded = isExpanded
     }
 
     fun toggleDeckExpand(deckId: DeckId) =
@@ -551,6 +607,12 @@ class DeckPickerViewModel :
         data object Success : StartupResponse()
     }
 
+    /** The startup check launched by [handleStartup] */
+    var startupJob: Job? = null
+        private set
+
+    private var startupServesFirstRefresh = false
+
     /**
      * The first call in showing dialogs for startup - error or success.
      * Attempts startup if storage permission has been acquired, else, it requests the permission
@@ -565,17 +627,30 @@ class DeckPickerViewModel :
         }
 
         Timber.d("handleStartup: Continuing after permission granted")
-        val failure = InitialActivity.getStartupFailureType(environment.preferences, environment::initializeAnkiDroidFolder)
-        if (failure != null) {
-            flowOfStartupResponse.value = StartupResponse.FatalError(failure)
-            return
-        }
+        startupServesFirstRefresh = true
+        startupJob =
+            viewModelScope.launch {
+                // opening the collection waits on the collection queue, which a sync stuck on an
+                // unresponsive server can hold for a long time. Waiting on the main thread here
+                // froze the DeckPicker when it was recreated
+                val failure =
+                    withContext(Dispatchers.IO) {
+                        // Once we have permissions, we know the `StorageDecision`
+                        environment.decideStorageIfUndecided()
+                        InitialActivity.getStartupFailureType(environment.preferences, environment::initializeAnkiDroidFolder)
+                    }
+                if (failure != null) {
+                    flowOfStartupResponse.value = StartupResponse.FatalError(failure)
+                    return@launch
+                }
 
-        // successful startup
+                // successful startup
 
-        configureRenderingMode()
+                configureRenderingMode()
+                viewModelScope.launch(Dispatchers.IO) { loadDeckList() }
 
-        flowOfStartupResponse.value = StartupResponse.Success
+                flowOfStartupResponse.value = StartupResponse.Success
+            }
     }
 
     interface AnkiDroidEnvironment {
@@ -585,6 +660,16 @@ class DeckPickerViewModel :
 
         /** The preferences of the (profile) context the collection path is read from */
         val preferences: SharedPreferences
+
+        /**
+         * Persists the collection path if the user has not decided yet; no-op otherwise.
+         *
+         * Called once [hasRequiredPermissions] passes, so a deferred decision is recorded
+         * before the collection is opened.
+         *
+         * @see InitialActivity.decideStorageIfUndecided
+         */
+        fun decideStorageIfUndecided()
 
         fun initializeAnkiDroidFolder(): Boolean
     }
@@ -644,11 +729,11 @@ class DeckPickerViewModel :
                 val undoAvailable = undoAvailable()
                 // besides checking for cards being available also consider if we have empty decks
                 val isColEmpty = isEmpty && decks.count() == 1
+                val showDeckActions = !isColEmpty
                 // the correct sync status is fetched in the next call so "Normal" is used as a placeholder
-                OptionsMenuState(searchIcon, undoLabel, SyncIconState.Normal, undoAvailable, isColEmpty)
-            }?.let { (searchIcon, undoLabel, _, undoAvailable, isColEmpty) ->
-                val syncIcon = fetchSyncIconState()
-                OptionsMenuState(searchIcon, undoLabel, syncIcon, undoAvailable, isColEmpty)
+                OptionsMenuState(searchIcon, undoLabel, SyncIconState.Normal, undoAvailable, showDeckActions)
+            }?.let { state ->
+                state.copy(syncIcon = fetchSyncIconState())
             }
     }
 
@@ -706,6 +791,14 @@ class DeckPickerViewModel :
     }
 }
 
+/** The operation [DeckPickerViewModel] is running, shown as a progress message by the UI. */
+enum class DeckPickerProgress {
+    DELETING_DECK,
+    REBUILDING_FILTERED_DECK,
+    DELETING_EMPTY_CARDS,
+    CREATING_BACKUP,
+}
+
 /** Result of [DeckPickerViewModel.deleteDeck] */
 data class DeckDeletionResult(
     val deckName: String,
@@ -760,5 +853,5 @@ data class OptionsMenuState(
     val undoLabel: String?,
     val syncIcon: SyncIconState,
     val undoAvailable: Boolean,
-    val isColEmpty: Boolean,
+    val showDeckActions: Boolean,
 )

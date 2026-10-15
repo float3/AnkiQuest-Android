@@ -10,9 +10,14 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabaseCorruptException
 import android.os.Bundle
+import android.os.SystemClock
+import android.text.Layout
 import android.view.KeyEvent
 import android.view.Menu
+import android.view.MotionEvent
 import android.view.View
+import android.view.View.MeasureSpec
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
@@ -23,9 +28,17 @@ import androidx.core.net.toUri
 import androidx.core.view.ContentInfoCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.children
+import androidx.core.view.size
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.commitNow
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.filters.SdkSuppress
 import anki.backend.backendError
 import anki.collection.opChanges
@@ -42,6 +55,7 @@ import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.anki.databinding.ActivityHomescreenBinding
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
+import com.ichi2.anki.deckpicker.SyncIconState
 import com.ichi2.anki.deckpicker.heatmap.ReviewHeatmapAdapter
 import com.ichi2.anki.deckpicker.heatmap.ReviewHeatmapViewModel
 import com.ichi2.anki.dialogs.DatabaseErrorDialog
@@ -50,6 +64,7 @@ import com.ichi2.anki.dialogs.DeckPickerConfirmDeleteDeckDialog
 import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
 import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.DeckSelectionDialog
+import com.ichi2.anki.dialogs.SyncErrorDialog
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.utils.input
 import com.ichi2.anki.dialogs.utils.message
@@ -60,6 +75,7 @@ import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.navigation.AnkiDroidNavigator
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.preferences.PreferencesActivity
+import com.ichi2.anki.reviewreminders.ScheduleRemindersFragment
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.ui.RecyclerFastScroller
@@ -74,6 +90,7 @@ import com.ichi2.testutils.BackendEmulatingOpenConflict
 import com.ichi2.testutils.BackupManagerTestUtilities
 import com.ichi2.testutils.common.Flaky
 import com.ichi2.testutils.common.OS
+import com.ichi2.testutils.dispatchTouch
 import com.ichi2.testutils.ext.addBasicNoteWithOp
 import com.ichi2.testutils.ext.menu
 import com.ichi2.testutils.ext.text
@@ -83,7 +100,11 @@ import com.ichi2.testutils.withBooleanPreference
 import com.ichi2.testutils.withDeniedPermissions
 import com.ichi2.testutils.withWritePermissions
 import com.ichi2.ui.AccessibleSearchView
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import net.ankiweb.rsdroid.BackendException.BackendDbException.BackendDbCorruptException
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
@@ -97,6 +118,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
@@ -116,6 +138,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -329,6 +352,27 @@ class DeckPickerTest : RobolectricTest() {
             assertThat("deck was deleted", col.decks.count(), equalTo(1))
         }
     }
+
+    @Test
+    fun `deleting a deck blocks deck selection while collection access is queued`() =
+        runTest {
+            val deleted = addDeck("Deleted")
+            val other = addDeck("Other")
+            val selected = col.decks.selected()
+            lateinit var deckPicker: DeckPicker
+            withDeckPicker(deckCount = 0) { deckPicker = it }
+            advanceRobolectricLooperUntil { deckPicker.dueTree?.find(other) != null }
+
+            val deletion =
+                withQueuedCollectionAccess {
+                    deckPicker.deleteDeck(deleted).also {
+                        onView(withText("Other")).perform(click())
+                    }
+                }
+            deletion.join()
+
+            assertEquals("a deck was selected while deleting", selected, col.decks.selected())
+        }
 
     @Test
     fun `Delete shortcut requests confirmation only in tablet layout`() {
@@ -718,6 +762,15 @@ class DeckPickerTest : RobolectricTest() {
             assertTrue(allCardsInSameDeck(cardIds, deckId))
         }
 
+    private suspend fun <T> TestScope.withQueuedCollectionAccess(block: suspend () -> T): T {
+        val previousQueue = CollectionManager.setTestDispatcher(StandardTestDispatcher(testScheduler), useReentrantLock = false)
+        try {
+            return block()
+        } finally {
+            CollectionManager.setTestDispatcher(previousQueue)
+        }
+    }
+
     private fun allCardsInSameDeck(
         cardIds: List<Long>,
         deckId: DeckId,
@@ -770,16 +823,170 @@ class DeckPickerTest : RobolectricTest() {
     }
 
     @Test
+    fun `deck search query is restored after recreation`() {
+        addBasicNote()
+        repeat(10) { addDeck("Test Deck $it") }
+
+        ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
+            lateinit var retainedViewModel: DeckPickerViewModel
+            scenario.onActivity { deckPicker ->
+                advanceRobolectricLooper()
+                retainedViewModel = deckPicker.viewModel
+                val searchItem = deckPicker.menu().findItem(R.id.deck_picker_action_filter)
+                assertTrue(searchItem.expandActionView())
+                (searchItem.actionView as AccessibleSearchView).setQuery("Test Deck 1", false)
+                advanceRobolectricLooperUntil { deckPicker.visibleDeckCount == 1 }
+            }
+
+            scenario.recreate()
+            advanceRobolectricLooper()
+
+            scenario.onActivity { deckPicker ->
+                assertSame(retainedViewModel, deckPicker.viewModel)
+                assertEquals("Test Deck 1", deckPicker.viewModel.deckSearchQuery)
+                val searchItem = deckPicker.menu().findItem(R.id.deck_picker_action_filter)
+                assertTrue(searchItem.isActionViewExpanded)
+                assertEquals("Test Deck 1", (searchItem.actionView as AccessibleSearchView).query.toString())
+                advanceRobolectricLooperUntil { deckPicker.visibleDeckCount == 1 }
+                deckPicker.invalidateOptionsMenu()
+            }
+            advanceRobolectricLooper()
+
+            scenario.onActivity { deckPicker ->
+                val searchItem = deckPicker.menu().findItem(R.id.deck_picker_action_filter)
+                assertTrue(searchItem.isActionViewExpanded)
+                assertEquals("Test Deck 1", (searchItem.actionView as AccessibleSearchView).query.toString())
+                assertEquals(1, deckPicker.visibleDeckCount)
+                assertTrue(searchItem.collapseActionView())
+                assertFalse(deckPicker.viewModel.isDeckSearchExpanded)
+                assertEquals("", deckPicker.viewModel.deckSearchQuery)
+                advanceRobolectricLooperUntil { deckPicker.visibleDeckCount == 11 }
+            }
+        }
+    }
+
+    @Test
+    fun `deck search query is restored before the queued menu refresh`() =
+        runTest {
+            addBasicNote()
+            repeat(10) { addDeck("Test Deck $it") }
+            val deckPicker = startRegularActivity<DeckPicker>()
+            advanceRobolectricLooper()
+            val menu = deckPicker.menu()
+            val searchItem = menu.findItem(R.id.deck_picker_action_filter)
+            assertTrue(searchItem.expandActionView())
+            (searchItem.actionView as AccessibleSearchView).setQuery("Test Deck 1", false)
+            advanceRobolectricLooperUntil { deckPicker.visibleDeckCount == 1 }
+
+            // A synchronous collection refresh restores the query a second time, masking
+            // SearchView clearing it during expansion. Exercise the production queue instead.
+            val previousQueue = CollectionManager.setTestDispatcher(StandardTestDispatcher(testScheduler), useReentrantLock = false)
+            try {
+                menu.clear()
+                deckPicker.onCreateOptionsMenu(menu)
+                assertFalse(assertNotNull(deckPicker.createMenuJob).isCompleted)
+
+                val restoredSearchItem = menu.findItem(R.id.deck_picker_action_filter)
+                assertTrue(restoredSearchItem.isActionViewExpanded)
+                assertEquals("Test Deck 1", (restoredSearchItem.actionView as AccessibleSearchView).query.toString())
+                advanceRobolectricLooper()
+                assertEquals("Test Deck 1", deckPicker.viewModel.deckSearchQuery)
+
+                advanceUntilIdle()
+                advanceRobolectricLooperUntil { deckPicker.visibleDeckCount == 1 }
+            } finally {
+                CollectionManager.setTestDispatcher(previousQueue)
+            }
+        }
+
+    @Test
+    fun `empty expanded deck search is restored after recreation`() {
+        addBasicNote()
+        repeat(10) { addDeck("Test Deck $it") }
+
+        ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
+            scenario.onActivity { deckPicker ->
+                advanceRobolectricLooper()
+                assertTrue(deckPicker.menu().findItem(R.id.deck_picker_action_filter).expandActionView())
+            }
+
+            scenario.recreate()
+            advanceRobolectricLooper()
+
+            scenario.onActivity { deckPicker ->
+                val searchItem = deckPicker.menu().findItem(R.id.deck_picker_action_filter)
+                assertTrue(searchItem.isActionViewExpanded)
+                assertEquals("", (searchItem.actionView as AccessibleSearchView).query.toString())
+                assertTrue(searchItem.collapseActionView())
+            }
+
+            scenario.recreate()
+            advanceRobolectricLooper()
+
+            scenario.onActivity { deckPicker ->
+                val searchItem = deckPicker.menu().findItem(R.id.deck_picker_action_filter)
+                assertFalse(searchItem.isActionViewExpanded)
+                assertEquals(11, deckPicker.visibleDeckCount)
+            }
+        }
+    }
+
+    @Test
     fun `study options follows the selected deck`() {
         assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
         val deckId = addDeck("Another Deck")
+        addNoteToDeck(deckId, count = 2)
 
         deckPicker {
+            val studyOptions = assertNotNull(fragment)
+            val studyOptionsView = studyOptions.requireView()
             viewModel.selectDeck(deckId).join()
             advanceRobolectricLooper()
 
+            assertSame(studyOptions, fragment)
+            assertSame(studyOptionsView, assertNotNull(fragment).requireView())
             assertEquals(deckId, assertNotNull(fragment).viewModel.selectedDeckId)
             assertEquals("Another Deck", findViewById<TextView>(R.id.studyoptions_deck_name).text.toString())
+            assertEquals("2", findViewById<TextView>(R.id.studyoptions_new_count).text.toString())
+
+            viewModel.selectDeck(1L).join()
+            advanceRobolectricLooper()
+
+            assertSame(studyOptionsView, assertNotNull(fragment).requireView())
+            assertEquals(1L, studyOptions.viewModel.selectedDeckId)
+            assertEquals("1", findViewById<TextView>(R.id.studyoptions_new_count).text.toString())
+        }
+    }
+
+    @Test
+    fun `description wrapping is restored after releasing or cancelling divider drag`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+
+        deckPicker {
+            val description = findViewById<TextView>(R.id.studyoptions_deck_description)
+            val defaultDescription =
+                layoutInflater.inflate(R.layout.fragment_study_options, null).findViewById<TextView>(R.id.studyoptions_deck_description)
+            assertEquals(defaultDescription.breakStrategy, description.breakStrategy)
+            assertEquals(defaultDescription.hyphenationFrequency, description.hyphenationFrequency)
+            val divider = findViewById<View>(R.id.resizing_divider)
+
+            for (endAction in listOf(MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL)) {
+                // Restore the view's own settings, including values different from the theme defaults.
+                @SuppressLint("WrongConstant")
+                description.breakStrategy = Layout.BREAK_STRATEGY_BALANCED
+                description.hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_FULL
+
+                divider.dispatchTouch(MotionEvent.ACTION_DOWN)
+                repeat(2) { divider.dispatchTouch(MotionEvent.ACTION_MOVE) }
+                assertEquals(Layout.BREAK_STRATEGY_SIMPLE, description.breakStrategy)
+                assertEquals(Layout.HYPHENATION_FREQUENCY_NONE, description.hyphenationFrequency)
+
+                divider.dispatchTouch(endAction)
+                assertEquals(Layout.BREAK_STRATEGY_BALANCED, description.breakStrategy)
+                assertEquals(Layout.HYPHENATION_FREQUENCY_FULL, description.hyphenationFrequency)
+            }
         }
     }
 
@@ -789,16 +996,210 @@ class DeckPickerTest : RobolectricTest() {
         addBasicNote()
 
         deckPicker {
-            val initialState = assertNotNull(fragment).viewModel.state
+            val studyOptions = assertNotNull(fragment)
+            val initialState = studyOptions.viewModel.state
             assertEquals(1, initialState.dataOrNull()?.numberOfCardsInDeck)
 
             addBasicNote()
-            viewModel.reloadDeckCounts().join()
-            advanceRobolectricLooper()
+            reloadDecks()
 
+            assertSame(studyOptions, fragment)
             val updatedState = assertNotNull(fragment).viewModel.state
             assertEquals(2, updatedState.dataOrNull()?.numberOfCardsInDeck)
         }
+    }
+
+    @Test
+    fun `deck reload preserves reminder panel and its dialog`() =
+        withReminderPanel { reminders ->
+            val dialog = showSyncConflict()
+
+            reloadDecks()
+
+            assertSame(reminders, sidePanel)
+            assertTrue(dialog.isShowing)
+        }
+
+    @Test
+    fun `cancelling sync conflict after reload returns to reminders`() =
+        withReminderPanel { reminders ->
+            val dialog = showSyncConflict()
+            reloadDecks()
+
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).performClick()
+            advanceRobolectricLooper()
+
+            assertFalse(dialog.isShowing)
+            assertSame(reminders, sidePanel)
+        }
+
+    @Test
+    fun `reminder toolbar returns to study options after reload`() =
+        withReminderPanel { reminders ->
+            reloadDecks()
+
+            reminders.navigateUp()
+
+            assertNotNull(fragment)
+            assertEquals(0, supportFragmentManager.backStackEntryCount)
+        }
+
+    @Test
+    fun `selecting another deck closes reminders and clears pane navigation history`() =
+        withReminderPanel {
+            val anotherDeck = addDeck("Another Deck")
+
+            viewModel.selectDeck(anotherDeck).join()
+            advanceRobolectricLooper()
+
+            assertEquals(anotherDeck, assertNotNull(fragment).viewModel.selectedDeckId)
+            assertEquals(0, supportFragmentManager.backStackEntryCount)
+        }
+
+    @Test
+    fun `returning from reminders does not accumulate study options subscriptions`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+        Prefs.newReviewRemindersEnabled = true
+
+        deckPicker {
+            val studyOptions = assertNotNull(fragment)
+            val state = studyOptions.viewModel.flowOfState as MutableStateFlow<StudyOptionsState>
+            val initialSubscriberCount = ChangeManager.subscriberCount
+            assertEquals(1, state.subscriptionCount.value)
+
+            repeat(2) {
+                selectContextMenuOption(ContextMenuOption.SCHEDULE_REMINDERS, studyOptions.viewModel.selectedDeckId)
+                advanceRobolectricLooper()
+                val reminders = requireNotNull(sidePanel as? ScheduleRemindersFragment)
+                reminders.navigateUp()
+
+                assertSame(studyOptions, fragment)
+                assertAll(
+                    { assertEquals("Active study options state collectors", 1, state.subscriptionCount.value) },
+                    { assertEquals("ChangeManager subscriptions", initialSubscriberCount, ChangeManager.subscriberCount) },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `returning from reminders restores scroll only for the same deck`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+        val anotherDeck = addDeck("Another deck")
+        addNoteToDeck(anotherDeck, count = 2)
+        Prefs.newReviewRemindersEnabled = true
+
+        deckPicker {
+            makeStudyOptionsScrollable()
+            val studyOptions = assertNotNull(fragment)
+            for (selectAnotherDeck in listOf(false, true)) {
+                val scroll = studyOptions.layoutScroll()
+                scroll.scrollTo(0, 200)
+                assertEquals(200, scroll.scrollY)
+
+                selectContextMenuOption(ContextMenuOption.SCHEDULE_REMINDERS, studyOptions.viewModel.selectedDeckId)
+                advanceRobolectricLooper()
+                val reminders = assertNotNull(sidePanel as? ScheduleRemindersFragment)
+                if (selectAnotherDeck) {
+                    viewModel.selectDeck(anotherDeck).join()
+                    advanceRobolectricLooper()
+                } else {
+                    reminders.navigateUp()
+                }
+
+                assertSame(studyOptions, fragment)
+                assertEquals(if (selectAnotherDeck) anotherDeck else 1L, studyOptions.viewModel.selectedDeckId)
+                val restoredScroll = studyOptions.layoutScroll()
+                assertEquals(if (selectAnotherDeck) 0 else 200, restoredScroll.scrollY)
+            }
+        }
+    }
+
+    @Test
+    fun `restored study options associates saved scroll with its deck`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+        val anotherDeck = addDeck("Another deck")
+        addNoteToDeck(anotherDeck, count = 2)
+
+        deckPicker {
+            makeStudyOptionsScrollable()
+            for (deckId in listOf(1L, anotherDeck)) {
+                val studyOptions = assertNotNull(fragment)
+                studyOptions.layoutScroll().scrollTo(0, 200)
+                val savedState = supportFragmentManager.saveFragmentInstanceState(studyOptions)
+                viewModel.selectDeck(deckId).join()
+                advanceRobolectricLooper()
+
+                // Recreate the fragment from its saved state, including its view hierarchy.
+                val restored = StudyOptionsFragment().apply { setInitialSavedState(savedState) }
+                supportFragmentManager.commitNow { replace(R.id.studyoptions_fragment, restored) }
+                advanceRobolectricLooper()
+
+                assertEquals(deckId, restored.viewModel.selectedDeckId)
+                assertEquals(if (deckId == 1L) 200 else 0, restored.layoutScroll().scrollY)
+            }
+        }
+    }
+
+    /** Keep original and restored panes scrollable without relying on font metrics. */
+    private fun DeckPicker.makeStudyOptionsScrollable() {
+        val studyOptionsView = assertNotNull(fragment).requireView()
+        studyOptionsView.findViewById<ScrollView>(R.id.studyoptions_scrollview).getChildAt(0).minimumHeight = 10000
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentViewCreated(
+                    fm: FragmentManager,
+                    f: Fragment,
+                    v: View,
+                    savedInstanceState: Bundle?,
+                ) {
+                    if (f is StudyOptionsFragment) {
+                        v.findViewById<ScrollView>(R.id.studyoptions_scrollview).getChildAt(0).minimumHeight = 10000
+                    }
+                }
+            },
+            false,
+        )
+    }
+
+    private fun StudyOptionsFragment.layoutScroll(): ScrollView =
+        requireView().findViewById<ScrollView>(R.id.studyoptions_scrollview).apply {
+            measure(MeasureSpec.makeMeasureSpec(400, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(300, MeasureSpec.EXACTLY))
+            layout(0, 0, 400, 300)
+        }
+
+    private fun withReminderPanel(test: suspend DeckPicker.(ScheduleRemindersFragment) -> Unit) {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+        Prefs.newReviewRemindersEnabled = true
+        deckPicker {
+            selectContextMenuOption(ContextMenuOption.SCHEDULE_REMINDERS, getColUnsafe.decks.selected())
+            advanceRobolectricLooper()
+            test(requireNotNull(sidePanel as? ScheduleRemindersFragment))
+        }
+    }
+
+    private val DeckPicker.sidePanel
+        get() = supportFragmentManager.findFragmentById(R.id.studyoptions_fragment)
+
+    private suspend fun DeckPicker.reloadDecks() {
+        viewModel.reloadDeckCounts().join()
+        advanceRobolectricLooper()
+    }
+
+    private fun DeckPicker.showSyncConflict(): AlertDialog {
+        showSyncErrorDialog(SyncErrorDialog.Type.DIALOG_SYNC_CONFLICT_RESOLUTION)
+        advanceRobolectricLooper()
+        return ShadowDialog.getLatestDialog() as AlertDialog
+    }
+
+    private fun ScheduleRemindersFragment.navigateUp() {
+        val toolbar = requireView().findViewById<Toolbar>(R.id.non_collapsible_toolbar)
+        toolbar.children.first { it.contentDescription == toolbar.navigationContentDescription }.performClick()
+        advanceRobolectricLooper()
     }
 
     @Test
@@ -839,7 +1240,9 @@ class DeckPickerTest : RobolectricTest() {
     fun `restored study options fragment is pruned when recreated into single pane`() {
         assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
         ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
-            advanceRobolectricLooper()
+            lateinit var viewModel: DeckPickerViewModel
+            scenario.onActivity { viewModel = it.viewModel }
+            viewModel.awaitStartup()
             scenario.onActivity { deckPicker ->
                 assertThat(
                     "side panel fragment should be displayed on tablet",
@@ -1015,6 +1418,44 @@ class DeckPickerTest : RobolectricTest() {
             // TalkBack activate a focused control, which routes to [View.performClick]
             fab.performClick()
             assertThat("FAB menu opens on click", floatingActionMenu.isFABOpen, equalTo(true))
+        }
+
+    @Test
+    fun `adding a note by single tap closes the FAB menu`() = assertAddingNoteByTouchClosesMenu(doubleTap = false)
+
+    @Test
+    fun `adding a note by double tap closes the FAB menu`() = assertAddingNoteByTouchClosesMenu(doubleTap = true)
+
+    private fun assertAddingNoteByTouchClosesMenu(doubleTap: Boolean) =
+        deckPicker {
+            val fab = floatingActionButtonBinding.fabMain
+            val startTime = SystemClock.uptimeMillis()
+
+            fun tap(offset: Long) {
+                val downTime = startTime + offset
+                for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                    val eventTime = downTime + if (action == MotionEvent.ACTION_UP) 50 else 0
+                    val event = MotionEvent.obtain(downTime, eventTime, action, 0f, 0f, 0)
+                    try {
+                        fab.dispatchTouchEvent(event)
+                    } finally {
+                        event.recycle()
+                    }
+                }
+            }
+
+            if (!doubleTap) floatingActionMenu.showFloatingActionMenu()
+            viewModel.flowOfNavigate.test {
+                if (doubleTap) {
+                    tap(0)
+                    assertTrue(floatingActionMenu.isFABOpen)
+                }
+                tap(100)
+                val intent = AnkiDroidNavigator.toIntent(awaitItem())
+                assertEquals("com.ichi2.anki.NoteEditorActivity", intent.component!!.className)
+                assertFalse(floatingActionMenu.isFABOpen, "Adding a note must close the FAB menu")
+                assertEquals(View.GONE, floatingActionButtonBinding.fabBGLayout.visibility)
+            }
         }
 
     @Test
@@ -1338,6 +1779,71 @@ class DeckPickerTest : RobolectricTest() {
             )
         }
 
+    @Test
+    fun `menu state refresh tolerates a cleared menu`() =
+        deckPicker {
+            createMenuJob?.join()
+            assertNotNull(viewModel.optionsMenuState)
+            val menu = menu()
+            // Menu invalidation can clear the menu while refreshMenuState is suspended.
+            menu.clear()
+
+            updateMenuFromState(menu)
+
+            assertEquals(0, menu.size)
+        }
+
+    @Test
+    fun `menu state refresh tolerates a removed sync item`() =
+        deckPicker {
+            createMenuJob?.join()
+            assertNotNull(viewModel.optionsMenuState)
+            val menu = menu()
+            assertNotNull(menu.findItem(R.id.action_undo))
+            menu.removeItem(R.id.action_sync)
+
+            updateMenuFromState(menu)
+
+            assertThat(menu.findItem(R.id.action_sync), nullValue())
+        }
+
+    @Test
+    fun `fatal error arriving after menu creation blanks the options menu`() =
+        deckPickerEx {
+            assertThat("menu was built normally on startup", lastCreateOptionsMenuResult, equalTo(true))
+
+            // a slow startup check delivers a fatal error once the menu already exists
+            viewModel.flowOfStartupResponse.value =
+                DeckPickerViewModel.StartupResponse.FatalError(InitialActivity.StartupFailure.DatabaseLocked)
+            advanceRobolectricLooper()
+            advanceRobolectricLooper()
+
+            assertThat("the failure was handled", databaseErrorDialog, equalTo(DatabaseErrorDialogType.DIALOG_DB_LOCKED))
+            assertThat("the menu is rebuilt and blanked", lastCreateOptionsMenuResult, equalTo(false))
+        }
+
+    @Test
+    fun `success arriving after menu creation refreshes the options menu`() =
+        deckPickerEx {
+            CollectionManager.closeCollectionBlocking()
+            invalidateOptionsMenu()
+            advanceRobolectricLooper()
+            createMenuJob?.join()
+            assertThat("menu built while the collection was closed", viewModel.optionsMenuState, nullValue())
+
+            CollectionManager.getColUnsafe()
+            viewModel.flowOfStartupResponse.value = DeckPickerViewModel.StartupResponse.Success
+            advanceRobolectricLooper()
+            advanceRobolectricLooper()
+            createMenuJob?.join()
+
+            assertThat(
+                "the menu is rebuilt once startup succeeds",
+                viewModel.optionsMenuState?.syncIcon,
+                equalTo(SyncIconState.NotLoggedIn),
+            )
+        }
+
     /** Regression test for [#20712](https://github.com/ankidroid/Anki-Android/issues/20712) */
     @Test
     fun `SQLiteDatabaseCorruptException in runCatching shows database error dialog`() =
@@ -1409,6 +1915,16 @@ class DeckPickerTest : RobolectricTest() {
         var databaseErrorDialog: DatabaseErrorDialogType? = null
         var displayedAnalyticsOptIn = false
         var optionsMenu: Menu? = null
+        var integrityCheckCalled = false
+
+        override fun integrityCheck() {
+            integrityCheckCalled = true
+        }
+
+        /** result of the last [onCreateOptionsMenu] call: false means the menu was blanked */
+        var lastCreateOptionsMenuResult: Boolean? = null
+
+        override fun onCreateOptionsMenu(menu: Menu): Boolean = super.onCreateOptionsMenu(menu).also { lastCreateOptionsMenuResult = it }
 
         override fun showDatabaseErrorDialog(
             errorDialogType: DatabaseErrorDialogType,

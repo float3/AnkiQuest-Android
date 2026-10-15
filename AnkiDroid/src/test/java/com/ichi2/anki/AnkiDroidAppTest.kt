@@ -15,6 +15,7 @@ import com.ichi2.anki.common.crashreporting.CrashReportService.sendExceptionRepo
 import com.ichi2.anki.multiprofile.ProfileManager
 import com.ichi2.anki.multiprofile.ProfileManager.Companion.KEY_LAST_ACTIVE_PROFILE_ID
 import com.ichi2.anki.multiprofile.ProfileManager.Companion.PROFILE_REGISTRY_FILENAME
+import com.ichi2.anki.multiprofile.isPhoenixProcess
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.runner.RunWith
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 @RunWith(AndroidJUnit4::class)
@@ -85,6 +87,13 @@ class AnkiDroidAppTest {
     }
 
     @Test
+    fun `the application retains the profile manager`() {
+        val app = ApplicationProvider.getApplicationContext<AnkiDroidApp>()
+
+        assertNotNull(app.profileManager, "callers need the manager to reach the active profile")
+    }
+
+    @Test
     fun `storage follows a non-default profile`() {
         profileRegistry.edit(commit = true) { putString(KEY_LAST_ACTIVE_PROFILE_ID, "p_routed") }
 
@@ -109,6 +118,18 @@ class AnkiDroidAppTest {
     fun `ACRA process skips the profile environment`() {
         mockkStatic(::isAcraSenderProcess)
         every { isAcraSenderProcess() } returns true
+        profileRegistry.edit(commit = true) { clear() }
+
+        val app = startApplication()
+
+        assertNull(profileRegistry.getString(KEY_LAST_ACTIVE_PROFILE_ID, null))
+        assertEquals(frameworkBase.filesDir, app.filesDir)
+    }
+
+    @Test
+    fun `phoenix process skips the profile environment`() {
+        mockkStatic(::isPhoenixProcess)
+        every { isPhoenixProcess() } returns true
         profileRegistry.edit(commit = true) { clear() }
 
         val app = startApplication()

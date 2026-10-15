@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2022 Ankitects Pty Ltd <http://apps.ankiweb.net>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2022 Ankitects Pty Ltd <http://apps.ankiweb.net>
 
 package com.ichi2.anki
 
@@ -25,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.ankiweb.rsdroid.BackendException
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Attempts a backup and awaits its completion.
@@ -39,7 +27,7 @@ import net.ankiweb.rsdroid.BackendException
 suspend fun performBackupInBackground(force: Boolean = false): Boolean {
     // Wait a second to allow the deck list to finish loading first, or it
     // will hang until the first stage of the backup completes.
-    delay(1000)
+    delay(1.seconds)
     return createBackup(force = force)
 }
 

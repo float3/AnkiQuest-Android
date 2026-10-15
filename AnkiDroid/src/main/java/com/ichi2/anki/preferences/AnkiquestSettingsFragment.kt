@@ -23,6 +23,7 @@ import androidx.preference.Preference
 import androidx.preference.SwitchPreferenceCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
@@ -437,10 +438,10 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                     .setMessage(message)
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
-            }.setNeutralButton(R.string.settings) { _, _ ->
+            }.setNeutralButton(CommonString.settings) { _, _ ->
                 AlertDialog
                     .Builder(context)
-                    .setTitle(R.string.settings)
+                    .setTitle(CommonString.settings)
                     .setItems(
                         arrayOf(
                             getString(R.string.ankiquest_health_permission_settings),

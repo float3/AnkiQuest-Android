@@ -3,10 +3,12 @@
 package com.ichi2.anki.ui.windows.reviewer
 
 import android.text.InputType
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
+import androidx.appcompat.widget.ThemeUtils
 import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.fragment.app.DialogFragment
@@ -18,12 +20,19 @@ import com.ichi2.anki.cardviewer.Gesture
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.dialogs.tags.TagsDialog
 import com.ichi2.anki.preferences.reviewer.ViewerAction
+import com.ichi2.anki.preferences.reviewer.WhiteboardAction
 import com.ichi2.anki.previewer.CardViewerActivity
+import com.ichi2.anki.reviewer.Binding
+import com.ichi2.anki.reviewer.CardSide
 import com.ichi2.anki.reviewer.MappableBinding.Companion.toPreferenceString
 import com.ichi2.anki.reviewer.ReviewerBinding
 import com.ichi2.anki.scheduling.SetDueDateDialog
 import com.ichi2.anki.scheduling.singleDayText
 import com.ichi2.anki.settings.Prefs
+import com.ichi2.anki.settings.PrefsRepository
+import com.ichi2.anki.settings.enums.AppTheme
+import com.ichi2.anki.settings.enums.NightTheme
+import com.ichi2.anki.ui.windows.reviewer.whiteboard.WhiteboardFragment
 import com.ichi2.anki.utils.ext.DIALOG_FRAGMENT_TAG
 import com.ichi2.testutils.RecordingInputMethodManager
 import com.ichi2.testutils.ext.addNoSuggestNote
@@ -34,9 +43,12 @@ import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadow.api.Shadow
+import kotlin.reflect.jvm.jvmName
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -83,6 +95,26 @@ class ReviewerFragmentTest : RobolectricTest() {
 
                 assertNotSame(originalWebView, webViewLayout.getChildAt(0))
                 assertRenderingLayerType(View.LAYER_TYPE_SOFTWARE)
+            }
+        }
+
+    @Test
+    fun `card WebView uses the theme background before the card loads`() =
+        runTest {
+            addBasicNote()
+            RuntimeEnvironment.setQualifiers("+night")
+            PrefsRepository(targetContext).apply {
+                appTheme = AppTheme.NIGHT
+                nightTheme = NightTheme.DARK
+            }
+
+            withReviewer {
+                val background = ThemeUtils.getThemeAttrColor(requireContext(), android.R.attr.colorBackground)
+                val webViewLayout = binding.webViewLayout
+                assertEquals(background, shadowOf(assertIs<WebView>(webViewLayout.getChildAt(0))).backgroundColor, "card WebView")
+
+                webViewLayout.onRenderProcessGone(assertIs<WebView>(webViewLayout.getChildAt(0)))
+                assertEquals(background, shadowOf(assertIs<WebView>(webViewLayout.getChildAt(0))).backgroundColor, "recreated WebView")
             }
         }
 
@@ -241,6 +273,53 @@ class ReviewerFragmentTest : RobolectricTest() {
                 assertFalse(reopenedTags.isChecked("unconfirmed"))
             }
         }
+
+    @Test
+    fun `shake reaches the study screen while the whiteboard is hidden`() =
+        runTest {
+            val cardId = addBasicNote().firstCard().id
+            bindToStudyScreenAndWhiteboard(ReviewerBinding.fromGesture(Gesture.SHAKE))
+            withReviewer {
+                hideWhiteboard(this)
+                hearShake()
+                advanceUntilIdle()
+                advanceRobolectricLooper()
+                assertEquals(listOf(cardId), assertIs<SetDueDateDialog>(currentDialog).cardIds)
+            }
+        }
+
+    @Test
+    fun `key press reaches the study screen while the whiteboard is hidden`() =
+        runTest {
+            val cardId = addBasicNote().firstCard().id
+            bindToStudyScreenAndWhiteboard(ReviewerBinding(Binding.keyCode(KeyEvent.KEYCODE_F5), CardSide.BOTH))
+            withReviewer {
+                hideWhiteboard(this)
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_F5))
+                advanceUntilIdle()
+                advanceRobolectricLooper()
+                assertEquals(listOf(cardId), assertIs<SetDueDateDialog>(currentDialog).cardIds)
+            }
+        }
+
+    private fun bindToStudyScreenAndWhiteboard(binding: ReviewerBinding) {
+        val bindings = listOf(binding).toPreferenceString()
+        targetContext.sharedPrefs().edit {
+            putString(ViewerAction.RESCHEDULE_NOTE.preferenceKey, bindings)
+            putString(WhiteboardAction.CLEAR.preferenceKey, bindings)
+        }
+        StudyScreenRepository().isWhiteboardEnabled = true
+    }
+
+    private fun TestScope.hideWhiteboard(reviewer: ReviewerFragment) {
+        advanceRobolectricLooper()
+        val whiteboard =
+            assertIs<WhiteboardFragment>(reviewer.childFragmentManager.findFragmentByTag(WhiteboardFragment::class.jvmName))
+        reviewer.viewModel.whiteboardEnabledFlow.value = false
+        advanceUntilIdle()
+        advanceRobolectricLooper()
+        assertTrue(whiteboard.isHidden)
+    }
 
     private fun ReviewerFragment.assertRenderingLayerType(expected: Int) {
         assertEquals(expected, requireView().layerType, "study screen root")

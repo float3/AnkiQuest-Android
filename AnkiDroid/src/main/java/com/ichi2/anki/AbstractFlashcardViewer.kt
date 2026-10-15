@@ -93,6 +93,7 @@ import com.ichi2.anki.cardviewer.SingleCardSide
 import com.ichi2.anki.cardviewer.TTS
 import com.ichi2.anki.cardviewer.TypeAnswer
 import com.ichi2.anki.cardviewer.TypeAnswer.Companion.createInstance
+import com.ichi2.anki.cardviewer.TypeAnswerWebView
 import com.ichi2.anki.cardviewer.ViewerCommand
 import com.ichi2.anki.cardviewer.ViewerRefresh
 import com.ichi2.anki.cardviewer.handledGamepadKeyDown
@@ -109,6 +110,7 @@ import com.ichi2.anki.common.utils.HashUtil.hashSetInit
 import com.ichi2.anki.common.utils.android.HandlerUtils.newHandler
 import com.ichi2.anki.common.utils.android.getResFromAttr
 import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.common.utils.ext.showIntervalsOnButtons
 import com.ichi2.anki.compat.CompatHelper.Companion.resolveActivityCompat
 import com.ichi2.anki.compat.ResolveInfoFlagsCompat
 import com.ichi2.anki.dialogs.TtsPlaybackErrorDialog
@@ -1270,7 +1272,7 @@ abstract class AbstractFlashcardViewer :
         // These are preferences we pull out of the collection instead of SharedPreferences
         try {
             lifecycle.removeObserver(automaticAnswer)
-            showNextReviewTime = col.config.get("estTimes") ?: true
+            showNextReviewTime = col.config.showIntervalsOnButtons
             automaticAnswer = AutomaticAnswer.createInstance(this, col)
             lifecycle.addObserver(automaticAnswer)
         } catch (ex: Exception) {
@@ -2015,7 +2017,7 @@ abstract class AbstractFlashcardViewer :
     /** Fixing bug 720: <input></input> focus, thanks to pablomouzo on android issue 7189  */
     internal inner class MyWebView(
         context: Context?,
-    ) : WebView(context!!) {
+    ) : TypeAnswerWebView(context!!) {
         override fun loadDataWithBaseURL(
             baseUrl: String?,
             data: String,
