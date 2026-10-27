@@ -21,6 +21,7 @@ import com.ichi2.anki.ankiActivity
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.analytics.AnalyticsEvent.LinkClicked
 import com.ichi2.anki.common.analytics.LinkAction
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.databinding.DialogHelpBinding
 import com.ichi2.anki.databinding.FragmentHelpPageBinding
 import com.ichi2.anki.databinding.ItemHelpEntryBinding
@@ -31,9 +32,9 @@ import com.ichi2.anki.dialogs.help.HelpItem.Action.SendReport
 import com.ichi2.anki.utils.ext.setCompoundDrawablesRelativeWithIntrinsicBoundsKt
 import com.ichi2.utils.createAndApply
 import com.ichi2.utils.customView
-import com.ichi2.utils.dp
 import com.ichi2.utils.title
 import dev.androidbroadcast.vbpd.viewBinding
+import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * [DialogFragment] responsible for showing the help/support menus.
@@ -82,7 +83,7 @@ class HelpDialog : AnalyticsDialogFragment() {
         val selectedItem =
             BundleCompat.getParcelable(
                 from,
-                ARG_SELECTED_MENU_ITEM,
+                RESULT_SELECTED_MENU_ITEM,
                 HelpItem::class.java,
             ) ?: return
         when (selectedItem.action) {
@@ -173,7 +174,7 @@ internal fun Fragment.requireArgsHelpEntries(): Array<HelpItem> {
 
 internal const val ARG_MENU_ITEMS = "arg_menu_items"
 internal const val REQUEST_HELP_PAGE = "request_help_page"
-internal const val ARG_SELECTED_MENU_ITEM = " selected_menu_item"
+internal const val RESULT_SELECTED_MENU_ITEM = " selected_menu_item"
 
 /**
  * This fragment is responsible for showing a list of menu items in the application's [HelpDialog].
@@ -196,7 +197,7 @@ class HelpPageFragment : Fragment(R.layout.fragment_help_page) {
                     Analytics.send(LinkClicked(menuItem.analyticsId))
                     parentFragmentManager.setFragmentResult(
                         REQUEST_HELP_PAGE,
-                        Bundle().apply { putParcelable(ARG_SELECTED_MENU_ITEM, menuItem) },
+                        Bundle().apply { putParcelable(RESULT_SELECTED_MENU_ITEM, menuItem) },
                     )
                 }
                 binding.pageContent.addView(this)
@@ -222,7 +223,7 @@ internal val mainHelpMenuItems =
         ),
         HelpItem(
             titleResId = CommonString.help_title_get_help,
-            iconResId = R.drawable.ic_help_black_24dp,
+            iconResId = CommonR.drawable.ic_help_black_24dp,
             analyticsId = LinkAction.OPENED_GET_HELP,
             id = 2,
         ),
@@ -274,7 +275,7 @@ internal val supportMenuItems =
         ),
         HelpItem(
             titleResId = CommonString.help_item_support_other_ankidroid,
-            iconResId = R.drawable.ic_help_black_24dp,
+            iconResId = CommonR.drawable.ic_help_black_24dp,
             analyticsId = LinkAction.OPENED_OTHER,
             id = 9,
             action = OpenUrlResource(R.string.link_contribution),
@@ -310,7 +311,7 @@ internal val childHelpMenuItems =
         ),
         HelpItem(
             titleResId = CommonString.help_item_ankidroid_faq,
-            iconResId = R.drawable.ic_help_black_24dp,
+            iconResId = CommonR.drawable.ic_help_black_24dp,
             analyticsId = LinkAction.OPENED_ANKIDROID_FAQ,
             id = 102,
             parentId = 1,

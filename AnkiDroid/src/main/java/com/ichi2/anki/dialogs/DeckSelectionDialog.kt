@@ -25,7 +25,6 @@ import androidx.fragment.app.setFragmentResultListener
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.RecyclerView
 import anki.decks.deckTreeNode
-import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CardTemplateEditor
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
@@ -38,8 +37,8 @@ import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.databinding.DialogDeckPickerBinding
 import com.ichi2.anki.databinding.ItemDeckPickerDialogBinding
 import com.ichi2.anki.deckpicker.DeckFilters
-import com.ichi2.anki.dialogs.DeckSelectionDialog.Companion.ARG_SELECTED_DECK
 import com.ichi2.anki.dialogs.DeckSelectionDialog.Companion.REQUEST_SELECT_DECK
+import com.ichi2.anki.dialogs.DeckSelectionDialog.Companion.RESULT_SELECTED_DECK
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
 import com.ichi2.anki.libanki.DeckId
@@ -56,6 +55,7 @@ import com.ichi2.utils.customView
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
 import timber.log.Timber
+import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * A fragment which allows the user to select one or multiple decks from a list of decks. It also
@@ -113,7 +113,7 @@ class DeckSelectionDialog : AnalyticsDialogFragment() {
     }
 
     private fun getDeckNames(): ArrayList<SelectableDeck> =
-        BundleCompat.getParcelableArrayList(requireArguments(), DECK_NAMES, SelectableDeck::class.java)!!
+        BundleCompat.getParcelableArrayList(requireArguments(), ARG_DECK_NAMES, SelectableDeck::class.java)!!
 
     private fun setupMenu() {
         val toolbar: Toolbar = binding.toolbar
@@ -187,7 +187,7 @@ class DeckSelectionDialog : AnalyticsDialogFragment() {
         parentFragmentManager.setFragmentResult(
             requestKey,
             Bundle().apply {
-                putParcelable(ARG_SELECTED_DECK, deck)
+                putParcelable(RESULT_SELECTED_DECK, deck)
             },
         )
     }
@@ -222,8 +222,8 @@ class DeckSelectionDialog : AnalyticsDialogFragment() {
 
         val attrs =
             intArrayOf(
-                R.attr.expandRef,
-                R.attr.collapseRef,
+                CommonR.attr.expandRef,
+                CommonR.attr.collapseRef,
             )
 
         inner class ViewHolder(
@@ -414,14 +414,14 @@ class DeckSelectionDialog : AnalyticsDialogFragment() {
     companion object {
         const val TAG = "DeckSelectionDialog"
         const val REQUEST_SELECT_DECK = "request_select_deck"
-        const val ARG_SELECTED_DECK = "arg_selected_deck"
+        const val RESULT_SELECTED_DECK = "arg_selected_deck"
         const val ARG_REQUEST_KEY = "arg_request_key"
         const val ARG_ALLOW_ALL = "arg_allow_all"
         const val ARG_ALLOW_FILTERED = "arg_allow_filtered"
         const val ARG_SKIP_EMPTY_DEFAULT = "arg_skip_empty_default"
         private const val ARG_TITLE = "arg_title"
         private const val ARG_TEMPLATE_EDITOR_MESSAGE = "arg_template_editor_message"
-        private const val DECK_NAMES = "deckNames"
+        private const val ARG_DECK_NAMES = "deckNames"
         private const val ARG_ALLOW_MULTIPLE_SELECTION = "arg_allow_multiple_selection"
 
         /** Creates a new instance of [DeckSelectionDialog]. */
@@ -440,7 +440,7 @@ class DeckSelectionDialog : AnalyticsDialogFragment() {
                     Bundle().apply {
                         putString(ARG_TEMPLATE_EDITOR_MESSAGE, templateEditorMessage)
                         putString(ARG_TITLE, title)
-                        putParcelableArrayList(DECK_NAMES, ArrayList(decks))
+                        putParcelableArrayList(ARG_DECK_NAMES, ArrayList(decks))
                         putString(ARG_REQUEST_KEY, requestKey)
                         putBoolean(ARG_ALLOW_MULTIPLE_SELECTION, allowMultipleSelection)
                         putBoolean(ARG_ALLOW_ALL, allowAll)
@@ -462,7 +462,7 @@ fun FragmentActivity.registerDeckSelectedHandler(
     action: (deck: SelectableDeck?) -> Unit,
 ) {
     setFragmentResultListener(requestKey) { _, bundle ->
-        val selectedDeck = bundle.getParcelableCompat<SelectableDeck?>(ARG_SELECTED_DECK)
+        val selectedDeck = bundle.getParcelableCompat<SelectableDeck?>(RESULT_SELECTED_DECK)
         action(selectedDeck)
     }
 }
@@ -479,7 +479,7 @@ fun Fragment.registerDeckSelectedHandler(
     action: (deck: SelectableDeck?) -> Unit,
 ) {
     setFragmentResultListener(requestKey) { _, bundle ->
-        val selectedDeck = bundle.getParcelableCompat<SelectableDeck?>(ARG_SELECTED_DECK)
+        val selectedDeck = bundle.getParcelableCompat<SelectableDeck?>(RESULT_SELECTED_DECK)
         action(selectedDeck)
     }
 }
@@ -557,7 +557,7 @@ fun Fragment.startDeckSelection(
  * @param allowFiltered shows filtered decks if true
  * @param skipEmptyDefault if true, hides the 'Default' deck if it has no cards or subdecks
  */
-fun AnkiActivity.startDeckSelection(
+fun FragmentActivity.startDeckSelection(
     title: String? = null,
     templateEditorMessage: String? = null,
     requestKey: String = REQUEST_SELECT_DECK,

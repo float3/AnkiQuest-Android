@@ -18,8 +18,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
+import com.ichi2.anki.InitialActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.utils.Dp
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.databinding.FragmentReminderTroubleshootingBinding
 import com.ichi2.anki.databinding.FragmentScheduleRemindersBinding
 import com.ichi2.anki.preferences.PreferencesActivity
@@ -28,8 +31,6 @@ import com.ichi2.anki.reviewreminders.ScheduleRemindersFragment.FragmentHost
 import com.ichi2.anki.utils.ConfigAwareSingleFragmentActivity
 import com.ichi2.testutils.windowInsetsOf
 import com.ichi2.testutils.withWritePermissions
-import com.ichi2.utils.Dp
-import com.ichi2.utils.dp
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.Test
@@ -130,6 +131,7 @@ class ReviewRemindersInsetsTest : RobolectricTest() {
     @Suppress("DEPRECATION") // systemUiVisibility: how WindowCompat un-fits the window below API 30
     fun `standalone host - the window stays edge to edge after pausing`() =
         withWritePermissions {
+            InitialActivity.decideStorageIfUndecided(targetContext)
             val intent = ScheduleRemindersFragment.getIntent(targetContext, ReviewReminderScope.Global)
             ActivityScenario.launch<ConfigAwareSingleFragmentActivity>(intent).use { scenario ->
                 advanceRobolectricLooper()

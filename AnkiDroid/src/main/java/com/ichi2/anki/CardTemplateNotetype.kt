@@ -8,12 +8,15 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Parcel
 import android.os.Parcelable
-import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.common.android.appContext
 import com.ichi2.anki.compat.CompatHelper.Companion.getSerializableCompat
+import com.ichi2.anki.libanki.CardOrdinal
 import com.ichi2.anki.libanki.CardTemplate
 import com.ichi2.anki.libanki.NoteTypeId
 import com.ichi2.anki.libanki.NotetypeJson
+import com.ichi2.anki.libanki.Notetypes
+import com.ichi2.anki.libanki.utils.insert
+import com.ichi2.anki.libanki.utils.remove
 import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.utils.ext.readJson
 import com.ichi2.anki.utils.ext.writeJson
@@ -25,33 +28,21 @@ import java.io.IOException
 class CardTemplateNotetype(
     val notetype: NotetypeJson,
 ) {
-    enum class ChangeType {
-        ADD,
-        DELETE,
-    }
-
-    data class TemplateChange(
-        var ordinal: Int,
-        val type: ChangeType,
-    ) : java.io.Serializable
-
-    private val changes = CardTemplateChanges()
-
-    var templateChanges: ArrayList<TemplateChange>
-        get() = changes.templateChanges
-        private set(value) {
-            changes.templateChanges = value
-        }
+    /** Database identity at each editor position; null for an unsaved addition. */
+    private var originalTemplateOrds: ArrayList<CardOrdinal?> = notetype.templates.mapTo(ArrayList()) { it.ord }
+    private var deletedTemplateOrds = ArrayList<CardOrdinal>()
 
     fun toBundle(): Bundle =
         Bundle().apply {
-            putString(INTENT_MODEL_FILENAME, saveTempNoteType(appContext, notetype))
-            putSerializable("mTemplateChanges", templateChanges)
+            putString(STATE_EDITED_NOTE_TYPE_FILENAME, saveTempNoteType(appContext, notetype))
+            putSerializable(STATE_ORIGINAL_TEMPLATE_ORDS, originalTemplateOrds)
+            putSerializable(STATE_DELETED_TEMPLATE_ORDS, deletedTemplateOrds)
         }
 
     private fun loadTemplateChanges(bundle: Bundle) {
         try {
-            templateChanges = bundle.getSerializableCompat("mTemplateChanges")!!
+            originalTemplateOrds = bundle.getSerializableCompat(STATE_ORIGINAL_TEMPLATE_ORDS)!!
+            deletedTemplateOrds = bundle.getSerializableCompat(STATE_DELETED_TEMPLATE_ORDS)!!
         } catch (e: ClassCastException) {
             Timber.e(e, "Unexpected cast failure")
         }
@@ -81,80 +72,64 @@ class CardTemplateNotetype(
         notetype.templates[ordinal] = template
     }
 
-    fun addNewTemplate(newTemplate: CardTemplate) {
+    fun addNewTemplate() {
         Timber.d("addNewTemplate()")
-        addTemplateChange(ChangeType.ADD, newTemplate.ord)
+        originalTemplateOrds.add(null)
     }
 
     fun removeTemplate(ord: Int) {
         Timber.d("removeTemplate() on ordinal %s", ord)
-        addTemplateChange(ChangeType.DELETE, ord)
+        originalTemplateOrds.removeAt(ord)?.let { deletedTemplateOrds.add(it) }
+    }
+
+    /** Move a template while retaining its database identity for saving, previews and deletion checks. */
+    fun repositionTemplate(
+        from: CardOrdinal,
+        to: CardOrdinal,
+    ) {
+        require(from in 0 until templateCount && to in 0 until templateCount)
+        if (from == to) return
+        val template = getTemplate(from)
+        notetype.templates.remove(template)
+        notetype.templates.insert(to, template)
+        originalTemplateOrds.add(to, originalTemplateOrds.removeAt(from))
+        Notetypes._updateTemplOrds(notetype)
     }
 
     suspend fun saveToDatabase() {
         Timber.d("saveToDatabase() called")
-        changes.dumpChanges()
-        clearTempNoteTypeFiles()
-        saveNoteType(notetype, adjustedTemplateChanges)
-    }
-
-    /**
-     * Handles everything for a note type change at once - template add / deletes as well as content updates
-     */
-    suspend fun saveNoteType(
-        notetype: NotetypeJson,
-        templateChanges: ArrayList<TemplateChange>,
-    ) {
-        Timber.d("saveNoteType")
-        val oldNoteType = withCol { notetypes.get(notetype.id) }
-
-        val newTemplates = notetype.templates
-        for (change in templateChanges) {
-            val oldTemplates = oldNoteType!!.templates
-            when (change.type) {
-                ChangeType.ADD -> {
-                    Timber.d("saveNoteType() adding template %s", change.ordinal)
-                    withCol { notetypes.addTemplate(oldNoteType, newTemplates[change.ordinal]) }
-                }
-                ChangeType.DELETE -> {
-                    Timber.d("saveNoteType() deleting template currently at ordinal %s", change.ordinal)
-                    withCol { notetypes.removeTemplate(oldNoteType, oldTemplates[change.ordinal]) }
-                }
-            }
+        val updated = notetype.deepClone()
+        for ((i, template) in updated.templates.withIndex()) {
+            template.setOrd(originalTemplateOrds[i])
         }
-
-        // required for Rust: the modified time can't go backwards, and we updated the note type by adding fields
-        // This could be done better
-        notetype.mod = oldNoteType!!.mod
         undoableOp {
-            notetypes.updateDict(notetype)
+            notetypes.updateDict(updated)
         }
+        clearTempNoteTypeFiles()
     }
 
-    fun addTemplateChange(
-        type: ChangeType,
-        ordinal: Int,
-    ) = changes.addTemplateChange(type, ordinal)
+    /** Database ordinals of pending deletions, including the proposed editor position. */
+    fun getDeleteDbOrds(ord: Int): IntArray = (deletedTemplateOrds + listOfNotNull(getOriginalOrdinal(ord))).toIntArray()
 
-    fun getDeleteDbOrds(ord: Int): IntArray = changes.getDeleteDbOrds(ord)
-
-    val adjustedTemplateChanges: ArrayList<TemplateChange>
-        get() = changes.adjustedTemplateChanges
+    /** Database ordinal for an editor position, or null for an unsaved addition. */
+    fun getOriginalOrdinal(ordinal: Int): CardOrdinal? = originalTemplateOrds[ordinal]
 
     companion object {
-        const val INTENT_MODEL_FILENAME = "editedNoteTypeFilename"
+        private const val STATE_EDITED_NOTE_TYPE_FILENAME = "editedNoteTypeFilename"
+        private const val STATE_ORIGINAL_TEMPLATE_ORDS = "originalTemplateOrds"
+        private const val STATE_DELETED_TEMPLATE_ORDS = "deletedTemplateOrds"
 
         /**
          * Load the TemporaryNoteType from the filename included in a Bundle
          *
-         * @param bundle a Bundle that should contain persisted JSON under INTENT_MODEL_FILENAME key
+         * @param bundle a Bundle that should contain persisted JSON under STATE_EDITED_NOTE_TYPE_FILENAME key
          * @return re-hydrated TemporaryNoteType or null if there was a problem, null means should reload from database
          */
         fun fromBundle(bundle: Bundle): CardTemplateNotetype? {
-            val editedNoteTypeFileName = bundle.getString(INTENT_MODEL_FILENAME)
+            val editedNoteTypeFileName = bundle.getString(STATE_EDITED_NOTE_TYPE_FILENAME)
             // Bundle.getString is @Nullable, so we have to check.
             if (editedNoteTypeFileName == null) {
-                Timber.d("fromBundle() - note type file name under key %s", INTENT_MODEL_FILENAME)
+                Timber.d("fromBundle() - note type file name under key %s", STATE_EDITED_NOTE_TYPE_FILENAME)
                 return null
             }
             Timber.d("onCreate() loading saved note type file %s", editedNoteTypeFileName)
@@ -225,12 +200,7 @@ class CardTemplateNotetype(
         fun isOrdinalPendingAdd(
             noteType: CardTemplateNotetype,
             ord: Int,
-        ): Boolean = CardTemplateChanges.isOrdinalPendingAdd(noteType.changes, ord)
-
-        fun getAdjustedAddOrdinalAtChangeIndex(
-            noteType: CardTemplateNotetype,
-            changesIndex: Int,
-        ): Int = CardTemplateChanges.getAdjustedAddOrdinalAtChangeIndex(noteType.changes, changesIndex)
+        ): Boolean = noteType.getOriginalOrdinal(ord) == null
     }
 }
 

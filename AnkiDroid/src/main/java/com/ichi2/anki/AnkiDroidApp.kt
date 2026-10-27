@@ -39,6 +39,7 @@ import com.ichi2.anki.common.crashreporting.CrashReportService.sendExceptionRepo
 import com.ichi2.anki.common.permissions.hasLegacyStorageAccessPermission
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.storage.CollectionHelper
+import com.ichi2.anki.common.storage.StorageDecision
 import com.ichi2.anki.common.utils.android.SdCard
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
@@ -60,6 +61,7 @@ import com.ichi2.anki.multiprofile.isPhoenixProcess
 import com.ichi2.anki.navigation.initializeNavigator
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.preferences.SharedPreferencesProvider
+import com.ichi2.anki.recorder.VoiceRecorder
 import com.ichi2.anki.reviewreminders.ReminderLogTree
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.servicelayer.ThrowableFilterService
@@ -67,16 +69,18 @@ import com.ichi2.anki.services.NotificationService
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.settings.PrefsRepository
 import com.ichi2.anki.startup.configureBackendTemporaryDirectory
-import com.ichi2.anki.startup.ensureCollectionPathSet
 import com.ichi2.anki.startup.getDefaultAnkiDroidDirectory
+import com.ichi2.anki.startup.maybeSetDefaultCollectionPath
 import com.ichi2.anki.ui.dialogs.ActivityAgnosticDialogs
 import com.ichi2.anki.widget.RECURRING_WIDGETS
 import com.ichi2.utils.ExceptionUtil
 import com.ichi2.utils.LanguageUtil
 import com.ichi2.utils.measureTime
 import com.ichi2.utils.setWebContentsDebuggingEnabled
+import com.ichi2.widget.AnkiDroidWidgetSmall
 import com.ichi2.widget.DayRolloverAlarm
 import com.ichi2.widget.WidgetNotificationScheduler
+import com.ichi2.widget.WidgetStatus
 import com.ichi2.widget.cardanalysis.CardAnalysisWidget
 import com.ichi2.widget.deckpicker.DeckPickerWidget
 import com.ichi2.widget.restoreRecurringAlarms
@@ -130,8 +134,8 @@ open class AnkiDroidApp :
         }
     }
 
+    @set:VisibleForTesting
     var profileManager: ProfileManager? = null
-        private set
 
     private val profileContext: Context?
         get() = profileManager?.activeProfileContext
@@ -189,6 +193,7 @@ open class AnkiDroidApp :
         initializeNavigator()
         initializeWidgetRepository()
         WidgetNotificationScheduler.register { scheduleNotification() }
+        WidgetStatus.register(Prefs) { context -> AnkiDroidWidgetSmall.UpdateService().doUpdate(context) }
         Animations.setPreferencesProvider { context -> PrefsRepository(context) }
         CollectionLockedException.messageProvider = {
             getString(CommonString.database_locked_summary_new, getString(CommonString.col_path))
@@ -281,6 +286,7 @@ open class AnkiDroidApp :
             runCatching {
                 measureTime("cacheCleanup") {
                     MultimediaArgsStorage.create(this@AnkiDroidApp).removeExpiredFiles()
+                    VoiceRecorder.removeExpiredRecordings(VoiceRecorder.recordingsDirectory(this@AnkiDroidApp))
                 }
             }.onFailure { Timber.w(it, "Unable to clean up expired cache files") }
         }
@@ -348,7 +354,13 @@ open class AnkiDroidApp :
             //  is not considered to be a fatal error, unless the directory itself is not writable.
             val ankiDroidDir =
                 try {
-                    ensureCollectionPathSet(this)
+                    maybeSetDefaultCollectionPath(this)
+                    if (CollectionHelper.storageDecision(this.sharedPrefs()) != StorageDecision.Decided) {
+                        // a fresh install without access to public storage: the user
+                        // decides via the permission screen (see maybeSetDefaultCollectionPath)
+                        Timber.i("skipping AnkiDroid directory init: storage is undecided")
+                        return@setup
+                    }
                     CollectionHelper.getCurrentAnkiDroidDirectory(this)
                 } catch (e: SystemStorageException) {
                     fatalInitializationError = FatalInitializationError.StorageError(e)

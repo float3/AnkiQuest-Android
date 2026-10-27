@@ -12,6 +12,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.android.view.locationInWindow
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.showSnackbar
@@ -20,7 +21,6 @@ import com.ichi2.testutils.BackupManagerTestUtilities
 import com.ichi2.testutils.dispatchInsets
 import com.ichi2.testutils.scrollToEnd
 import com.ichi2.testutils.simulateKeyboard
-import com.ichi2.utils.dp
 import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Before
@@ -119,6 +119,18 @@ class DeckPickerScreenshotTest : ScreenshotTest() {
 
             captureScreen("keyboard_open_scrolled_to_bottom")
         }
+
+    /** The studied summary and final deck must remain above the keyboard with bottom navigation enabled. */
+    @Test
+    fun bottom_navigation_keyboard_open_scrolled_to_bottom() {
+        enableBottomNavigation()
+        withDeckPicker(deckCount = 30) { deckPicker ->
+            deckPicker.searchWithKeyboard()
+            deckPicker.deckPickerBinding.decks.scrollToEnd()
+
+            captureScreen("bottom_navigation_keyboard_open_scrolled_to_bottom")
+        }
+    }
 
     @Test
     fun hierarchy_lines() =

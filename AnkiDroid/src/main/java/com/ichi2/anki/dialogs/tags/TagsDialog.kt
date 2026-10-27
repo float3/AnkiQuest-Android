@@ -332,7 +332,7 @@ class TagsDialog : AnalyticsDialogFragment {
 
         val toolbarAddItem = toolbar.menu.findItem(R.id.tags_dialog_action_add)
         val drawable = ContextCompat.getDrawable(requireContext(), CommonR.drawable.ic_add)
-        drawable?.setTint(requireContext().getColor(R.color.white))
+        drawable?.setTint(requireContext().getColor(CommonR.color.white))
         toolbarAddItem.icon = drawable
 
         toolbarAddItem.setOnMenuItemClickListener {
@@ -399,7 +399,7 @@ class TagsDialog : AnalyticsDialogFragment {
                     title(text = getString(CommonString.add_tag))
                     positiveButton(CommonString.menu_add)
                     negativeButton(CommonString.dialog_cancel)
-                    setView(R.layout.dialog_generic_text_input)
+                    setView(CommonR.layout.dialog_generic_text_input)
                 }.input(
                     hint = TR.actionsName().dropLastWhile { it == ':' },
                     inputType = InputType.TYPE_CLASS_TEXT,

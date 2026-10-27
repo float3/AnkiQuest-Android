@@ -2,7 +2,6 @@
 
 package com.ichi2.anki.previewer
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.libanki.Card
 import com.ichi2.testutils.JvmTest
 import org.hamcrest.MatcherAssert.assertThat
@@ -11,10 +10,8 @@ import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.not
 import org.junit.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.runner.RunWith
 import kotlin.test.assertNotNull
 
-@RunWith(AndroidJUnit4::class)
 class TypeAnswerTest : JvmTest() {
     /** [Issue #20575](https://github.com/ankidroid/Anki-Android/issues/20575) */
     @Test
@@ -63,6 +60,62 @@ class TypeAnswerTest : JvmTest() {
             val card = addBasicWithTypingNote("front", "back").firstCard()
             val typeAnswer = requireNotNull(TypeAnswer.getInstance(card, "[[type:nosuggest:nc:Back]]"))
             assertThat(typeAnswer.noSuggest, equalTo(true))
+        }
+
+    @Test
+    fun `combining is true when nc modifier is absent`() =
+        runTest {
+            val card = addBasicWithTypingNote("front", "back").firstCard()
+            val typeAnswer = requireNotNull(TypeAnswer.getInstance(card, "[[type:Back]]"))
+            assertThat(typeAnswer.combining, equalTo(true))
+        }
+
+    @Test
+    fun `combining is false when nc modifier is present`() =
+        runTest {
+            val card = addBasicWithTypingNote("front", "back").firstCard()
+            val typeAnswer = requireNotNull(TypeAnswer.getInstance(card, "[[type:nc:Back]]"))
+            assertThat(typeAnswer.combining, equalTo(false))
+        }
+
+    @Test
+    fun `nosuggest composes with cloze modifier`() =
+        runTest {
+            val card = addClozeNote("{{c1::hello}} world").firstCard()
+            val typeAnswer = requireNotNull(TypeAnswer.getInstance(card, "[[type:nosuggest:cloze:Text]]"))
+            assertThat(typeAnswer.noSuggest, equalTo(true))
+            assertThat(typeAnswer.expectedAnswer, equalTo("hello"))
+        }
+
+    @Test
+    fun `nosuggest composes with cloze and nc modifiers`() =
+        runTest {
+            val card = addClozeNote("{{c1::hello}} world").firstCard()
+            val typeAnswer = requireNotNull(TypeAnswer.getInstance(card, "[[type:nosuggest:cloze:nc:Text]]"))
+            assertThat(typeAnswer.noSuggest, equalTo(true))
+            assertThat(typeAnswer.combining, equalTo(false))
+            assertThat(typeAnswer.expectedAnswer, equalTo("hello"))
+        }
+
+    @Test
+    fun `cloze type-in-answer extracts expected answer for each card ordinal`() =
+        runTest {
+            val note = addClozeNote("{{c1::alpha}} and {{c2::beta}}")
+            val (card1, card2) = note.cards()
+
+            val typeAnswerCard1 = requireNotNull(TypeAnswer.getInstance(card1, "[[type:cloze:Text]]"))
+            assertThat(typeAnswerCard1.expectedAnswer, equalTo("alpha"))
+
+            val typeAnswerCard2 = requireNotNull(TypeAnswer.getInstance(card2, "[[type:cloze:Text]]"))
+            assertThat(typeAnswerCard2.expectedAnswer, equalTo("beta"))
+        }
+
+    @Test
+    fun `cloze type-in-answer extracts expected answer with hint`() =
+        runTest {
+            val card = addClozeNote("{{c1::alpha::hint for alpha}}").firstCard()
+            val typeAnswer = requireNotNull(TypeAnswer.getInstance(card, "[[type:cloze:Text]]"))
+            assertThat(typeAnswer.expectedAnswer, equalTo("alpha"))
         }
 
     companion object {

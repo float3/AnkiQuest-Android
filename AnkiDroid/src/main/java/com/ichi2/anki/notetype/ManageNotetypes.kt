@@ -8,7 +8,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -20,38 +19,36 @@ import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type.displayCutout
 import androidx.core.view.WindowInsetsCompat.Type.ime
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
 import androidx.core.view.isVisible
+import androidx.core.view.marginBottom
 import androidx.core.view.updateMargins
 import androidx.core.view.updateMarginsRelative
 import androidx.core.view.updatePadding
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.google.android.material.behavior.HideViewOnScrollBehavior
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CommonPlurals
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.databinding.ActivityManageNoteTypesBinding
-import com.ichi2.anki.dialogs.dismissLoadingDialog
-import com.ichi2.anki.dialogs.showLoadingDialog
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.notetype.ManageNoteTypesState.UserMessage
+import com.ichi2.anki.progress.observeProgress
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.startup.ensureStorageIsReady
 import com.ichi2.anki.sync.userAcceptsSchemaChange
 import com.ichi2.anki.utils.Destination
 import com.ichi2.themes.setTransparentStatusBar
 import com.ichi2.ui.AccessibleSearchView
-import com.ichi2.utils.dp
 import com.ichi2.utils.getInputField
 import com.ichi2.utils.getInputTextLayout
 import com.ichi2.utils.input
@@ -63,6 +60,7 @@ import com.ichi2.utils.title
 import dev.androidbroadcast.vbpd.viewBinding
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.ichi2.anki.common.android.R as CommonR
 
 class ManageNotetypes : AnkiActivity(R.layout.activity_manage_note_types) {
     @VisibleForTesting
@@ -107,13 +105,12 @@ class ManageNotetypes : AnkiActivity(R.layout.activity_manage_note_types) {
         setTransparentStatusBar()
         enableToolbar()
         binding.noteTypesList.adapter = notetypesAdapter
+        observeProgress(viewModel) { it }
         binding.floatingActionButton.apply {
             setOnClickListener {
                 val addNewNotesType = AddNewNotesType(this@ManageNotetypes)
                 launchCatchingTask { addNewNotesType.showAddNewNotetypeDialog() }
             }
-            val params = (layoutParams as? CoordinatorLayout.LayoutParams)
-            (params?.behavior as? HideViewOnScrollBehavior<View>)?.setViewEdge(HideViewOnScrollBehavior.EDGE_BOTTOM)
         }
         binding.btnClearSelection.setOnClickListener { viewModel.clearSelection() }
 
@@ -169,15 +166,23 @@ class ManageNotetypes : AnkiActivity(R.layout.activity_manage_note_types) {
     }
 
     private fun applyInsets() {
+        // Material 3 supplies the FAB size before layout.
+        val fabSize = binding.floatingActionButton.customSize
+        val fabBottomMargin = binding.floatingActionButton.marginBottom
         ViewCompat.setOnApplyWindowInsetsListener(binding.rootLayout) { _, insets ->
             val constraints = insets.getInsets(systemBars() or displayCutout() or ime())
             Timber.d("Applying insets: $constraints")
             binding.appBarLayout.updatePadding(left = constraints.left, top = constraints.top, right = constraints.right)
-            binding.noteTypesList.updatePadding(left = constraints.left, right = constraints.right, bottom = constraints.bottom)
+            binding.noteTypesList.updatePadding(
+                left = constraints.left,
+                right = constraints.right,
+                // FAB size + its layout margin + a 16dp gap.
+                bottom = constraints.bottom + fabSize + fabBottomMargin + 16.dp.toPx(this),
+            )
             val fabLayoutParams = binding.floatingActionButton.layoutParams as ViewGroup.MarginLayoutParams
             // also applies the 32dp bottom/end margin to not sit right on top of navigation bar
             fabLayoutParams.updateMarginsRelative(
-                bottom = constraints.bottom + 32.dp.toPx(this),
+                bottom = constraints.bottom + fabBottomMargin,
                 end = constraints.right + 32.dp.toPx(this),
             )
             // needed otherwise the updated relative margins are not seen
@@ -204,11 +209,6 @@ class ManageNotetypes : AnkiActivity(R.layout.activity_manage_note_types) {
             }
             viewModel.clearError()
             return
-        }
-        if (state.isLoading) {
-            showLoadingDialog()
-        } else {
-            dismissLoadingDialog()
         }
         // send only the items that should be displayed
         notetypesAdapter.submitList(state.noteTypes.filter { it.shouldBeDisplayed })
@@ -292,7 +292,7 @@ class ManageNotetypes : AnkiActivity(R.layout.activity_manage_note_types) {
                             viewModel.rename(state.id, userInput)
                         }
                         negativeButton(CommonString.dialog_cancel)
-                        setView(R.layout.dialog_generic_text_input)
+                        setView(CommonR.layout.dialog_generic_text_input)
                     }.input(
                         hint = TR.deckConfigNamePrompt(),
                         prefill = state.name,

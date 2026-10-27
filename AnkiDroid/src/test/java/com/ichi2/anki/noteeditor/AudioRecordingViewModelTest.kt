@@ -3,6 +3,7 @@
 
 package com.ichi2.anki.noteeditor
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModelStore
 import androidx.media3.common.MediaItem
@@ -14,10 +15,12 @@ import com.ichi2.anki.recorder.MediaRecorderStub
 import com.ichi2.anki.recorder.PlayerState
 import com.ichi2.anki.recorder.PlayerStub
 import com.ichi2.anki.recorder.RecorderState
-import com.ichi2.testutils.JvmTest
+import com.ichi2.anki.recorder.VoiceRecorder
+import com.ichi2.testutils.rules.MainDispatcherRule
 import io.mockk.every
 import io.mockk.verify
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -34,7 +37,10 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(AndroidJUnit4::class)
-class AudioRecordingViewModelTest : JvmTest() {
+class AudioRecordingViewModelTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     @get:Rule
     val recordingsFolder = TemporaryFolder()
 
@@ -331,6 +337,22 @@ class AudioRecordingViewModelTest : JvmTest() {
 
             verify(exactly = 2) { playerStub.player.setMediaItem(any()) }
             assertEquals(RecorderState.Recorded(recording), viewModel.recorderState.value, "the recording can still be inserted")
+        }
+
+    @Test
+    fun `recordings are stored outside the cache`() =
+        runTest {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val viewModel =
+                AudioRecordingViewModel(AudioRecorder(context), playerStub.factory)
+                    .also { viewModelStore.put(VIEW_MODEL_KEY, it) }
+            try {
+                val recording = viewModel.record()
+
+                assertEquals(File(context.noBackupFilesDir, VoiceRecorder.RECORDINGS_DIRECTORY), recording.parentFile)
+            } finally {
+                viewModelStore.clear()
+            }
         }
 
     private fun runViewModelTest(testBody: suspend TestScope.(AudioRecordingViewModel) -> Unit) =

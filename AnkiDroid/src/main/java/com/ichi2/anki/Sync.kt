@@ -19,6 +19,7 @@ import com.ichi2.anki.observability.ChangeManager.notifySubscribersAllValuesChan
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.settings.enums.ShouldFetchMedia
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.sync.MediaSync
 import com.ichi2.anki.sync.MeteredSyncPermission
 import com.ichi2.anki.sync.MeteredSyncPolicy
 import com.ichi2.anki.sync.SyncAuth
@@ -43,7 +44,7 @@ import timber.log.Timber
 import kotlin.time.Duration.Companion.milliseconds
 
 object SyncPreferences {
-    const val CURRENT_SYNC_URI = "currentSyncUri"
+    const val PREF_CURRENT_SYNC_URI = "currentSyncUri"
     const val CUSTOM_SYNC_URI = "syncBaseUrl"
     const val CUSTOM_SYNC_ENABLED = CUSTOM_SYNC_URI + VersatileTextWithASwitchPreference.SWITCH_SUFFIX
 }
@@ -88,7 +89,8 @@ fun getEndpoint(): String? {
  */
 fun isLoggedIn(): Boolean = !Prefs.hkey.isNullOrEmpty()
 
-fun millisecondsSinceLastSync() = TimeManager.time.intTimeMS() - Prefs.lastSyncTime
+/** Elapsed milliseconds since the last manual or automatic sync attempt. */
+fun millisecondsSinceLastSyncAttempt() = TimeManager.time.intTimeMS() - Prefs.lastSyncTime
 
 fun DeckPicker.handleNewSync(
     conflict: ConflictResolution?,
@@ -137,8 +139,6 @@ fun DeckPicker.handleNewSync(
             notifySubscribersAllValuesChanged(deckPicker)
             refreshState()
         } finally {
-            // Always update last sync time to prevent infinite retry loops
-            // when sync fails (e.g., collection too large). See issue #19776
             setLastSyncTimeToNow()
         }
     }
@@ -284,7 +284,12 @@ private suspend fun handleDownload(
                     Timber.i("Sync: Backup skipped before full download: collection unchanged")
                 }
                 close(downgrade = false, forFullSync = true)
-                fullUploadOrDownload(auth, upload = false, serverUsn = mediaUsn)
+                // Media starts through SyncMediaWorker so WorkManager can enforce network constraints.
+                fullUploadOrDownload(
+                    auth,
+                    upload = false,
+                    mediaSync = MediaSync.Skip,
+                )
             } finally {
                 reopen(afterFullSync = true)
             }
@@ -318,7 +323,12 @@ private suspend fun handleUpload(
         ) {
             close(downgrade = false, forFullSync = true)
             try {
-                fullUploadOrDownload(auth, upload = true, serverUsn = mediaUsn)
+                // Media starts through SyncMediaWorker so WorkManager can enforce network constraints.
+                fullUploadOrDownload(
+                    auth,
+                    upload = true,
+                    mediaSync = MediaSync.Skip,
+                )
             } finally {
                 reopen(afterFullSync = true)
             }
@@ -420,6 +430,7 @@ fun DeckPicker.showSyncLogMessage(
     }
 }
 
+/** Starts the retry delay after every sync attempt, regardless of outcome. */
 fun setLastSyncTimeToNow() {
     Prefs.lastSyncTime = TimeManager.time.intTimeMS()
 }

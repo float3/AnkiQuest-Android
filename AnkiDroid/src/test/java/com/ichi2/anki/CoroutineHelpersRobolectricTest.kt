@@ -17,6 +17,9 @@ import com.ichi2.anki.exception.CollectionLockedException
 import com.ichi2.anki.exception.StorageNotConfiguredException
 import com.ichi2.anki.preferences.PreferencesActivity
 import com.ichi2.testutils.BackendEmulatingOpenConflict
+import com.ichi2.testutils.FragmentCoroutineTracker
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.hamcrest.CoreMatchers.containsString
@@ -38,6 +41,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -70,24 +76,63 @@ class CoroutineHelpersRobolectricTest : RobolectricTest() {
         verify(crashReporter, never()).sendExceptionReport(any<Throwable>(), anyOrNull(), anyOrNull(), any())
     }
 
-    /** Issue 22348: removal can precede lifecycle scope registration and the queued task. */
+    /** Issue 22348/22065: removal can precede lifecycle scope registration and the queued task. */
     @Test
-    fun `fragment removed before catching task starts fails under Robolectric`() =
-        assertLifecycleFailure("not attached to an activity") {
-            val controller = Robolectric.buildActivity(FragmentActivity::class.java).setup()
-            saveControllerForCleanup(controller)
-            val activity = controller.get()
+    fun `fragment removed before catching task starts skips the task`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java).setup()
+        saveControllerForCleanup(controller)
+        val activity = controller.get()
+        val manager = activity.supportFragmentManager
+        FragmentCoroutineTracker(manager).use { tracker ->
             var ran = false
+            lateinit var task: Job
             val job =
                 activity.lifecycleScope.launch {
                     val fragment = Fragment()
-                    activity.supportFragmentManager.commitNow { add(fragment, "task") }
-                    fragment.launchCatchingTask { ran = true }
-                    activity.supportFragmentManager.commitNow { remove(fragment) }
+                    manager.commitNow { add(fragment, "task") }
+                    task = fragment.launchCatchingTask { ran = true }
+                    manager.commitNow { remove(fragment) }
                 }
             advanceRobolectricLooper()
             assertTrue(job.isCompleted)
+            assertTrue(task.isCompleted)
             assertFalse(ran)
+            tracker.assertDestroyedLifecyclesAreIdle()
+        }
+        verify(crashReporter, never()).sendExceptionReport(any<Throwable>(), anyOrNull(), anyOrNull(), any())
+    }
+
+    @Test
+    fun `readded fragment only runs tasks for its new lifecycle`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java).setup()
+        saveControllerForCleanup(controller)
+        val activity = controller.get()
+        val manager = activity.supportFragmentManager
+        FragmentCoroutineTracker(manager).use { tracker ->
+            val tasksRun = mutableListOf<String>()
+            val job =
+                activity.lifecycleScope.launch {
+                    val fragment = Fragment()
+                    manager.commitNow { add(fragment, "task") }
+                    val oldLifecycle = fragment.lifecycle
+                    fragment.launchCatchingTask { tasksRun.add("old") }
+                    manager.commitNow { remove(fragment) }
+                    manager.commitNow { add(fragment, "task") }
+                    assertNotSame(oldLifecycle, fragment.lifecycle)
+                    fragment.launchCatchingTask { tasksRun.add("new") }
+                }
+            advanceRobolectricLooper()
+            assertTrue(job.isCompleted)
+            assertEquals(listOf("new"), tasksRun)
+            tracker.assertDestroyedLifecyclesAreIdle()
+        }
+    }
+
+    @Test
+    fun `unattached fragment task fails under Robolectric`() =
+        assertLifecycleFailure("not attached to an activity") {
+            Fragment().launchCatchingTask { error("Unattached fragment task must not run") }
+            advanceRobolectricLooper()
         }
 
     @Test
@@ -136,6 +181,56 @@ class CoroutineHelpersRobolectricTest : RobolectricTest() {
         assertThat(failure.message, containsString(message))
         verify(crashReporter, never()).sendExceptionReport(any<Throwable>(), anyOrNull(), anyOrNull(), any())
     }
+
+    @Test
+    fun `view task is cancelled when the view is destroyed but the fragment remains attached`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java).setup()
+        saveControllerForCleanup(controller)
+        val activity = controller.get()
+        val fragment = Fragment(android.R.layout.simple_list_item_1)
+        activity.supportFragmentManager.commitNow { add(android.R.id.content, fragment) }
+
+        var cancelled = false
+        val job =
+            assertNotNull(
+                fragment.launchCatchingViewTask {
+                    try {
+                        awaitCancellation()
+                    } finally {
+                        cancelled = true
+                    }
+                },
+            )
+        assertTrue(job.isActive)
+
+        activity.supportFragmentManager.commitNow { detach(fragment) }
+        advanceRobolectricLooper()
+
+        assertNull(fragment.view)
+        assertSame(activity, fragment.activity)
+        assertTrue(job.isCancelled)
+        assertTrue(cancelled)
+    }
+
+    @Test
+    fun `finishing activity fails view task under Robolectric`() =
+        assertLifecycleFailure("activity is finishing") {
+            val controller = Robolectric.buildActivity(FragmentActivity::class.java).setup()
+            saveControllerForCleanup(controller)
+            val activity = controller.get()
+            val fragment = Fragment(android.R.layout.simple_list_item_1)
+            activity.supportFragmentManager.commitNow { add(android.R.id.content, fragment) }
+            var ran = false
+
+            activity.lifecycleScope.launch {
+                fragment.launchCatchingViewTask { ran = true }
+                activity.finish()
+            }
+            advanceRobolectricLooper()
+
+            assertTrue(activity.isFinishing)
+            assertFalse(ran)
+        }
 
     /**
      * A [StorageNotConfiguredException] escaping a coroutine means an activity raced or

@@ -62,9 +62,9 @@ import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.MaterialColors
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.utils.ext.wholeAndFraction
 import com.ichi2.anki.utils.postDelayed
-import com.ichi2.utils.dp
 import com.ichi2.utils.isRtl
 import timber.log.Timber
 import kotlin.time.Duration
@@ -396,11 +396,12 @@ class RecyclerFastScroller
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    handle.isSelected = false
+                    handle.isPressed = false
                     if (recyclerView != null) {
                         recyclerView?.let { removeCallbacks(scrollTask) }
                         scrollTask.run()
                     }
+                    postAutoHide()
                     false
                 }
                 else -> super.onTouchEvent(event)

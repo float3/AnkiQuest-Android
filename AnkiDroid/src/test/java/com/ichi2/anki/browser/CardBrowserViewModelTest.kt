@@ -1657,18 +1657,49 @@ class CardBrowserViewModelTest : JvmTest() {
         }
 
     @Test
-    fun `searchResultMessage - initial search provides rows without a message - Issue 21242`() =
+    fun `initial search does not request feedback - Issue 21242`() =
         runViewModelTest(notes = 2, initMode = InitMode.MANUAL) {
             flowOfSearchState.test {
                 manualInit()
                 val completed = awaitSearchCompleted()
                 assertThat(completed.rowCount, equalTo(2))
-                assertThat(completed.resultMessage, nullValue())
+                assertThat(completed.feedbackMode, equalTo(BrowserSearchFeedbackMode.NONE))
             }
         }
 
     @Test
-    fun `searchResultMessage - sorting and reversing do not produce count messages`() =
+    fun `completed search retains the feedback mode and deck scope`() =
+        runViewModelTest(notes = 3) {
+            flowOfSearchState.test {
+                ignoreEventsDuringViewModelInit()
+                setSelectedDeck(SelectableDeck.AllDecks)
+                awaitSearchCompleted()
+                setQuery("", feedbackMode = BrowserSearchFeedbackMode.SEARCH_RESULTS)
+                val completed = awaitSearchCompleted()
+                assertThat("count", completed.rowCount, equalTo(3))
+                assertThat("cardsOrNotes", completed.cardsOrNotes, equalTo(CardsOrNotes.CARDS))
+                assertThat(completed.feedbackMode, equalTo(BrowserSearchFeedbackMode.SEARCH_RESULTS))
+                assertThat(completed.allDecksSelected, equalTo(true))
+            }
+        }
+
+    @Test
+    fun `deck change does not request search feedback`() =
+        runViewModelTest {
+            val deck = addDeck("Specific")
+            addNoteToDeck(deck)
+            flowOfSearchState.test {
+                ignoreEventsDuringViewModelInit()
+                setSelectedDeck(deck)
+                val completed = awaitSearchCompleted()
+                assertThat(completed.rowCount, equalTo(1))
+                assertThat(completed.feedbackMode, equalTo(BrowserSearchFeedbackMode.NONE))
+                assertThat(completed.allDecksSelected, equalTo(false))
+            }
+        }
+
+    @Test
+    fun `sorting and reversing do not request search feedback`() =
         runViewModelTest(notes = 2) {
             flowOfSearchState.test {
                 ignoreEventsDuringViewModelInit()
@@ -1682,72 +1713,8 @@ class CardBrowserViewModelTest : JvmTest() {
                     setSortType(sort).join()
                     val completed = awaitSearchCompleted()
                     assertThat("sorting retains the results", completed.rowCount, equalTo(2))
-                    assertThat("sorting has its own feedback", completed.resultMessage, nullValue())
+                    assertThat("sorting has its own feedback", completed.feedbackMode, equalTo(BrowserSearchFeedbackMode.NONE))
                 }
-            }
-        }
-
-    @Test
-    fun `searchResultMessage - user search, all decks selected, with rows`() =
-        runViewModelTest(notes = 3) {
-            flowOfSearchState.test {
-                ignoreEventsDuringViewModelInit()
-                setSelectedDeck(SelectableDeck.AllDecks)
-                awaitSearchCompleted()
-                setQuery("", fromUserSearch = true)
-                val completed = awaitSearchCompleted()
-                val card = completed.resultMessage as CardBrowserViewModel.SearchResultMessage.CardCount
-                assertThat("count", completed.rowCount, equalTo(3))
-                assertThat("cardsOrNotes", completed.cardsOrNotes, equalTo(CardsOrNotes.CARDS))
-                assertThat("no all-decks action when already on all decks", card.includeSearchAllDecksAction, equalTo(false))
-            }
-        }
-
-    @Test
-    fun `searchResultMessage - user search, specific deck with cards has all-decks action`() =
-        runViewModelTest {
-            val deck = addDeck("Specific")
-            addNoteToDeck(deck)
-            flowOfSearchState.test {
-                ignoreEventsDuringViewModelInit()
-                setSelectedDeck(deck)
-                awaitSearchCompleted()
-                setQuery("", fromUserSearch = true)
-                val card = awaitSearchCompleted().resultMessage as CardBrowserViewModel.SearchResultMessage.CardCount
-                assertThat("includes all-decks action", card.includeSearchAllDecksAction, equalTo(true))
-            }
-        }
-
-    @Test
-    fun `searchResultMessage - user search, specific deck with no cards`() =
-        runViewModelTest {
-            val deck = addDeck("Empty")
-            flowOfSearchState.test {
-                ignoreEventsDuringViewModelInit()
-                setSelectedDeck(deck)
-                awaitSearchCompleted()
-                setQuery("", fromUserSearch = true)
-                assertThat(
-                    "empty deck → no-cards-in-selected-deck",
-                    awaitSearchCompleted().resultMessage,
-                    equalTo(CardBrowserViewModel.SearchResultMessage.NoCardsInSelectedDeck),
-                )
-            }
-        }
-
-    @Test
-    fun `searchResultMessage - no message on deck change`() =
-        runViewModelTest {
-            val deck = addDeck("Specific")
-            addNoteToDeck(deck)
-            flowOfSearchState.test {
-                ignoreEventsDuringViewModelInit()
-                setSelectedDeck(deck)
-                assertThat(
-                    "changing deck does not surface a result message",
-                    awaitSearchCompleted().resultMessage,
-                    nullValue(),
-                )
             }
         }
 
@@ -2167,6 +2134,51 @@ class CardBrowserViewModelTest : JvmTest() {
             Prefs.devUsingCardBrowserSearchView = false
         }
     }
+
+    @Test
+    fun `external search launches request feedback`() {
+        for (options in listOf(DeepLink("cat"), SystemContextMenu("cat"), CardBrowserLaunchOptions.SearchQueryJs("cat", allDecks = true))) {
+            runViewModelTest(options = options) {
+                waitForSearchResults()
+                assertEquals(BrowserSearchFeedbackMode.SEARCH_RESULTS, flowOfSearchFeedback.value?.feedbackMode)
+            }
+        }
+    }
+
+    @Test
+    fun `restoring notes mode on startup does not request feedback`() =
+        runViewModelNotesTest(notes = 1) {
+            waitForSearchResults()
+            assertEquals(CardsOrNotes.NOTES, cardsOrNotes)
+            assertNull(flowOfSearchFeedback.value)
+        }
+
+    @Test
+    fun `a newer automatic refresh discards unshown feedback`() =
+        runViewModelTest(notes = 1) {
+            setQuery("", feedbackMode = BrowserSearchFeedbackMode.SEARCH_RESULTS).join()
+            waitForSearchResults()
+            val feedback = assertNotNull(flowOfSearchFeedback.value)
+
+            launchSearchForCards()
+            waitForSearchResults()
+
+            assertNull(flowOfSearchFeedback.value)
+            assertEquals(false, consumeSearchFeedback(feedback))
+        }
+
+    @Test
+    fun `feedback is consumed once but identical later searches still request it`() =
+        runViewModelTest(notes = 1) {
+            repeat(2) {
+                setQuery("", feedbackMode = BrowserSearchFeedbackMode.SEARCH_RESULTS).join()
+                waitForSearchResults()
+                val feedback = assertNotNull(flowOfSearchFeedback.value)
+                assertEquals(true, consumeSearchFeedback(feedback))
+                assertEquals(false, consumeSearchFeedback(feedback))
+                assertNull(flowOfSearchFeedback.value)
+            }
+        }
 
     @Test
     fun `setDefaultSearchText round-trips through collection config`() {

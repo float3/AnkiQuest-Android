@@ -72,7 +72,7 @@ class IntroductionActivityTest : RobolectricTest() {
             val activity = startRegularActivity<IntroductionActivity>(Intent())
 
             activity.supportFragmentManager.setFragmentResult(
-                SetupCollectionFragment.FRAGMENT_KEY,
+                SetupCollectionFragment.REQUEST_COLLECTION_SETUP,
                 Bundle().apply { putParcelable(SetupCollectionFragment.RESULT_KEY, DeckPickerWithNewCollection) },
             )
 
@@ -83,19 +83,19 @@ class IntroductionActivityTest : RobolectricTest() {
             )
             assertThat(
                 "DeckPicker isn't asked to sync (Get Started, not Sync)",
-                intent.getBooleanExtra(DeckPicker.INTENT_SYNC_FROM_LOGIN, false),
+                intent.getBooleanExtra(DeckPicker.EXTRA_SYNC_FROM_LOGIN, false),
                 equalTo(false),
             )
             assertThat(
                 "intro is marked as shown so it doesn't reappear",
-                getPreferences().getBoolean(IntroductionActivity.INTRODUCTION_SLIDES_SHOWN, false),
+                getPreferences().getBoolean(IntroductionActivity.PREF_INTRODUCTION_SLIDES_SHOWN, false),
                 equalTo(true),
             )
         }
 
     private fun IntroductionActivity.clickSync() {
         supportFragmentManager.setFragmentResult(
-            SetupCollectionFragment.FRAGMENT_KEY,
+            SetupCollectionFragment.REQUEST_COLLECTION_SETUP,
             Bundle().apply { putParcelable(SetupCollectionFragment.RESULT_KEY, SyncFromExistingAccount) },
         )
     }

@@ -32,12 +32,13 @@ import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.databinding.ActivityNoteTypeFieldEditorBinding
 import com.ichi2.anki.databinding.ItemNotetypeFieldBinding
 import com.ichi2.anki.dialogs.ConfirmationDialog
 import com.ichi2.anki.dialogs.LocaleSelectionDialog
-import com.ichi2.anki.dialogs.LocaleSelectionDialog.Companion.KEY_SELECTED_LOCALE
 import com.ichi2.anki.dialogs.LocaleSelectionDialog.Companion.REQUEST_HINT_LOCALE_SELECTION
+import com.ichi2.anki.dialogs.LocaleSelectionDialog.Companion.RESULT_SELECTED_LOCALE
 import com.ichi2.anki.dialogs.NoteTypeFieldEditorContextMenu.Companion.newInstance
 import com.ichi2.anki.dialogs.NoteTypeFieldEditorContextMenu.NoteTypeFieldEditorContextMenuAction
 import com.ichi2.anki.libanki.Collection
@@ -54,7 +55,6 @@ import com.ichi2.anki.utils.ext.setFragmentResultListener
 import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.ui.FixedEditText
 import com.ichi2.utils.customView
-import com.ichi2.utils.dp
 import com.ichi2.utils.getInputField
 import com.ichi2.utils.input
 import com.ichi2.utils.moveCursorToEnd
@@ -67,6 +67,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import timber.log.Timber
 import java.util.Locale
+import com.ichi2.anki.common.android.R as CommonR
 
 @NeedsTest("perform one action, then another")
 class NoteTypeFieldEditor : AnkiActivity(R.layout.activity_note_type_field_editor) {
@@ -123,7 +124,7 @@ class NoteTypeFieldEditor : AnkiActivity(R.layout.activity_note_type_field_edito
             val selectedLocale =
                 BundleCompat.getSerializable(
                     bundle,
-                    KEY_SELECTED_LOCALE,
+                    RESULT_SELECTED_LOCALE,
                     Locale::class.java,
                 )
             if (selectedLocale != null) {
@@ -408,7 +409,7 @@ class NoteTypeFieldEditor : AnkiActivity(R.layout.activity_note_type_field_edito
                     }
                     negativeButton(CommonString.dialog_cancel)
                     setMessage(TR.fieldsNewPosition1(numberOfTemplates))
-                    setView(R.layout.dialog_generic_text_input)
+                    setView(CommonR.layout.dialog_generic_text_input)
                 }.input(
                     prefill = (currentPos + 1).toString(),
                     inputType = InputType.TYPE_CLASS_NUMBER,
