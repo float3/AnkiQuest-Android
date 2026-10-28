@@ -72,7 +72,8 @@ class AnkiquestDecksTest : RobolectricTest() {
         card.did = child
         card.queue = QueueType.Lrn
         card.type = CardType.Lrn
-        card.due = (col.sched.dayCutoff - 3600).toInt()
+        // Halfway between now and the cutoff: always still ahead, always before rollover, whatever time CI runs.
+        card.due = ((TimeManager.time.intTime() + col.sched.dayCutoff) / 2).toInt()
         col.updateCards(listOf(card))
 
         assertEquals(1L, snapshot(child).getLong("remaining"))
