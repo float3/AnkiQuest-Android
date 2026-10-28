@@ -54,9 +54,9 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.USER_KEY, "cerro two")
-            putString(Ankiquest.TOKEN_KEY, "saved-token")
+            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_USER, "cerro two")
+            putString(Ankiquest.PREF_TOKEN, "saved-token")
         }
     }
 
@@ -107,7 +107,7 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
     @Test
     fun `missing token does not send a request`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.TOKEN_KEY) }
+            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
             assertFailsWith<IllegalStateException> { Ankiquest.setStreakProtection(true) }
             assertTrue(requests.isEmpty())
         }

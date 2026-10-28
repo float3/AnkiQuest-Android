@@ -107,7 +107,7 @@ fun DeckPickerViewModel.awaitStartup() =
 
 /** Waits for the adapter to display the expected decks, including background list diffs. */
 fun DeckPicker.awaitVisibleDecks(expectedDeckIds: List<DeckId>) {
-    val adapter = deckPickerBinding.decks.adapter as DeckAdapter
+    val adapter = (deckPickerBinding.decks.adapter as ConcatAdapter).adapters.filterIsInstance<DeckAdapter>().single()
     advanceRobolectricLooperUntil(
         lazyMessage = { "Expected visible decks $expectedDeckIds, but found ${adapter.currentList.map { it.did }}" },
     ) {

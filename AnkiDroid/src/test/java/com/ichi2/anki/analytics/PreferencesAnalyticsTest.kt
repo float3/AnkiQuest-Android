@@ -131,7 +131,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.ankiquest_subscriptions_retry_key,
             R.string.ankiquest_subscriptions_people_key,
         ).toStringResourceSet() +
-            setOf(AnkiquestNavigation.OPEN_TODAY_KEY, AnkiquestNavigation.SESSION_SUMMARY_KEY)
+            setOf(AnkiquestNavigation.PREF_OPEN_TODAY, AnkiquestNavigation.PREF_SESSION_SUMMARY)
 
     @Test
     fun `The include and excluded prefs lists don't share elements`() {

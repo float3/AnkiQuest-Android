@@ -100,16 +100,16 @@ class AnkiquestHomeDataTest : RobolectricTest() {
     fun `fallback member and credentials are captured from one preferences snapshot`() {
         val first =
             mapOf(
-                Ankiquest.URL_KEY to "https://first.example",
-                Ankiquest.USER_KEY to " ",
-                Ankiquest.TOKEN_KEY to "first-token",
+                Ankiquest.PREF_URL to "https://first.example",
+                Ankiquest.PREF_USER to " ",
+                Ankiquest.PREF_TOKEN to "first-token",
                 "username" to "first member",
             )
         val second =
             mapOf(
-                Ankiquest.URL_KEY to "https://second.example",
-                Ankiquest.USER_KEY to "",
-                Ankiquest.TOKEN_KEY to "second-token",
+                Ankiquest.PREF_URL to "https://second.example",
+                Ankiquest.PREF_USER to "",
+                Ankiquest.PREF_TOKEN to "second-token",
                 "username" to "second member",
             )
         val preferences = mockk<SharedPreferences>()
@@ -125,7 +125,7 @@ class AnkiquestHomeDataTest : RobolectricTest() {
     // Synthetic credentials on a reserved example domain verify that URL userinfo is rejected.
     @SuppressLint("AuthLeak")
     fun `blank and ambiguous server URLs cannot carry credentials`() {
-        fun settings(url: String) = mapOf(Ankiquest.URL_KEY to url, Ankiquest.USER_KEY to "member", Ankiquest.TOKEN_KEY to "secret")
+        fun settings(url: String) = mapOf(Ankiquest.PREF_URL to url, Ankiquest.PREF_USER to "member", Ankiquest.PREF_TOKEN to "secret")
         listOf(
             "",
             "not a url",

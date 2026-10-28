@@ -52,7 +52,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
     @Test
     fun `the channel follows the setting and defaults to stable`() {
         assertEquals(AnkiquestUpdater.Channel.STABLE, AnkiquestUpdater.channel())
-        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestUpdater.CHANNEL_KEY, "nightly") }
+        AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestUpdater.PREF_CHANNEL, "nightly") }
         assertEquals(AnkiquestUpdater.Channel.NIGHTLY, AnkiquestUpdater.channel())
     }
 }

@@ -45,9 +45,9 @@ class AnkiquestSettingsTest : RobolectricTest() {
         every { Ankiquest.onActivityResumed(any()) } returns Unit
         coEvery { Ankiquest.dashboardSession(any()) } returns null
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "https://quest.example/anki")
-            putString(Ankiquest.USER_KEY, "cerro")
-            putString(Ankiquest.TOKEN_KEY, "saved-test-token")
+            putString(Ankiquest.PREF_URL, "https://quest.example/anki")
+            putString(Ankiquest.PREF_USER, "cerro")
+            putString(Ankiquest.PREF_TOKEN, "saved-test-token")
         }
     }
 
@@ -65,9 +65,9 @@ class AnkiquestSettingsTest : RobolectricTest() {
         every { changingPreferences.all } answers {
             val captured = preferences.all
             preferences.edit {
-                putString(Ankiquest.URL_KEY, "https://different.example")
-                putString(Ankiquest.USER_KEY, "hill")
-                putString(Ankiquest.TOKEN_KEY, "different-server-secret")
+                putString(Ankiquest.PREF_URL, "https://different.example")
+                putString(Ankiquest.PREF_USER, "hill")
+                putString(Ankiquest.PREF_TOKEN, "different-server-secret")
             }
             captured
         }
@@ -301,7 +301,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
 
     @Test
     fun `community reminders open with the same saved account`() {
-        val intent = Intent(targetContext, AnkiquestActivity::class.java).putExtra(AnkiquestActivity.COMMUNITY_REMINDERS, true)
+        val intent = Intent(targetContext, AnkiquestActivity::class.java).putExtra(AnkiquestActivity.EXTRA_COMMUNITY_REMINDERS, true)
         val controller =
             Robolectric
                 .buildActivity(
@@ -370,7 +370,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
         activity.onCreateOptionsMenu(menu)
         activity.onOptionsItemSelected(menu.findItem(R.id.ankiquest_settings))
         controller.pause()
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.URL_KEY, "https://quest.example/anki/") }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "https://quest.example/anki/") }
         assertEquals(previousSession, Ankiquest.webSession())
         assertNotEquals(previousFingerprint, AnkiquestNavigation.accountFingerprint())
         controller.resume()
@@ -398,8 +398,8 @@ class AnkiquestSettingsTest : RobolectricTest() {
         val webView = controller.get().findViewById<WebView>(R.id.web_view)
         controller.pause()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.USER_KEY, "hill")
-            putString(Ankiquest.TOKEN_KEY, "new-token")
+            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_TOKEN, "new-token")
         }
         controller.resume()
         assertEquals("about:blank", shadowOf(webView).lastLoadedUrl)
@@ -433,7 +433,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
         saveControllerForCleanup(controller)
         val webView = controller.get().findViewById<WebView>(R.id.web_view)
         controller.pause()
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.TOKEN_KEY, "replacement-token") }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement-token") }
         controller.resume()
         assertEquals("about:blank", shadowOf(webView).lastLoadedUrl)
         shadowOf(webView).webViewClient.onPageFinished(webView, "about:blank")
@@ -457,7 +457,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
         saveControllerForCleanup(controller)
         val webView = controller.get().findViewById<WebView>(R.id.web_view)
         controller.pause()
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.URL_KEY, "https://new.example/quest") }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "https://new.example/quest") }
         controller.resume()
         shadowOf(webView).webViewClient.onPageFinished(webView, "about:blank")
         shadowOf(Looper.getMainLooper()).idle()

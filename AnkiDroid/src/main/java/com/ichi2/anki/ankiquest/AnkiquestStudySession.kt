@@ -12,8 +12,8 @@ import org.json.JSONObject
 
 /** Local, revisitable feedback. Review counts come from the log, including undo, never from XP. */
 object AnkiquestStudySession {
-    private const val ACTIVE = "ankiquestActiveStudySession"
-    private const val LATEST = "ankiquestLastStudySession"
+    private const val PREF_ACTIVE_SESSION = "ankiquestActiveStudySession"
+    private const val PREF_LATEST_SESSION = "ankiquestLastStudySession"
     private const val MAX_DURATION = 24 * 60 * 60 * 1000L
 
     data class Summary(
@@ -36,13 +36,13 @@ object AnkiquestStudySession {
             JSONObject()
                 .put("account", AnkiquestNavigation.accountFingerprint())
                 .put("started", TimeManager.time.intTimeMS())
-        AnkiDroidApp.sharedPrefs().edit { putString(ACTIVE, value.toString()) }
+        AnkiDroidApp.sharedPrefs().edit { putString(PREF_ACTIVE_SESSION, value.toString()) }
     }
 
     suspend fun finish(): Summary? {
         val prefs = AnkiDroidApp.sharedPrefs()
-        val active = prefs.getString(ACTIVE, null) ?: return null
-        prefs.edit { remove(ACTIVE) }
+        val active = prefs.getString(PREF_ACTIVE_SESSION, null) ?: return null
+        prefs.edit { remove(PREF_ACTIVE_SESSION) }
         val data = runCatching { JSONObject(active) }.getOrNull() ?: return null
         val account = AnkiquestNavigation.accountFingerprint()
         if (!AnkiquestNavigation.enabled() || data.optString("account") != account) return null
@@ -69,18 +69,18 @@ object AnkiquestStudySession {
                 .put("minutes", summary.minutes)
                 .put("remaining", summary.remaining)
                 .put("finished_at", summary.finishedAt)
-        prefs.edit { putString(LATEST, stored.toString()) }
+        prefs.edit { putString(PREF_LATEST_SESSION, stored.toString()) }
         return summary
     }
 
     fun latest(): Summary? {
         val prefs = AnkiDroidApp.sharedPrefs()
-        val text = prefs.getString(LATEST, null) ?: return null
+        val text = prefs.getString(PREF_LATEST_SESSION, null) ?: return null
         val data = runCatching { JSONObject(text) }.getOrNull()
         if (!AnkiquestNavigation.enabled() || data == null || data.optString("account") != AnkiquestNavigation.accountFingerprint()) {
             prefs.edit {
-                remove(LATEST)
-                remove(ACTIVE)
+                remove(PREF_LATEST_SESSION)
+                remove(PREF_ACTIVE_SESSION)
             }
             return null
         }

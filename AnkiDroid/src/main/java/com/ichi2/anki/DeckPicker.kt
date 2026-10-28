@@ -1645,7 +1645,7 @@ open class DeckPicker :
         ) {
             launchCatchingTask {
                 val summary = AnkiquestStudySession.finish()
-                if (summary != null && sharedPrefs().getBoolean(AnkiquestNavigation.SESSION_SUMMARY_KEY, true)) {
+                if (summary != null && sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
                     val neverAgain =
                         AppCompatCheckBox(this@DeckPicker).apply {
                             setText(R.string.ankiquest_summary_dont_show_again)
@@ -1692,7 +1692,7 @@ open class DeckPicker :
                     }
                     builder.show().setOnDismissListener {
                         if (neverAgain.isChecked) {
-                            sharedPrefs().edit { putBoolean(AnkiquestNavigation.SESSION_SUMMARY_KEY, false) }
+                            sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
                         }
                     }
                 }

@@ -25,8 +25,8 @@ import org.json.JSONObject
 
 /** Leaderboard position and streak notifications. */
 object AnkiquestNotifier {
-    const val RANK_KEY = "ankiquestNotifyRank"
-    const val STREAK_HOURS_KEY = "ankiquestStreakReminderHours"
+    const val PREF_RANK = "ankiquestNotifyRank"
+    const val PREF_STREAK_HOURS = "ankiquestStreakReminderHours"
     const val DEFAULT_STREAK_HOURS = "2"
 
     private const val CHANNEL = "ankiquest"
@@ -34,8 +34,8 @@ object AnkiquestNotifier {
     /** Keep nudges independently configurable, including channels saved by older versions. */
     private const val NUDGE_CHANNEL = "ankiquestNudges"
     private val BUZZ = longArrayOf(0, 250, 150, 250)
-    private const val ORDER_KEY = "ankiquestLastOrder"
-    private const val STREAK_DAY_KEY = "ankiquestStreakNotifiedDay"
+    private const val PREF_ORDER = "ankiquestLastOrder"
+    private const val PREF_STREAK_DAY = "ankiquestStreakNotifiedDay"
     private const val RANK_ID = 5_130_001
     private const val STREAK_ID = 5_130_002
     private const val TEST_ID = 5_130_003
@@ -112,14 +112,14 @@ object AnkiquestNotifier {
         val prefs = AnkiDroidApp.sharedPrefs()
         val previous =
             prefs
-                .getString(ORDER_KEY, null)
+                .getString(PREF_ORDER, null)
                 ?.split(',')
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
         val result = Ankiquest.rank(previous)
         val order = result.getJSONArray("order").let { users -> (0 until users.length()).map { users.getString(it) } }
-        prefs.edit { putString(ORDER_KEY, order.joinToString(",")) }
-        if (!prefs.getBoolean(RANK_KEY, true)) return
+        prefs.edit { putString(PREF_ORDER, order.joinToString(",")) }
+        if (!prefs.getBoolean(PREF_RANK, true)) return
         val change = result.optJSONObject("change") ?: return
         notify(
             context,
@@ -136,16 +136,16 @@ object AnkiquestNotifier {
         profile: JSONObject,
     ) {
         val prefs = AnkiDroidApp.sharedPrefs()
-        val hours = prefs.getString(STREAK_HOURS_KEY, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
+        val hours = prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
         val warning = profile.optJSONObject("streak_warning")
         if (hours <= 0 || warning == null) return
         val dayEndsAt = profile.optLong("day_ends_at")
         val remaining = dayEndsAt - TimeManager.time.intTimeMS()
         if (remaining <= 0 || remaining > hours * HOUR_MS) return
-        if (prefs.getLong(STREAK_DAY_KEY, Long.MIN_VALUE) == dayEndsAt) return
+        if (prefs.getLong(PREF_STREAK_DAY, Long.MIN_VALUE) == dayEndsAt) return
         val open = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
         if (notify(context, STREAK_ID, warning.getString("title"), warning.getString("body"), open) != Delivery.DISABLED) {
-            prefs.edit { putLong(STREAK_DAY_KEY, dayEndsAt) }
+            prefs.edit { putLong(PREF_STREAK_DAY, dayEndsAt) }
         }
     }
 
@@ -156,11 +156,11 @@ object AnkiquestNotifier {
         who: String,
     ) {
         if (!AnkiquestReply.current(data)) return
-        val message = data.getString(AnkiquestReply.MESSAGE_KEY).orEmpty()
+        val message = data.getString(AnkiquestReply.EXTRA_MESSAGE).orEmpty()
         notify(
             context,
-            data.getInt(AnkiquestReply.TAG_KEY, 0),
-            data.getString(AnkiquestReply.TITLE_KEY).orEmpty(),
+            data.getInt(AnkiquestReply.EXTRA_TAG, 0),
+            data.getString(AnkiquestReply.EXTRA_TITLE).orEmpty(),
             AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_sent, who, message),
             replyIntent(context, data),
             silent = true,
@@ -173,10 +173,10 @@ object AnkiquestNotifier {
         data: Data,
     ) {
         if (!AnkiquestReply.current(data)) return
-        val tag = data.getInt(AnkiquestReply.TAG_KEY, 0)
-        val title = data.getString(AnkiquestReply.TITLE_KEY).orEmpty()
-        val body = data.getString(AnkiquestReply.BODY_KEY).orEmpty()
-        val message = data.getString(AnkiquestReply.MESSAGE_KEY).orEmpty()
+        val tag = data.getInt(AnkiquestReply.EXTRA_TAG, 0)
+        val title = data.getString(AnkiquestReply.EXTRA_TITLE).orEmpty()
+        val body = data.getString(AnkiquestReply.EXTRA_BODY).orEmpty()
+        val message = data.getString(AnkiquestReply.EXTRA_MESSAGE).orEmpty()
         notify(
             context,
             tag,
@@ -185,13 +185,13 @@ object AnkiquestNotifier {
             replyIntent(context, data),
             AnkiquestReply.actions(
                 context,
-                data.getLong(AnkiquestReply.NOTIFICATION_KEY, 0),
+                data.getLong(AnkiquestReply.EXTRA_NOTIFICATION, 0),
                 tag,
                 title,
                 body,
-                data.getString(AnkiquestReply.ACCOUNT_KEY),
-                data.getString(AnkiquestReply.SCOPE_KEY),
-                data.getString(AnkiquestReply.KIND_KEY) ?: "completion",
+                data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT),
+                data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
+                data.getString(AnkiquestReply.EXTRA_KIND) ?: "completion",
             ),
             silent = true,
         )
@@ -202,7 +202,7 @@ object AnkiquestNotifier {
         data: Data,
     ): Intent =
         AnkiquestActivity
-            .intent(context, AnkiquestNavigation.ACTIVITY_PATH, data.getString(AnkiquestReply.ACCOUNT_KEY))
+            .intent(context, AnkiquestNavigation.ACTIVITY_PATH, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** IDs become known website routes; server-supplied URLs never become arbitrary app destinations. */

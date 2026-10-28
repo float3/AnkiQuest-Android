@@ -82,9 +82,9 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
         server.start()
         url = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, url)
-            putString(Ankiquest.USER_KEY, "member name")
-            putString(Ankiquest.TOKEN_KEY, " member-secret ")
+            putString(Ankiquest.PREF_URL, url)
+            putString(Ankiquest.PREF_USER, "member name")
+            putString(Ankiquest.PREF_TOKEN, " member-secret ")
         }
     }
 
@@ -108,7 +108,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `public server reads still work without a configured token`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.TOKEN_KEY) }
+            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
 
             Ankiquest.leaderboard()
             Ankiquest.profile()
@@ -127,15 +127,15 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             val captured = read()
             if (readingUnderTest.get() == true) {
                 preferences.edit {
-                    putString(Ankiquest.URL_KEY, "https://private.example.test")
-                    putString(Ankiquest.TOKEN_KEY, "new-private-secret")
+                    putString(Ankiquest.PREF_URL, "https://private.example.test")
+                    putString(Ankiquest.PREF_TOKEN, "new-private-secret")
                 }
             }
             return captured
         }
         every { changingPreferences.getString(any(), any()) } answers { preferences.getString(firstArg(), secondArg()) }
-        every { changingPreferences.getString(Ankiquest.URL_KEY, "") } answers {
-            switchServerAfter { preferences.getString(Ankiquest.URL_KEY, "") }
+        every { changingPreferences.getString(Ankiquest.PREF_URL, "") } answers {
+            switchServerAfter { preferences.getString(Ankiquest.PREF_URL, "") }
         }
         every { changingPreferences.all } answers { switchServerAfter { preferences.all } }
         AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
@@ -144,7 +144,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     private suspend fun <T> readingSettings(block: suspend () -> T): T = withContext(readingUnderTest.asContextElement(true)) { block() }
 
     private fun assertServerSwitched() =
-        assertEquals("https://private.example.test", targetContext.sharedPrefs().getString(Ankiquest.URL_KEY, ""))
+        assertEquals("https://private.example.test", targetContext.sharedPrefs().getString(Ankiquest.PREF_URL, ""))
 
     @Test
     fun `account changes never send new server credentials to the captured server`() =
@@ -162,7 +162,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `tokenless settings checks remain anonymous after account changes`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.TOKEN_KEY) }
+            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
             switchServerDuringSettingsRead()
 
             readingSettings { Ankiquest.runFromSettings(targetContext, uploadAll = false) }
@@ -186,7 +186,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @Test
     fun `browser session skips an unconfigured token`() =
         runBlocking {
-            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.TOKEN_KEY) }
+            AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
 
             assertNull(Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!))
             assertTrue(requests.isEmpty())
@@ -196,7 +196,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     fun `browser session never sends credentials for a stale dashboard`() =
         runBlocking {
             val dashboard = Ankiquest.dashboardUrl()!!
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.URL_KEY, "https://new.example.test") }
+            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "https://new.example.test") }
 
             assertNull(Ankiquest.dashboardSession(dashboard))
             assertTrue(requests.isEmpty())

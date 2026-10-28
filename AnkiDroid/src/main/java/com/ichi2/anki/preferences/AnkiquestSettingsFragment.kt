@@ -479,7 +479,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             } else {
                 startActivity(
                     Intent(requireContext(), AnkiquestActivity::class.java)
-                        .putExtra(AnkiquestActivity.COMMUNITY_REMINDERS, community),
+                        .putExtra(AnkiquestActivity.EXTRA_COMMUNITY_REMINDERS, community),
                 )
             }
             true
@@ -568,7 +568,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         key: String?,
     ) {
         super.onSharedPreferenceChanged(sharedPreferences, key)
-        if (key in setOf(Ankiquest.URL_KEY, Ankiquest.USER_KEY, Ankiquest.TOKEN_KEY)) {
+        if (key in setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN)) {
             pictureAccount = null
             pictureEditor?.dismiss()
             pictureEditor = null
@@ -739,8 +739,8 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     override fun onStart() {
         super.onStart()
         val prefs = preferenceManager.sharedPreferences ?: return
-        if (!prefs.getBoolean(ASKED_KEY, false)) {
-            prefs.edit { putBoolean(ASKED_KEY, true) }
+        if (!prefs.getBoolean(PREF_ASKED, false)) {
+            prefs.edit { putBoolean(PREF_ASKED, true) }
             askForNotifications()
         }
     }
@@ -768,6 +768,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     companion object {
-        private const val ASKED_KEY = "ankiquestAskedNotifications"
+        private const val PREF_ASKED = "ankiquestAskedNotifications"
     }
 }

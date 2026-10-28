@@ -57,11 +57,11 @@ import java.util.concurrent.TimeUnit
  * sent to its preview endpoint, which stores nothing, when the server permits public access.
  */
 object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallbacks {
-    const val URL_KEY = "ankiquestUrl"
-    const val USER_KEY = "ankiquestUser"
-    const val TOKEN_KEY = "ankiquestToken"
-    private const val MARK_KEY = "ankiquestUploadedThrough"
-    private const val RECENT_KEY = "ankiquestRecentUploads"
+    const val PREF_URL = "ankiquestUrl"
+    const val PREF_USER = "ankiquestUser"
+    const val PREF_TOKEN = "ankiquestToken"
+    private const val PREF_MARK = "ankiquestUploadedThrough"
+    private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
 
     private const val MAX_PENDING = 5000
@@ -129,7 +129,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     fun player(): String? =
         AnkiDroidApp
             .sharedPrefs()
-            .getString(USER_KEY, "")
+            .getString(PREF_USER, "")
             .orEmpty()
             .trim()
             .ifEmpty { Prefs.username.orEmpty() }
@@ -138,9 +138,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private fun endpoint(): Triple<String, String, String>? {
         // Keep credentials tied to one server even when settings change during a queued request.
         val settings = AnkiDroidApp.sharedPrefs().all
-        val url = (settings[URL_KEY] as? String).orEmpty().trim().trimEnd('/')
-        val user = (settings[USER_KEY] as? String).orEmpty().trim().ifEmpty { Prefs.username.orEmpty() }
-        val token = (settings[TOKEN_KEY] as? String).orEmpty().trim()
+        val url = (settings[PREF_URL] as? String).orEmpty().trim().trimEnd('/')
+        val user = (settings[PREF_USER] as? String).orEmpty().trim().ifEmpty { Prefs.username.orEmpty() }
+        val token = (settings[PREF_TOKEN] as? String).orEmpty().trim()
         if (url.isEmpty() || user.isEmpty()) return null
         return Triple(url, URLEncoder.encode(user, "UTF-8").replace("+", "%20"), token)
     }
@@ -447,7 +447,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         catalog: Boolean = false,
     ): JSONObject {
         val prefs = AnkiDroidApp.sharedPrefs()
-        val mark = prefs.getLong(MARK_KEY, 0L)
+        val mark = prefs.getLong(PREF_MARK, 0L)
         val initialSyncKey = "$INITIAL_SYNC_KEY:$url/$user"
         val initialSyncDone = prefs.getBoolean(initialSyncKey, false)
         var known = if (resync) maxOf(0L, mark - RESYNC_WINDOW_MS) else mark
@@ -505,12 +505,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                         .post(body.toString().toRequestBody(json))
                         .build(),
                 )
-            prefs.edit { putLong(MARK_KEY, maxOf(known, mark)) }
+            prefs.edit { putLong(PREF_MARK, maxOf(known, mark)) }
             first = false
         } while (full)
         if (!onlyTest) {
             prefs.edit {
-                putString(RECENT_KEY, present.joinToString(","))
+                putString(PREF_RECENT, present.joinToString(","))
                 putBoolean(initialSyncKey, true)
             }
         }
@@ -522,7 +522,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         windowStart: Long,
     ): Set<Long> =
         prefs
-            .getString(RECENT_KEY, "")
+            .getString(PREF_RECENT, "")
             .orEmpty()
             .split(',')
             .mapNotNull { it.toLongOrNull() }
@@ -692,7 +692,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     } else {
                         if (uploadAll) {
                             AnkiDroidApp.sharedPrefs().edit {
-                                remove(MARK_KEY)
+                                remove(PREF_MARK)
                                 remove("$INITIAL_SYNC_KEY:$url/$user")
                             }
                         }

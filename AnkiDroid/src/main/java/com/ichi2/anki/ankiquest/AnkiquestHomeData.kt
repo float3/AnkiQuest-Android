@@ -44,9 +44,9 @@ internal data class HomeAccount(
             settings: Map<String, *>,
             fallbackUser: String,
         ): HomeAccount? {
-            val server = (settings[Ankiquest.URL_KEY] as? String).orEmpty().trim().trimEnd('/')
-            val user = (settings[Ankiquest.USER_KEY] as? String).orEmpty().trim().ifEmpty { fallbackUser.trim() }
-            val token = (settings[Ankiquest.TOKEN_KEY] as? String).orEmpty().trim()
+            val server = (settings[Ankiquest.PREF_URL] as? String).orEmpty().trim().trimEnd('/')
+            val user = (settings[Ankiquest.PREF_USER] as? String).orEmpty().trim().ifEmpty { fallbackUser.trim() }
+            val token = (settings[Ankiquest.PREF_TOKEN] as? String).orEmpty().trim()
             val parsed = server.toHttpUrlOrNull() ?: return null
             if (user.isEmpty() || parsed.username.isNotEmpty() || parsed.password.isNotEmpty() || parsed.query != null ||
                 parsed.fragment != null

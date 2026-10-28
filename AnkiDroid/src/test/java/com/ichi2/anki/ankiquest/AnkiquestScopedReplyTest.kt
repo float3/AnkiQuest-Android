@@ -50,7 +50,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
         server.createContext("/") { exchange ->
             requests += exchange.requestURI.path to exchange.requestHeaders.getFirst("Authorization")
             exchange.requestBody.close()
-            if (switchDuringResponse) AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.USER_KEY, "bob") }
+            if (switchDuringResponse) AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "bob") }
             if (redirect) exchange.responseHeaders.set("Location", "/other-destination")
             val response = "{\"sent_to\":\"Friend\"}".toByteArray()
             exchange.sendResponseHeaders(if (redirect) 307 else 200, response.size.toLong())
@@ -59,9 +59,9 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.USER_KEY, "alice")
-            putString(Ankiquest.TOKEN_KEY, "alice-test-token")
+            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_USER, "alice")
+            putString(Ankiquest.PREF_TOKEN, "alice-test-token")
         }
         captured = AnkiquestHomeData.account()!!
     }
@@ -75,10 +75,10 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
     private fun replyData(): Data =
         AnkiquestReply.data(
             Intent()
-                .putExtra(AnkiquestReply.NOTIFICATION_KEY, 7L)
-                .putExtra(AnkiquestReply.TAG_KEY, 5_140_007)
-                .putExtra(AnkiquestReply.ACCOUNT_KEY, captured.notificationAccount)
-                .putExtra(AnkiquestReply.SCOPE_KEY, captured.scope),
+                .putExtra(AnkiquestReply.EXTRA_NOTIFICATION, 7L)
+                .putExtra(AnkiquestReply.EXTRA_TAG, 5_140_007)
+                .putExtra(AnkiquestReply.EXTRA_REPLY_ACCOUNT, captured.notificationAccount)
+                .putExtra(AnkiquestReply.EXTRA_REPLY_SCOPE, captured.scope),
             "Well done",
         )
 
@@ -86,7 +86,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
     fun `reply carries captured owner credentials and never persists the token`() =
         runBlocking {
             val data = replyData()
-            assertEquals(captured.scope, data.getString(AnkiquestReply.SCOPE_KEY))
+            assertEquals(captured.scope, data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE))
             assertFalse(data.toString().contains(captured.token))
             assertEquals("Friend", Ankiquest.reply(7, "Well done", captured.notificationAccount, captured.scope))
             assertEquals(listOf("/api/reply/alice" to "Bearer alice-test-token"), requests.toList())
@@ -98,15 +98,15 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
             val missing =
                 Data
                     .Builder()
-                    .putLong(AnkiquestReply.NOTIFICATION_KEY, 7L)
-                    .putString(AnkiquestReply.MESSAGE_KEY, "Well done")
+                    .putLong(AnkiquestReply.EXTRA_NOTIFICATION, 7L)
+                    .putString(AnkiquestReply.EXTRA_MESSAGE, "Well done")
                     .build()
             assertEquals(AnkiquestReply.Outcome.FAILED, AnkiquestReply.run(targetContext, missing, 0))
             val original = AnkiDroidApp.sharedPrefs().all
             for ((key, value) in listOf(
-                Ankiquest.USER_KEY to "bob",
-                Ankiquest.TOKEN_KEY to "new-token",
-                Ankiquest.URL_KEY to "http://127.0.0.1:9",
+                Ankiquest.PREF_USER to "bob",
+                Ankiquest.PREF_TOKEN to "new-token",
+                Ankiquest.PREF_URL to "http://127.0.0.1:9",
             )) {
                 AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
                 assertEquals(AnkiquestReply.Outcome.FAILED, AnkiquestReply.run(targetContext, replyData(), 0))

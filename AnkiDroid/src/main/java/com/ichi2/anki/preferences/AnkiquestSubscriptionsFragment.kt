@@ -63,7 +63,7 @@ class AnkiquestSubscriptionsFragment : SettingsFragment() {
         key: String?,
     ) {
         super.onSharedPreferenceChanged(sharedPreferences, key)
-        if (key in setOf(Ankiquest.URL_KEY, Ankiquest.USER_KEY, Ankiquest.TOKEN_KEY, "username")) refresh()
+        if (key in setOf(Ankiquest.PREF_URL, Ankiquest.PREF_USER, Ankiquest.PREF_TOKEN, "username")) refresh()
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean =

@@ -29,33 +29,33 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     @Before
     fun configure() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "https://anki.example.test")
-            putString(Ankiquest.USER_KEY, "member name")
-            putString(Ankiquest.TOKEN_KEY, "member-token")
+            putString(Ankiquest.PREF_URL, "https://anki.example.test")
+            putString(Ankiquest.PREF_USER, "member name")
+            putString(Ankiquest.PREF_TOKEN, "member-token")
         }
     }
 
     @Test
     fun `launcher opens decks by default without an extra Today screen`() {
-        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestNavigation.OPEN_TODAY_KEY) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestNavigation.PREF_OPEN_TODAY) }
         assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
     }
 
     @Test
     fun `initializing settings keeps Decks as the default opening screen`() {
-        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestNavigation.OPEN_TODAY_KEY) }
+        AnkiDroidApp.sharedPrefs().edit { remove(AnkiquestNavigation.PREF_OPEN_TODAY) }
         PreferenceManager.setDefaultValues(targetContext, R.xml.preferences_ankiquest, true)
         assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
     }
 
     @Test
     fun `only a normal launcher entry opens Today`() {
-        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestNavigation.OPEN_TODAY_KEY, true) }
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true) }
         assertTrue(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
         assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_VIEW)))
         assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN).putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)))
         assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN).putExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK, 1L)))
-        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestNavigation.OPEN_TODAY_KEY, false) }
+        AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, false) }
         assertFalse(AnkiquestNavigation.opensToday(Intent(Intent.ACTION_MAIN)))
     }
 
@@ -63,7 +63,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     fun `changing credentials invalidates the presentation identity`() {
         val before = AnkiquestNavigation.accountFingerprint()
         assertFalse(before.contains("member-token"))
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.TOKEN_KEY, "replacement-token") }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement-token") }
         assertNotEquals(before, AnkiquestNavigation.accountFingerprint())
     }
 
@@ -71,7 +71,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     fun `presentation identity captures fallback member in the same settings snapshot`() {
         val preferences = AnkiDroidApp.sharedPrefs()
         preferences.edit {
-            remove(Ankiquest.USER_KEY)
+            remove(Ankiquest.PREF_USER)
             putString("username", "original-member")
         }
         val before = AnkiquestNavigation.accountFingerprint()

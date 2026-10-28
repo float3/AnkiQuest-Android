@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit
 object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
     private const val NOW_NAME = "ankiquestPollNow"
-    private const val CACHE_KEY = "ankiquestWidgetLeaderboard"
-    private const val CACHE_AT_KEY = "ankiquestWidgetLeaderboardAt"
+    private const val PREF_CACHE = "ankiquestWidgetLeaderboard"
+    private const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
 
     fun schedule(context: Context) {
         try {
@@ -81,18 +81,18 @@ object AnkiquestPoll {
                 if (board != null) {
                     val now = TimeManager.time.intTimeMS()
                     prefs.edit {
-                        putString(CACHE_KEY, board.toString())
-                        putLong(CACHE_AT_KEY, now)
+                        putString(PREF_CACHE, board.toString())
+                        putLong(PREF_CACHE_AT, now)
                     }
                     AnkiquestWidget.render(context, board, now, offline = false)
                     photoBoard = board
                     photoFetchedAt = now
                     AnkiquestNotifier.onLeaderboard(context)
                 } else {
-                    val cached = prefs.getString(CACHE_KEY, null)?.let { JSONArray(it) } ?: JSONArray()
-                    AnkiquestWidget.render(context, cached, prefs.getLong(CACHE_AT_KEY, 0), offline = true)
+                    val cached = prefs.getString(PREF_CACHE, null)?.let { JSONArray(it) } ?: JSONArray()
+                    AnkiquestWidget.render(context, cached, prefs.getLong(PREF_CACHE_AT, 0), offline = true)
                     photoBoard = cached
-                    photoFetchedAt = prefs.getLong(CACHE_AT_KEY, 0)
+                    photoFetchedAt = prefs.getLong(PREF_CACHE_AT, 0)
                     photoOffline = true
                 }
             }
@@ -130,8 +130,8 @@ object AnkiquestPoll {
             val stillCurrent = {
                 photoScope != null &&
                     photoScope == runCatching { AnkiquestAvatars.account()?.scope }.getOrNull() &&
-                    prefs.getLong(CACHE_AT_KEY, 0) == photoFetchedAt &&
-                    prefs.getString(CACHE_KEY, null) == board.toString()
+                    prefs.getLong(PREF_CACHE_AT, 0) == photoFetchedAt &&
+                    prefs.getString(PREF_CACHE, null) == board.toString()
             }
             if (!stillCurrent()) return@let
             try {

@@ -10,8 +10,8 @@ import java.security.MessageDigest
 
 /** Entry policy is independent of connectivity: the local study library always works. */
 object AnkiquestNavigation {
-    const val OPEN_TODAY_KEY = "ankiquestOpenToday"
-    const val SESSION_SUMMARY_KEY = "ankiquestSessionSummary"
+    const val PREF_OPEN_TODAY = "ankiquestOpenToday"
+    const val PREF_SESSION_SUMMARY = "ankiquestSessionSummary"
     const val FRIENDS_PATH = "/community#challenges"
     const val ACTIVITY_PATH = "/community#activity"
 
@@ -19,7 +19,7 @@ object AnkiquestNavigation {
 
     fun opensToday(intent: Intent): Boolean =
         enabled() &&
-            AnkiDroidApp.sharedPrefs().getBoolean(OPEN_TODAY_KEY, false) &&
+            AnkiDroidApp.sharedPrefs().getBoolean(PREF_OPEN_TODAY, false) &&
             !intent.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false) &&
             !intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK) &&
             intent.action == Intent.ACTION_MAIN &&
@@ -47,15 +47,15 @@ object AnkiquestNavigation {
     fun accountFingerprint(): String {
         val settings = AnkiDroidApp.sharedPrefs().all
         val player =
-            (settings[Ankiquest.USER_KEY] as? String).orEmpty().trim().ifEmpty {
+            (settings[Ankiquest.PREF_USER] as? String).orEmpty().trim().ifEmpty {
                 (settings["username"] as? String).orEmpty().trim()
             }
         val identity =
             listOf(
-                settings[Ankiquest.URL_KEY].toString(),
-                settings[Ankiquest.USER_KEY].toString(),
+                settings[Ankiquest.PREF_URL].toString(),
+                settings[Ankiquest.PREF_USER].toString(),
                 player,
-                settings[Ankiquest.TOKEN_KEY].toString(),
+                settings[Ankiquest.PREF_TOKEN].toString(),
             ).joinToString("\u0000")
         return MessageDigest.getInstance("SHA-256").digest(identity.toByteArray()).joinToString("") { "%02x".format(it) }
     }

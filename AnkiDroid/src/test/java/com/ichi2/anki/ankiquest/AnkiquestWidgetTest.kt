@@ -308,10 +308,10 @@ class AnkiquestWidgetTest : RobolectricTest() {
 
     private fun configureTodayLaunch() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "https://anki.example.test")
-            putString(Ankiquest.USER_KEY, "member")
-            putString(Ankiquest.TOKEN_KEY, "member-token")
-            putBoolean(AnkiquestNavigation.OPEN_TODAY_KEY, true)
+            putString(Ankiquest.PREF_URL, "https://anki.example.test")
+            putString(Ankiquest.PREF_USER, "member")
+            putString(Ankiquest.PREF_TOKEN, "member-token")
+            putBoolean(AnkiquestNavigation.PREF_OPEN_TODAY, true)
         }
         Ankiquest.resumeUploadAt = TimeManager.time.intTimeMS()
         assertTrue(AnkiquestNavigation.enabled())

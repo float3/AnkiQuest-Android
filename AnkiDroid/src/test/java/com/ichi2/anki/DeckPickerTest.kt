@@ -184,7 +184,7 @@ class DeckPickerTest : RobolectricTest() {
         assertThat(col.sched.deckDueTree().find(DEFAULT_DECK_ID), nullValue())
 
         deckPicker {
-            advanceRobolectricLooperUntil { deckPickerBinding.decks.adapter?.itemCount == 1 }
+            advanceRobolectricLooperUntil { visibleDeckCount == 1 }
             shadowOf(this).clearNextStartedActivities()
 
             assertTrue(onKeyUp(KeyEvent.KEYCODE_S, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_S)))
@@ -201,7 +201,7 @@ class DeckPickerTest : RobolectricTest() {
         val filtered = col.decks.newFiltered("Filtered")
 
         deckPicker {
-            advanceRobolectricLooperUntil { deckPickerBinding.decks.adapter?.itemCount == 2 }
+            advanceRobolectricLooperUntil { visibleDeckCount == 2 }
             shadowOf(this).clearNextStartedActivities()
 
             assertTrue(onKeyUp(KeyEvent.KEYCODE_S, KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_S)))

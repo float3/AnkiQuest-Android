@@ -68,7 +68,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val intent = chose(posted, "¡Gracias!")
         val data = AnkiquestReply.data(intent, AnkiquestReply.message(intent))
         assertEquals("reply", data.getString("kind"))
-        assertEquals("¡Gracias!", data.getString(AnkiquestReply.MESSAGE_KEY))
+        assertEquals("¡Gracias!", data.getString(AnkiquestReply.EXTRA_MESSAGE))
         AnkiquestNotifier.onReplyFailed(targetContext, data)
         assertEquals(
             listOf("¡Gracias!", "¡Me alegraste el día!", "¡Te lo agradezco!"),
@@ -124,15 +124,15 @@ class AnkiquestNotifierTest : RobolectricTest() {
         RemoteInput.addResultsToIntent(
             notification.actions.single().remoteInputs,
             it,
-            Bundle().apply { putCharSequence(AnkiquestReply.MESSAGE_KEY, text) },
+            Bundle().apply { putCharSequence(AnkiquestReply.EXTRA_MESSAGE, text) },
         )
     }
 
     private fun replyAccount(): HomeAccount {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "https://server.test")
-            putString(Ankiquest.USER_KEY, "hill")
-            putString(Ankiquest.TOKEN_KEY, "hill-token")
+            putString(Ankiquest.PREF_URL, "https://server.test")
+            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_TOKEN, "hill-token")
         }
         return AnkiquestHomeData.account()!!
     }
@@ -236,10 +236,10 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val cheer = chose(posted[0], "Good job!")
         assertEquals("Good job!", AnkiquestReply.message(cheer))
         val data = AnkiquestReply.data(cheer, AnkiquestReply.message(cheer))
-        assertEquals(1L, data.getLong(AnkiquestReply.NOTIFICATION_KEY, 0))
-        assertEquals("Deck complete", data.getString(AnkiquestReply.TITLE_KEY))
-        assertEquals(account.scope, data.getString(AnkiquestReply.SCOPE_KEY))
-        assertEquals(account.notificationAccount, data.getString(AnkiquestReply.ACCOUNT_KEY))
+        assertEquals(1L, data.getLong(AnkiquestReply.EXTRA_NOTIFICATION, 0))
+        assertEquals("Deck complete", data.getString(AnkiquestReply.EXTRA_TITLE))
+        assertEquals(account.scope, data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE))
+        assertEquals(account.notificationAccount, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
 
         val typed =
             chose(posted[0], "  proud of you  ")
@@ -259,8 +259,8 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val incoming = shadowOf(manager).getNotification(5_140_001)
         val cheer = chose(incoming, "Good job!")
         val data = AnkiquestReply.data(cheer, AnkiquestReply.message(cheer))
-        assertEquals(account.notificationAccount, data.getString(AnkiquestReply.ACCOUNT_KEY))
-        assertEquals(account.scope, data.getString(AnkiquestReply.SCOPE_KEY))
+        assertEquals(account.notificationAccount, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        assertEquals(account.scope, data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE))
         AnkiquestNotifier.onReplyFailed(targetContext, data)
         val failed = shadowOf(manager).getNotification(5_140_001)
 
@@ -300,13 +300,13 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val data =
             Data
                 .Builder()
-                .putLong(AnkiquestReply.NOTIFICATION_KEY, 7)
-                .putInt(AnkiquestReply.TAG_KEY, 5_140_007)
-                .putString(AnkiquestReply.TITLE_KEY, "Deck complete")
-                .putString(AnkiquestReply.BODY_KEY, "Cerro has finished Spanish for today.")
-                .putString(AnkiquestReply.MESSAGE_KEY, "Good job!")
-                .putString(AnkiquestReply.ACCOUNT_KEY, account.notificationAccount)
-                .putString(AnkiquestReply.SCOPE_KEY, account.scope)
+                .putLong(AnkiquestReply.EXTRA_NOTIFICATION, 7)
+                .putInt(AnkiquestReply.EXTRA_TAG, 5_140_007)
+                .putString(AnkiquestReply.EXTRA_TITLE, "Deck complete")
+                .putString(AnkiquestReply.EXTRA_BODY, "Cerro has finished Spanish for today.")
+                .putString(AnkiquestReply.EXTRA_MESSAGE, "Good job!")
+                .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, account.notificationAccount)
+                .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, account.scope)
                 .build()
 
         AnkiquestNotifier.onReplySent(targetContext, data, "Cerro")
@@ -335,9 +335,9 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val data =
             Data
                 .Builder()
-                .putInt(AnkiquestReply.TAG_KEY, 5_140_007)
-                .putString(AnkiquestReply.ACCOUNT_KEY, account.notificationAccount)
-                .putString(AnkiquestReply.SCOPE_KEY, account.scope)
+                .putInt(AnkiquestReply.EXTRA_TAG, 5_140_007)
+                .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, account.notificationAccount)
+                .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, account.scope)
                 .build()
         AnkiquestNotifier.onReplySent(targetContext, data, "Cerro")
         val posted = shadowOf(manager).getNotification(5_140_007)
@@ -441,7 +441,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
     @Test
     fun `a denied streak reminder can be delivered once notifications are enabled`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
-        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.STREAK_HOURS_KEY, "24") }
+        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "24") }
         val profile = atRisk(dayEndsIn = 3 * HOUR_MS)
         shadowOf(manager).setNotificationsEnabled(false)
         AnkiquestNotifier.onProfile(targetContext, profile)
@@ -476,7 +476,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = 3 * HOUR_MS))
         AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS).put("streak_warning", JSONObject.NULL))
         AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = -HOUR_MS))
-        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.STREAK_HOURS_KEY, "0") }
+        AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "0") }
         AnkiquestNotifier.onProfile(targetContext, atRisk(dayEndsIn = HOUR_MS))
         assertEquals(0, shadowOf(manager).size())
     }
@@ -507,7 +507,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals(0, shadowOf(manager).size())
 
                 change = JSONObject().put("title", "▼ Hill passed you").put("body", "You're now #2.")
-                AnkiDroidApp.sharedPrefs().edit(commit = true) { putBoolean(AnkiquestNotifier.RANK_KEY, false) }
+                AnkiDroidApp.sharedPrefs().edit(commit = true) { putBoolean(AnkiquestNotifier.PREF_RANK, false) }
                 AnkiquestNotifier.onLeaderboard(targetContext)
                 assertEquals(0, shadowOf(manager).size(), "rank notifications can be turned off")
 
@@ -530,8 +530,8 @@ class AnkiquestNotifierTest : RobolectricTest() {
         }
         server.start()
         AnkiDroidApp.sharedPrefs().edit(commit = true) {
-            putString(Ankiquest.URL_KEY, "http://127.0.0.1:${server.address.port}")
-            putString(Ankiquest.USER_KEY, "cerro")
+            putString(Ankiquest.PREF_URL, "http://127.0.0.1:${server.address.port}")
+            putString(Ankiquest.PREF_USER, "cerro")
         }
         return server
     }

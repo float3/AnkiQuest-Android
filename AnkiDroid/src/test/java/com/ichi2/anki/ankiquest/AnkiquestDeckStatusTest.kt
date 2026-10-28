@@ -79,7 +79,7 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
         val spanish = addDeck("Spanish")
         col.decks.select(spanish)
         for ((enabled, expected) in listOf(true to true, false to false)) {
-            AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDecks.DECK_STATUS_KEY, enabled) }
+            AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDecks.PREF_DECK_STATUS, enabled) }
             withDeckPicker(deckCount = 0) { deckPicker ->
                 deckPicker.awaitInitialDeckHolder(spanish)
                 val adapter =

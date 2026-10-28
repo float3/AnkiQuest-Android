@@ -94,14 +94,14 @@ object AnkiquestAvatars {
     fun account(): Account? {
         // Keep the server and its credentials together if settings change during a refresh.
         val settings = AnkiDroidApp.sharedPrefs().all
-        val url = (settings[Ankiquest.URL_KEY] as? String).orEmpty().trim().trimEnd('/')
+        val url = (settings[Ankiquest.PREF_URL] as? String).orEmpty().trim().trimEnd('/')
         // username is R.string.username_key. Read the fallback from this same snapshot.
         val user =
-            (settings[Ankiquest.USER_KEY] as? String)
+            (settings[Ankiquest.PREF_USER] as? String)
                 .orEmpty()
                 .trim()
                 .ifEmpty { (settings["username"] as? String).orEmpty().trim() }
-        val token = (settings[Ankiquest.TOKEN_KEY] as? String).orEmpty().trim()
+        val token = (settings[Ankiquest.PREF_TOKEN] as? String).orEmpty().trim()
         if (url.isEmpty() || user.isEmpty()) return null
         val base = "$url/".toHttpUrlOrNull() ?: return null
         if (base.username.isNotEmpty() || base.password.isNotEmpty() || base.query != null || base.fragment != null) return null
