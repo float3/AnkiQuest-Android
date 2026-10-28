@@ -6,6 +6,7 @@ import android.content.Intent
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
+import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -50,6 +51,8 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns profile
+        // Otherwise the activity really asks anki.example.test, and the render that follows waits on that socket.
+        coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
     }
 
     @After
@@ -152,7 +155,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     private fun launch(): AnkiquestHomeActivity =
         startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
-            .also { advanceRobolectricLooper() }
+            .also { home -> advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible } }
 
     private fun AnkiquestHomeActivity.hasText(value: String): Boolean =
         findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().any { it.text.toString() == value }
