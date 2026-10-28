@@ -234,7 +234,7 @@ private fun ensureBrowserViewModel() {
         deckPicker.viewModelStore,
         CardBrowserViewModel.factory(
             lastDeckIdRepository = AnkiDroidApp.instance.sharedPrefsLastDeckIdRepository,
-            idsFileDirectory = IdsFile.getDirectory(deckPicker),
+            idsFileDirectory = IdsFile.getDirectory(),
             options = null,
             isFragmented = false,
             initialDeckId = null,
