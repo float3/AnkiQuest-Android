@@ -26,7 +26,9 @@ import com.ichi2.anki.CollectionManager.CollectionOpenFailure
 import com.ichi2.anki.RobolectricTest.CollectionStorageMode.IN_MEMORY_NO_FOLDERS
 import com.ichi2.anki.RobolectricTest.CollectionStorageMode.IN_MEMORY_WITH_MEDIA
 import com.ichi2.anki.RobolectricTest.CollectionStorageMode.ON_DISK
+import com.ichi2.anki.common.android.AdaptionUtil
 import com.ichi2.anki.common.annotations.UseContextParameter
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -81,8 +83,12 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import com.ichi2.testutils.Robolectric as RobolectricActivities
 
-open class RobolectricTest :
-    AnkiTest,
+/**
+ * @param loadBackend Disable for tests which do not use the native backend.
+ */
+open class RobolectricTest(
+    private val loadBackend: Boolean = true,
+) : AnkiTest,
     AndroidTest {
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     private fun Any.wait(timeMs: Long) = (this as Object).wait(timeMs)
@@ -168,7 +174,7 @@ open class RobolectricTest :
 
         CollectionManager.closeCollectionBlocking()
 
-        maybeSetupBackend()
+        if (loadBackend) setupBackend()
 
         // Reset static variable for custom tabs failure.
         CustomTabActivityHelper.resetFailed()
@@ -181,6 +187,8 @@ open class RobolectricTest :
 
         // https://github.com/ankidroid/Anki-Android/pull/19004#discussion_r2739833965
         grantPermissions(Manifest.permission.INTERNET)
+
+        AdaptionUtil.resetWebBrowserAvailabilityCacheForTests()
     }
 
     @After
@@ -199,6 +207,10 @@ open class RobolectricTest :
         }
         controllersForCleanup.clear()
 
+        if (SharedPreferencesTestHook.override != null) {
+            Timber.w("SharedPreferencesTestHook was not reset! Setting it to null.")
+            SharedPreferencesTestHook.override = null
+        }
         if (AnkiDroidApp.sharedPreferencesTestingOverride != null) {
             Timber.w("AnkiDroidApp SharedPrefs test override was not reset to null! Setting it to null.")
             AnkiDroidApp.sharedPreferencesTestingOverride = null
@@ -465,16 +477,7 @@ open class RobolectricTest :
             undoableOp<OpChanges> { col.updateNote(note) }
         }
 
-    private fun maybeSetupBackend() {
-        try {
-            targetContext
-        } catch (exc: IllegalStateException) {
-            // We must make sure not to load the backend library into a test running outside
-            // the Robolectric classloader, or subsequent Robolectric tests that run in this
-            // process will be unable to make calls into the backend.
-            println("not annotated with junit, not setting up backend")
-            return
-        }
+    private fun setupBackend() {
         try {
             RustBackendLoader.ensureSetup()
         } catch (e: UnsatisfiedLinkError) {

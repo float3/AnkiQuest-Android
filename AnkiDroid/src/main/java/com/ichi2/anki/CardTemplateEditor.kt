@@ -60,12 +60,14 @@ import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.cardviewer.SingleCardSide
+import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.android.animationDisabled
 import com.ichi2.anki.common.android.appContext
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.utils.android.getColorFromAttr
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.common.utils.ext.contentEquals
 import com.ichi2.anki.compat.CompatHelper.Companion.getSerializableCompat
 import com.ichi2.anki.databinding.ActivityCardTemplateEditorBinding
@@ -87,6 +89,8 @@ import com.ichi2.anki.libanki.NoteTypeId
 import com.ichi2.anki.libanki.NotetypeJson
 import com.ichi2.anki.libanki.Notetypes
 import com.ichi2.anki.libanki.Notetypes.Companion.NOT_FOUND_NOTE_TYPE
+import com.ichi2.anki.libanki.backend.BackendUtils
+import com.ichi2.anki.libanki.backend.model.toBackendNote
 import com.ichi2.anki.libanki.exception.ConfirmModSchemaException
 import com.ichi2.anki.libanki.getStockNotetype
 import com.ichi2.anki.libanki.getStockNotetypeKinds
@@ -111,20 +115,24 @@ import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.anki.utils.postDelayed
 import com.ichi2.utils.TruncatedString
 import com.ichi2.utils.copyToClipboard
-import com.ichi2.utils.dp
 import com.ichi2.utils.listItems
 import com.ichi2.utils.show
 import dev.androidbroadcast.vbpd.viewBinding
 import kotlinx.coroutines.launch
 import net.ankiweb.rsdroid.Translations
+import net.ankiweb.rsdroid.exceptions.BackendTemplateException
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
+import java.util.concurrent.TimeoutException
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import com.ichi2.anki.common.android.R as CommonR
 
 private typealias BackendCardTemplate = com.ichi2.anki.libanki.CardTemplate
 
@@ -204,30 +212,30 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
         // Load the args either from the intent or savedInstanceState bundle
         if (savedInstanceState == null) {
             // get note type id
-            noteTypeId = intent.getLongExtra(EDITOR_NOTE_TYPE_ID, NOT_FOUND_NOTE_TYPE)
+            noteTypeId = intent.getLongExtra(EXTRA_NOTE_TYPE_ID, NOT_FOUND_NOTE_TYPE)
             if (noteTypeId == NOT_FOUND_NOTE_TYPE) {
                 Timber.e("CardTemplateEditor :: no note type ID was provided")
                 finish()
                 return
             }
             // get id for currently edited note (optional)
-            noteId = intent.getLongExtra(EDITOR_NOTE_ID, -1L)
+            noteId = intent.getLongExtra(EXTRA_NOTE_ID, -1L)
             // get id for currently edited template (optional)
-            startingOrdId = intent.getIntExtra(EDITOR_START_ORD_ID, -1)
+            startingOrdId = intent.getIntExtra(EXTRA_START_ORD_ID, -1)
             tabToCursorPositions[0] = hashMapOf()
             tabToViewId[0] = R.id.front_edit
         } else {
-            noteTypeId = savedInstanceState.getLong(EDITOR_NOTE_TYPE_ID)
-            noteId = savedInstanceState.getLong(EDITOR_NOTE_ID)
-            startingOrdId = savedInstanceState.getInt(EDITOR_START_ORD_ID)
-            tabToCursorPositions = savedInstanceState.getSerializableCompat<HashMap<Int, HashMap<Int, Int>>>(TAB_TO_CURSOR_POSITION_KEY)!!
-            tabToViewId = savedInstanceState.getSerializableCompat<HashMap<Int, Int?>>(TAB_TO_VIEW_ID)!!
+            noteTypeId = savedInstanceState.getLong(STATE_NOTE_TYPE_ID)
+            noteId = savedInstanceState.getLong(STATE_NOTE_ID)
+            startingOrdId = savedInstanceState.getInt(STATE_STARTING_TEMPLATE_ORDINAL)
+            tabToCursorPositions = savedInstanceState.getSerializableCompat<HashMap<Int, HashMap<Int, Int>>>(STATE_TAB_TO_CURSOR_POSITION)!!
+            tabToViewId = savedInstanceState.getSerializableCompat<HashMap<Int, Int?>>(STATE_TAB_TO_VIEW_ID)!!
             tempNoteType = CardTemplateNotetype.fromBundle(savedInstanceState)
         }
 
         fragmented = binding.fragmentContainer?.isVisible == true
 
-        setNavigationBarColor(R.attr.alternativeBackgroundColor)
+        setNavigationBarColor(CommonR.attr.alternativeBackgroundColor)
 
         // Disable the home icon
         enableToolbar()
@@ -335,11 +343,11 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
     public override fun onSaveInstanceState(outState: Bundle) {
         with(outState) {
             tempNoteType?.let { putAll(it.toBundle()) }
-            putLong(EDITOR_NOTE_TYPE_ID, noteTypeId)
-            putLong(EDITOR_NOTE_ID, noteId)
-            putInt(EDITOR_START_ORD_ID, startingOrdId)
-            putSerializable(TAB_TO_VIEW_ID, tabToViewId)
-            putSerializable(TAB_TO_CURSOR_POSITION_KEY, tabToCursorPositions)
+            putLong(STATE_NOTE_TYPE_ID, noteTypeId)
+            putLong(STATE_NOTE_ID, noteId)
+            putInt(STATE_STARTING_TEMPLATE_ORDINAL, ord)
+            putSerializable(STATE_TAB_TO_VIEW_ID, tabToViewId)
+            putSerializable(STATE_TAB_TO_CURSOR_POSITION, tabToCursorPositions)
             super.onSaveInstanceState(this)
         }
     }
@@ -546,6 +554,39 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
         return supportFragmentManager.findFragmentByTag("f${adapter.getItemId(position)}") as? CardTemplateFragment
     }
 
+    private fun repositionTemplate(
+        from: CardOrdinal,
+        to: CardOrdinal,
+    ) {
+        if (from == to) return
+        val positions = (0 until tempNoteType!!.templateCount).toMutableList()
+        // Save the live cursor positions before the fragments are recreated at their new positions.
+        for (position in positions) {
+            templateFragment(position)?.takeIf { it.view != null }?.let { fragment ->
+                tabToCursorPositions[position]?.set(fragment.currentEditorViewId, fragment.binding.editText.selectionStart)
+            }
+        }
+        positions.add(to, positions.removeAt(from))
+        tabToCursorPositions = reorderTabState(tabToCursorPositions, positions)
+        tabToViewId = reorderTabState(tabToViewId, positions)
+        tempNoteType!!.repositionTemplate(from, to)
+
+        val pager = mainBinding.cardTemplateEditorPager
+        (pager.adapter as TemplatePagerAdapter).ordinalShift()
+        pager.adapter!!.notifyDataSetChanged()
+        pager.setCurrentItem(to, false)
+        loadTemplatePreviewerFragmentIfFragmented(to)
+        updateDiscardChangesCallback()
+    }
+
+    private fun <T> reorderTabState(
+        state: HashMap<Int, T>,
+        positions: List<Int>,
+    ): HashMap<Int, T> =
+        positions
+            .mapIndexedNotNull { newPosition, oldPosition -> state[oldPosition]?.let { newPosition to it } }
+            .toMap(HashMap())
+
     @get:VisibleForTesting
     val currentFragment: CardTemplateFragment?
         get() = templateFragment(ord)
@@ -611,7 +652,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
 
         // Index of this card template fragment in ViewPager
         private val cardIndex
-            get() = requireArguments().getInt(CARD_INDEX)
+            get() = requireArguments().getInt(ARG_CARD_INDEX)
 
         /** Whether this is the page shown by the pager. */
         private val isCurrentPage: Boolean
@@ -665,7 +706,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
                 binding.mainLayout.setBackgroundColor(
                     getColorFromAttr(
                         requireContext(),
-                        R.attr.alternativeBackgroundColor,
+                        CommonR.attr.alternativeBackgroundColor,
                     ),
                 )
 
@@ -732,7 +773,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
             }
             // set saved or default view
             binding.bottomNavigation.selectedItemId =
-                templateEditor.tabToViewId[cardIndex] ?: requireArguments().getInt(EDITOR_VIEW_ID_KEY)
+                templateEditor.tabToViewId[cardIndex] ?: requireArguments().getInt(ARG_EDITOR_VIEW_ID)
 
             // Set text change listeners
             val templateEditorWatcher: TextWatcher =
@@ -816,7 +857,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
 
             parentFragmentManager.setFragmentResultListener(insertFieldRequestKey, viewLifecycleOwner) { key, bundle ->
                 // this is guaranteed to be non null, as we put a non null value on the other side
-                insertField(bundle.getString(InsertFieldDialog.KEY_INSERTED_FIELD)!!)
+                insertField(bundle.getString(InsertFieldDialog.RESULT_INSERTED_FIELD)!!)
             }
             setupMenu()
         }
@@ -887,16 +928,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
 
                 // use the ord of the selected template, not the ord of the currently edited card
 
-                val ord =
-                    // deletions change ordinals, don't try to preview metadata if this occurs.
-                    if (tempModel.templateChanges.any {
-                            it.type == CardTemplateNotetype.ChangeType.DELETE
-                        }
-                    ) {
-                        null
-                    } else {
-                        templateEditor.ord
-                    }
+                val ord = tempModel.getOriginalOrdinal(templateEditor.ord)
 
                 val dialog =
                     InsertFieldDialog.newInstance(
@@ -953,14 +985,16 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
         }
 
         private fun showRepositionDialog() {
+            if (noteTypeCreatesDynamicNumberOfNotes() || tempModel.templateCount < 2) return
+            val currentPosition = templateEditor.ord
             RepositionCardTemplateDialog.showInstance(
                 requireContext(),
-                templateEditor.mainBinding.cardTemplateEditorPager.adapter!!
-                    .itemCount,
+                tempModel.templateCount,
             ) { newPosition ->
-                val currentPosition = templateEditor.ord
-                Timber.w("moving card template %d to %d", currentPosition, newPosition)
-                TODO("CardTemplateNotetype is a complex class and requires significant testing")
+                val newOrdinal = newPosition - 1
+                if (newOrdinal == currentPosition) return@showInstance
+                Timber.i("moving card template %d to %d", currentPosition, newOrdinal)
+                executeWithSyncCheck(Runnable { templateEditor.repositionTemplate(currentPosition, newOrdinal) })
             }
         }
 
@@ -1043,7 +1077,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
                 val numAffectedCards =
                     if (!CardTemplateNotetype.isOrdinalPendingAdd(tempModel, ordinal)) {
                         Timber.d("Ordinal is not a pending add, so we'll get the current card count for confirmation")
-                        withCol { notetypes.tmplUseCount(tempModel.notetype, ordinal) }
+                        withCol { notetypes.tmplUseCount(tempModel.notetype, tempModel.getOriginalOrdinal(ordinal)!!) }
                     } else {
                         0
                     }
@@ -1076,16 +1110,13 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
                 Timber.w("addCardTemplate attempted on cloze note type")
                 return
             }
-            // Show confirmation dialog
-            // isOrdinalPendingAdd method will check if there are any new card types added or not,
-            // if TempModel has new card type then numAffectedCards will be 0 by default.
-            val numAffectedCards =
-                if (!CardTemplateNotetype.isOrdinalPendingAdd(templateEditor.tempNoteType!!, templateEditor.ord)) {
-                    templateEditor.getColUnsafe.notetypes.tmplUseCount(templateEditor.tempNoteType!!.notetype, templateEditor.ord)
-                } else {
-                    0
-                }
-            confirmAddCards(templateEditor.tempNoteType!!.notetype, numAffectedCards)
+            val noteType = templateEditor.tempNoteType!!.notetype
+            val newTemplate = buildNewTemplate(noteType)
+            launchCatchingTask {
+                // Show confirmation dialog
+                val numAffectedCards = withProgress { withCol { countCardsCreatedBy(noteType, newTemplate) } }
+                confirmAddCards(noteType, newTemplate, numAffectedCards)
+            }
         }
 
         fun saveNoteType(): Boolean {
@@ -1127,6 +1158,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
         fun setupCommonMenu(menu: Menu) {
             menu.findItem(R.id.action_restore_to_default).title = TR.sentenceCase.restoreToDefault
             menu.findItem(R.id.action_card_browser_appearance).title = TR.sentenceCase.browserAppearance
+            menu.findItem(R.id.action_reposition).isVisible = !noteTypeCreatesDynamicNumberOfNotes() && tempModel.templateCount > 1
             if (noteTypeCreatesDynamicNumberOfNotes()) {
                 Timber.d("Editing cloze/occlusion note type, disabling add/delete card template and deck override functionality")
                 menu.findItem(R.id.action_add).isVisible = false
@@ -1313,7 +1345,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
         }
 
         fun getNote(col: Collection): Note? {
-            val nid = requireArguments().getLong(EDITOR_NOTE_ID)
+            val nid = requireArguments().getLong(EXTRA_NOTE_ID)
             return if (nid != -1L) col.getNote(nid) else null
         }
 
@@ -1382,7 +1414,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
          */
         private fun getCurrentCardTemplateIndex(): Int {
             // COULD_BE_BETTER: Lots of duplicate code could call this. Hold off on the refactor until #5151 goes in.
-            return requireArguments().getInt(CARD_INDEX)
+            return requireArguments().getInt(ARG_CARD_INDEX)
         }
 
         private suspend fun deletionWouldOrphanNote(
@@ -1484,6 +1516,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
          */
         private fun confirmAddCards(
             notetype: NotetypeJson,
+            newTemplate: BackendCardTemplate,
             numAffectedCards: Int,
         ) {
             val d = ConfirmationDialog()
@@ -1501,7 +1534,7 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
                 positiveButtonText = getString(CommonString.menu_add),
             )
 
-            val addCard = Runnable { addNewTemplate(notetype) }
+            val addCard = Runnable { addNewTemplate(notetype, newTemplate) }
             val confirm = Runnable { executeWithSyncCheck(addCard) }
             d.setConfirm(confirm)
             templateEditor.showDialogFragment(d)
@@ -1577,9 +1610,23 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
          * Add new template to a given note type
          * @param noteType note type to add new template to
          */
-        private fun addNewTemplate(noteType: NotetypeJson) {
-            // Build new template
-            val oldCardIndex = requireArguments().getInt(CARD_INDEX)
+        private fun addNewTemplate(
+            noteType: NotetypeJson,
+            newTemplate: BackendCardTemplate,
+        ) {
+            val templates = noteType.templates
+            templates.append(newTemplate)
+            templateEditor.tempNoteType!!.addNewTemplate()
+            templateEditor.mainBinding.cardTemplateEditorPager.adapter!!
+                .notifyDataSetChanged()
+            templateEditor.mainBinding.cardTemplateEditorPager.setCurrentItem(
+                templates.length() - 1,
+                templateEditor.animationDisabled(),
+            )
+        }
+
+        private fun buildNewTemplate(noteType: NotetypeJson): BackendCardTemplate {
+            val oldCardIndex = requireArguments().getInt(ARG_CARD_INDEX)
             val templates = noteType.templates
             val oldTemplate = templates[oldCardIndex]
             val newTemplate = Notetypes.newTemplate(newCardName(templates))
@@ -1591,16 +1638,9 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
                 flipQA(newTemplate)
             }
             val lastExistingOrd = templates.last().ord
-            Timber.d("addNewTemplate() lastExistingOrd was %s", lastExistingOrd)
+            Timber.d("buildNewTemplate() lastExistingOrd was %s", lastExistingOrd)
             newTemplate.setOrd(lastExistingOrd + 1)
-            templates.append(newTemplate)
-            templateEditor.tempNoteType!!.addNewTemplate(newTemplate)
-            templateEditor.mainBinding.cardTemplateEditorPager.adapter!!
-                .notifyDataSetChanged()
-            templateEditor.mainBinding.cardTemplateEditorPager.setCurrentItem(
-                templates.length() - 1,
-                templateEditor.animationDisabled(),
-            )
+            return newTemplate
         }
 
         /**
@@ -1668,9 +1708,9 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
             ): CardTemplateFragment {
                 val f = CardTemplateFragment()
                 val args = Bundle()
-                args.putInt(CARD_INDEX, cardIndex)
-                args.putLong(EDITOR_NOTE_ID, noteId)
-                args.putInt(EDITOR_VIEW_ID_KEY, viewId)
+                args.putInt(ARG_CARD_INDEX, cardIndex)
+                args.putLong(EXTRA_NOTE_ID, noteId)
+                args.putInt(ARG_EDITOR_VIEW_ID, viewId)
                 f.arguments = args
                 return f
             }
@@ -1684,13 +1724,16 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
     }
 
     companion object {
-        private const val TAB_TO_CURSOR_POSITION_KEY = "tabToCursorPosition"
-        private const val EDITOR_VIEW_ID_KEY = "editorViewId"
-        private const val TAB_TO_VIEW_ID = "tabToViewId"
-        const val EDITOR_NOTE_TYPE_ID = "noteTypeId"
-        private const val EDITOR_NOTE_ID = "noteId"
-        private const val EDITOR_START_ORD_ID = "ordId"
-        private const val CARD_INDEX = "card_ord"
+        private const val STATE_TAB_TO_CURSOR_POSITION = "tabToCursorPosition"
+        private const val ARG_EDITOR_VIEW_ID = "editorViewId"
+        private const val STATE_TAB_TO_VIEW_ID = "tabToViewId"
+        const val EXTRA_NOTE_TYPE_ID = "noteTypeId"
+        private const val EXTRA_NOTE_ID = "noteId"
+        private const val EXTRA_START_ORD_ID = "ordId"
+        private const val STATE_NOTE_TYPE_ID = "noteTypeId"
+        private const val STATE_NOTE_ID = "noteId"
+        private const val STATE_STARTING_TEMPLATE_ORDINAL = "ordId"
+        private const val ARG_CARD_INDEX = "card_ord"
 
         // Keys for saving pane weights in SharedPreferences
         private const val PREF_TEMPLATE_EDITOR_PANE_WEIGHT = "cardTemplateEditorPaneWeight"
@@ -1713,9 +1756,9 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
             ord: CardOrdinal? = null,
         ) = Intent(context, CardTemplateEditor::class.java)
             .apply {
-                putExtra(EDITOR_NOTE_TYPE_ID, noteTypeId)
-                noteId?.let { putExtra(EDITOR_NOTE_ID, it) }
-                ord?.let { putExtra(EDITOR_START_ORD_ID, it) }
+                putExtra(EXTRA_NOTE_TYPE_ID, noteTypeId)
+                noteId?.let { putExtra(EXTRA_NOTE_ID, it) }
+                ord?.let { putExtra(EXTRA_START_ORD_ID, it) }
 
                 Timber.d(
                     "Built intent for CardTemplateEditor; ntid: %s; nid: %s; ord: %s",
@@ -1724,5 +1767,32 @@ open class CardTemplateEditor : AnkiActivity(R.layout.activity_card_template_edi
                     ord,
                 )
             }
+    }
+}
+
+@VisibleForTesting
+internal fun Collection.countCardsCreatedBy(
+    noteType: NotetypeJson,
+    template: BackendCardTemplate,
+    timeout: Duration = 1.seconds,
+): Int {
+    val deadline = TimeSource.Monotonic.markNow() + timeout
+    val unreferencedOrd = generateSequence(0) { it + 1 }.first { "c${it + 1}" !in template.qfmt }
+    val templateBytes = BackendUtils.toJsonBytes(template.deepClone().apply { setOrd(unreferencedOrd) })
+    val noteIds = notetypes.nids(noteType)
+    return try {
+        noteIds.count { nid ->
+            if (deadline.hasPassedNow()) {
+                Timber.w("counting the cards of a new card type timed out")
+                Analytics.sendAnalyticsException(TimeoutException("New card type count timed out with ${noteIds.size} notes"), false)
+                return noteIds.size
+            }
+            !backend
+                .renderUncommittedCardLegacy(getNote(nid).toBackendNote(), unreferencedOrd, templateBytes, false, true)
+                .isEmpty
+        }
+    } catch (e: BackendTemplateException) {
+        Timber.w(e, "new card type has a template error")
+        0
     }
 }

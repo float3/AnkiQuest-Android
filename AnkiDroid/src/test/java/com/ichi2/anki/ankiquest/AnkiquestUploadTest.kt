@@ -139,13 +139,13 @@ class AnkiquestUploadTest : RobolectricTest() {
             val data =
                 Data
                     .Builder()
-                    .putLong(AnkiquestReply.NOTIFICATION_KEY, 7)
-                    .putInt(AnkiquestReply.TAG_KEY, 5_140_007)
-                    .putString(AnkiquestReply.TITLE_KEY, "Deck complete")
-                    .putString(AnkiquestReply.BODY_KEY, "Cerro has finished Spanish for today.")
-                    .putString(AnkiquestReply.MESSAGE_KEY, "Good job!")
-                    .putString(AnkiquestReply.ACCOUNT_KEY, AnkiquestHomeData.account()!!.notificationAccount)
-                    .putString(AnkiquestReply.SCOPE_KEY, AnkiquestHomeData.account()!!.scope)
+                    .putLong(AnkiquestReply.EXTRA_NOTIFICATION, 7)
+                    .putInt(AnkiquestReply.EXTRA_TAG, 5_140_007)
+                    .putString(AnkiquestReply.EXTRA_TITLE, "Deck complete")
+                    .putString(AnkiquestReply.EXTRA_BODY, "Cerro has finished Spanish for today.")
+                    .putString(AnkiquestReply.EXTRA_MESSAGE, "Good job!")
+                    .putString(AnkiquestReply.EXTRA_REPLY_ACCOUNT, AnkiquestHomeData.account()!!.notificationAccount)
+                    .putString(AnkiquestReply.EXTRA_REPLY_SCOPE, AnkiquestHomeData.account()!!.scope)
                     .build()
             assertEquals(AnkiquestReply.Outcome.SENT, AnkiquestReply.run(targetContext, data, 0))
 
@@ -324,9 +324,9 @@ class AnkiquestUploadTest : RobolectricTest() {
         token: String,
     ) {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, url)
-            putString(Ankiquest.USER_KEY, user)
-            putString(Ankiquest.TOKEN_KEY, token)
+            putString(Ankiquest.PREF_URL, url)
+            putString(Ankiquest.PREF_USER, user)
+            putString(Ankiquest.PREF_TOKEN, token)
         }
     }
 

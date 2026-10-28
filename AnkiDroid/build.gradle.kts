@@ -12,13 +12,13 @@ plugins {
     // Gradle plugin portal
     alias(libs.plugins.tripletPlay)
     id("ankidroid.android.app")
+    id("ankidroid.android.compose")
     id("ankidroid.plugins.jacoco")
     id("ankidroid.plugins.robolectric-downloader")
     alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.keeper)
-    alias(libs.plugins.roborazzi)
+    id("ankidroid.plugins.screenshots")
     id("idea")
 }
 
@@ -89,7 +89,6 @@ android {
         aidl = true
         viewBinding = true
         resValues = true
-        compose = true
     }
 
     if (testReleaseBuild) {
@@ -133,9 +132,9 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode = 22600104
+        versionCode = 22600109
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName = "2.26.0alpha4"
+        versionName = "2.26.0alpha9"
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "com.ichi2.testutils.NewCollectionPathTestRunner"
@@ -352,11 +351,11 @@ android {
         animationsDisabled = true
         unitTests {
             all { test ->
+                // Profile coverage checks must rerun when the generated profiles change.
+                test.inputs.dir("src/main/generated/baselineProfiles")
                 test.useJUnitPlatform {
                     // ./gradlew testFullDebugUnitTest -Pscreenshot
                     if (project.hasProperty("screenshot")) {
-                        includeTags("com.ichi2.anki.ScreenshotTestCategory")
-
                         // ./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot -Ptheme=black -Pdevice=tablet,foldable
                         val theme = project.findProperty("theme")?.takeIf { it.toString().isNotEmpty() } ?: "light"
                         val device = project.findProperty("device")?.takeIf { it.toString().isNotEmpty() } ?: "phone"
@@ -379,8 +378,7 @@ android {
 
                         test.systemProperty("screenshot.theme", theme)
                         test.systemProperty("screenshot.device", device)
-                    } else {
-                        excludeTags("com.ichi2.anki.ScreenshotTestCategory")
+                        test.systemProperty("screenshot.accessibilityScan", project.hasProperty("accessibilityScan"))
                     }
                     // Ensures that no EmptyApplication test relies on AnkiDroidApp
                     //  by only running EmptyApplication tests
@@ -749,9 +747,10 @@ android {
     }
 }
 
-configurations.configureEach {
+configurations.matching { it.name.endsWith("CompileClasspath") || it.name.endsWith("RuntimeClasspath") }.configureEach {
     resolutionStrategy {
-        // Timber has this as a dependency but they are not up to date. We want to force our version.
+        // Keep app dependencies such as Timber on our annotations version. Changing Kotlin's
+        // compiler classpath creates an extra compiler daemon and increases peak memory use.
         force(libs.jetbrains.annotations)
     }
 }
@@ -772,6 +771,7 @@ dependencies {
     implementation(project(":common:android"))
     implementation(project(":compat"))
     implementation(project(":libanki"))
+    implementation(project(":note-editor"))
     implementation(project(":vbpd"))
     "baselineProfile"(project(":baselineprofile"))
     implementation(project(":widgets"))
@@ -779,17 +779,9 @@ dependencies {
     implementation(libs.google.analytics.kt)
 
     implementation(libs.androidx.activity)
-    // TODO: hoist the Compose enablement (kotlin.compose plugin, buildFeatures.compose,
-    // and the dependencies below) into a convention plugin under `buildSrc/` once the
-    // Kotlin-DSL migration of this build script lands
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.browser)
@@ -877,9 +869,6 @@ dependencies {
     // ankidroid.plugins.robolectric-downloader may need a new SDK jar entry
     // when Robolectric or targetSdk changes. See the instructions in that plugin.
     testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.compose.ui.test.junit4)
-    // Needed for createComposeRule(), but not for createAndroidComposeRule<YourActivity>()
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.kotlin.reflect)
@@ -899,6 +888,7 @@ dependencies {
     }
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.accessibility.check)
     testImplementation(libs.roborazzi.rule)
     // for testing flows
     testImplementation(libs.cashapp.turbine)
@@ -930,10 +920,4 @@ dependencies {
     // Required so the ExperimentalCoroutinesApi opt-in (applied globally) doesn't cause
     // an "unresolved" warning, which is treated as an error due to allWarningsAsErrors
     testFixturesImplementation(libs.kotlinx.coroutines.core)
-    // The Kotlin Compose Compiler plugin attaches to every Kotlin compilation in the
-    // module including testFixtures, which has no @Composable code and refuses to
-    // run unless the Compose Runtime is on the classpath. compileOnly satisfies the
-    // plugin's version check without shipping the runtime in the testFixtures output.
-    testFixturesCompileOnly(platform(libs.androidx.compose.bom))
-    testFixturesCompileOnly(libs.androidx.compose.runtime)
 }

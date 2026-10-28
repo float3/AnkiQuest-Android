@@ -24,9 +24,9 @@ class AnkiquestStudySessionTest : RobolectricTest() {
     fun configure() {
         TimeManager.resetWith(clock)
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "https://anki.example.test")
-            putString(Ankiquest.USER_KEY, "member")
-            putString(Ankiquest.TOKEN_KEY, "member-token")
+            putString(Ankiquest.PREF_URL, "https://anki.example.test")
+            putString(Ankiquest.PREF_USER, "member")
+            putString(Ankiquest.PREF_TOKEN, "member-token")
         }
     }
 
@@ -70,7 +70,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             AnkiquestStudySession.start()
             review(clock.intTimeMS() + 1000)
             clock.addM(2)
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.USER_KEY, "someone-else") }
+            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "someone-else") }
             assertNull(AnkiquestStudySession.finish())
             assertNull(AnkiquestStudySession.latest())
         }
@@ -82,7 +82,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             review(clock.intTimeMS() + 1000)
             clock.addM(2)
             assertNotNull(AnkiquestStudySession.finish())
-            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.TOKEN_KEY, "new-token") }
+            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
             assertNull(AnkiquestStudySession.latest())
         }
 }

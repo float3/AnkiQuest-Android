@@ -2,6 +2,8 @@ name: 🛠️ Conflict Scan
 
 on:
   push:
+    branches-ignore:
+      - 'gh-readonly-queue/**'
   schedule:
   - cron: "0 * * * *"
 

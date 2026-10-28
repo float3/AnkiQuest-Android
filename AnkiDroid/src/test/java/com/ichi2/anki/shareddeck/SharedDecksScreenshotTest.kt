@@ -7,9 +7,12 @@ import android.content.Intent
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.os.Bundle
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -17,16 +20,21 @@ import androidx.core.view.WindowInsetsCompat.Type.displayCutout
 import androidx.core.view.WindowInsetsCompat.Type.navigationBars
 import androidx.core.view.WindowInsetsCompat.Type.statusBars
 import androidx.fragment.app.commit
+import com.google.testing.junit.testparameterinjector.TestParameter
 import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.common.utils.dp
+import com.ichi2.anki.shareddeck.SharedDecksActivity.Companion.HTTP_STATUS_TOO_MANY_REQUESTS
 import com.ichi2.testutils.insetsOf
-import com.ichi2.utils.dp
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowChoreographer
+import java.time.Duration
 
 /**
  * Screenshot tests for [SharedDecksActivity]
@@ -56,12 +64,29 @@ class SharedDecksScreenshotTest : ScreenshotTest() {
 
     /** [SharedDecksDownloadFragment]: a full-screen overlay above the WebView */
     @Test
-    fun downloadFragment() =
+    fun downloadFragment(
+        @TestParameter("-1", "0", "30", "100") percent: Int,
+    ) = withSharedDecks { activity ->
+        // show the fragment first: insets are only received by attached views
+        activity.showDownloadFragment(percent)
+        activity.simulateNavigationBar()
+        val name =
+            when (percent) {
+                -1 -> "download_indeterminate"
+                30 -> "download"
+                else -> "download_$percent"
+            }
+        captureScreen(name)
+    }
+
+    @Test
+    fun loginRequiredDialog() =
         withSharedDecks { activity ->
-            // show the fragment first: insets are only received by attached views
-            activity.showDownloadFragment()
             activity.simulateNavigationBar()
-            captureScreen("download")
+            val response = mock<WebResourceResponse> { on { statusCode } doReturn HTTP_STATUS_TOO_MANY_REQUESTS }
+            activity.webViewClient.onReceivedHttpError(activity.findViewById<WebView>(R.id.web_view), mock(), response)
+            advanceRobolectricLooper()
+            captureScreen("login_required_dialog")
         }
 
     private fun withSharedDecks(block: (SharedDecksActivity) -> Unit) {
@@ -76,20 +101,28 @@ class SharedDecksScreenshotTest : ScreenshotTest() {
 
     /**
      * Shows [SharedDecksDownloadFragment] as the activity's download listener would,
-     * with a mocked [DownloadManager] reporting a stable in-progress download
+     * with a mocked [DownloadManager] reporting a stable in-progress download.
+     * A [percent] of -1 makes progress unavailable, showing the indeterminate indicator.
      */
-    private fun SharedDecksActivity.showDownloadFragment() {
+    private fun SharedDecksActivity.showDownloadFragment(percent: Int) {
+        if (percent < 0) {
+            ShadowChoreographer.setPaused(true)
+            ShadowChoreographer.setFrameDelay(Duration.ofMillis(16))
+        }
         downloadManager =
             mock {
                 on { enqueue(any()) } doReturn 1L
-                on { query(any()) } doAnswer { inProgressDownloadCursor() }
+                on { query(any()) } doAnswer {
+                    if (percent < 0) throw IllegalArgumentException("Progress unavailable")
+                    inProgressDownloadCursor(percent)
+                }
             }
         val fragment =
             SharedDecksDownloadFragment().apply {
                 arguments =
                     Bundle().apply {
                         putSerializable(
-                            SharedDecksActivity.DOWNLOAD_FILE,
+                            SharedDecksActivity.ARG_DOWNLOAD_FILE,
                             DownloadFile(
                                 url = "https://ankiweb.net/svc/shared/download-deck/1104981491?t=token",
                                 userAgent = "Mozilla/5.0",
@@ -106,11 +139,16 @@ class SharedDecksScreenshotTest : ScreenshotTest() {
                 SharedDecksActivity.SHARED_DECKS_DOWNLOAD_FRAGMENT,
             )
         }
-        advanceRobolectricLooper()
+        if (percent < 0) {
+            // The indeterminate animation never ends. Capture a fixed frame instead of draining it.
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
+        } else {
+            advanceRobolectricLooper()
+        }
     }
 
-    /** A download which is 30% complete */
-    private fun inProgressDownloadCursor(): Cursor =
+    /** A download with known progress. */
+    private fun inProgressDownloadCursor(percent: Int): Cursor =
         MatrixCursor(
             arrayOf(
                 DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR,
@@ -119,7 +157,9 @@ class SharedDecksScreenshotTest : ScreenshotTest() {
                 DownloadManager.COLUMN_REASON,
             ),
         ).apply {
-            addRow(arrayOf<Any>(3_000_000L, 10_000_000L, DownloadManager.STATUS_RUNNING, 0))
+            val totalBytes = 10_000_000L
+            val downloadedBytes = totalBytes * percent / 100
+            addRow(arrayOf<Any>(downloadedBytes, totalBytes, DownloadManager.STATUS_RUNNING, 0))
         }
 
     /**

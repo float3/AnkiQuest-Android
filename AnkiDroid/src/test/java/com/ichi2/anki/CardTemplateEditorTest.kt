@@ -10,14 +10,18 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.widget.EditText
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.CardTemplateEditor.CardTemplateFragment
 import com.ichi2.anki.CardTemplateEditor.CardTemplateFragment.CardTemplate
 import com.ichi2.anki.CollectionManager.withCol
+import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.common.utils.ext.deepClonedInto
 import com.ichi2.anki.dialogs.InsertFieldDialog
+import com.ichi2.anki.dialogs.InsertFieldDialogViewModel
 import com.ichi2.anki.libanki.CardOrdinal
 import com.ichi2.anki.libanki.NotetypeJson
+import com.ichi2.anki.libanki.Notetypes
 import com.ichi2.anki.libanki.testutils.ext.addNote
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.notetype.ManageNoteTypesState.CardEditor
@@ -27,7 +31,6 @@ import com.ichi2.anki.scheduling.selectTab
 import com.ichi2.testutils.assertFalse
 import com.ichi2.testutils.dispatchInsets
 import com.ichi2.testutils.withSplitPaneUi
-import com.ichi2.utils.dp
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
 import org.hamcrest.CoreMatchers.equalTo
@@ -47,9 +50,55 @@ import kotlin.test.junit5.JUnit5Asserter.assertNotEquals
 import kotlin.test.junit5.JUnit5Asserter.assertNotNull
 import kotlin.test.junit5.JUnit5Asserter.assertNull
 import kotlin.test.junit5.JUnit5Asserter.assertTrue
+import kotlin.time.Duration
 
 @RunWith(AndroidJUnit4::class)
 class CardTemplateEditorTest : RobolectricTest() {
+    @Test
+    fun `field insertion previews the original card after an unsaved deletion`() {
+        val note = addBasicAndReversedNote()
+        val reverseCardId = note.cards().single { it.ord == 1 }.id
+        val intent = CardTemplateEditor.getIntent(targetContext, col.notetypes.basicAndReversed.id, note.id)
+        val editor = startActivityNormallyOpenCollectionWithIntent(CardTemplateEditor::class.java, intent)
+
+        with(editor) {
+            deleteSelectedCardType()
+            currentFragment!!.showInsertFieldDialog()
+            advanceRobolectricLooper()
+            val dialog = supportFragmentManager.fragments.filterIsInstance<InsertFieldDialog>().single()
+            val metadata = ViewModelProvider(dialog)[InsertFieldDialogViewModel::class.java].metadata
+
+            assertEquals("The preview should use the surviving card", reverseCardId, metadata.cardId)
+        }
+    }
+
+    @Test
+    fun `deletion confirmation counts the original card type after an unsaved deletion`() {
+        val noteType = col.notetypes.basicAndReversed
+        val spare =
+            Notetypes.newTemplate("Spare").apply {
+                qfmt = "{{Front}} spare"
+                afmt = "{{Back}}"
+            }
+        col.notetypes.addTemplate(noteType, spare)
+        addBasicAndReversedNote("one", "back")
+        addBasicAndReversedNote("two", "")
+
+        withCardTemplateEditor(noteType) {
+            deleteSelectedCardType()
+            selectTab(0)
+            advanceRobolectricLooper()
+            assertTrue("Unable to delete the card type", shadowOf(this).clickMenuItem(R.id.action_delete))
+            advanceRobolectricLooper()
+
+            assertEquals(
+                "The remaining reverse card type has one card in the database",
+                getQuantityString(CommonPlurals.card_template_editor_confirm_delete, 1, 1, "Card 2"),
+                getAlertDialogText(true),
+            )
+        }
+    }
+
     @Test
     fun `change detection does not serialize the note type - Issue 21912`() {
         val original = col.notetypes.basic
@@ -275,7 +324,7 @@ class CardTemplateEditorTest : RobolectricTest() {
         // Assert.assertEquals("Wrong dialog shown?", "This will create NN cards. Proceed?", getDialogText());
         // clickDialogButton(WhichButton.POSITIVE);
         assertTrue("Note type should have changed", testEditor.noteTypeHasChanged())
-        assertEquals("Change not pending add?", 1, CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 0))
+        assertNull("New templates have no database ordinal", testEditor.tempNoteType!!.getOriginalOrdinal(1))
         assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(0))
         assertTrue("Ordinal not pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(1))
         assertEquals("Note type should have 2 templates now", 2, testEditor.tempNoteType!!.templateCount)
@@ -389,7 +438,7 @@ class CardTemplateEditorTest : RobolectricTest() {
                 getCurrentDatabaseNoteTypeCopy(noteTypeName).toString().trim(),
             )
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(0))
-            assertEquals("Change incorrectly added to list?", 0, testEditor.templateChangeCount)
+            assertFalse("A blocked deletion must not change the note type", testEditor.noteTypeHasChanged())
 
             // Assert can delete 'Card 2'
             assertNotNull("Cannot delete unused template?", collectionBasicNoteTypeOriginal.getCardIds(1))
@@ -480,11 +529,7 @@ class CardTemplateEditorTest : RobolectricTest() {
             // the templates must be different
             testEditor.tempNoteType!!.getTemplate(2).qfmt += "different_template"
             assertTrue("Note type should have changed", testEditor.noteTypeHasChanged())
-            assertEquals(
-                "Change added but not adjusted correctly?",
-                2,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 0),
-            )
+            assertNull("New templates have no database ordinal", testEditor.tempNoteType!!.getOriginalOrdinal(2))
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(0))
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(1))
             assertTrue("Ordinal not pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(2))
@@ -516,22 +561,14 @@ class CardTemplateEditorTest : RobolectricTest() {
 
             // Add another template - but we work in memory for a while before saving
             addCardType(testEditor, shadowTestEditor)
-            assertEquals(
-                "Change added but not adjusted correctly?",
-                3,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 0),
-            )
+            assertNull("New templates have no database ordinal", testEditor.tempNoteType!!.getOriginalOrdinal(3))
             assertTrue("Note type should have changed", testEditor.noteTypeHasChanged())
             assertEquals("Note type should have 4 templates now", 4, testEditor.tempNoteType?.templateCount)
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(0))
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(1))
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(2))
             assertTrue("Ordinal not pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(3))
-            assertEquals(
-                "Change added but not adjusted correctly?",
-                3,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 0),
-            )
+            assertNull("New templates have no database ordinal", testEditor.tempNoteType!!.getOriginalOrdinal(3))
 
             // Delete two pre-existing templates for real now - but still without saving it out, should work fine
             advanceRobolectricLooper()
@@ -570,21 +607,7 @@ class CardTemplateEditorTest : RobolectricTest() {
                 collectionBasicNoteTypeOriginal.toString().trim(),
                 getCurrentDatabaseNoteTypeCopy(noteTypeName).toString().trim(),
             )
-            assertEquals(
-                "Change added but not adjusted correctly?",
-                1,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 0),
-            )
-            assertEquals(
-                "Change incorrectly pending add?",
-                -1,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 1),
-            )
-            assertEquals(
-                "Change incorrectly pending add?",
-                -1,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 2),
-            )
+            assertNull("New templates have no database ordinal", testEditor.tempNoteType!!.getOriginalOrdinal(1))
 
             // Now confirm everything to persist it to the database
             assertTrue("Unable to click?", shadowTestEditor.clickMenuItem(R.id.action_confirm))
@@ -661,11 +684,7 @@ class CardTemplateEditorTest : RobolectricTest() {
             // Add a template - click add, click confirm for card add, click confirm again for full sync
             addCardType(testEditor, shadowTestEditor)
             assertTrue("Note type should have changed", testEditor.noteTypeHasChanged())
-            assertEquals(
-                "Change added but not adjusted correctly?",
-                1,
-                CardTemplateNotetype.getAdjustedAddOrdinalAtChangeIndex(testEditor.tempNoteType!!, 1),
-            )
+            assertNull("New templates have no database ordinal", testEditor.tempNoteType!!.getOriginalOrdinal(1))
             assertFalse("Ordinal pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(0))
             assertTrue("Ordinal not pending add?", testEditor.tempNoteType.isOrdinalPendingAdd(1))
             assertEquals("Note type should have 2 templates", 2, testEditor.tempNoteType?.templateCount)
@@ -908,8 +927,8 @@ class CardTemplateEditorTest : RobolectricTest() {
                 shadowEditor.nextStartedActivity,
                 Activity.RESULT_OK,
                 Intent()
-                    .putExtra(CardTemplateBrowserAppearanceEditor.INTENT_QUESTION_FORMAT, "q")
-                    .putExtra(CardTemplateBrowserAppearanceEditor.INTENT_ANSWER_FORMAT, "a"),
+                    .putExtra(CardTemplateBrowserAppearanceEditor.EXTRA_QUESTION_FORMAT, "q")
+                    .putExtra(CardTemplateBrowserAppearanceEditor.EXTRA_ANSWER_FORMAT, "a"),
             )
             assertDiscardChangesDialogShown(shadowEditor)
         }
@@ -1069,7 +1088,7 @@ class CardTemplateEditorTest : RobolectricTest() {
         advanceRobolectricLooper()
 
         val resultBundle = Bundle()
-        resultBundle.putString(InsertFieldDialog.KEY_INSERTED_FIELD, expectedFieldText)
+        resultBundle.putString(InsertFieldDialog.RESULT_INSERTED_FIELD, expectedFieldText)
         testEditor.supportFragmentManager.setFragmentResult(firstFragmentAgain.insertFieldRequestKey, resultBundle)
         advanceRobolectricLooper()
 
@@ -1140,6 +1159,251 @@ class CardTemplateEditorTest : RobolectricTest() {
             advanceRobolectricLooper()
             assertThat("card 1 is focused again", window.decorView.findFocus(), equalTo(templateFragment(0).binding.editText))
         }
+    }
+
+    @Test
+    fun `adding a second card type still counts the notes`() {
+        addBasicNote()
+        val intent = Intent(Intent.ACTION_VIEW).putExtra("noteTypeId", col.notetypes.byName("Basic")!!.id)
+        val controller =
+            Robolectric
+                .buildActivity(CardTemplateEditor::class.java, intent)
+                .create()
+                .start()
+                .resume()
+                .visible()
+        saveControllerForCleanup(controller)
+        val editor = controller.get()
+
+        addCardType(editor, shadowOf(editor))
+        assertTrue("Unable to click?", shadowOf(editor).clickMenuItem(R.id.action_add))
+        advanceRobolectricLooper()
+        assertEquals(
+            "Adding from a new card type should count the notes",
+            getQuantityString(CommonPlurals.card_template_editor_confirm_add, 1, 1),
+            getAlertDialogText(true),
+        )
+    }
+
+    @Test
+    fun `adding an optional reverse template with an empty condition creates no cards`() {
+        val noteType = col.notetypes.byName("Basic (optional reversed card)")!!
+        val note = col.newNote(noteType)
+        note.setField(0, "Front")
+        note.setField(1, "Back")
+        note.setField(2, "")
+        col.addNote(note)
+        assertEquals("Only the forward card should exist", 1, getNoteTypeCardCount(noteType))
+
+        withCardTemplateEditor(noteType) {
+            selectTab(1)
+            advanceRobolectricLooper()
+            assertEquals("The optional reverse template should be selected", 1, selectedTabPosition)
+
+            assertTrue("Unable to add a card type", shadowOf(this).clickMenuItem(R.id.action_add))
+            advanceRobolectricLooper()
+            val confirmation = getAlertDialogText(true)
+            clickAlertDialogButton { positiveButton }
+            assertEquals("The duplicate template should be added", 3, tempNoteType!!.templateCount)
+
+            // Saving rejects identical fronts. Keep the empty condition while making the new front distinct.
+            advanceRobolectricLooper()
+            templateFragment(2).binding.editText.setText("{{#Add Reverse}}{{Front}} {{Back}}{{/Add Reverse}}")
+
+            assertTrue("Unable to save the templates", shadowOf(this).clickMenuItem(R.id.action_confirm))
+            advanceRobolectricLooper()
+            val savedNoteType = col.notetypes.get(noteType.id)!!
+            assertEquals("The duplicate template should be saved", 3, savedNoteType.templates.length())
+            assertEquals("An empty Add Reverse field should prevent generating another card", 1, getNoteTypeCardCount(noteType))
+            assertEquals(
+                "The confirmation must not promise a card that will not be generated",
+                getQuantityString(CommonPlurals.card_template_editor_confirm_add, 0, 0),
+                confirmation,
+            )
+        }
+    }
+
+    @Test
+    fun `adding from an unsaved optional reverse template creates no cards`() {
+        val noteType = col.notetypes.byName("Basic (optional reversed card)")!!
+        val note = col.newNote(noteType)
+        note.setField(0, "Front")
+        note.setField(1, "Back")
+        note.setField(2, "")
+        col.addNote(note)
+        assertEquals("Only the forward card should exist", 1, getNoteTypeCardCount(noteType))
+
+        withCardTemplateEditor(noteType) {
+            selectTab(1)
+            advanceRobolectricLooper()
+            addCardType(this, shadowOf(this))
+            advanceRobolectricLooper()
+            assertEquals("The first duplicate should be selected", 2, selectedTabPosition)
+            assertTrue(
+                "The selected template must be unsaved",
+                CardTemplateNotetype.isOrdinalPendingAdd(tempNoteType!!, selectedTabPosition),
+            )
+
+            // Keep the empty condition, but make each front distinct so saving succeeds.
+            templateFragment(2).binding.editText.setText("{{#Add Reverse}}{{Front}} {{Back}}{{/Add Reverse}}")
+            assertTrue("Unable to add a card type", shadowOf(this).clickMenuItem(R.id.action_add))
+            advanceRobolectricLooper()
+            val confirmation = getAlertDialogText(true)
+            clickAlertDialogButton { positiveButton }
+            advanceRobolectricLooper()
+            assertEquals("The second duplicate should be selected", 3, selectedTabPosition)
+            templateFragment(3).binding.editText.setText("{{#Add Reverse}}{{Back}} {{Front}}{{/Add Reverse}}")
+
+            assertTrue("Unable to save the templates", shadowOf(this).clickMenuItem(R.id.action_confirm))
+            advanceRobolectricLooper()
+            assertEquals(
+                "Both new templates should be saved",
+                4,
+                col.notetypes
+                    .get(noteType.id)!!
+                    .templates
+                    .length(),
+            )
+            assertEquals("Neither conditional template should generate cards", 1, getNoteTypeCardCount(noteType))
+            assertEquals(
+                "Adding from an unsaved conditional template must not promise a card that will not be generated",
+                getQuantityString(CommonPlurals.card_template_editor_confirm_add, 0, 0),
+                confirmation,
+            )
+        }
+    }
+
+    @Test
+    fun `adding from a broken template does not crash`() {
+        addBasicAndReversedNote()
+        withCardTemplateEditor(col.notetypes.basicAndReversed) {
+            templateFragment(0).binding.editText.setText("{{#Front}}")
+            assertTrue("Unable to add a card type", shadowOf(this).clickMenuItem(R.id.action_add))
+            advanceRobolectricLooper()
+            assertEquals(
+                "A broken template should not create cards",
+                getQuantityString(CommonPlurals.card_template_editor_confirm_add, 0, 0),
+                getAlertDialogText(true),
+            )
+        }
+    }
+
+    @Test
+    fun `adding a template with a card number condition counts generated cards`() {
+        addBasicAndReversedNote()
+        val noteType = col.notetypes.basicAndReversed
+        val initialCardCount = getNoteTypeCardCount(noteType)
+        assertEquals("Both original cards should exist", 2, initialCardCount)
+
+        withCardTemplateEditor(noteType) {
+            // Preview supplies c3 for the new template, but card generation does not.
+            templateFragment(0).binding.editText.setText("{{#c3}}{{Front}}{{/c3}}")
+            assertTrue("Unable to add a card type", shadowOf(this).clickMenuItem(R.id.action_add))
+            advanceRobolectricLooper()
+            val confirmation = getAlertDialogText(true)
+            clickAlertDialogButton { positiveButton }
+            advanceRobolectricLooper()
+            assertEquals("The new template should be selected", 2, selectedTabPosition)
+
+            // Avoid identical fronts without changing the condition or field requirements.
+            templateFragment(2).binding.editText.setText("{{#c3}}{{Front}} extra{{/c3}}")
+            assertTrue("Unable to save the templates", shadowOf(this).clickMenuItem(R.id.action_confirm))
+            advanceRobolectricLooper()
+            assertEquals(
+                "The new template should be saved",
+                3,
+                col.notetypes
+                    .get(noteType.id)!!
+                    .templates
+                    .length(),
+            )
+            val createdCards = getNoteTypeCardCount(noteType) - initialCardCount
+            assertEquals("The card number condition should prevent generation", 0, createdCards)
+            assertEquals(
+                "The confirmation must count generated cards, not nonempty previews",
+                getQuantityString(CommonPlurals.card_template_editor_confirm_add, createdCards, createdCards),
+                confirmation,
+            )
+        }
+    }
+
+    @Test
+    fun `counting falls back to the note count when it times out`() {
+        val noteType = col.notetypes.byName("Basic (optional reversed card)")!!
+        val note = col.newNote(noteType)
+        note.setField(0, "Front")
+        note.setField(1, "Back")
+        col.addNote(note)
+        val reverseTemplate = noteType.templates[1]
+
+        assertEquals("No reverse card is created", 0, col.countCardsCreatedBy(noteType, reverseTemplate))
+        assertEquals("A timeout counts every note", 1, col.countCardsCreatedBy(noteType, reverseTemplate, timeout = Duration.ZERO))
+    }
+
+    @Test
+    fun `a failed save does not add card types - Issue 19953`() {
+        addBasicNote()
+        val noteType = col.notetypes.basic
+        val savedNames = noteType.templatesNames
+
+        withCardTemplateEditor(noteType) {
+            repeat(2) {
+                assertTrue("Unable to add a card type", shadowOf(this).clickMenuItem(R.id.action_add))
+                advanceRobolectricLooper()
+                clickAlertDialogButton { positiveButton }
+                advanceRobolectricLooper()
+            }
+            assertEquals("The new card types should share a front", tempNoteType!!.getTemplate(1).qfmt, tempNoteType!!.getTemplate(2).qfmt)
+
+            throwOnShowError = false
+            saveChanges()
+            assertEquals("A failed save must not add card types", savedNames, col.notetypes.get(noteType.id)!!.templatesNames)
+
+            templateFragment(2).binding.editText.setText("{{Back}} {{Front}}")
+            val editedNames = tempNoteType!!.notetype.templatesNames
+            saveChanges()
+            assertEquals("Saving again should add each card type once", editedNames, col.notetypes.get(noteType.id)!!.templatesNames)
+        }
+    }
+
+    @Test
+    fun `deleting the first card type keeps the cards of the second`() {
+        val note = addBasicAndReversedNote()
+        val reverseCardId = note.cards().single { it.ord == 1 }.id
+
+        withCardTemplateEditor(col.notetypes.basicAndReversed) {
+            deleteSelectedCardType()
+            saveChanges()
+        }
+
+        assertEquals("Only the deleted card type's card should be removed", listOf(reverseCardId), note.cids())
+    }
+
+    @Test
+    fun `deleting the first card type keeps the cards of the second after recreation`() {
+        val note = addBasicAndReversedNote()
+        val reverseCardId = note.cards().single { it.ord == 1 }.id
+        val intent = CardEditor(ntid = col.notetypes.basicAndReversed.id).toIntent(targetContext)
+        val controller = startActivityControllerNormallyOpenCollectionWithIntent(CardTemplateEditor::class.java, intent)
+
+        controller.get().deleteSelectedCardType()
+        controller.recreate()
+        advanceRobolectricLooper()
+        controller.get().saveChanges()
+
+        assertEquals("Only the deleted card type's card should be removed", listOf(reverseCardId), note.cids())
+    }
+
+    private fun CardTemplateEditor.deleteSelectedCardType() {
+        assertTrue("Unable to delete the card type", shadowOf(this).clickMenuItem(R.id.action_delete))
+        advanceRobolectricLooper()
+        clickAlertDialogButton { positiveButton }
+        advanceRobolectricLooper()
+    }
+
+    private fun CardTemplateEditor.saveChanges() {
+        assertTrue("Unable to save", shadowOf(this).clickMenuItem(R.id.action_confirm))
+        advanceRobolectricLooper()
     }
 
     private fun CardTemplateEditor.templateFragment(ord: Int) = supportFragmentManager.findFragmentByTag("f$ord") as CardTemplateFragment
@@ -1213,9 +1477,6 @@ Hello World{{Front}}
         requireNotNull(this)
         return CardTemplateNotetype.isOrdinalPendingAdd(this, ordinal)
     }
-
-    private val CardTemplateEditor.templateChangeCount
-        get() = tempNoteType?.templateChanges?.size
 
     private suspend fun NotetypeJson.getCardIds(vararg ords: Int): List<Long>? = withCol { notetypes.getCardIdsForNoteType(id, ords) }
 }

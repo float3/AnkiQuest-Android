@@ -10,11 +10,14 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
+import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.R
 import com.ichi2.anki.cardviewer.TapGestureMode
 import com.ichi2.anki.common.preferences.AnimationPreferences
+import com.ichi2.anki.common.preferences.NotificationPreferences
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.isRunningAsUnitTest
+import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.preferences.SharedPreferencesProvider
 import com.ichi2.anki.settings.enums.AppTheme
 import com.ichi2.anki.settings.enums.DayTheme
@@ -36,7 +39,8 @@ object Prefs : PrefsRepository(AnkiDroidApp.sharedPreferencesProvider, AnkiDroid
 open class PrefsRepository protected constructor(
     private val preferences: SharedPreferencesProvider,
     private val resources: Resources,
-) : AnimationPreferences {
+) : AnimationPreferences,
+    NotificationPreferences {
     constructor(sharedPrefs: SharedPreferences, resources: Resources) : this(SharedPreferencesProvider { sharedPrefs }, resources)
 
     constructor(context: Context) : this(context.sharedPrefs(), context.resources)
@@ -236,6 +240,14 @@ open class PrefsRepository protected constructor(
 
     val exitViaDoubleTapBack by booleanPref(R.string.exit_via_double_tap_back_key, false)
 
+    // ****************************************** Editing ****************************************** //
+
+    /**
+     * Last deck successfully used when saving note data from a 'share' intent,
+     * or zero if no destination has been saved.
+     */
+    var lastSharedDeckId: DeckId by longPref(R.string.last_shared_deck_id_key, defaultValue = 0L)
+
     // ****************************************** Sync ****************************************** //
 
     val isAutoSyncEnabled by booleanPref(R.string.automatic_sync_choice_key, false)
@@ -246,6 +258,13 @@ open class PrefsRepository protected constructor(
     var hkey by stringPref(R.string.hkey_key)
     var currentSyncUri by stringPref(R.string.current_sync_uri_key)
 
+    /**
+     * End time of the last manual or automatic sync attempt, in epoch milliseconds.
+     * Rate-limits foreground auto-sync and sync intents, including failed, canceled and no-change attempts.
+     *
+     * If a request is blocked before starting (rate limit; metered connection etc...) do not update it,
+     * so it can try again once the block is lifted.
+     */
     var lastSyncTime by longPref(R.string.last_sync_time_key, defaultValue = 0L)
 
     val shouldFetchMedia: ShouldFetchMedia
@@ -276,7 +295,12 @@ open class PrefsRepository protected constructor(
     /**
      * Whether to enable the new review reminders notification system.
      */
-    var newReviewRemindersEnabled by booleanPref(R.string.pref_new_review_reminders, false)
+    override var newReviewRemindersEnabled by booleanPref(CommonPreferenceKey.pref_new_review_reminders, defaultValue = false)
+
+    private val minimumCardsDueForNotification by stringPref(CommonPreferenceKey.pref_notifications_minimum_cards_due_key, "1000000")
+
+    override val legacyNotificationsEnabled: Boolean
+        get() = minimumCardsDueForNotification!!.toInt() < 1000000
 
     /**
      * Review reminder IDs are unique, starting at 0 and climbing upwards by one each time a new one is created.

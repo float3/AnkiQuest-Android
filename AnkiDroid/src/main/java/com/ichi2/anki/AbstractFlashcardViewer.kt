@@ -9,7 +9,6 @@
 package com.ichi2.anki
 
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -131,7 +130,6 @@ import com.ichi2.anki.multimedia.getAvTag
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.pages.AnkiServer
-import com.ichi2.anki.pages.CongratsPage
 import com.ichi2.anki.pages.PostRequestHandler
 import com.ichi2.anki.pages.PostRequestUri
 import com.ichi2.anki.reviewer.AutomaticAnswer
@@ -150,6 +148,7 @@ import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.BaseSnackbarBuilderProvider
 import com.ichi2.anki.snackbar.SnackbarBuilder
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.study.StudyCompletionUi
 import com.ichi2.anki.ui.windows.reviewer.StudyScreenRepository
 import com.ichi2.anki.utils.OnlyOnce.Method.ANSWER_CARD
 import com.ichi2.anki.utils.OnlyOnce.preventSimultaneousExecutions
@@ -179,6 +178,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import java.util.function.Consumer
 import java.util.function.Function
 import kotlin.math.abs
+import com.ichi2.anki.common.android.R as CommonR
 
 abstract class AbstractFlashcardViewer :
     NavigationDrawerActivity(),
@@ -526,7 +526,7 @@ abstract class AbstractFlashcardViewer :
             closeReviewer(RESULT_NO_MORE_CARDS)
             // When launched with a shortcut, we want to display a message when finishing
             if (intent.getBooleanExtra(EXTRA_STARTED_WITH_SHORTCUT, false)) {
-                CongratsPage.display(this)
+                StudyCompletionUi.displayFromShortcut(this)
             }
             return
         }
@@ -977,7 +977,7 @@ abstract class AbstractFlashcardViewer :
             }
         }
         if (animationEnabled()) {
-            flipCardLayout?.setBackgroundResource(getResFromAttr(this, R.attr.hardButtonRippleRef))
+            flipCardLayout?.setBackgroundResource(getResFromAttr(this, CommonR.attr.hardButtonRippleRef))
         }
         if (!buttonHeightSet && relativeButtonSize != 100) {
             val params = flipCardLayout!!.layoutParams
@@ -2627,7 +2627,8 @@ abstract class AbstractFlashcardViewer :
             }
             if (intent == null) {
                 val uri = url.toUri()
-                if (!appPermission.checkCanLaunchExternalApps()) {
+                intent = appPermission.createUrlIntent(uri)
+                if (intent == null) {
                     Timber.w("URL blocked: canLaunchExternalApps")
                     return true
                 }
@@ -2636,14 +2637,13 @@ abstract class AbstractFlashcardViewer :
                     return true
                 }
                 Timber.d("Opening external link \"%s\" with an Intent", url)
-                intent = Intent(Intent.ACTION_VIEW, uri)
             } else {
                 Timber.d("Opening resolved external link \"%s\" with an Intent: %s", url, intent)
             }
             try {
                 startActivity(intent)
-            } catch (_: ActivityNotFoundException) {
-                Timber.w("No app found to handle open external url from AbstractFlashcardViewer")
+            } catch (e: Exception) {
+                Timber.w(e, "Could not open url from AbstractFlashcardViewer")
                 showSnackbar(CommonString.activity_start_failed)
             }
             return true

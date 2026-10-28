@@ -51,7 +51,7 @@ import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.doOnApplyWindowInsets
-import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
+import com.ichi2.anki.utils.ext.launchCollectionInViewLifecycleScope
 import com.ichi2.anki.utils.ext.setFragmentResultListener
 import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.ui.CollectionMediaImageGetter
@@ -114,7 +114,6 @@ class StudyOptionsFragment :
         displayedDeckId = savedInstanceState?.getLong(STATE_DISPLAYED_DECK_ID)?.takeIf { it != 0L }
         // Subscribe once per fragment: returning from another panel can recreate its view.
         ChangeManager.subscribe(this)
-        viewModel.flowOfState.launchCollectionInLifecycleScope(::rebuildUi)
     }
 
     override fun onCreateView(
@@ -140,6 +139,7 @@ class StudyOptionsFragment :
             requireAnkiActivity().setToolbarText(title = "")
         }
         setupContentInsets(view)
+        viewModel.flowOfState.launchCollectionInViewLifecycleScope(::rebuildUi)
         refreshInterface()
     }
 
@@ -326,7 +326,7 @@ class StudyOptionsFragment :
             menu.findItem(R.id.action_custom_study)?.isVisible = true
             menu.findItem(R.id.action_deck_or_study_options)?.title = TR.sentenceCase.deckOptions
         }
-        if (state is StudyOptionsState.Congrats) {
+        if (state is StudyOptionsState.Congrats || state is StudyOptionsState.Empty) {
             menu.findItem(R.id.action_custom_study)?.isVisible = false
         }
         menu.findItem(R.id.action_schedule_reminders)?.isVisible = Prefs.newReviewRemindersEnabled
@@ -356,7 +356,7 @@ class StudyOptionsFragment :
 
     fun refreshInterface() {
         Timber.d("Refreshing StudyOptionsFragment")
-        launchCatchingTask { viewModel.refreshData() }
+        launchCatchingViewTask { viewModel.refreshData() }
     }
 
     private fun rebuildUi(state: StudyOptionsState) {
@@ -449,7 +449,7 @@ class StudyOptionsFragment :
         buryInfoLabel.isVisible = data.hasBuriedCards
 
         fun TextView.updateBuryText(count: Int) {
-            this.isVisible = count > 0
+            this.isVisible = deckInfoLayout.isVisible && count > 0
             this.text =
                 when {
                     count > 0 ->
@@ -458,7 +458,6 @@ class StudyOptionsFragment :
                             count,
                             count,
                         )
-                    // #18094 - potential race condition: view may be visible with a count of 0
                     else -> ""
                 }
         }

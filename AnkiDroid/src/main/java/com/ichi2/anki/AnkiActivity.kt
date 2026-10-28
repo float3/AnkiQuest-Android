@@ -83,10 +83,10 @@ import com.ichi2.anki.dialogs.DatabaseErrorDialog
 import com.ichi2.anki.dialogs.DatabaseErrorDialog.CustomExceptionData
 import com.ichi2.anki.dialogs.DatabaseErrorDialog.DatabaseErrorDialogType
 import com.ichi2.anki.dialogs.DialogHandler
-import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.ARG_SHARE_AS_TEXT
-import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.KEY_EXPORT_PATH
 import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.REQUEST_EXPORT_SAVE
 import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.REQUEST_EXPORT_SHARE
+import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.RESULT_EXPORT_PATH
+import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.RESULT_SHARE_AS_TEXT
 import com.ichi2.anki.dialogs.SimpleMessageDialog
 import com.ichi2.anki.dialogs.handleExportReadyRequest
 import com.ichi2.anki.dialogs.viewmodel.ExportReadyViewModel
@@ -166,17 +166,17 @@ open class AnkiActivity(
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             @Suppress("deprecation")
-            window.navigationBarColor = getColor(R.color.transparent)
+            window.navigationBarColor = getColor(CommonR.color.transparent)
         }
         supportFragmentManager.setFragmentResultListener(REQUEST_EXPORT_SAVE, this) { _, bundle ->
             saveExportFile(
-                bundle.getString(KEY_EXPORT_PATH) ?: error("Missing required exportPath!"),
+                bundle.getString(RESULT_EXPORT_PATH) ?: error("Missing required exportPath!"),
             )
         }
         supportFragmentManager.setFragmentResultListener(REQUEST_EXPORT_SHARE, this) { _, bundle ->
             shareFile(
-                path = bundle.requireString(KEY_EXPORT_PATH),
-                asText = bundle.getBoolean(ARG_SHARE_AS_TEXT, false),
+                path = bundle.requireString(RESULT_EXPORT_PATH),
+                asText = bundle.getBoolean(RESULT_SHARE_AS_TEXT, false),
             )
         }
 
@@ -187,7 +187,7 @@ open class AnkiActivity(
         }
 
         if (savedInstanceState != null) {
-            val restoredValue = savedInstanceState.getString(KEY_EXPORT_FILE_NAME) ?: return
+            val restoredValue = savedInstanceState.getString(STATE_EXPORT_FILE_PATH) ?: return
             fileExportPath = restoredValue
         }
     }
@@ -279,12 +279,12 @@ open class AnkiActivity(
 
     /**
      * Maps from intent name action to function to run when this action is received by [broadcastReceiver].
-     * By default it handles [SdCardReceiver.MEDIA_EJECT], and shows/dismisses dialogs when an SD
+     * By default it handles [SdCardReceiver.ACTION_MEDIA_EJECT], and shows/dismisses dialogs when an SD
      * card is ejected/remounted (collection is saved beforehand by [SdCardReceiver])
      */
     protected open val broadcastsActions =
         mapOf(
-            SdCardReceiver.MEDIA_EJECT to { onSdCardNotMounted() },
+            SdCardReceiver.ACTION_MEDIA_EJECT to { onSdCardNotMounted() },
         )
 
     /**
@@ -718,7 +718,7 @@ open class AnkiActivity(
 
     override fun onSaveInstanceState(outState: Bundle) {
         if (::fileExportPath.isInitialized) {
-            outState.putString(KEY_EXPORT_FILE_NAME, fileExportPath)
+            outState.putString(STATE_EXPORT_FILE_PATH, fileExportPath)
         }
         super.onSaveInstanceState(outState)
     }
@@ -864,7 +864,7 @@ open class AnkiActivity(
         const val EXTRA_FINISH_ANIMATION = "finishAnimation"
 
         private const val SIMPLE_NOTIFICATION_ID = 0
-        private const val KEY_EXPORT_FILE_NAME = "key_export_file_name"
+        private const val STATE_EXPORT_FILE_PATH = "key_export_file_name"
     }
 }
 

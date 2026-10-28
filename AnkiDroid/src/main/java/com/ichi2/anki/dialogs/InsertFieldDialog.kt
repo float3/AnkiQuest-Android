@@ -32,20 +32,21 @@ import com.ichi2.anki.CardTemplateEditor
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.Flag
 import com.ichi2.anki.R
-import com.ichi2.anki.databinding.DialogGenericRecyclerViewBinding
+import com.ichi2.anki.common.android.databinding.DialogGenericRecyclerViewBinding
 import com.ichi2.anki.databinding.DialogInsertFieldBinding
 import com.ichi2.anki.databinding.ItemInsertSpecialFieldBinding
-import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Companion.KEY_FIELD_ITEMS
-import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Companion.KEY_INSERT_FIELD_METADATA
-import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Companion.KEY_REQUEST_KEY
+import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Companion.ARG_FIELD_NAMES
+import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Companion.ARG_INSERT_FIELD_METADATA
+import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Companion.ARG_REQUEST_KEY
 import com.ichi2.anki.dialogs.InsertFieldDialogViewModel.Tab
-import com.ichi2.anki.launchCatchingTask
+import com.ichi2.anki.launchCatchingViewTask
 import com.ichi2.anki.model.SpecialField
 import com.ichi2.anki.model.SpecialFields
 import com.ichi2.anki.utils.ext.requireString
 import com.ichi2.themes.Themes
 import dev.androidbroadcast.vbpd.viewBinding
 import org.jetbrains.annotations.VisibleForTesting
+import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * Dialog fragment used to show the fields that the user can insert in the card editor. This
@@ -56,7 +57,7 @@ import org.jetbrains.annotations.VisibleForTesting
 class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
     private val viewModel by viewModels<InsertFieldDialogViewModel>()
     private val requestKey: String by lazy {
-        requireArguments().requireString(KEY_REQUEST_KEY)
+        requireArguments().requireString(ARG_REQUEST_KEY)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,12 +103,12 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
         )
 
         // setup flows
-        launchCatchingTask {
+        launchCatchingViewTask {
             viewModel.selectedFieldFlow.collect { field ->
                 if (field == null) return@collect
                 parentFragmentManager.setFragmentResult(
                     requestKey,
-                    Bundle().apply { putString(KEY_INSERTED_FIELD, field.renderToTemplateTag()) },
+                    Bundle().apply { putString(RESULT_INSERTED_FIELD, field.renderToTemplateTag()) },
                 )
                 dismiss()
             }
@@ -132,7 +133,7 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
          *
          * Represents the template tag for the selected field: `{{Front}}`
          */
-        const val KEY_INSERTED_FIELD = "key_inserted_field"
+        const val RESULT_INSERTED_FIELD = "key_inserted_field"
 
         /**
          * Creates a new instance of [InsertFieldDialog]
@@ -149,9 +150,9 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
             InsertFieldDialog().apply {
                 arguments =
                     Bundle().apply {
-                        putStringArrayList(KEY_FIELD_ITEMS, ArrayList(fieldItems))
-                        putParcelable(KEY_INSERT_FIELD_METADATA, metadata)
-                        putString(KEY_REQUEST_KEY, requestKey)
+                        putStringArrayList(ARG_FIELD_NAMES, ArrayList(fieldItems))
+                        putParcelable(ARG_INSERT_FIELD_METADATA, metadata)
+                        putString(ARG_REQUEST_KEY, requestKey)
                     }
             }
     }
@@ -169,7 +170,7 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
         override fun getItemCount() = 2
     }
 
-    class SelectBasicFieldFragment : Fragment(R.layout.dialog_generic_recycler_view) {
+    class SelectBasicFieldFragment : Fragment(CommonR.layout.dialog_generic_recycler_view) {
         val viewModel by viewModels<InsertFieldDialogViewModel>(
             ownerProducer = { requireParentFragment() as InsertFieldDialog },
         )
@@ -207,7 +208,7 @@ class InsertFieldDialog : DialogFragment(R.layout.dialog_insert_field) {
         }
     }
 
-    class SelectSpecialFieldFragment : Fragment(R.layout.dialog_generic_recycler_view) {
+    class SelectSpecialFieldFragment : Fragment(CommonR.layout.dialog_generic_recycler_view) {
         val viewModel by viewModels<InsertFieldDialogViewModel>(
             ownerProducer = { requireParentFragment() as InsertFieldDialog },
         )

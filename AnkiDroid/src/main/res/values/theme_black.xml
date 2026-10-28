@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="DuplicateCrowdInStrings">
-    <color name="theme_black_primary">#000000</color>
-    <color name="theme_black_primary_dark">#000000</color>
-    <color name="theme_black_primary_light">#151515</color>
-    <color name="theme_black_primary_text">#fff</color> <!-- Alternative: #808080 -->
-    <color name="theme_black_row_current">#1a1a1a</color>
 
     <style name="Base.Theme.Dark.Black" parent="Theme_Dark">
         <!-- Android colors -->
@@ -12,6 +7,11 @@
         <item name="colorPrimaryDark">@color/black</item>
         <item name="colorAccent">@color/material_blue_500</item>
         <item name="colorSecondaryContainer">#252525</item>
+        <item name="colorSurfaceVariant">#252525</item>
+        <item name="colorOnSurfaceVariant">#CCCCCC</item>
+        <item name="colorOutlineVariant">#555555</item>
+        <item name="colorTertiary">#CCCCCC</item>
+        <item name="colorOnTertiary">#000000</item>
         <item name="colorSurfaceContainerHigh">#151515</item>
         <item name="android:textColor">@color/text_color_dark</item>
         <item name="android:textColorSecondary">@color/text_color_secondary_dark</item>
@@ -96,6 +96,7 @@
         <!-- Dialog styles -->
         <item name="android:listPreferredItemHeight">56dip</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.AnkiDroid.AlertDialog.Black</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.App.BottomSheetDialog.Black</item>
         <!--Custom Tabs colors-->
         <item name="customTabNavBarColor">#000000</item>
         <item name="popupBackgroundColor">@color/popup_background_theme_black</item>
@@ -133,6 +134,11 @@
 
     <style name="ThemeOverlay.AnkiDroid.AlertDialog.Black" parent="ThemeOverlay.AnkiDroid.AlertDialog">
         <item name="android:colorBackground">@color/theme_black_primary_light</item>
+    </style>
+
+    <style name="ThemeOverlay.App.BottomSheetDialog.Black" parent="ThemeOverlay.App.BottomSheetDialog">
+        <item name="android:colorBackground">@color/theme_black_primary_light</item>
+        <item name="elevationOverlayEnabled">false</item>
     </style>
 
     <style name="Theme_Dark.Black" parent="Base.Theme.Dark.Black"/>

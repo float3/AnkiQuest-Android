@@ -68,7 +68,7 @@ class ImageCropper :
             cropRect = Rect(100, 300, 500, 1200)
         }
         val originalImageUri =
-            BundleCompat.getParcelable(requireArguments(), CROP_IMAGE_URI, Uri::class.java)
+            BundleCompat.getParcelable(requireArguments(), ARG_IMAGE_URI, Uri::class.java)
                 ?: error("No image identifier was provided for cropping")
         viewLifecycleOwner.lifecycleScope.launch {
             withProgress {
@@ -194,7 +194,7 @@ class ImageCropper :
         if (result.error == null) {
             val resultIntent = Intent()
             resultIntent.putExtra(
-                CROP_IMAGE_RESULT,
+                EXTRA_CROP_IMAGE_RESULT,
                 CropResultData(
                     uriContent = result.uriContent,
                     uriPath = context?.let { result.getUriFilePath(it) },
@@ -220,12 +220,12 @@ class ImageCropper :
         /**
          * The key for the original image URI passed as an argument.
          */
-        const val CROP_IMAGE_URI = "image_uri"
+        const val ARG_IMAGE_URI = "image_uri"
 
         /**
          * The key for the cropped image path sent back in the result Intent.
          */
-        const val CROP_IMAGE_RESULT = "crop_image_result"
+        const val EXTRA_CROP_IMAGE_RESULT = "crop_image_result"
     }
 
     @Parcelize

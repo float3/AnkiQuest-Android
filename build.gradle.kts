@@ -1,9 +1,12 @@
 
 import com.android.build.api.dsl.CommonExtension
 import com.android.build.api.extension.impl.AndroidComponentsExtensionImpl
+import com.ichi2.anki.gradle.BackendTempLibraryService
 import com.ichi2.anki.gradle.GitHubActionsTestListener
 import com.ichi2.anki.gradle.TestSummaryService
 import com.ichi2.anki.gradle.configureRobolectricJvm
+import com.ichi2.anki.gradle.registerJacocoLibraryVariants
+import com.ichi2.anki.gradle.reportBackendTempLibraries
 import com.slack.keeper.optInToKeeper
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.buildconfiguration.tasks.UpdateDaemonJvm
@@ -30,11 +33,13 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile) apply false
     // Serialization is a separate artifact, not pinned transitively by AGP.
     alias(libs.plugins.kotlin.serialization) apply false
-    // Compose Compiler plugin (required since Kotlin 2.0); applied per-module that opts in.
-    alias(libs.plugins.kotlin.compose) apply false
+    // Pinned by buildSrc; applied by the Compose convention plugin.
+    id("org.jetbrains.kotlin.plugin.compose") apply false
     alias(libs.plugins.ktlint.gradle.plugin) apply false
     alias(libs.plugins.keeper) apply false
 }
+
+registerJacocoLibraryVariants()
 
 val localProperties = Properties()
 if (project.rootProject.file("local.properties").exists()) {
@@ -52,6 +57,15 @@ val testSummaryService = System.getenv("GITHUB_STEP_SUMMARY")?.let { path ->
         parameters.path.set(path)
     }
 }
+
+// The backend keeps native libraries in the test JVM's temp directory, outside Gradle clean.
+// Use -PbackendTempLibraryWarnBytes=0 to report even small amounts; the default is 1 GiB.
+val backendTempLibraryService =
+    gradle.sharedServices.registerIfAbsent("backendTempLibraryService", BackendTempLibraryService::class) {
+        parameters.warnAboveBytes.set(
+            providers.gradleProperty("backendTempLibraryWarnBytes").map { it.toLong() }.orElse(1024L * 1024 * 1024),
+        )
+    }
 
 /**
  * Per-fork JVM heap for unit tests.
@@ -96,6 +110,7 @@ subprojects {
                 it.minHeapSize = "1g"
 
                 it.configureRobolectricJvm()
+                it.reportBackendTempLibraries(backendTempLibraryService)
 
                 it.useJUnitPlatform()
                 it.testLogging {

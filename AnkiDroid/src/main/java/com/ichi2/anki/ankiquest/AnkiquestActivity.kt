@@ -248,9 +248,9 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                     webView.loadData("<p>Unable to prepare your connection. Close this screen and try again.</p>", "text/html", "UTF-8")
                     return@launch
                 }
-                if (savedInstanceState == null || savedInstanceState.getString(DASHBOARD_STATE) != expected.dashboard ||
-                    savedInstanceState.getString(ACCOUNT_STATE) != expectedAccount ||
-                    savedInstanceState.getString(DESTINATION_STATE) != destination || webView.restoreState(savedInstanceState) == null
+                if (savedInstanceState == null || savedInstanceState.getString(STATE_DASHBOARD) != expected.dashboard ||
+                    savedInstanceState.getString(STATE_ACCOUNT) != expectedAccount ||
+                    savedInstanceState.getString(STATE_DESTINATION) != destination || webView.restoreState(savedInstanceState) == null
                 ) {
                     webView.loadUrl(destination)
                 }
@@ -330,9 +330,9 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(DASHBOARD_STATE, session?.dashboard)
-        outState.putString(ACCOUNT_STATE, account)
-        outState.putString(DESTINATION_STATE, initialUrl())
+        outState.putString(STATE_DASHBOARD, session?.dashboard)
+        outState.putString(STATE_ACCOUNT, account)
+        outState.putString(STATE_DESTINATION, initialUrl())
         if (::webView.isInitialized && pendingDashboard == null && !clearHistoryAfterLoad) webView.saveState(outState)
     }
 
@@ -349,10 +349,10 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
     companion object {
         const val EXTRA_PATH = "ankiquest.path"
         const val EXTRA_ACCOUNT = "ankiquest.notification_account"
-        const val COMMUNITY_REMINDERS = "ankiquestCommunityReminders"
-        private const val ACCOUNT_STATE = "ankiquest.account"
-        private const val DASHBOARD_STATE = "ankiquestDashboard"
-        private const val DESTINATION_STATE = "ankiquestDestination"
+        const val EXTRA_COMMUNITY_REMINDERS = "ankiquestCommunityReminders"
+        private const val STATE_ACCOUNT = "ankiquest.account"
+        private const val STATE_DASHBOARD = "ankiquestDashboard"
+        private const val STATE_DESTINATION = "ankiquestDestination"
         private val sessionBridge = AnkiquestBrowserSessionBridge()
 
         /**
@@ -384,7 +384,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         ): String? =
             when {
                 !owned(intent, current) -> AnkiquestNavigation.ACTIVITY_PATH
-                intent.getBooleanExtra(COMMUNITY_REMINDERS, false) -> "/community#reminders"
+                intent.getBooleanExtra(EXTRA_COMMUNITY_REMINDERS, false) -> "/community#reminders"
                 else -> intent.getStringExtra(EXTRA_PATH)
             }
 

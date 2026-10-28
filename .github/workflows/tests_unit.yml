@@ -41,6 +41,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+env:
+  JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+
 jobs:
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
@@ -115,8 +118,8 @@ jobs:
     # Do not run the scheduled jobs on forks
     if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     needs: matrix_prep
-    # Windows takes 30-34 minutes when the Gradle cache misses (#21834)
-    timeout-minutes: 45
+    # Windows can take 40m+ on tests
+    timeout-minutes: 60
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
@@ -126,6 +129,17 @@ jobs:
     #env:
     #  CODACY_TOKEN: ${{ secrets.CODACY_TOKEN }}
     steps:
+      # Work around Ubuntu 26.04's RAM-backed /tmp until the image fix rolls out.
+      # https://github.com/actions/runner-images/pull/14814
+      - name: Keep /tmp on disk
+        if: runner.os == 'Linux'
+        run: |
+          if [ "$(findmnt -n -o FSTYPE --target /tmp)" = "tmpfs" ]; then
+            sudo systemctl mask tmp.mount
+            sudo umount -l /tmp
+          fi
+          df -hT /tmp
+
       - name: Configure Windows Pagefile
         uses: al-cheb/configure-pagefile-action@9b6da52fb72a3c6147c1aad2df22d8d905681adc # v1.5
         if: contains(matrix.os, 'windows')
@@ -133,6 +147,15 @@ jobs:
           minimum-size: 8GB
           maximum-size: 12GB
           disk-root: "C:"
+
+      - name: Configure Linux Swap
+        if: runner.os == 'Linux'
+        run: |
+          sudo fallocate -l 8G /swapfile-ci
+          sudo chmod 600 /swapfile-ci
+          sudo mkswap /swapfile-ci
+          sudo swapon /swapfile-ci
+          swapon --show
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -178,6 +201,17 @@ jobs:
       - name: De-flake EmptyApplication Tests (schedule/manual run only)
         if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.iteration == 1 && matrix.os == 'ubuntu-latest'
         run: ./gradlew testFullDebugUnitTest -PemptyApplication --daemon
+
+      # Compile the extra release variant once per scheduled run, keeping PR checks unchanged.
+      - name: Test Parallel Content Provider (scheduled run only)
+        if: github.event_name == 'schedule' && matrix.iteration == 1 && matrix.os == 'ubuntu-latest'
+        env:
+          TEST_RELEASE_BUILD: "true"
+        run: >
+          ./gradlew :AnkiDroid:testFullReleaseUnitTest
+          -PcustomSuffix=a
+          --tests 'com.ichi2.anki.provider.CardContentProviderTest'
+          --daemon
 
       - name: Report Unit Test Results
         if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''

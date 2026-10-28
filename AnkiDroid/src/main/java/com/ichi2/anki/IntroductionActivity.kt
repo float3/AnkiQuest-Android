@@ -20,7 +20,7 @@ import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.introduction.CollectionPermissionScreenLauncher
 import com.ichi2.anki.introduction.SetupCollectionFragment
 import com.ichi2.anki.introduction.SetupCollectionFragment.CollectionSetupOption
-import com.ichi2.anki.introduction.SetupCollectionFragment.Companion.FRAGMENT_KEY
+import com.ichi2.anki.introduction.SetupCollectionFragment.Companion.REQUEST_COLLECTION_SETUP
 import com.ichi2.anki.introduction.SetupCollectionFragment.Companion.RESULT_KEY
 import com.ichi2.anki.introduction.hasCollectionStoragePermissions
 import com.ichi2.anki.utils.ext.setFragmentResultListener
@@ -63,7 +63,7 @@ class IntroductionActivity :
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
 
-        setFragmentResultListener(FRAGMENT_KEY) { _, bundle ->
+        setFragmentResultListener(REQUEST_COLLECTION_SETUP) { _, bundle ->
             val option =
                 BundleCompat.getParcelable(bundle, RESULT_KEY, CollectionSetupOption::class.java) ?: error("Missing introduction option!")
             when (option) {
@@ -82,11 +82,11 @@ class IntroductionActivity :
 
     private fun startDeckPicker(result: Int = RESULT_START_NEW) {
         Timber.i("Opening deck picker, login: %b", result == RESULT_SYNC_PROFILE)
-        this.sharedPrefs().edit { putBoolean(INTRODUCTION_SLIDES_SHOWN, true) }
+        this.sharedPrefs().edit { putBoolean(PREF_INTRODUCTION_SLIDES_SHOWN, true) }
         val deckPicker = Intent(this, DeckPicker::class.java)
         deckPicker.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
         if (result == RESULT_SYNC_PROFILE) {
-            deckPicker.putExtra(DeckPicker.INTENT_SYNC_FROM_LOGIN, true)
+            deckPicker.putExtra(DeckPicker.EXTRA_SYNC_FROM_LOGIN, true)
         }
 
         startActivity(deckPicker)
@@ -101,8 +101,8 @@ class IntroductionActivity :
          * Key for the preference recording that the slide "Study less/ Remember more" offering to
          * get started or sync from ankiweb, was displayed. If so don't display it again.
          */
-        const val INTRODUCTION_SLIDES_SHOWN = "IntroductionSlidesShown"
+        const val PREF_INTRODUCTION_SLIDES_SHOWN = "IntroductionSlidesShown"
     }
 }
 
-internal fun Context.hasShownAppIntro(): Boolean = sharedPrefs().getBoolean(IntroductionActivity.INTRODUCTION_SLIDES_SHOWN, false)
+internal fun Context.hasShownAppIntro(): Boolean = sharedPrefs().getBoolean(IntroductionActivity.PREF_INTRODUCTION_SLIDES_SHOWN, false)

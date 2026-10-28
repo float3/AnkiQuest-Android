@@ -27,7 +27,6 @@ import com.ichi2.anki.browser.CardBrowserColumn.REVIEWS
 import com.ichi2.anki.browser.CardBrowserColumn.SFLD
 import com.ichi2.anki.browser.CardBrowserColumn.TAGS
 import com.ichi2.anki.cardviewer.Gesture
-import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.HashUtil.hashSetInit
 import com.ichi2.anki.libanki.Consts
@@ -36,7 +35,7 @@ import com.ichi2.anki.model.CardsOrNotes
 import com.ichi2.anki.noteeditor.CustomToolbarButton
 import com.ichi2.anki.preferences.reviewer.ViewerAction
 import com.ichi2.anki.reviewer.Binding
-import com.ichi2.anki.reviewer.Binding.Companion.keyCode
+import com.ichi2.anki.reviewer.Binding.KeyCode
 import com.ichi2.anki.reviewer.CardSide
 import com.ichi2.anki.reviewer.FullScreenMode
 import com.ichi2.anki.reviewer.MappableBinding
@@ -95,7 +94,7 @@ object PreferenceUpgradeService {
         companion object {
             /** A version code where the value doesn't matter as we're not using the result */
             private const val IGNORED_LEGACY_VERSION_CODE = 0L
-            const val UPGRADE_VERSION_PREF_KEY = "preferenceUpgradeVersion"
+            const val PREF_PREFERENCE_UPGRADE_VERSION = "preferenceUpgradeVersion"
 
             /** Returns all instances of preference upgrade classes */
             private fun getAllInstances(legacyPreviousVersionCode: LegacyVersionIdentifier) =
@@ -146,14 +145,14 @@ object PreferenceUpgradeService {
                 setPreferenceVersion(preferences, versionWhichRequiresNoUpgrades)
             }
 
-            internal fun getPreferenceVersion(preferences: SharedPreferences) = preferences.getInt(UPGRADE_VERSION_PREF_KEY, 0)
+            internal fun getPreferenceVersion(preferences: SharedPreferences) = preferences.getInt(PREF_PREFERENCE_UPGRADE_VERSION, 0)
 
             internal fun setPreferenceVersion(
                 preferences: SharedPreferences,
                 versionIdentifier: VersionIdentifier,
             ) {
                 Timber.i("upgrading preference version to '$versionIdentifier'")
-                preferences.edit { putInt(UPGRADE_VERSION_PREF_KEY, versionIdentifier) }
+                preferences.edit { putInt(PREF_PREFERENCE_UPGRADE_VERSION, versionIdentifier) }
             }
 
             /** Returns the collection of all preference version numbers */
@@ -364,7 +363,7 @@ object PreferenceUpgradeService {
                 oldGesturePreferenceKey: String,
                 volumeKeyCode: Int,
             ) {
-                upgradeBinding(preferences, oldGesturePreferenceKey, keyCode(volumeKeyCode))
+                upgradeBinding(preferences, oldGesturePreferenceKey, KeyCode(volumeKeyCode))
             }
 
             private fun upgradeGestureToBinding(
@@ -454,10 +453,10 @@ object PreferenceUpgradeService {
 
         internal class UpgradeFetchMedia : PreferenceUpgrade(9) {
             override fun upgrade(preferences: SharedPreferences) {
-                val fetchMediaSwitch = preferences.getBoolean(RemovedPreferences.SYNC_FETCHES_MEDIA, true)
+                val fetchMediaSwitch = preferences.getBoolean(RemovedPreferences.PREF_SYNC_FETCHES_MEDIA, true)
                 val status = if (fetchMediaSwitch) "always" else "never"
                 preferences.edit {
-                    remove(RemovedPreferences.SYNC_FETCHES_MEDIA)
+                    remove(RemovedPreferences.PREF_SYNC_FETCHES_MEDIA)
                     putString("syncFetchMedia", status)
                 }
             }
@@ -617,13 +616,13 @@ object PreferenceUpgradeService {
                 fun clearLegacyKeys() {
                     Timber.d("removing legacy keys")
                     preferences.edit {
-                        remove(DISPLAY_COLUMN_1_KEY)
-                        remove(DISPLAY_COLUMN_2_KEY)
+                        remove(PREF_DISPLAY_COLUMN_1)
+                        remove(PREF_DISPLAY_COLUMN_2)
                     }
                 }
 
-                val currentColumn1Index = preferences.getInt(DISPLAY_COLUMN_1_KEY, -1)
-                val currentColumn2Index = preferences.getInt(DISPLAY_COLUMN_2_KEY, -1)
+                val currentColumn1Index = preferences.getInt(PREF_DISPLAY_COLUMN_1, -1)
+                val currentColumn2Index = preferences.getInt(PREF_DISPLAY_COLUMN_2, -1)
 
                 if (currentColumn1Index == -1 || currentColumn2Index == -1) {
                     Timber.d("no update needed")
@@ -654,8 +653,8 @@ object PreferenceUpgradeService {
             }
 
             companion object {
-                private const val DISPLAY_COLUMN_1_KEY = "cardBrowserColumn1"
-                private const val DISPLAY_COLUMN_2_KEY = "cardBrowserColumn2"
+                private const val PREF_DISPLAY_COLUMN_1 = "cardBrowserColumn1"
+                private const val PREF_DISPLAY_COLUMN_2 = "cardBrowserColumn2"
 
                 @VisibleForTesting
                 internal val LEGACY_COLUMN1_KEYS = arrayOf(QUESTION, SFLD)
@@ -675,7 +674,6 @@ object PreferenceUpgradeService {
             }
         }
 
-        @NeedsTest("long touch gesture is removed from preferences")
         internal class RemoveLongTouchGesture : PreferenceUpgrade(21) {
             private val keys =
                 listOf(
@@ -734,14 +732,19 @@ object PreferenceUpgradeService {
             override fun upgrade(preferences: SharedPreferences) {
                 for (key in keys) {
                     val value = preferences.getString(key, null) ?: continue
-                    val bindings = fromPreferenceString(value)
-                    val unknown = bindings.filter { it.binding is Binding.UnknownBinding }
-                    if (unknown.isEmpty()) continue
-                    val newBindings = bindings - unknown
+                    val (newBindings, error) = parseBindingsAndError(value)
+                    if (!error) continue
                     preferences.edit {
                         putString(key, newBindings.toPreferenceString())
                     }
                 }
+            }
+
+            /** The list of bindings, and whether there are bindings that could not be interpreted. */
+            private fun parseBindingsAndError(prefString: String): Pair<List<ReviewerBinding>, Boolean> {
+                val substringCount = MappableBinding.getPreferenceSubstrings(prefString).size
+                val bindings = ReviewerBinding.fromPreferenceString(prefString)
+                return bindings to (substringCount != bindings.size)
             }
         }
 
@@ -797,9 +800,9 @@ object PreferenceUpgradeService {
 
         internal class UpgradeThemes : PreferenceUpgrade(26) {
             companion object {
-                const val KEY_APP_THEME = "appTheme"
-                const val KEY_DAY_THEME = "dayTheme"
-                const val KEY_NIGHT_THEME = "nightTheme"
+                const val PREF_APP_THEME = "appTheme"
+                const val PREF_DAY_THEME = "dayTheme"
+                const val PREF_NIGHT_THEME = "nightTheme"
 
                 const val THEME_FOLLOW_SYSTEM = "0"
                 const val THEME_LIGHT = "1"
@@ -813,20 +816,20 @@ object PreferenceUpgradeService {
 
             @Suppress("MoveVariableDeclarationIntoWhen")
             override fun upgrade(preferences: SharedPreferences) {
-                val appTheme = preferences.getString(KEY_APP_THEME, THEME_FOLLOW_SYSTEM)
+                val appTheme = preferences.getString(PREF_APP_THEME, THEME_FOLLOW_SYSTEM)
 
                 when (appTheme) {
                     THEME_FOLLOW_SYSTEM -> return
                     THEME_LIGHT, THEME_PLAIN -> {
                         preferences.edit {
-                            putString(KEY_APP_THEME, THEME_DAY)
-                            putString(KEY_DAY_THEME, appTheme)
+                            putString(PREF_APP_THEME, THEME_DAY)
+                            putString(PREF_DAY_THEME, appTheme)
                         }
                     }
                     THEME_BLACK, THEME_DARK -> {
                         preferences.edit {
-                            putString(KEY_APP_THEME, THEME_NIGHT)
-                            putString(KEY_NIGHT_THEME, appTheme)
+                            putString(PREF_APP_THEME, THEME_NIGHT)
+                            putString(PREF_NIGHT_THEME, appTheme)
                         }
                     }
                 }
@@ -898,7 +901,7 @@ object PreferenceUpgradeService {
         /**
          * Removes the legacy "analytics_opt_in" key so all users are re-prompted
          * to opt in under the new GA4-backed analytics implementation, which
-         * stores the opt-in under [AnkiDroidUsageAnalytics.ANALYTICS_OPTIN_KEY].
+         * stores the opt-in under [AnkiDroidUsageAnalytics.PREF_ANALYTICS_OPTIN].
          */
         internal class ResetAnalyticsOptIn2 : PreferenceUpgrade(29) {
             override fun upgrade(preferences: SharedPreferences) = preferences.edit { remove("analytics_opt_in") }
@@ -907,7 +910,7 @@ object PreferenceUpgradeService {
 }
 
 object RemovedPreferences {
-    const val SYNC_FETCHES_MEDIA = "syncFetchesMedia"
+    const val PREF_SYNC_FETCHES_MEDIA = "syncFetchesMedia"
 }
 
 fun bindingFromPreference(

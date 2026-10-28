@@ -38,8 +38,8 @@ object AnkiquestUpdater {
     private const val LATEST_URL = "https://api.github.com/repos/float3/AnkiQuest-Android/releases/latest"
     private const val NIGHTLY_URL = "https://github.com/float3/AnkiQuest-Android/releases/download/nightly/"
     private const val TAG_PREFIX = "quest-"
-    const val CHANNEL_KEY = "ankiquestUpdateChannel"
-    private const val CHECKED_AT_KEY = "ankiquestUpdateCheckedAt"
+    const val PREF_CHANNEL = "ankiquestUpdateChannel"
+    private const val PREF_CHECKED_AT = "ankiquestUpdateCheckedAt"
     private const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,9 +63,9 @@ object AnkiquestUpdater {
     )
 
     /** Makes the next deck list visit check again, e.g. after switching channel. */
-    fun checkSoon() = AnkiDroidApp.sharedPrefs().edit { remove(CHECKED_AT_KEY) }
+    fun checkSoon() = AnkiDroidApp.sharedPrefs().edit { remove(PREF_CHECKED_AT) }
 
-    fun channel(): Channel = if (AnkiDroidApp.sharedPrefs().getString(CHANNEL_KEY, null) == "nightly") Channel.NIGHTLY else Channel.STABLE
+    fun channel(): Channel = if (AnkiDroidApp.sharedPrefs().getString(PREF_CHANNEL, null) == "nightly") Channel.NIGHTLY else Channel.STABLE
 
     /** A stable release is newer by its number, a nightly by the version code Android compares on install. */
     internal fun isNewer(
@@ -78,8 +78,8 @@ object AnkiquestUpdater {
         if (BuildConfig.ANKIQUEST_RELEASE <= 0 || busy || activity !is DeckPicker) return
         val prefs = AnkiDroidApp.sharedPrefs()
         val now = TimeManager.time.intTimeMS()
-        if (now - prefs.getLong(CHECKED_AT_KEY, 0L) < CHECK_INTERVAL_MS) return
-        prefs.edit { putLong(CHECKED_AT_KEY, now) }
+        if (now - prefs.getLong(PREF_CHECKED_AT, 0L) < CHECK_INTERVAL_MS) return
+        prefs.edit { putLong(PREF_CHECKED_AT, now) }
         busy = true
         val host = WeakReference(activity)
         scope.launch {

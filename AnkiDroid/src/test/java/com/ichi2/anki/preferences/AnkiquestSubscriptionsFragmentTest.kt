@@ -49,9 +49,9 @@ class AnkiquestSubscriptionsFragmentTest : RobolectricTest() {
     @Before
     fun prepare() {
         AnkiDroidApp.sharedPrefs().edit {
-            putString(Ankiquest.URL_KEY, "https://quest.example")
-            putString(Ankiquest.USER_KEY, "member")
-            putString(Ankiquest.TOKEN_KEY, "test-token")
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "member")
+            putString(Ankiquest.PREF_TOKEN, "test-token")
         }
         repository = mockk()
         mockkObject(AnkiquestSubscriptions, AnkiquestPoll)
@@ -134,7 +134,7 @@ class AnkiquestSubscriptionsFragmentTest : RobolectricTest() {
         val fragment = open().second
         coEvery { repository.load(match { it.user == "new-player" }) } returns
             original.copy(senders = listOf(IncomingSender("new-friend", "New friend")))
-        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.USER_KEY, "new-player") }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "new-player") }
         idle()
         pending.complete(original)
         idle()
@@ -170,7 +170,7 @@ class AnkiquestSubscriptionsFragmentTest : RobolectricTest() {
 
     @Test
     fun `missing account token shows setup guidance without fetching private settings`() {
-        AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.TOKEN_KEY) }
+        AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
         val fragment = open().second
         assertEquals(targetContext.getString(R.string.ankiquest_subscriptions_configure), fragment.status().summary)
         assertFalse(fragment.all().isEnabled)

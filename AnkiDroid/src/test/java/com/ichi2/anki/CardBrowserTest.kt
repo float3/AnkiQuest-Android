@@ -5,9 +5,12 @@ package com.ichi2.anki
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.text.TextUtils
 import android.view.Menu
+import android.view.MotionEvent
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.SpinnerAdapter
 import android.widget.TextView
@@ -41,12 +44,12 @@ import anki.search.BrowserRow
 import anki.search.BrowserRow.Color
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
-import com.ichi2.anki.IntentHandler.Companion.grantedStoragePermissions
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooper
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooperUntil
 import com.ichi2.anki.browser.BrowserColumnKey
 import com.ichi2.anki.browser.BrowserMultiColumnAdapter
 import com.ichi2.anki.browser.BrowserMultiColumnAdapter.Companion.LINES_VISIBLE_WHEN_COLLAPSED
+import com.ichi2.anki.browser.BrowserSearchFeedbackMode
 import com.ichi2.anki.browser.CardBrowserColumn
 import com.ichi2.anki.browser.CardBrowserColumn.DECK
 import com.ichi2.anki.browser.CardBrowserColumn.QUESTION
@@ -57,13 +60,13 @@ import com.ichi2.anki.browser.CardBrowserViewModelTest
 import com.ichi2.anki.browser.CardOrNoteId
 import com.ichi2.anki.browser.FindAndReplaceDialogFragment
 import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ALL_FIELDS_AS_FIELD
-import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ARG_FIELD
-import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ARG_MATCH_CASE
-import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ARG_ONLY_SELECTED_NOTES
-import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ARG_REGEX
-import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ARG_REPLACEMENT
-import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.ARG_SEARCH
 import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.REQUEST_FIND_AND_REPLACE
+import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.RESULT_FIELD
+import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.RESULT_MATCH_CASE
+import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.RESULT_ONLY_SELECTED_NOTES
+import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.RESULT_REGEX
+import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.RESULT_REPLACEMENT
+import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.RESULT_SEARCH
 import com.ichi2.anki.browser.FindAndReplaceDialogFragment.Companion.TAGS_AS_FIELD
 import com.ichi2.anki.browser.IdsFile
 import com.ichi2.anki.browser.column1
@@ -71,6 +74,8 @@ import com.ichi2.anki.browser.selectRowAtPosition
 import com.ichi2.anki.browser.setColumn
 import com.ichi2.anki.browser.setSelectedDeck
 import com.ichi2.anki.browser.toRowSelection
+import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.storage.grantedStoragePermissions
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.isRunningAsUnitTest
 import com.ichi2.anki.dialogs.DeckSelectionDialog
@@ -102,12 +107,11 @@ import com.ichi2.testutils.ext.snackbarText
 import com.ichi2.testutils.getSharedPrefs
 import com.ichi2.testutils.parcelledCopy
 import com.ichi2.testutils.saveState
+import com.ichi2.testutils.withSplitPaneUi
 import com.ichi2.testutils.withSplitPaneUiAsync
 import com.ichi2.utils.LanguageUtil
 import io.mockk.every
-import io.mockk.mockkObject
 import io.mockk.mockkStatic
-import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.allOf
@@ -473,7 +477,7 @@ class CardBrowserTest : RobolectricTest() {
     fun startupFromCardBrowserActionItemShouldEndActivityIfNoPermissions() {
         try {
             mockkStatic(::isRunningAsUnitTest)
-            mockkObject(IntentHandler)
+            mockkStatic("com.ichi2.anki.common.storage.LegacyStorageKt")
 
             every { grantedStoragePermissions(any(), any()) } returns false
             every { isRunningAsUnitTest } returns false
@@ -485,7 +489,7 @@ class CardBrowserTest : RobolectricTest() {
             assertThat("Activity should be finishing", cardBrowser.isFinishing)
         } finally {
             unmockkStatic(::isRunningAsUnitTest)
-            unmockkObject(IntentHandler)
+            unmockkStatic("com.ichi2.anki.common.storage.LegacyStorageKt")
         }
     }
 
@@ -526,7 +530,8 @@ class CardBrowserTest : RobolectricTest() {
                     CardBrowserViewModel.SearchState.Completed(
                         rowCount = count,
                         cardsOrNotes = mode,
-                        resultMessage = CardBrowserViewModel.SearchResultMessage.CardCount(includeSearchAllDecksAction = false),
+                        feedbackMode = BrowserSearchFeedbackMode.SEARCH_RESULTS,
+                        allDecksSelected = true,
                     )
                 assertThat(search.formatCardCount(targetContext.resources), equalTo(expected))
             }
@@ -832,8 +837,8 @@ class CardBrowserTest : RobolectricTest() {
             b.supportFragmentManager.setFragmentResult(
                 ForgetCardsDialog.REQUEST_KEY_FORGET,
                 Bundle().apply {
-                    putBoolean(ForgetCardsDialog.ARG_RESTORE_ORIGINAL, true)
-                    putBoolean(ForgetCardsDialog.ARG_RESET_REPETITION, false)
+                    putBoolean(ForgetCardsDialog.RESULT_RESTORE_ORIGINAL, true)
+                    putBoolean(ForgetCardsDialog.RESULT_RESET_REPETITION, false)
                 },
             )
 
@@ -1296,15 +1301,8 @@ class CardBrowserTest : RobolectricTest() {
     }
 
     @Test
-    @Ignore("Issue 22065: search task starts while activity is finishing")
     fun `deck id is remembered - issue 15072`() =
         runTest {
-            // WARN: This doesn't mirror reality due to the use of coroutines
-            // in the issue, selectDeckAndSave() was called AFTER the search had been performed
-            // due to this being called immediately in a test-based context
-
-            // We're going to move this functionality entirely to the ViewModel over the next few weeks
-            // so this test should be updated and working after the refactorings are completed
             addBasicNote().moveToDeck("First")
             addBasicNote().moveToDeck("Second")
 
@@ -1314,6 +1312,8 @@ class CardBrowserTest : RobolectricTest() {
                 viewModel.setSelectedDeck(secondDeckId)
                 assertThat(viewModel.deckId, equalTo(secondDeckId))
                 finish()
+                // Pending search updates must not start tasks for the finishing browser.
+                advanceRobolectricLooper()
             }
 
             browserWithNoNewCards.apply {
@@ -1878,8 +1878,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_copy_note to true,
                     R.id.action_font_size to true,
                     R.id.action_capitalize to true,
-                    R.id.action_show_toolbar to true,
-                    R.id.action_scroll_toolbar to true,
+                    R.id.action_toolbar_layout to true,
                     R.id.action_toggle_previewer to false,
                 )
 
@@ -1922,8 +1921,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_copy_note to true,
                     R.id.action_font_size to true,
                     R.id.action_capitalize to true,
-                    R.id.action_show_toolbar to true,
-                    R.id.action_scroll_toolbar to true,
+                    R.id.action_toolbar_layout to true,
                     R.id.action_toggle_previewer to false,
                 )
 
@@ -1966,6 +1964,29 @@ class CardBrowserTest : RobolectricTest() {
                 equalTo("replaced"),
             )
         }
+
+    @Test
+    @Config(qualifiers = "w1024dp-h768dp")
+    fun `resizing the note editor's panes does not resize the split browser`() {
+        withSplitPaneUi {
+            val noteEditor =
+                startActivityNormallyOpenCollectionWithIntent(
+                    NoteEditorActivity::class.java,
+                    NoteEditorDestination.AddNote().toIntent(targetContext),
+                )
+            advanceRobolectricLooper()
+            noteEditor.findViewById<View>(R.id.note_editor_resizing_divider).dragBy(-100f)
+        }
+
+        withBrowser(noteCount = 1, fragmented = true) {
+            val editorPane = findViewById<View>(R.id.note_editor_frame)
+            assertThat(
+                "the browser's editor pane keeps its default weight",
+                (editorPane.layoutParams as LinearLayout.LayoutParams).weight,
+                equalTo(2f),
+            )
+        }
+    }
 
     @Test
     fun `deck chip performs a search`() {
@@ -2112,13 +2133,13 @@ class CardBrowserTest : RobolectricTest() {
         supportFragmentManager.setFragmentResult(
             REQUEST_FIND_AND_REPLACE,
             Bundle().apply {
-                putString(ARG_SEARCH, search)
-                putString(ARG_REPLACEMENT, replacement)
-                putString(ARG_FIELD, field)
-                putBoolean(ARG_ONLY_SELECTED_NOTES, onlyInSelectedNotes)
+                putString(RESULT_SEARCH, search)
+                putString(RESULT_REPLACEMENT, replacement)
+                putString(RESULT_FIELD, field)
+                putBoolean(RESULT_ONLY_SELECTED_NOTES, onlyInSelectedNotes)
                 // "Ignore case" checkbox text => when it's checked we pass false to the backend
-                putBoolean(ARG_MATCH_CASE, matchCase)
-                putBoolean(ARG_REGEX, regex)
+                putBoolean(RESULT_MATCH_CASE, matchCase)
+                putBoolean(RESULT_REGEX, regex)
             },
         )
     }
@@ -2203,6 +2224,18 @@ class CardBrowserTest : RobolectricTest() {
 fun setCardBrowserFragmented(value: Boolean) = Prefs.putBoolean(R.string.dev_card_browser_fragmented, value)
 
 fun setUsingSearchView(value: Boolean) = Prefs.putBoolean(R.string.dev_card_browser_search_view, value)
+
+private fun View.dragBy(dx: Float) {
+    val downTime = SystemClock.uptimeMillis()
+    for ((action, x) in listOf(MotionEvent.ACTION_DOWN to 0f, MotionEvent.ACTION_MOVE to dx, MotionEvent.ACTION_UP to dx)) {
+        val event = MotionEvent.obtain(downTime, downTime, action, x, 0f, 0)
+        try {
+            dispatchTouchEvent(event)
+        } finally {
+            event.recycle()
+        }
+    }
+}
 
 private fun CardBrowser.rerenderAllCards() {
     cardBrowserFragment.cardsAdapter.notifyDataSetChanged()

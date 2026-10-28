@@ -24,15 +24,15 @@ import timber.log.Timber
 object AnkiquestReply {
     enum class Outcome { SENT, RETRY, FAILED }
 
-    const val NOTIFICATION_KEY = "notification"
-    const val TAG_KEY = "tag"
-    const val TITLE_KEY = "title"
-    const val BODY_KEY = "body"
-    const val KIND_KEY = "kind"
-    const val MESSAGE_KEY = "message"
-    const val ACCOUNT_KEY = "ankiquest.reply_account"
-    const val SCOPE_KEY = "ankiquest.reply_scope"
-    const val CUSTOM_ACTION = "com.ichi2.anki.ankiquest.REPLY_CUSTOM"
+    const val EXTRA_NOTIFICATION = "notification"
+    const val EXTRA_TAG = "tag"
+    const val EXTRA_TITLE = "title"
+    const val EXTRA_BODY = "body"
+    const val EXTRA_KIND = "kind"
+    const val EXTRA_MESSAGE = "message"
+    const val EXTRA_REPLY_ACCOUNT = "ankiquest.reply_account"
+    const val EXTRA_REPLY_SCOPE = "ankiquest.reply_scope"
+    const val ACTION_REPLY_CUSTOM = "com.ichi2.anki.ankiquest.REPLY_CUSTOM"
 
     const val ATTEMPTS = 3
     const val MAX_MESSAGE = 200
@@ -69,17 +69,17 @@ object AnkiquestReply {
         val choices = listOfNotNull(quick).toTypedArray<CharSequence>() + suggestions
         val intent =
             Intent(context, AnkiquestReplyReceiver::class.java)
-                .setAction(CUSTOM_ACTION)
-                .putExtra(NOTIFICATION_KEY, notification)
-                .putExtra(TAG_KEY, tag)
-                .putExtra(TITLE_KEY, title)
-                .putExtra(BODY_KEY, body)
-                .putExtra(KIND_KEY, kind)
-                .putExtra(ACCOUNT_KEY, account)
-                .putExtra(SCOPE_KEY, scope)
+                .setAction(ACTION_REPLY_CUSTOM)
+                .putExtra(EXTRA_NOTIFICATION, notification)
+                .putExtra(EXTRA_TAG, tag)
+                .putExtra(EXTRA_TITLE, title)
+                .putExtra(EXTRA_BODY, body)
+                .putExtra(EXTRA_KIND, kind)
+                .putExtra(EXTRA_REPLY_ACCOUNT, account)
+                .putExtra(EXTRA_REPLY_SCOPE, scope)
         val reply =
             RemoteInput
-                .Builder(MESSAGE_KEY)
+                .Builder(EXTRA_MESSAGE)
                 .setLabel(AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_hint))
                 .setChoices(choices)
                 .build()
@@ -106,7 +106,7 @@ object AnkiquestReply {
     ) {
         try {
             WorkManager.getInstance(context).enqueueUniqueWork(
-                "$WORK_NAME:${data.getString(SCOPE_KEY)}:${data.getInt(TAG_KEY, 0)}",
+                "$WORK_NAME:${data.getString(EXTRA_REPLY_SCOPE)}:${data.getInt(EXTRA_TAG, 0)}",
                 ExistingWorkPolicy.REPLACE,
                 OneTimeWorkRequestBuilder<AnkiquestReplyWorker>()
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -121,8 +121,8 @@ object AnkiquestReply {
     /** The chosen or typed text; notifications posted by older versions carry a cheer as an extra instead. */
     fun message(intent: Intent): String =
         (
-            RemoteInput.getResultsFromIntent(intent)?.getCharSequence(MESSAGE_KEY)?.toString()
-                ?: intent.getStringExtra(MESSAGE_KEY)
+            RemoteInput.getResultsFromIntent(intent)?.getCharSequence(EXTRA_MESSAGE)?.toString()
+                ?: intent.getStringExtra(EXTRA_MESSAGE)
         ).orEmpty()
             .trim()
             .take(MAX_MESSAGE)
@@ -133,14 +133,14 @@ object AnkiquestReply {
     ): Data =
         Data
             .Builder()
-            .putLong(NOTIFICATION_KEY, intent.getLongExtra(NOTIFICATION_KEY, 0))
-            .putInt(TAG_KEY, intent.getIntExtra(TAG_KEY, 0))
-            .putString(TITLE_KEY, intent.getStringExtra(TITLE_KEY))
-            .putString(BODY_KEY, intent.getStringExtra(BODY_KEY))
-            .putString(KIND_KEY, intent.getStringExtra(KIND_KEY) ?: "completion")
-            .putString(MESSAGE_KEY, message)
-            .putString(ACCOUNT_KEY, intent.getStringExtra(ACCOUNT_KEY))
-            .putString(SCOPE_KEY, intent.getStringExtra(SCOPE_KEY))
+            .putLong(EXTRA_NOTIFICATION, intent.getLongExtra(EXTRA_NOTIFICATION, 0))
+            .putInt(EXTRA_TAG, intent.getIntExtra(EXTRA_TAG, 0))
+            .putString(EXTRA_TITLE, intent.getStringExtra(EXTRA_TITLE))
+            .putString(EXTRA_BODY, intent.getStringExtra(EXTRA_BODY))
+            .putString(EXTRA_KIND, intent.getStringExtra(EXTRA_KIND) ?: "completion")
+            .putString(EXTRA_MESSAGE, message)
+            .putString(EXTRA_REPLY_ACCOUNT, intent.getStringExtra(EXTRA_REPLY_ACCOUNT))
+            .putString(EXTRA_REPLY_SCOPE, intent.getStringExtra(EXTRA_REPLY_SCOPE))
             .build()
 
     suspend fun run(
@@ -148,10 +148,10 @@ object AnkiquestReply {
         data: Data,
         attempt: Int,
     ): Outcome {
-        val message = data.getString(MESSAGE_KEY).orEmpty()
-        val notification = data.getLong(NOTIFICATION_KEY, 0)
-        val account = data.getString(ACCOUNT_KEY).orEmpty()
-        val scope = data.getString(SCOPE_KEY).orEmpty()
+        val message = data.getString(EXTRA_MESSAGE).orEmpty()
+        val notification = data.getLong(EXTRA_NOTIFICATION, 0)
+        val account = data.getString(EXTRA_REPLY_ACCOUNT).orEmpty()
+        val scope = data.getString(EXTRA_REPLY_SCOPE).orEmpty()
         if (message.isEmpty() || notification <= 0 || account.isEmpty() || scope.isEmpty() || !current(data)) return Outcome.FAILED
         return try {
             AnkiquestNotifier.onReplySent(context, data, Ankiquest.reply(notification, message, account, scope))
@@ -171,8 +171,8 @@ object AnkiquestReply {
 
     internal fun current(data: Data): Boolean {
         val account = AnkiquestHomeData.account() ?: return false
-        return account.token.isNotEmpty() && account.notificationAccount == data.getString(ACCOUNT_KEY) &&
-            account.scope == data.getString(SCOPE_KEY)
+        return account.token.isNotEmpty() && account.notificationAccount == data.getString(EXTRA_REPLY_ACCOUNT) &&
+            account.scope == data.getString(EXTRA_REPLY_SCOPE)
     }
 }
 

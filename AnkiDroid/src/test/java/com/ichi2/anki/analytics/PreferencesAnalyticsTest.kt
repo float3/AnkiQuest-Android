@@ -3,6 +3,7 @@
 package com.ichi2.anki.analytics
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.CommonPreferenceKey
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -72,7 +73,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.thirdparty_apps_key, // thirdpartyapps_link
             // will be reworked in the future
             // Notify when
-            R.string.pref_notifications_minimum_cards_due_key, // minimumCardsDueForNotification
+            CommonPreferenceKey.pref_notifications_minimum_cards_due_key, // minimumCardsDueForNotification
             // Vibrate
             R.string.pref_notifications_vibrate_key, // widgetVibrate
             // Blink light
@@ -130,7 +131,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.ankiquest_subscriptions_retry_key,
             R.string.ankiquest_subscriptions_people_key,
         ).toStringResourceSet() +
-            setOf(AnkiquestNavigation.OPEN_TODAY_KEY, AnkiquestNavigation.SESSION_SUMMARY_KEY)
+            setOf(AnkiquestNavigation.PREF_OPEN_TODAY, AnkiquestNavigation.PREF_SESSION_SUMMARY)
 
     @Test
     fun `The include and excluded prefs lists don't share elements`() {

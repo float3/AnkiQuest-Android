@@ -121,7 +121,10 @@ class DeckPickerViewModel :
             if (tree == null) return@combine FlattenedDeckList.empty
 
             // TODO: use flowOfFocusedDeck once it's set on all instances
-            val currentDeckId = withCol { decks.current().getLong("id") }
+            // This flow can outlive the visible screen. Do not reopen the collection just to redraw it.
+            val currentDeckId =
+                withOpenColOrNull { decks.current().id }
+                    ?: return@combine FlattenedDeckList.empty
             Timber.i("currentDeckId: %d", currentDeckId)
 
             FlattenedDeckList(
@@ -210,21 +213,17 @@ class DeckPickerViewModel :
         val isFilteredDeck: Boolean,
     )
 
-    /** Prepares a confirmation dialog for deleting the focused deck. */
+    /** Prepares a confirmation dialog for deleting the selected deck. */
     fun requestDeleteDeckConfirmation() =
         launchCatchingIO {
-            val deckId =
-                focusedDeck ?: run {
-                    Timber.w("no focused deck")
-                    return@launchCatchingIO
-                }
             val request =
                 withCol {
+                    val deck = decks.current()
                     DeleteDeckConfirmationRequest(
-                        deckId = deckId,
-                        deckName = decks.name(deckId),
-                        totalCards = decks.cardCount(deckId, includeSubdecks = true),
-                        isFilteredDeck = decks.isFiltered(deckId),
+                        deckId = deck.id,
+                        deckName = deck.name,
+                        totalCards = decks.cardCount(deck.id, includeSubdecks = true),
+                        isFilteredDeck = deck.isFiltered,
                     )
                 }
             flowOfDeleteDeckConfirmation.emit(request)
@@ -508,6 +507,8 @@ class DeckPickerViewModel :
                 focusedDeck = withCol { decks.current().id }
                 refreshUndoMenuState()
 
+                // Reopening can leave the counts and selection unchanged after a skipped display refresh.
+                flowOfRefreshDeckList.emit(Unit)
                 flowOfDecksReloaded.emit(Unit)
             }
         this.loadDeckCounts = loadDeckCounts
@@ -765,17 +766,17 @@ class DeckPickerViewModel :
     ): Long {
         var previous: Long
         try {
-            previous = preferences.getLong(UPGRADE_VERSION_KEY, current)
+            previous = preferences.getLong(PREF_LAST_UPGRADE_VERSION, current)
         } catch (e: ClassCastException) {
             Timber.w(e)
             previous =
                 try {
                     // set 20900203 to default value, as it's the latest version that stores integer in shared prefs
-                    preferences.getInt(UPGRADE_VERSION_KEY, 20900203).toLong()
+                    preferences.getInt(PREF_LAST_UPGRADE_VERSION, 20900203).toLong()
                 } catch (cce: ClassCastException) {
                     Timber.w(cce)
                     // Previous versions stored this as a string.
-                    val s = preferences.getString(UPGRADE_VERSION_KEY, "")
+                    val s = preferences.getString(PREF_LAST_UPGRADE_VERSION, "")
                     // The last version of AnkiDroid that stored this as a string was 2.0.2.
                     // We manually set the version here, but anything older will force a DB check.
                     if ("2.0.2" == s) {
@@ -784,16 +785,16 @@ class DeckPickerViewModel :
                         0
                     }
                 }
-            Timber.d("Updating shared preferences stored key %s type to long", UPGRADE_VERSION_KEY)
+            Timber.d("Updating shared preferences stored key %s type to long", PREF_LAST_UPGRADE_VERSION)
             // Expected Editor.putLong to be called later to update the value in shared prefs
-            preferences.edit().remove(UPGRADE_VERSION_KEY).apply()
+            preferences.edit().remove(PREF_LAST_UPGRADE_VERSION).apply()
         }
         Timber.i("Previous AnkiDroid version: %s", previous)
         return previous
     }
 
     companion object {
-        const val UPGRADE_VERSION_KEY = "lastUpgradeVersion"
+        const val PREF_LAST_UPGRADE_VERSION = "lastUpgradeVersion"
     }
 }
 
