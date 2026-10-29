@@ -10,13 +10,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ApplicationProvider
-import com.ichi2.anki.R
+import com.ichi2.anki.common.android.R
+import com.ichi2.anki.settings.enums.DayTheme
+import com.ichi2.anki.settings.enums.NightTheme
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import com.ichi2.anki.common.android.R as CommonR
 
 /**
  * Verifies that the four AnkiDroid XML themes (light, plain, dark, black) are
@@ -34,16 +36,33 @@ class ThemeTest {
     private fun themed(themeRes: Int) = ContextThemeWrapper(appContext, themeRes)
 
     @Test
+    @Config(sdk = [24, Config.TARGET_SDK])
+    fun `surface containers are opaque in every app theme`() {
+        for (theme in DayTheme.entries + NightTheme.entries) {
+            val scheme = themed(theme.styleResId).toMaterial3ColorScheme()
+            for (color in listOf(
+                scheme.surfaceContainer,
+                scheme.surfaceContainerHigh,
+                scheme.surfaceContainerHighest,
+                scheme.surfaceContainerLow,
+                scheme.surfaceContainerLowest,
+            )) {
+                assertEquals(1f, color.alpha, "${theme.name}: popup surfaces must hide underlying content")
+            }
+        }
+    }
+
+    @Test
     fun `light theme bridges colorPrimary to scheme primary`() {
         val scheme = themed(R.style.Theme_Light).toMaterial3ColorScheme()
-        val expected = ContextCompat.getColor(appContext, CommonR.color.material_light_blue_500)
+        val expected = ContextCompat.getColor(appContext, R.color.material_light_blue_500)
         assertEquals(expected, scheme.primary.toArgb())
     }
 
     @Test
     fun `dark theme bridges colorPrimary to scheme primary`() {
         val scheme = themed(R.style.Theme_Dark).toMaterial3ColorScheme()
-        val expected = ContextCompat.getColor(appContext, CommonR.color.material_blue_400)
+        val expected = ContextCompat.getColor(appContext, R.color.material_blue_400)
         assertEquals(expected, scheme.primary.toArgb())
     }
 
@@ -89,7 +108,7 @@ class ThemeTest {
     fun `light theme bridges fab_normal to the fab container color`() {
         val context = themed(R.style.Theme_Light)
         val colors = context.toAnkiDroidColors(context.toMaterial3ColorScheme())
-        val expected = ContextCompat.getColor(appContext, CommonR.color.material_light_blue_700)
+        val expected = ContextCompat.getColor(appContext, R.color.material_light_blue_700)
         assertEquals(expected, colors.fabContainer.toArgb())
     }
 

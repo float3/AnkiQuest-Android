@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.awaitInitialDeckHolder
 import com.ichi2.anki.common.time.TimeManager
@@ -27,6 +26,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.common.android.R as CommonR
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestDeckStatusTest : RobolectricTest() {
@@ -93,7 +93,7 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
     }
 
     private fun bind(states: Map<DeckId, DailyDeckState>): Map<DeckId, DeckAdapter.ViewHolder> {
-        val context = ContextThemeWrapper(targetContext, R.style.Theme_Light)
+        val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_Light)
         val adapter =
             DeckAdapter(
                 context,
