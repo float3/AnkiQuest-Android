@@ -23,13 +23,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import com.ichi2.anki.common.android.R as CommonR
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = EmptyApplication::class, qualifiers = "en-rUS-mdpi")
 @Category(EmptyApplicationCategory::class)
 class ReviewHeatmapViewTest {
     private val context: Context
-        get() = ContextThemeWrapper(ApplicationProvider.getApplicationContext(), R.style.Theme_Light)
+        get() = ContextThemeWrapper(ApplicationProvider.getApplicationContext(), CommonR.style.Theme_Light)
 
     @Test
     fun `selecting leap day previews details and only the full size button opens cards`() {

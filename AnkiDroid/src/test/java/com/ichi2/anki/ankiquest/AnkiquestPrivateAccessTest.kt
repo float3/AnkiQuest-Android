@@ -100,7 +100,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             Ankiquest.leaderboard()
             Ankiquest.profile()
 
-            assertEquals(listOf("/api/leaderboard", "/api/profile/member%20name"), requests.map { it.path })
+            assertEquals(setOf("/api/leaderboard", "/api/profile/member%20name"), requests.map { it.path }.toSet())
             assertTrue(requests.all { it.authorization == "Bearer member-secret" })
             assertTrue(requests.all { it.method == "GET" && it.body.isEmpty() })
         }

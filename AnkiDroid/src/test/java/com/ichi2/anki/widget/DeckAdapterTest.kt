@@ -32,6 +32,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import com.ichi2.anki.common.android.R as CommonR
 
 @RunWith(AndroidJUnit4::class)
 class DeckAdapterTest : RobolectricTest() {
@@ -184,7 +185,7 @@ class DeckAdapterTest : RobolectricTest() {
     }
 
     private inner class HeatmapDeckListFixture {
-        private val context = ContextThemeWrapper(targetContext, R.style.Theme_Light)
+        private val context = ContextThemeWrapper(targetContext, CommonR.style.Theme_Light)
         val deckAdapter =
             DeckAdapter(
                 context,
