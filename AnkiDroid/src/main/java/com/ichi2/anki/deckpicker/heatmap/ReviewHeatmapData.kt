@@ -161,7 +161,11 @@ object ReviewHeatmap {
         server: ServerDays,
         zone: ZoneId = ZoneId.systemDefault(),
     ): ReviewHeatmapData {
-        val first = server.reviews.filterValues { it > 0 }.keys.minOrNull()
+        val first =
+            server.reviews
+                .filterValues { it > 0 }
+                .keys
+                .minOrNull()
         val uploaded = server.uploadedUntil?.atZone(zone)?.toLocalDate() ?: data.today
         val until = minOf(data.today, uploaded)
         val reviews =
