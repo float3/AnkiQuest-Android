@@ -65,7 +65,11 @@ class ReviewHeatmapRenderTest {
                     (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
                     if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
             }
-        val context = ContextThemeWrapper(app.createConfigurationContext(config), if (dark) CommonR.style.Theme_Dark else CommonR.style.Theme_Light)
+        val context =
+            ContextThemeWrapper(
+                app.createConfigurationContext(config),
+                if (dark) CommonR.style.Theme_Dark else CommonR.style.Theme_Light,
+            )
         val view = ReviewHeatmapView(context).apply(configure)
         view.measure(
             View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
