@@ -2,11 +2,13 @@
 
 package com.ichi2.anki.deckpicker.heatmap
 
+import org.json.JSONObject
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ReviewHeatmapDataTest {
     private val today = LocalDate.of(2024, 3, 1)
@@ -90,5 +92,52 @@ class ReviewHeatmapDataTest {
                 .atZone(losAngeles)
                 .toEpochSecond()
         assertEquals(LocalDate.of(2023, 12, 31), ReviewHeatmap.studyDate(nextRollover, losAngeles))
+    }
+
+    @Test
+    fun `a day AnkiQuest protected keeps the streak without lengthening it`() {
+        val reviews = mapOf(today to 5, today.minusDays(1) to 5, today.minusDays(3) to 5, today.minusDays(4) to 5)
+        val missed = today.minusDays(2)
+
+        val alone = ReviewHeatmap.summarize(today, reviews, emptyMap())
+        assertEquals(2, alone.currentStreak)
+        assertEquals(2, alone.longestStreak)
+
+        val kept = ReviewHeatmap.withProtectedDays(alone, setOf(missed))
+        assertEquals(4, kept.currentStreak)
+        assertEquals(4, kept.longestStreak)
+        assertEquals(setOf(missed), kept.protectedDays)
+        assertEquals(4, kept.daysStudied)
+    }
+
+    @Test
+    fun `a protected day after a gap starts nothing, and a studied or future day is not protected`() {
+        val reviews = mapOf(today.minusDays(1) to 5)
+        val data =
+            ReviewHeatmap.summarize(
+                today,
+                reviews,
+                emptyMap(),
+                setOf(today.minusDays(5), today.minusDays(1), today),
+            )
+        assertEquals(1, data.currentStreak)
+        assertEquals(1, data.longestStreak)
+        assertEquals(setOf(today.minusDays(5)), data.protectedDays)
+    }
+
+    @Test
+    fun `protected days are read off the profile's frozen heatmap cells`() {
+        val profile =
+            JSONObject(
+                """
+                {"heatmap": [
+                  {"date": "2026-10-27", "reviews": 120, "xp": 300, "frozen": false},
+                  {"date": "2026-10-28", "reviews": 0, "xp": 0, "frozen": true},
+                  {"date": "not a date", "reviews": 0, "xp": 0, "frozen": true}
+                ]}
+                """,
+            )
+        assertEquals(setOf(LocalDate.of(2026, 10, 28)), ReviewHeatmap.protectedDays(profile))
+        assertTrue(ReviewHeatmap.protectedDays(JSONObject("{}")).isEmpty())
     }
 }

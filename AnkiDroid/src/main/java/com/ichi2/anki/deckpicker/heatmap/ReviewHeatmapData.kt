@@ -3,12 +3,19 @@
 package com.ichi2.anki.deckpicker.heatmap
 
 import com.ichi2.anki.libanki.Collection
+import org.json.JSONObject
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
-/** Local collection history: counts are answers, not distinct cards or server points. */
+/**
+ * Local collection history: counts are answers, not distinct cards or server points.
+ *
+ * [protectedDays] are days without reviews that AnkiQuest kept the streak through, with a
+ * streak freeze or because moving the clock east skipped them. Both streaks count them as
+ * AnkiQuest does: such a day keeps a streak going and does not lengthen it.
+ */
 data class ReviewHeatmapData(
     val today: LocalDate,
     val reviews: Map<LocalDate, Int>,
@@ -19,6 +26,7 @@ data class ReviewHeatmapData(
     val daysStudied: Int,
     val firstReviewDate: LocalDate?,
     val dailyAverage: Double,
+    val protectedDays: Set<LocalDate> = emptySet(),
 ) {
     val forecastEndDate: LocalDate get() = today.plusDays(ReviewHeatmap.FORECAST_DAYS)
 }
@@ -111,25 +119,48 @@ object ReviewHeatmap {
             .toLocalDate()
             .minusDays(1)
 
+    /** The same history, with the days AnkiQuest protected counted into the streaks. */
+    fun withProtectedDays(
+        data: ReviewHeatmapData,
+        protectedDays: Set<LocalDate>,
+    ): ReviewHeatmapData = summarize(data.today, data.reviews, data.scheduled, protectedDays)
+
+    /** The days an AnkiQuest profile's heatmap marks as frozen. */
+    fun protectedDays(profile: JSONObject): Set<LocalDate> {
+        val cells = profile.optJSONArray("heatmap") ?: return emptySet()
+        return (0 until cells.length())
+            .mapNotNull { cells.optJSONObject(it) }
+            .filter { it.optBoolean("frozen") }
+            .mapNotNull { runCatching { LocalDate.parse(it.optString("date")) }.getOrNull() }
+            .toSet()
+    }
+
     internal fun summarize(
         today: LocalDate,
         reviews: Map<LocalDate, Int>,
         scheduled: Map<LocalDate, Int>,
+        protectedDays: Set<LocalDate> = emptySet(),
     ): ReviewHeatmapData {
         val history = reviews.filter { (date, count) -> date <= today && count > 0 }.toSortedMap()
         val forecastEnd = today.plusDays(FORECAST_DAYS)
         val forecast = scheduled.filter { (date, count) -> date > today && date <= forecastEnd && count > 0 }.toSortedMap()
+        val kept = protectedDays.filter { it < today && !history.containsKey(it) }.toSortedSet()
         var currentStreak = 0
         var day = if (history.containsKey(today)) today else today.minusDays(1)
-        while (history.containsKey(day)) {
-            currentStreak++
+        while (history.containsKey(day) || day in kept) {
+            if (history.containsKey(day)) currentStreak++
             day = day.minusDays(1)
         }
         var longestStreak = 0
         var run = 0
         var previousDay: LocalDate? = null
-        for (studiedDay in history.keys) {
-            run = if (previousDay?.plusDays(1) == studiedDay) run + 1 else 1
+        for (studiedDay in (history.keys + kept).sorted()) {
+            val continues = previousDay?.plusDays(1) == studiedDay
+            if (studiedDay in kept) {
+                if (!continues) run = 0
+            } else {
+                run = if (continues) run + 1 else 1
+            }
             longestStreak = maxOf(longestStreak, run)
             previousDay = studiedDay
         }
@@ -145,6 +176,7 @@ object ReviewHeatmap {
             daysStudied = history.size,
             firstReviewDate = firstReviewDate,
             dailyAverage = if (history.isNotEmpty()) totalReviews.toDouble() / history.size else 0.0,
+            protectedDays = kept,
         )
     }
 }
