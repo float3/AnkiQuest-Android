@@ -10,7 +10,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 /**
- * Local collection history: counts are answers, not distinct cards or server points.
+ * Collection history: counts are answers, not distinct cards or server points.
  *
  * [protectedDays] are days without reviews that AnkiQuest kept the streak through, with a
  * streak freeze or because moving the clock east skipped them. Both streaks count them as
@@ -119,20 +119,59 @@ object ReviewHeatmap {
             .toLocalDate()
             .minusDays(1)
 
-    /** The same history, with the days AnkiQuest protected counted into the streaks. */
-    fun withProtectedDays(
-        data: ReviewHeatmapData,
-        protectedDays: Set<LocalDate>,
-    ): ReviewHeatmapData = summarize(data.today, data.reviews, data.scheduled, protectedDays)
+    /**
+     * What an AnkiQuest profile's heatmap says of each day: its reviews, and whether it was
+     * frozen. [uploadedUntil] is the time of the last review the server has, whose id is the
+     * millisecond it was made at.
+     */
+    data class ServerDays(
+        val reviews: Map<LocalDate, Int>,
+        val protectedDays: Set<LocalDate>,
+        val uploadedUntil: Instant? = null,
+    )
 
-    /** The days an AnkiQuest profile's heatmap marks as frozen. */
-    fun protectedDays(profile: JSONObject): Set<LocalDate> {
-        val cells = profile.optJSONArray("heatmap") ?: return emptySet()
-        return (0 until cells.length())
-            .mapNotNull { cells.optJSONObject(it) }
-            .filter { it.optBoolean("frozen") }
-            .mapNotNull { runCatching { LocalDate.parse(it.optString("date")) }.getOrNull() }
-            .toSet()
+    fun serverDays(profile: JSONObject): ServerDays {
+        val last = profile.optLong("last_review_id").takeIf { it > 0 }?.let(Instant::ofEpochMilli)
+        val cells = profile.optJSONArray("heatmap") ?: return ServerDays(emptyMap(), emptySet(), last)
+        val reviews = mutableMapOf<LocalDate, Int>()
+        val protectedDays = mutableSetOf<LocalDate>()
+        for (i in 0 until cells.length()) {
+            val cell = cells.optJSONObject(i) ?: continue
+            val date = runCatching { LocalDate.parse(cell.optString("date")) }.getOrNull() ?: continue
+            reviews[date] = cell.optInt("reviews")
+            if (cell.optBoolean("frozen")) protectedDays += date
+        }
+        return ServerDays(reviews, protectedDays, last)
+    }
+
+    /**
+     * The same history with AnkiQuest's numbering of the days it holds.
+     *
+     * The revlog records when a review happened but not under which clock, so the
+     * collection can only number its days by the clock the device has now: a flight
+     * through time zones moves the reviews studied on the plane onto a neighbouring
+     * day and leaves an empty one. AnkiQuest records each clock as it is reported and
+     * numbers every review by the one in force when it was made. Its counts are used
+     * from the first day it has reviews for up to the day before the last review it was
+     * sent, and never for today: those days may hold reviews not uploaded yet, so they
+     * stay the collection's, as do days the server does not cover.
+     */
+    fun withServerDays(
+        data: ReviewHeatmapData,
+        server: ServerDays,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): ReviewHeatmapData {
+        val first = server.reviews.filterValues { it > 0 }.keys.minOrNull()
+        val uploaded = server.uploadedUntil?.atZone(zone)?.toLocalDate() ?: data.today
+        val until = minOf(data.today, uploaded)
+        val reviews =
+            if (first == null || first >= until) {
+                data.reviews
+            } else {
+                data.reviews.filterKeys { it < first || it >= until } +
+                    server.reviews.filter { (date, count) -> date >= first && date < until && count > 0 }
+            }
+        return summarize(data.today, reviews, data.scheduled, server.protectedDays)
     }
 
     internal fun summarize(

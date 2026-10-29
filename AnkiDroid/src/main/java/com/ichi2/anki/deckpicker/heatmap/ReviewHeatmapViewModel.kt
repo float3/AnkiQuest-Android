@@ -13,17 +13,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.time.LocalDate
 
 /**
  * Keeps review history out of the deck-list loading path and survives activity recreation.
  *
- * The collection's history is shown as soon as it is read. When AnkiQuest is set up, the
- * days its streak was protected on follow from the server, and the streaks are counted
- * again with them; without a connection the heatmap stays as the collection alone says.
+ * The collection's history is shown as soon as it is read. When AnkiQuest is set up, its
+ * numbering of the days, which follows the clock each review was made under, and the days
+ * its streak was protected on follow from the server, and the heatmap is drawn again with
+ * them; without a connection it stays as the collection alone says.
  */
 class ReviewHeatmapViewModel(
-    private val protectedDays: suspend () -> Set<LocalDate> = ::ankiquestProtectedDays,
+    private val serverDays: suspend () -> ReviewHeatmap.ServerDays? = ::ankiquestDays,
     private val load: suspend () -> ReviewHeatmapData = { withCol { ReviewHeatmap.load(this) } },
 ) : ViewModel() {
     sealed interface State {
@@ -49,18 +49,18 @@ class ReviewHeatmapViewModel(
                     val data = load()
                     ensureActive()
                     mutableState.value = State.Loaded(data)
-                    val kept =
+                    val server =
                         try {
-                            protectedDays()
+                            serverDays()
                         } catch (cancelled: CancellationException) {
                             throw cancelled
                         } catch (error: Exception) {
-                            Timber.i(error, "AnkiQuest streak days unavailable")
-                            emptySet()
+                            Timber.i(error, "AnkiQuest days unavailable")
+                            null
                         }
                     ensureActive()
-                    if (kept.isNotEmpty()) {
-                        mutableState.value = State.Loaded(ReviewHeatmap.withProtectedDays(data, kept))
+                    if (server != null) {
+                        mutableState.value = State.Loaded(ReviewHeatmap.withServerDays(data, server))
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
@@ -73,5 +73,5 @@ class ReviewHeatmapViewModel(
     }
 }
 
-private suspend fun ankiquestProtectedDays(): Set<LocalDate> =
-    if (Ankiquest.isConfigured()) ReviewHeatmap.protectedDays(Ankiquest.profile()) else emptySet()
+private suspend fun ankiquestDays(): ReviewHeatmap.ServerDays? =
+    if (Ankiquest.isConfigured()) ReviewHeatmap.serverDays(Ankiquest.profile()) else null

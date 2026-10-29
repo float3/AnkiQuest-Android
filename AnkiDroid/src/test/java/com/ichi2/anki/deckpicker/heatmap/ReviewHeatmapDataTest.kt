@@ -94,6 +94,56 @@ class ReviewHeatmapDataTest {
         assertEquals(LocalDate.of(2023, 12, 31), ReviewHeatmap.studyDate(nextRollover, losAngeles))
     }
 
+    private fun server(
+        reviews: Map<LocalDate, Int>,
+        protectedDays: Set<LocalDate> = emptySet(),
+        uploadedUntil: LocalDate = today,
+    ) = ReviewHeatmap.ServerDays(
+        reviews,
+        protectedDays,
+        uploadedUntil.atTime(12, 0).atZone(ZoneId.of("UTC")).toInstant(),
+    )
+
+    private fun withServer(
+        data: ReviewHeatmapData,
+        server: ReviewHeatmap.ServerDays,
+    ) = ReviewHeatmap.withServerDays(data, server, ZoneId.of("UTC"))
+
+    @Test
+    fun `reviews studied on a flight count on the day AnkiQuest numbered them by`() {
+        val local = mapOf(today to 5, today.minusDays(1) to 0, today.minusDays(2) to 30, today.minusDays(3) to 8)
+        val alone = ReviewHeatmap.summarize(today, local, emptyMap())
+        assertEquals(1, alone.currentStreak)
+
+        val numbered =
+            withServer(
+                alone,
+                server(mapOf(today.minusDays(3) to 8, today.minusDays(2) to 10, today.minusDays(1) to 20, today to 2)),
+            )
+        assertEquals(20, numbered.reviews[today.minusDays(1)])
+        assertEquals(10, numbered.reviews[today.minusDays(2)])
+        assertEquals(5, numbered.reviews[today], "today stays the collection's")
+        assertEquals(4, numbered.currentStreak)
+        assertEquals(43L, numbered.totalReviews)
+    }
+
+    @Test
+    fun `days the server has not been sent, or never covered, stay the collection's`() {
+        val local = mapOf(today.minusDays(1) to 9, today.minusDays(2) to 7, today.minusDays(40) to 3)
+        val alone = ReviewHeatmap.summarize(today, local, emptyMap())
+        val stale =
+            withServer(
+                alone,
+                server(mapOf(today.minusDays(2) to 7, today.minusDays(1) to 0), uploadedUntil = today.minusDays(1)),
+            )
+        assertEquals(9, stale.reviews[today.minusDays(1)])
+        assertEquals(3, stale.reviews[today.minusDays(40)])
+        assertEquals(2, stale.currentStreak)
+
+        val empty = withServer(alone, server(emptyMap()))
+        assertEquals(alone.reviews, empty.reviews)
+    }
+
     @Test
     fun `a day AnkiQuest protected keeps the streak without lengthening it`() {
         val reviews = mapOf(today to 5, today.minusDays(1) to 5, today.minusDays(3) to 5, today.minusDays(4) to 5)
@@ -103,7 +153,7 @@ class ReviewHeatmapDataTest {
         assertEquals(2, alone.currentStreak)
         assertEquals(2, alone.longestStreak)
 
-        val kept = ReviewHeatmap.withProtectedDays(alone, setOf(missed))
+        val kept = withServer(alone, server(reviews.mapValues { 5 } + (missed to 0), setOf(missed)))
         assertEquals(4, kept.currentStreak)
         assertEquals(4, kept.longestStreak)
         assertEquals(setOf(missed), kept.protectedDays)
@@ -126,18 +176,21 @@ class ReviewHeatmapDataTest {
     }
 
     @Test
-    fun `protected days are read off the profile's frozen heatmap cells`() {
+    fun `the profile's heatmap gives each day's reviews, the frozen days and the last upload`() {
         val profile =
             JSONObject(
                 """
-                {"heatmap": [
+                {"last_review_id": 1793270000000, "heatmap": [
                   {"date": "2026-10-27", "reviews": 120, "xp": 300, "frozen": false},
                   {"date": "2026-10-28", "reviews": 0, "xp": 0, "frozen": true},
                   {"date": "not a date", "reviews": 0, "xp": 0, "frozen": true}
                 ]}
                 """,
             )
-        assertEquals(setOf(LocalDate.of(2026, 10, 28)), ReviewHeatmap.protectedDays(profile))
-        assertTrue(ReviewHeatmap.protectedDays(JSONObject("{}")).isEmpty())
+        val days = ReviewHeatmap.serverDays(profile)
+        assertEquals(mapOf(LocalDate.of(2026, 10, 27) to 120, LocalDate.of(2026, 10, 28) to 0), days.reviews)
+        assertEquals(setOf(LocalDate.of(2026, 10, 28)), days.protectedDays)
+        assertEquals(1793270000000L, days.uploadedUntil?.toEpochMilli())
+        assertTrue(ReviewHeatmap.serverDays(JSONObject("{}")).reviews.isEmpty())
     }
 }
