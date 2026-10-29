@@ -19,10 +19,11 @@
     <string name="review_heatmap_year">Year %1$s</string>
     <string name="review_heatmap_scroll_hint">Swipe to explore the year. Tap a day for details.</string>
     <string name="review_heatmap_forecast_hint">Gray squares show estimated review cards due over the next 90 days. Counts change as you study.</string>
-    <string name="review_heatmap_legend">Fewer reviews → More reviews · Gray = forecast</string>
+    <string name="review_heatmap_legend">Fewer reviews → More reviews · Gray = forecast · Blue outline = streak kept by AnkiQuest</string>
     <string name="review_heatmap_day_description">%1$s. %2$s</string>
     <string name="review_heatmap_today_description">%1$s. Today</string>
     <string name="review_heatmap_forecast_unavailable">Forecast is available for the next 90 days.</string>
+    <string name="review_heatmap_protected_day">%1$s · AnkiQuest kept your streak</string>
     <string name="review_heatmap_view_reviewed_cards">View reviewed cards</string>
     <string name="review_heatmap_view_due_cards">View due cards</string>
     <plurals name="review_heatmap_review_count">
@@ -46,4 +47,5 @@
     <color name="review_heatmap_forecast_two">#ABB3BE</color>
     <color name="review_heatmap_forecast_three">#7D8998</color>
     <color name="review_heatmap_forecast_four">#546171</color>
+    <color name="review_heatmap_protected">#2F80C9</color>
 </resources>

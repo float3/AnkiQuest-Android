@@ -45,6 +45,7 @@ class ReviewHeatmapGrid
         private val cellPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val outlineColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, 0)
         private val selectedColor = MaterialColors.getColor(context, androidx.appcompat.R.attr.colorPrimary, 0)
+        private val protectedColor = ContextCompat.getColor(context, R.color.review_heatmap_protected)
         private val reviewColors =
             intArrayOf(
                 R.color.review_heatmap_empty,
@@ -141,6 +142,12 @@ class ReviewHeatmapGrid
                 cellPaint.alpha = if (date > currentData.forecastEndDate) 70 else 255
                 canvas.drawRoundRect(bounds, 3 * density, 3 * density, cellPaint)
                 cellPaint.alpha = 255
+                if (date in currentData.protectedDays) {
+                    cellPaint.style = Paint.Style.STROKE
+                    cellPaint.strokeWidth = 2 * density
+                    cellPaint.color = protectedColor
+                    canvas.drawRoundRect(bounds, 3 * density, 3 * density, cellPaint)
+                }
                 if (date == selectedDate || date == currentData.today || accessibility.keyboardFocusedVirtualViewId == index) {
                     cellPaint.style = Paint.Style.STROKE
                     cellPaint.strokeWidth = 2 * density
@@ -365,6 +372,7 @@ internal fun ReviewHeatmapData.dayCountDescription(
     return when {
         date > forecastEndDate -> context.getString(R.string.review_heatmap_forecast_unavailable)
         date > today -> due()
+        date in protectedDays -> context.getString(R.string.review_heatmap_protected_day, reviews())
         else -> reviews()
     }
 }

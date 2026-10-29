@@ -125,6 +125,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             get("$url/api/profile/$user", token)
         }
 
+    /** Whether a server and a player are set, so that the profile can be asked for. */
+    fun isConfigured(): Boolean = endpoint() != null
+
     /** The configured player name, or the sync username when none is set. */
     fun player(): String? =
         AnkiDroidApp
