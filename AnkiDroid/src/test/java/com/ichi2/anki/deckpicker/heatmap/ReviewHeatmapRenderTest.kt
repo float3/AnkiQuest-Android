@@ -26,6 +26,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 import java.time.LocalDate
 import kotlin.test.assertTrue
+import com.ichi2.anki.common.android.R as CommonR
 
 /** Human-reviewed render artifacts, deliberately kept out of source-controlled golden images. */
 @RunWith(RobolectricTestRunner::class)
@@ -64,7 +65,7 @@ class ReviewHeatmapRenderTest {
                     (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
                     if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
             }
-        val context = ContextThemeWrapper(app.createConfigurationContext(config), if (dark) R.style.Theme_Dark else R.style.Theme_Light)
+        val context = ContextThemeWrapper(app.createConfigurationContext(config), if (dark) CommonR.style.Theme_Dark else CommonR.style.Theme_Light)
         val view = ReviewHeatmapView(context).apply(configure)
         view.measure(
             View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
