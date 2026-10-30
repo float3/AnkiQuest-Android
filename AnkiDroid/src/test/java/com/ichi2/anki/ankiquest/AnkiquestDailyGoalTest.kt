@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Celebration
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Load
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Settings
@@ -17,7 +16,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -87,19 +85,5 @@ class AnkiquestDailyGoalTest {
         assertTrue(AnkiquestDailyGoal.status(Load(5, 14, 10, 30, 0), prefs).minimumDone)
         AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject()), prefs)
         assertTrue(AnkiquestDailyGoal.status(Load(5, 1, 0, 30, 0), prefs).minimumDone, "older servers count any review")
-    }
-
-    @Test
-    fun `each celebration shows once a day`() {
-        AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject().put("streak_minutes", 5)), prefs)
-        AnkiquestDailyGoal.status(Load(5, 0, 0, 20, 0), prefs)
-        assertNull(AnkiquestDailyGoal.claim(AnkiquestDailyGoal.status(Load(5, 3, 2, 17, 0), prefs), prefs))
-        assertEquals(Celebration.MINIMUM, AnkiquestDailyGoal.claim(AnkiquestDailyGoal.status(Load(5, 8, 6, 12, 0), prefs), prefs))
-        assertNull(AnkiquestDailyGoal.claim(AnkiquestDailyGoal.status(Load(5, 9, 7, 11, 0), prefs), prefs))
-        assertEquals(Celebration.GOAL, AnkiquestDailyGoal.claim(AnkiquestDailyGoal.status(Load(5, 20, 15, 0, 0), prefs), prefs))
-        assertNull(AnkiquestDailyGoal.claim(AnkiquestDailyGoal.status(Load(5, 21, 16, 0, 0), prefs), prefs))
-
-        AnkiquestDailyGoal.status(Load(6, 0, 0, 5, 0), prefs)
-        assertEquals(Celebration.BOTH, AnkiquestDailyGoal.claim(AnkiquestDailyGoal.status(Load(6, 5, 6, 0, 0), prefs), prefs))
     }
 }

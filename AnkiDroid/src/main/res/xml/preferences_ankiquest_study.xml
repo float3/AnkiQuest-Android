@@ -44,11 +44,6 @@
         app:useSimpleSummaryProvider="true" />
     <SwitchPreferenceCompat
         android:defaultValue="true"
-        android:key="@string/ankiquest_goal_celebrate_key"
-        android:summary="@string/ankiquest_goal_celebrate_summary"
-        android:title="@string/ankiquest_goal_celebrate_title" />
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
         android:key="@string/ankiquest_deck_status_key"
         android:summary="@string/ankiquest_deck_status_summary"
         android:title="@string/ankiquest_deck_status_title" />

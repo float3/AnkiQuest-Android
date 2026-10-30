@@ -330,7 +330,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             if (status.goalDone) {
                 getString(R.string.aq_goal_done_title)
             } else {
-                getString(R.string.aq_goal_daily, AnkiquestGoalCelebration.progress(this, status))
+                getString(R.string.aq_goal_daily, AnkiquestDailyGoal.progress(this, status))
             },
             small = true,
         )

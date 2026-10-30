@@ -116,7 +116,6 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.ankiquest_goal_backlog_key,
             R.string.ankiquest_goal_cards_key,
             R.string.ankiquest_goal_minutes_key,
-            R.string.ankiquest_goal_celebrate_key,
             R.string.ankiquest_deck_notifications_key,
             R.string.ankiquest_avatar_key,
             R.string.ankiquest_companion_key,

@@ -105,8 +105,6 @@ import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.android.view.locationInWindow
 import com.ichi2.anki.ankiquest.AnkiquestActivity
-import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
-import com.ichi2.anki.ankiquest.AnkiquestGoalCelebration
 import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.ankiquest.AnkiquestStudySession
@@ -1623,30 +1621,13 @@ open class DeckPicker :
         ExportDialogFragment.newInstance().show(supportFragmentManager, "exportDialog")
     }
 
-    /** Shows the streak-minimum or daily-goal popup when this session reached one. */
-    private suspend fun celebrateDailyGoal(summary: AnkiquestStudySession.Summary): Boolean {
-        if (!AnkiquestDailyGoal.celebrationsEnabled()) return false
-        val status = AnkiquestDailyGoal.status()
-        val celebration = AnkiquestDailyGoal.claim(status) ?: return false
-        AnkiquestGoalCelebration.show(
-            this,
-            celebration,
-            status,
-            session = getString(R.string.ankiquest_summary_body, summary.reviews, summary.duration(this), summary.remaining),
-            continueStudying = if (summary.remaining > 0) ({ openReviewer() }) else null,
-            openProgress = { startActivity(AnkiquestActivity.intent(this, null)) },
-        )
-        return true
-    }
-
     private fun processReviewResults(resultCode: Int) {
         if (AnkiquestNavigation.enabled() &&
             (resultCode == AbstractFlashcardViewer.RESULT_DEFAULT || resultCode == AbstractFlashcardViewer.RESULT_NO_MORE_CARDS)
         ) {
             launchCatchingTask {
                 val summary = AnkiquestStudySession.finish()
-                val celebrated = summary != null && celebrateDailyGoal(summary)
-                if (summary != null && !celebrated && sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
+                if (summary != null && sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
                     val neverAgain =
                         AppCompatCheckBox(this@DeckPicker).apply {
                             setText(R.string.ankiquest_summary_dont_show_again)
