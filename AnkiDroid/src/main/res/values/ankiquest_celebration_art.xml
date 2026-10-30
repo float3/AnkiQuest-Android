@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Placeholder artwork until the images requested in float3/ankiquest#88 land.
+     To use a new image, delete its line and add a PNG with the same name to drawable-nodpi. -->
+<resources>
+    <!-- An achievement, level, personal best or conquered deck -->
+    <drawable name="aki_achievement">@drawable/aki_winner</drawable>
+    <!-- A streak milestone -->
+    <drawable name="aki_streak_milestone">@drawable/aki_streak</drawable>
+    <!-- Invited to or joined a friend challenge -->
+    <drawable name="aki_challenge">@drawable/aki_welcome</drawable>
+    <!-- A friend challenge reached its goal -->
+    <drawable name="aki_challenge_won">@drawable/aki_celebrate</drawable>
+    <!-- 1st, 2nd and 3rd place on the weekly leaderboard -->
+    <drawable name="aki_place_1">@drawable/aki_winner</drawable>
+    <drawable name="aki_place_2">@drawable/aki_celebrate</drawable>
+    <drawable name="aki_place_3">@drawable/aki_celebrate</drawable>
+    <!-- Medals for the top three leaderboard rows -->
+    <drawable name="icon_place_1">@drawable/ankiquest_medal_gold</drawable>
+    <drawable name="icon_place_2">@drawable/ankiquest_medal_silver</drawable>
+    <drawable name="icon_place_3">@drawable/ankiquest_medal_bronze</drawable>
+</resources>

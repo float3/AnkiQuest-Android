@@ -87,13 +87,16 @@ internal object AnkiquestAki {
             )
         }
 
-    fun notificationIcon(context: Context): Bitmap? =
+    fun notificationIcon(
+        context: Context,
+        @DrawableRes art: Int = R.drawable.aki_face,
+    ): Bitmap? =
         if (!AnkiquestCompanion.visible()) {
             null
         } else {
             BitmapFactory.decodeResource(
                 context.resources,
-                AnkiquestCompanion.resource(R.drawable.aki_face),
+                AnkiquestCompanion.resource(art),
                 BitmapFactory.Options().apply { inSampleSize = 8 },
             )
         }
