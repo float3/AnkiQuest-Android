@@ -18,6 +18,8 @@ class AnkiquestArtTest {
         assertEquals(R.drawable.aki_place_2, AnkiquestArt.forNotice("reminder_weekly_recap", "place:2"))
         assertEquals(R.drawable.aki_face, AnkiquestArt.forNotice("reminder_weekly_recap", "place:4"))
         assertEquals(R.drawable.aki_face, AnkiquestArt.forNotice("completion", null))
+        assertEquals(R.drawable.aki_place_1, AnkiquestArt.forNotice("share", "place:1"), "a friend's shared win keeps its art")
+        assertEquals(R.drawable.aki_streak_milestone, AnkiquestArt.forNotice("share", "streak"))
     }
 
     @Test
