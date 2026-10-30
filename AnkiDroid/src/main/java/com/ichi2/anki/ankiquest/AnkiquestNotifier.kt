@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -98,6 +99,7 @@ object AnkiquestNotifier {
                         emptyList()
                     },
                     entry.optString("kind") == "nudge",
+                    art = AnkiquestArt.forNotice(entry.optString("kind"), entry.optString("topic").ifEmpty { null }),
                 ) == Delivery.DISABLED
             ) {
                 return
@@ -127,7 +129,19 @@ object AnkiquestNotifier {
             change.getString("title"),
             change.getString("body"),
             AnkiquestActivity.intent(context, "/week").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            art = climbedTo(previous, order, Ankiquest.player())?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
+    }
+
+    /** The 1-based place [me] climbed to between two leaderboard orders, or null when they did not climb. */
+    internal fun climbedTo(
+        previous: List<String>,
+        order: List<String>,
+        me: String?,
+    ): Int? {
+        val now = order.indexOf(me)
+        val before = previous.indexOf(me)
+        return if (now >= 0 && before > now) now + 1 else null
     }
 
     /** Posts the server's streak warning once per study day, within the chosen hours before it ends. */
@@ -293,6 +307,7 @@ object AnkiquestNotifier {
         actions: List<NotificationCompat.Action> = emptyList(),
         nudge: Boolean = false,
         silent: Boolean = false,
+        @DrawableRes art: Int = R.drawable.aki_face,
     ): Delivery {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -309,7 +324,7 @@ object AnkiquestNotifier {
             NotificationCompat
                 .Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_aki_notify)
-                .setLargeIcon(AnkiquestAki.notificationIcon(context))
+                .setLargeIcon(AnkiquestAki.notificationIcon(context, art))
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))

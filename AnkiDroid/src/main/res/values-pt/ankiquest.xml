@@ -97,6 +97,7 @@
     <string name="ankiquest_widget_transparent_description">Classificação AnkiQuest desta semana sem fundo</string>
     <string name="ankiquest_widget_description">Classificação AnkiQuest desta semana</string>
     <string name="ankiquest_widget_level">Nív. %1$d</string>
+    <string name="ankiquest_widget_place">%1$dº lugar</string>
     <string name="ankiquest_widget_unconfigured">Configura o AnkiQuest nas definições</string>
     <string name="ankiquest_widget_empty">Ainda ninguém enviou revisões</string>
     <string name="ankiquest_widget_offline">Não foi possível contactar o servidor AnkiQuest</string>

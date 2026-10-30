@@ -11,6 +11,7 @@ import android.os.Looper
 import android.view.View
 import android.view.View.MeasureSpec
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -132,7 +133,12 @@ class AnkiquestWidgetTest : RobolectricTest() {
             assertEquals("Player ${position + 1}", row.text(R.id.ankiquest_widget_name))
         }
         val firstRow = items.getItemView(0).apply(targetContext, FrameLayout(targetContext))
-        assertEquals("👑", firstRow.text(R.id.ankiquest_widget_rank))
+        assertEquals("", firstRow.text(R.id.ankiquest_widget_rank))
+        val medal = firstRow.findViewById<ImageView>(R.id.ankiquest_widget_medal)
+        assertEquals(View.VISIBLE, medal.visibility)
+        assertEquals("Place 1", medal.contentDescription?.toString())
+        val fourth = items.getItemView(3).apply(targetContext, FrameLayout(targetContext))
+        assertEquals(View.GONE, fourth.findViewById<ImageView>(R.id.ankiquest_widget_medal).visibility)
     }
 
     @Test

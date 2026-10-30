@@ -120,6 +120,7 @@
     <string name="ankiquest_widget_transparent_description">This week\'s ankiquest leaderboard without a background</string>
     <string name="ankiquest_widget_description">This week\'s ankiquest leaderboard</string>
     <string name="ankiquest_widget_level">Lv %1$d</string>
+    <string name="ankiquest_widget_place">Place %1$d</string>
     <string name="ankiquest_widget_unconfigured">Set up ankiquest in Settings</string>
     <string name="ankiquest_widget_empty">Nobody has uploaded reviews yet</string>
     <string name="ankiquest_widget_offline">Could not reach the ankiquest server</string>
