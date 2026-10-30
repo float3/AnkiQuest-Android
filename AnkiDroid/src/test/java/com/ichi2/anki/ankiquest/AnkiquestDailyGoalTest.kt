@@ -57,7 +57,7 @@ class AnkiquestDailyGoalTest {
     @Test
     fun `the goal is fixed for the day so studying does not move it`() {
         val morning = AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs)
-        val evening = AnkiquestDailyGoal.status(Load(5, 60, 30, 0, 280), prefs)
+        val evening = AnkiquestDailyGoal.status(Load(5, 70, 30, 0, 270), prefs)
         assertEquals(70, morning.goal.target)
         assertEquals(70, evening.goal.target)
         assertTrue(evening.goalDone)
