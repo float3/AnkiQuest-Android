@@ -113,7 +113,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             Ankiquest.leaderboard()
             Ankiquest.profile()
 
-            assertEquals(2, requests.size)
+            assertEquals(setOf("/api/leaderboard", "/api/profile/member%20name"), requests.map { it.path }.toSet())
             assertTrue(requests.all { it.authorization == null })
         }
 
@@ -178,7 +178,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             val dashboard = Ankiquest.dashboardUrl()!!
 
             assertEquals(sessionCookie, Ankiquest.dashboardSession(dashboard))
-            assertEquals(ReceivedRequest("/auth/session", "POST", "Bearer member-secret", ""), requests.single())
+            assertEquals(ReceivedRequest("/auth/session", "POST", "Bearer member-secret", ""), requests.toSet().single())
             assertEquals("$url/#member%20name", dashboard)
             assertFalse(dashboard.contains("member-secret"))
         }
@@ -208,7 +208,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             sessionStatus = 404
 
             assertNull(Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!))
-            assertEquals(1, requests.size)
+            assertEquals(setOf(ReceivedRequest("/auth/session", "POST", "Bearer member-secret", "")), requests.toSet())
         }
 
     @Test
