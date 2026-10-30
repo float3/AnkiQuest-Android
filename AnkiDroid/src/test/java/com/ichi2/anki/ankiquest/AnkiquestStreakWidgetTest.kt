@@ -69,6 +69,26 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     }
 
     @Test
+    fun `every size shows the streak number`() {
+        val board = JSONArray().put(me(42, "studied", 30, 12, 10))
+        for (size in AnkiquestStreakWidget.Size.entries) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, board, "hill", size)
+                    .apply(targetContext, FrameLayout(targetContext))
+            assertEquals("42", widget.text(R.id.ankiquest_streak_number), size.name)
+        }
+    }
+
+    @Test
+    fun `the layout grows with the widget`() {
+        assertEquals(AnkiquestStreakWidget.Size.SMALL, AnkiquestStreakWidget.Size.fitting(57f, 57f))
+        assertEquals(AnkiquestStreakWidget.Size.MEDIUM, AnkiquestStreakWidget.Size.fitting(130f, 110f))
+        assertEquals(AnkiquestStreakWidget.Size.MEDIUM, AnkiquestStreakWidget.Size.fitting(320f, 110f), "a wide strip keeps the card")
+        assertEquals(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.fitting(250f, 260f))
+    }
+
+    @Test
     fun `the companion's pose follows the streak`() {
         assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose("studied", 10))
         assertEquals(R.drawable.aki_freeze, AnkiquestStreakWidget.pose("protected", 10))

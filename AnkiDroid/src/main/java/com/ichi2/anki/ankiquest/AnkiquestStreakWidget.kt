@@ -7,9 +7,13 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
+import android.os.Bundle
+import android.util.SizeF
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.DrawableRes
+import androidx.annotation.LayoutRes
 import com.ichi2.anki.R
 import com.ichi2.widget.getAppWidgetManager
 import org.json.JSONArray
@@ -32,6 +36,36 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
     override fun onEnabled(context: Context) {
         AnkiquestPoll.schedule(context)
+    }
+
+    /** Before Android 12 a resized widget keeps its layout until it is drawn again for its new size. */
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) AnkiquestPoll.refreshNow(context)
+    }
+
+    /** Like Duolingo's: a tiny face and number at 1x1, the usual card at 2x2, a big companion from 3x3 up. */
+    enum class Size(
+        @LayoutRes val layout: Int,
+        val minWidthDp: Float,
+        val minHeightDp: Float,
+    ) {
+        SMALL(R.layout.widget_ankiquest_streak_small, 0f, 0f),
+        MEDIUM(R.layout.widget_ankiquest_streak, 100f, 90f),
+        LARGE(R.layout.widget_ankiquest_streak_large, 200f, 220f),
+        ;
+
+        companion object {
+            /** The largest layout that fits a widget of [widthDp] x [heightDp]. */
+            fun fitting(
+                widthDp: Float,
+                heightDp: Float,
+            ): Size = entries.last { widthDp >= it.minWidthDp && heightDp >= it.minHeightDp }
+        }
     }
 
     companion object {
@@ -57,17 +91,37 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val manager = getAppWidgetManager(context) ?: return
             val ids = manager.getAppWidgetIds(ComponentName(context, AnkiquestStreakWidget::class.java)) ?: return
             if (ids.isEmpty()) return
-            val views = views(context, board, Ankiquest.player())
-            for (id in ids) manager.updateAppWidget(id, views)
+            val player = Ankiquest.player()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // The launcher picks the layout for each size itself, also while resizing.
+                val views =
+                    RemoteViews(
+                        Size.entries.associate { size ->
+                            SizeF(size.minWidthDp, size.minHeightDp) to views(context, board, player, size)
+                        },
+                    )
+                for (id in ids) manager.updateAppWidget(id, views)
+            } else {
+                for (id in ids) {
+                    val options = manager.getAppWidgetOptions(id)
+                    val size =
+                        Size.fitting(
+                            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).toFloat(),
+                            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).toFloat(),
+                        )
+                    manager.updateAppWidget(id, views(context, board, player, size))
+                }
+            }
         }
 
         internal fun views(
             context: Context,
             board: JSONArray?,
             player: String?,
+            size: Size = Size.MEDIUM,
         ): RemoteViews {
             val language = AnkiquestLanguage.context(context)
-            val views = RemoteViews(context.packageName, R.layout.widget_ankiquest_streak)
+            val views = RemoteViews(context.packageName, size.layout)
             val me = board?.let { mine(it, player) }
             val streak = me?.optInt("streak") ?: 0
             val state = me?.let { AnkiquestWidget.streakState(it) } ?: "unknown"
@@ -101,7 +155,12 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             if (open != null) {
                 views.setOnClickPendingIntent(
                     R.id.ankiquest_streak_root,
-                    PendingIntent.getActivity(context, 3000, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
+                    PendingIntent.getActivity(
+                        context,
+                        3000 + size.ordinal,
+                        open,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    ),
                 )
             }
             return views
