@@ -26,7 +26,7 @@ internal object AnkiquestAki {
         REVIEW(R.drawable.aki_review, R.string.aki_review),
         CELEBRATE(R.drawable.aki_celebrate, R.string.aki_complete),
         STREAK(R.drawable.aki_streak, R.string.aki_streak),
-        FREEZE(R.drawable.aki_freeze, R.string.aki_protected),
+        FREEZE(R.drawable.aki_freeze_used, R.string.aki_protected),
     }
 
     fun mood(

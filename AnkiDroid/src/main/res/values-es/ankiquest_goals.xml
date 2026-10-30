@@ -41,4 +41,6 @@
         <item quantity="one">día de racha</item>
         <item quantity="other">días de racha</item>
     </plurals>
+    <string name="ankiquest_mood_icon_title">El ánimo de Aki en el icono</string>
+    <string name="ankiquest_mood_icon_summary">El icono sonríe cuando hoy ya cuenta, se preocupa al final del día y muestra un protector cuando te cubre. Algunos lanzadores ocultan el icono un momento al cambiar.</string>
 </resources>

@@ -71,7 +71,13 @@ class ExternalEntryPointsUndecidedStorageTest : RobolectricTest() {
     private fun EntryPoint.externalIntent(): Intent =
         when (className) {
             // launcher icon tap
-            "com.ichi2.anki.IntentHandler" -> Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            "com.ichi2.anki.IntentHandler",
+            "com.ichi2.anki.ankiquest.AnkiquestIconDefault",
+            "com.ichi2.anki.ankiquest.AnkiquestIconHappy",
+            "com.ichi2.anki.ankiquest.AnkiquestIconWorried",
+            "com.ichi2.anki.ankiquest.AnkiquestIconFrozen",
+            "com.ichi2.anki.ankiquest.AnkiquestIconSleepy",
+            -> Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
             // share text with AnkiDroid
             "com.ichi2.anki.IntentHandler2", "com.ichi2.anki.instantnoteeditor.InstantNoteEditorActivity" ->
                 Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "dog")
