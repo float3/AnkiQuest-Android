@@ -567,6 +567,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_provider_ankiquest_transparent" />
         </receiver>
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestStreakWidget"
+            android:label="@string/ankiquest_streak_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_provider_ankiquest_streak" />
+        </receiver>
 
         <!-- Configuration view for the DeckPickerWidget.
              It is opened when adding a new deck picker widget and
