@@ -137,7 +137,7 @@
     <string name="ankiquest_widget_refresh">Actualizar</string>
     <string name="ankiquest_widget_offline_at">sin conexión · %1$s</string>
     <string name="ankiquest_update_title">%1$s disponible</string>
-    <string name="ankiquest_update_message">Hay una nueva versión de AnkiDroid Quest (%1$d MB). Tu colección se conserva.</string>
+    <string name="ankiquest_update_message">Hay una nueva versión de AnkiQuest (%1$d MB). Tu colección se conserva.</string>
     <string name="ankiquest_update_nightly_message">Hay una nueva compilación nocturna (%1$d MB). Las compilaciones nocturnas no están probadas y pueden fallar. Tu colección se conserva.</string>
     <string name="ankiquest_update_channel_title">Canal de actualizaciones</string>
     <string-array name="ankiquest_update_channel_entries">

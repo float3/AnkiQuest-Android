@@ -74,6 +74,7 @@ internal data class HomeLocal(
     val decks: List<HomeDeck>,
     val selected: Long,
     val nextUpdateAt: Long? = null,
+    val goal: AnkiquestDailyGoal.Status? = null,
 ) {
     val focus: HomeDeck? get() =
         decks.firstOrNull { it.id == selected && it.daily.status == DailyDeckStatus.REVIEW_NOW }
@@ -169,7 +170,8 @@ internal object AnkiquestHomeData {
                 }
             val cutoff = sched.dayCutoff * 1000L
             val next = (daily.values.mapNotNull { it.nextLearningAt } + cutoff).filter { it > now }.minOrNull()
-            HomeLocal(rows, decks.selected(), next)
+            val goal = runCatching { AnkiquestDailyGoal.status(AnkiquestDailyGoal.load(this), AnkiDroidApp.sharedPrefs()) }.getOrNull()
+            HomeLocal(rows, decks.selected(), next, goal)
         }
 }
 

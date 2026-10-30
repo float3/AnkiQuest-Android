@@ -37,7 +37,7 @@ Install
 ---------
 <div style="display:flex;">
 
-Download the APK from [Releases](https://github.com/float3/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiDroid Quest", and offers later releases itself.
+Download the APK from [Releases](https://github.com/float3/AnkiQuest-Android/releases/latest). It installs next to AnkiDroid as "AnkiQuest", and offers later releases itself.
 
 <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/float3/AnkiQuest-Android">
     <img alt="Get it on Obtainium" height="80"

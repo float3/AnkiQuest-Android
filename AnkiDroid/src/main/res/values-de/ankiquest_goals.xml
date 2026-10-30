@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_goal_today">Heutiges Ziel</string>
+    <string name="aq_goal_minimum_minutes">Minimum für die Lernserie: heute %1$d Minuten wiederholen</string>
+    <string name="aq_goal_minimum_any">Jede Wiederholung heute hält deine Lernserie am Leben.</string>
+    <string name="aq_goal_minimum_minutes_done">Lernserie gesichert: Du hast heute die %1$d Minuten geschafft.</string>
+    <string name="aq_goal_minimum_any_done">Lernserie gesichert: Heute zählt für deine Serie.</string>
+    <string name="aq_goal_progress_cards">%1$d von %2$d Karten</string>
+    <string name="aq_goal_progress_minutes">%1$d von %2$d Minuten</string>
+    <string name="aq_goal_daily">Tagesziel: %1$s</string>
+    <string name="aq_goal_backlog_explained">Die heute fälligen Karten plus %1$d deiner %2$d überfälligen Karten (%3$d%% pro Tag). So schrumpft der Rückstand, ohne deinen Tag zu füllen.</string>
+    <string name="aq_goal_minimum_title">Lernserie gesichert! 🔥</string>
+    <string name="aq_goal_done_title">Tagesziel erreicht! 🎉</string>
+    <string name="aq_goal_minimum_body">%1$s Als Nächstes dein Tagesziel: bisher %2$s.</string>
+    <string name="aq_goal_done_body">Du hast dein heutiges Ziel erreicht: %1$s.</string>
+    <string name="aq_goal_both_body">%1$s Und du hast dein heutiges Ziel erreicht: %2$s.</string>
+    <string name="aq_goal_nice">Super!</string>
+    <string name="ankiquest_streak_short">Heute %1$d von %2$d Minuten</string>
+    <string name="ankiquest_goal_mode_title">Tagesziel</string>
+    <string name="ankiquest_goal_backlog_title">Rückstand pro Tag abbauen</string>
+    <string name="ankiquest_goal_cards_title">Karten pro Tag</string>
+    <string name="ankiquest_goal_minutes_title">Minuten pro Tag</string>
+    <string name="ankiquest_goal_celebrate_title">Ziele feiern</string>
+    <string name="ankiquest_goal_celebrate_summary">Feiern, wenn heute für deine Lernserie zählt und wenn du dein Tagesziel erreichst.</string>
+    <string-array name="ankiquest_goal_mode_entries">
+        <item>Heute fällig plus ein Teil des Rückstands</item>
+        <item>Eine Anzahl Karten</item>
+        <item>Eine Anzahl Minuten</item>
+    </string-array>
+    <string-array name="ankiquest_goal_backlog_entries">
+        <item>5% (in etwa 20 Tagen abgebaut)</item>
+        <item>10% (etwa 10 Tage)</item>
+        <item>20% (etwa 5 Tage)</item>
+        <item>34% (etwa 3 Tage)</item>
+        <item>Alles</item>
+    </string-array>
+</resources>

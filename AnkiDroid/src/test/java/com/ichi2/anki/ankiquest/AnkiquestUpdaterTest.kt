@@ -30,7 +30,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         assertTrue(nightly.nightly)
         assertEquals(50_017_003, nightly.versionCode)
         assertEquals("Nightly quest-17+3 (1a2b3c4)", nightly.name)
-        assertEquals("https://github.com/float3/AnkiQuest-Android/releases/download/nightly/AnkiDroid-Quest.apk", nightly.apkUrl)
+        assertEquals("https://github.com/float3/AnkiQuest-Android/releases/download/nightly/AnkiQuest.apk", nightly.apkUrl)
         assertNull(AnkiquestUpdater.parseNightly(JSONObject(nightlyJson.toString()).put("version_code", 0)))
     }
 
@@ -44,7 +44,7 @@ class AnkiquestUpdaterTest : RobolectricTest() {
 
     @Test
     fun `a stable release is offered over any nightly built before it`() {
-        val stable = AnkiquestUpdater.Release(number = 18, name = "AnkiDroid Quest 18", apkUrl = "", apkSize = 0)
+        val stable = AnkiquestUpdater.Release(number = 18, name = "AnkiQuest 18", apkUrl = "", apkSize = 0)
         assertTrue(AnkiquestUpdater.isNewer(stable, installedRelease = 17, installedCode = 50_017_009))
         assertFalse(AnkiquestUpdater.isNewer(stable, installedRelease = 18, installedCode = 50_018_000))
     }

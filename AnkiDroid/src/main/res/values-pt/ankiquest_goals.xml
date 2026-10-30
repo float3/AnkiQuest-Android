@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_goal_today">Meta de hoje</string>
+    <string name="aq_goal_minimum_minutes">Mínimo para a sequência: %1$d minutos de revisão hoje</string>
+    <string name="aq_goal_minimum_any">Qualquer revisão hoje mantém sua sequência.</string>
+    <string name="aq_goal_minimum_minutes_done">Sequência garantida: você atingiu o mínimo de %1$d minutos de hoje.</string>
+    <string name="aq_goal_minimum_any_done">Sequência garantida: hoje conta para sua sequência.</string>
+    <string name="aq_goal_progress_cards">%1$d de %2$d cartões</string>
+    <string name="aq_goal_progress_minutes">%1$d de %2$d minutos</string>
+    <string name="aq_goal_daily">Meta diária: %1$s</string>
+    <string name="aq_goal_backlog_explained">Os cartões de hoje mais %1$d dos seus %2$d cartões atrasados (%3$d%% por dia), para o atraso diminuir sem tomar o seu dia.</string>
+    <string name="aq_goal_minimum_title">Sequência garantida! 🔥</string>
+    <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
+    <string name="aq_goal_minimum_body">%1$s Agora, sua meta diária: %2$s até agora.</string>
+    <string name="aq_goal_done_body">Você alcançou a meta de hoje: %1$s.</string>
+    <string name="aq_goal_both_body">%1$s E você alcançou a meta de hoje: %2$s.</string>
+    <string name="aq_goal_nice">Boa!</string>
+    <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
+    <string name="ankiquest_goal_mode_title">Meta diária</string>
+    <string name="ankiquest_goal_backlog_title">Atraso a reduzir por dia</string>
+    <string name="ankiquest_goal_cards_title">Cartões por dia</string>
+    <string name="ankiquest_goal_minutes_title">Minutos por dia</string>
+    <string name="ankiquest_goal_celebrate_title">Comemorar metas</string>
+    <string name="ankiquest_goal_celebrate_summary">Comemorar quando hoje conta para sua sequência e quando você alcança a meta diária.</string>
+    <string-array name="ankiquest_goal_mode_entries">
+        <item>O de hoje mais parte do atraso</item>
+        <item>Um número de cartões</item>
+        <item>Um número de minutos</item>
+    </string-array>
+    <string-array name="ankiquest_goal_backlog_entries">
+        <item>5% (cerca de 20 dias)</item>
+        <item>10% (cerca de 10 dias)</item>
+        <item>20% (cerca de 5 dias)</item>
+        <item>34% (cerca de 3 dias)</item>
+        <item>Tudo</item>
+    </string-array>
+</resources>

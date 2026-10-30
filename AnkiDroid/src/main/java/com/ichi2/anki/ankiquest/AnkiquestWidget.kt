@@ -318,10 +318,16 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     }
                 val label =
                     when (state) {
-                        "studied" -> R.string.ankiquest_streak_studied
-                        "protected" -> R.string.ankiquest_streak_protected
-                        "pending" -> R.string.ankiquest_streak_pending
-                        else -> R.string.ankiquest_streak_unknown
+                        "studied" -> languageContext.getString(R.string.ankiquest_streak_studied)
+                        "protected" -> languageContext.getString(R.string.ankiquest_streak_protected)
+                        "short" ->
+                            languageContext.getString(
+                                R.string.ankiquest_streak_short,
+                                entry.optLong("today_minutes"),
+                                entry.optLong("streak_minutes"),
+                            )
+                        "pending" -> languageContext.getString(R.string.ankiquest_streak_pending)
+                        else -> languageContext.getString(R.string.ankiquest_streak_unknown)
                     }
                 views.setTextViewText(R.id.ankiquest_widget_streak, if (streak > 0) numbers.format(streak) else "")
                 views.setTextViewCompoundDrawables(R.id.ankiquest_widget_streak, if (streak > 0) icon else 0, 0, 0, 0)
@@ -331,7 +337,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                         languageContext.getString(
                             R.string.ankiquest_streak_description,
                             numbers.format(streak),
-                            languageContext.getString(label),
+                            label,
                         )
                     } else {
                         null
@@ -354,8 +360,12 @@ open class AnkiquestWidget : AppWidgetProvider() {
             if (dayEndsAt > 0 && dayEndsAt <= TimeManager.time.intTimeMS()) return "unknown"
             if (!entry.has("today_reviews") || entry.isNull("today_reviews")) return "unknown"
             return when {
-                entry.optLong("today_reviews") > 0 -> "studied"
+                entry.optString("streak_state") == "studied" -> "studied"
+                // Servers with a streak minimum say how far today is; older ones count any review.
+                entry.optLong("today_reviews") > 0 &&
+                    entry.optLong("today_minutes") >= entry.optLong("streak_minutes", 0) -> "studied"
                 entry.optString("streak_state") == "protected" -> "protected"
+                entry.optLong("today_reviews") > 0 -> "short"
                 else -> "pending"
             }
         }
