@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_share">Compartir</string>
+    <string name="ankiquest_share_title">Compartir este logro</string>
+    <string name="ankiquest_share_friends">Con mis amigos de AnkiQuest</string>
+    <string name="ankiquest_share_elsewhere">En otro lugar…</string>
+    <string name="ankiquest_share_text">%1$s: %2$s
+Estudiá conmigo en AnkiQuest: %3$s</string>
+    <string name="ankiquest_share_text_offline">%1$s: %2$s
+Estudio con AnkiQuest.</string>
+    <string name="ankiquest_share_nobody">Nadie nuevo lo recibió: tus amigos ya lo tienen, o todavía no tenés amigos en AnkiQuest.</string>
+    <string name="ankiquest_share_failed">No se pudo compartir. Revisá tu conexión y volvé a intentarlo.</string>
+    <plurals name="ankiquest_share_sent">
+        <item quantity="one">Compartido con %d amigo</item>
+        <item quantity="other">Compartido con %d amigos</item>
+    </plurals>
+</resources>

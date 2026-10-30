@@ -258,6 +258,36 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
+    /**
+     * Shares a win with everyone in the player's circle through `/api/share`: one of their own
+     * [notification]s, or their current [place] on this week's board. Answers how many friends got it.
+     */
+    suspend fun shareWin(
+        notification: Long?,
+        place: Int?,
+    ): Int {
+        val (url, user, token) = authenticatedEndpoint()
+        return withContext(Dispatchers.IO) {
+            execute(
+                Request
+                    .Builder()
+                    .url("$url/api/share/$user")
+                    .header("Authorization", "Bearer $token")
+                    .post(
+                        JSONObject()
+                            .apply {
+                                notification?.let { put("notification", it) }
+                                place?.let { put("place", it) }
+                            }.toString()
+                            .toRequestBody(json),
+                    ).build(),
+            ).optInt("recipients")
+        }
+    }
+
+    /** The server's address, for inviting people met outside the app. */
+    fun serverUrl(): String? = endpoint()?.first
+
     suspend fun setCelebrations(enabled: Boolean): JSONObject {
         val (url, user, token) = authenticatedEndpoint()
         return withContext(Dispatchers.IO) {
