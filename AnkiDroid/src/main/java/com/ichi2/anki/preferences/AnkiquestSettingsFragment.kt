@@ -211,6 +211,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     protected fun bindStudy() {
         val mode = requirePreference<ListPreference>(R.string.ankiquest_goal_mode_key)
+
         fun showGoalFields(value: String?) {
             val chosen = AnkiquestDailyGoal.Mode.of(value)
             requirePreference<Preference>(R.string.ankiquest_goal_backlog_key).isVisible = chosen == AnkiquestDailyGoal.Mode.BACKLOG
