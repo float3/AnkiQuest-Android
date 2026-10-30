@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_goal_today">Objectif du jour</string>
+    <string name="aq_goal_minimum_minutes">Minimum pour la série : %1$d minutes de révision aujourd’hui</string>
+    <string name="aq_goal_minimum_any">Une seule révision aujourd’hui suffit pour garder ta série.</string>
+    <string name="aq_goal_minimum_minutes_done">Série assurée : tu as atteint le minimum de %1$d minutes.</string>
+    <string name="aq_goal_minimum_any_done">Série assurée : aujourd’hui compte pour ta série.</string>
+    <string name="aq_goal_progress_cards">%1$d cartes sur %2$d</string>
+    <string name="aq_goal_progress_minutes">%1$d minutes sur %2$d</string>
+    <string name="aq_goal_daily">Objectif du jour : %1$s</string>
+    <string name="aq_goal_backlog_explained">Les cartes du jour plus %1$d de tes %2$d cartes en retard (%3$d%% par jour), pour réduire le retard sans y passer la journée.</string>
+    <string name="aq_goal_done_title">Objectif du jour atteint ! 🎉</string>
+    <string name="ankiquest_streak_short">%1$d minutes sur %2$d aujourd’hui</string>
+    <string name="ankiquest_goal_mode_title">Objectif du jour</string>
+    <string name="ankiquest_goal_backlog_title">Retard à rattraper chaque jour</string>
+    <string name="ankiquest_goal_cards_title">Cartes par jour</string>
+    <string name="ankiquest_goal_minutes_title">Minutes par jour</string>
+    <string-array name="ankiquest_goal_mode_entries">
+        <item>Les cartes du jour plus une partie du retard</item>
+        <item>Un nombre de cartes</item>
+        <item>Un nombre de minutes</item>
+    </string-array>
+    <string-array name="ankiquest_goal_backlog_entries">
+        <item>5 % (environ 20 jours)</item>
+        <item>10 % (environ 10 jours)</item>
+        <item>20 % (environ 5 jours)</item>
+        <item>34 % (environ 3 jours)</item>
+        <item>Tout</item>
+    </string-array>
+</resources>

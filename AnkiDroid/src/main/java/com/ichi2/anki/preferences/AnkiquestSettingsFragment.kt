@@ -31,6 +31,7 @@ import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
@@ -209,6 +210,19 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     protected fun bindStudy() {
+        val mode = requirePreference<ListPreference>(R.string.ankiquest_goal_mode_key)
+
+        fun showGoalFields(value: String?) {
+            val chosen = AnkiquestDailyGoal.Mode.of(value)
+            requirePreference<Preference>(R.string.ankiquest_goal_backlog_key).isVisible = chosen == AnkiquestDailyGoal.Mode.BACKLOG
+            requirePreference<Preference>(R.string.ankiquest_goal_cards_key).isVisible = chosen == AnkiquestDailyGoal.Mode.CARDS
+            requirePreference<Preference>(R.string.ankiquest_goal_minutes_key).isVisible = chosen == AnkiquestDailyGoal.Mode.MINUTES
+        }
+        showGoalFields(mode.value)
+        mode.setOnPreferenceChangeListener { _, value ->
+            showGoalFields(value as? String)
+            true
+        }
         bindServerToggle(
             R.string.ankiquest_streak_protection_key,
             read = { Ankiquest.streakProtectionEnabled() },

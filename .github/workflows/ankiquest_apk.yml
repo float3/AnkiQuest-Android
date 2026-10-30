@@ -60,10 +60,10 @@ jobs:
         run: |
           echo "fatal_warnings=false" >> local.properties
           ./gradlew :AnkiDroid:assembleFullRelease -Duniversal-apk=true \
-            -PcustomSuffix=quest -PcustomName="AnkiDroid Quest" \
+            -PcustomSuffix=quest -PcustomName="AnkiQuest" \
             -PankiquestRelease=${{ steps.release.outputs.number }} \
             -PankiquestNightly=${{ steps.release.outputs.nightly }}
-          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiDroid-Quest.apk
+          cp AnkiDroid/build/outputs/apk/full/release/*universal*.apk AnkiQuest.apk
 
       - name: Sign with the AnkiQuest release key
         id: sign
@@ -85,9 +85,9 @@ jobs:
             --ks tools/fallback-release-keystore.jks --ks-key-alias my-key --ks-pass pass:Test@123 \
             --next-signer --ks "$RUNNER_TEMP/ankiquest.jks" --ks-key-alias ankiquest --ks-pass env:ANKIQUEST_KEY_PASSWORD \
             --lineage tools/ankiquest-signing-lineage.bin --rotation-min-sdk-version 28 \
-            AnkiDroid-Quest.apk
+            AnkiQuest.apk
           rm -f "$RUNNER_TEMP/ankiquest.jks"
-          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiDroid-Quest.apk | grep -q "CN=AnkiQuest"
+          "$apksigner" verify --min-sdk-version 28 --print-certs AnkiQuest.apk | grep -q "CN=AnkiQuest"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Version code
@@ -97,7 +97,7 @@ jobs:
           NIGHTLY: ${{ steps.release.outputs.nightly }}
         run: |
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
-          version_code=$("$aapt2" dump badging AnkiDroid-Quest.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+          version_code=$("$aapt2" dump badging AnkiQuest.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
           echo "versionCode $version_code (quest-$RELEASE + $NIGHTLY)"
           if [ "$RELEASE" -gt 0 ] && [ "$version_code" -ne $((50000000 + RELEASE * 1000 + NIGHTLY)) ]; then
             echo "::error::versionCode $version_code does not match quest-$RELEASE + $NIGHTLY"
@@ -107,8 +107,8 @@ jobs:
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ankidroid-quest
-          path: AnkiDroid-Quest.apk
+          name: ankiquest
+          path: AnkiQuest.apk
           if-no-files-found: error
 
       - name: Publish release
@@ -116,8 +116,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" AnkiDroid-Quest.apk \
-            --title "AnkiDroid Quest ${{ steps.release.outputs.number }}" \
+          # Builds from before the rename download AnkiDroid-Quest.apk, so publish a copy under that name too.
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          gh release create "$GITHUB_REF_NAME" AnkiQuest.apk AnkiDroid-Quest.apk \
+            --title "AnkiQuest ${{ steps.release.outputs.number }}" \
             --notes-file .github/ankiquest-release.md
 
       - name: Publish nightly
@@ -130,11 +132,12 @@ jobs:
         run: |
           jq -n --argjson release "$RELEASE" --argjson nightly "$NIGHTLY" --argjson version_code "$VERSION_CODE" \
             --arg commit "$GITHUB_SHA" --arg built_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --argjson size "$(stat -c %s AnkiDroid-Quest.apk)" \
+            --argjson size "$(stat -c %s AnkiQuest.apk)" \
             '{release: $release, nightly: $nightly, version_code: $version_code, commit: $commit, built_at: $built_at, size: $size}' \
             > nightly.json
           gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly AnkiDroid-Quest.apk nightly.json \
+          cp AnkiQuest.apk AnkiDroid-Quest.apk
+          gh release create nightly AnkiQuest.apk AnkiDroid-Quest.apk nightly.json \
             --prerelease --latest=false --target "$GITHUB_SHA" \
-            --title "AnkiDroid Quest nightly" \
+            --title "AnkiQuest nightly" \
             --notes "Built from $GITHUB_SHA after quest-$RELEASE. Untested: pick the nightly update channel in AnkiQuest settings to get these."

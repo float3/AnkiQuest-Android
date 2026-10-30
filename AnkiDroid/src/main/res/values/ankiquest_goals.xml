@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_goal_mode_key" translatable="false">ankiquestGoalMode</string>
+    <string name="ankiquest_goal_backlog_key" translatable="false">ankiquestGoalBacklogPercent</string>
+    <string name="ankiquest_goal_cards_key" translatable="false">ankiquestGoalCards</string>
+    <string name="ankiquest_goal_minutes_key" translatable="false">ankiquestGoalMinutes</string>
+    <string-array name="ankiquest_goal_mode_values" translatable="false">
+        <item>backlog</item>
+        <item>cards</item>
+        <item>minutes</item>
+    </string-array>
+    <string-array name="ankiquest_goal_backlog_values" translatable="false">
+        <item>5</item>
+        <item>10</item>
+        <item>20</item>
+        <item>34</item>
+        <item>100</item>
+    </string-array>
+    <string name="aq_goal_today">Today’s goal</string>
+    <string name="aq_goal_minimum_minutes">Streak minimum: %1$d minutes of review today</string>
+    <string name="aq_goal_minimum_any">Any review today keeps your streak going.</string>
+    <string name="aq_goal_minimum_minutes_done">Streak secured: you reached today’s %1$d-minute minimum.</string>
+    <string name="aq_goal_minimum_any_done">Streak secured: today counts for your streak.</string>
+    <string name="aq_goal_progress_cards">%1$d of %2$d cards</string>
+    <string name="aq_goal_progress_minutes">%1$d of %2$d minutes</string>
+    <string name="aq_goal_daily">Daily goal: %1$s</string>
+    <string name="aq_goal_backlog_explained">Today’s due cards plus %1$d of your %2$d overdue cards (%3$d%% a day), so the backlog shrinks without taking over your day.</string>
+    <string name="aq_goal_done_title">Daily goal reached! 🎉</string>
+    <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
+    <string name="ankiquest_goal_mode_title" maxLength="41">Daily goal</string>
+    <string name="ankiquest_goal_backlog_title" maxLength="41">Backlog to work off each day</string>
+    <string name="ankiquest_goal_cards_title" maxLength="41">Cards per day</string>
+    <string name="ankiquest_goal_minutes_title" maxLength="41">Minutes per day</string>
+    <string-array name="ankiquest_goal_mode_entries">
+        <item>Due today plus part of the backlog</item>
+        <item>A number of cards</item>
+        <item>A number of minutes</item>
+    </string-array>
+    <string-array name="ankiquest_goal_backlog_entries">
+        <item>5 % (clears in about 20 days)</item>
+        <item>10 % (about 10 days)</item>
+        <item>20 % (about 5 days)</item>
+        <item>34 % (about 3 days)</item>
+        <item>All of it</item>
+    </string-array>
+</resources>

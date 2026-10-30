@@ -26,7 +26,7 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
 
 /**
- * Offers new AnkiDroid Quest builds from the GitHub releases of the fork.
+ * Offers new AnkiQuest builds from the GitHub releases of the fork.
  *
  * Releases are tagged `quest-<n>` and CI bakes `<n>` into [BuildConfig.ANKIQUEST_RELEASE].
  * Every push to the branch also replaces the `nightly` pre-release, whose builds carry the
@@ -145,7 +145,7 @@ object AnkiquestUpdater {
         return Release(
             number = number,
             name = "Nightly $TAG_PREFIX$number+${json.optInt("nightly")} (${json.optString("commit").take(7)})",
-            apkUrl = NIGHTLY_URL + "AnkiDroid-Quest.apk",
+            apkUrl = NIGHTLY_URL + "AnkiQuest.apk",
             apkSize = json.optLong("size"),
             versionCode = versionCode,
             nightly = true,
@@ -170,7 +170,9 @@ object AnkiquestUpdater {
         val apk =
             (0 until assets.length())
                 .map { assets.getJSONObject(it) }
-                .firstOrNull { it.getString("name").endsWith(".apk") } ?: return null
+                .filter { it.getString("name").endsWith(".apk") }
+                .let { apks -> apks.firstOrNull { it.getString("name") == "AnkiQuest.apk" } ?: apks.firstOrNull() }
+                ?: return null
         return Release(
             number = number,
             name = json.optString("name").ifEmpty { tag },
@@ -213,7 +215,7 @@ object AnkiquestUpdater {
         busy = true
         scope.launch {
             try {
-                val file = File(File(app.cacheDir, "ankiquest").apply { mkdirs() }, "AnkiDroid-Quest.apk")
+                val file = File(File(app.cacheDir, "ankiquest").apply { mkdirs() }, "AnkiQuest.apk")
                 fetch(release, file) { percent ->
                     withContext(Dispatchers.Main) {
                         progress.setMessage(app.getString(R.string.ankiquest_update_downloading, percent))

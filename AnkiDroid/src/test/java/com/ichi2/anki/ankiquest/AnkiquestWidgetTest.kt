@@ -88,6 +88,26 @@ class AnkiquestWidgetTest : RobolectricTest() {
     }
 
     @Test
+    fun `widget shows the minutes still missing for a streak minimum`() {
+        for ((minutes, label) in listOf(6 to "6 of 10 minutes today", 10 to "Studied today")) {
+            val entry =
+                player("friend", 100, 100)
+                    .put("streak", 27)
+                    .put("streak_state", if (minutes >= 10) "studied" else "pending")
+                    .put("today_reviews", 12)
+                    .put("today_minutes", minutes)
+                    .put("streak_minutes", 10)
+                    .put("day_ends_at", TimeManager.time.intTimeMS() + 3_600_000)
+            val row =
+                AnkiquestWidget
+                    .collection(targetContext, JSONArray().put(entry))
+                    .getItemView(0)
+                    .apply(targetContext, FrameLayout(targetContext))
+            assertEquals("27 day streak · $label", row.findViewById<TextView>(R.id.ankiquest_widget_streak).contentDescription?.toString())
+        }
+    }
+
+    @Test
     fun `older servers use today reviews and unknown data stays neutral`() {
         for ((reviews, label) in listOf(0 to "Not studied yet", 1 to "Studied today", null to "Refresh to see today's study status")) {
             val entry = player("friend", 100, 100).put("streak", 27)

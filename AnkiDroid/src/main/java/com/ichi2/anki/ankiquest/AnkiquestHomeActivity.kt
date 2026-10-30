@@ -176,7 +176,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 val failure =
                     try {
                         val result = AnkiquestHomeData.profile(current)
-                        if (turn == generation && AnkiquestHomeData.account()?.scope == current.scope) profile = result
+                        if (turn == generation && AnkiquestHomeData.account()?.scope == current.scope) {
+                            profile = result
+                            AnkiquestDailyGoal.remember(result)
+                        }
                         if (current.token.isNotEmpty()) {
                             try {
                                 val companion = AnkiquestHomeData.companion(current)
@@ -281,6 +284,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
+        local?.goal?.let { renderGoal(it) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -306,6 +310,38 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             if (failure == R.string.aq_home_auth) button(content, R.string.aq_home_settings) { settings() }
         }
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
+    }
+
+    private fun renderGoal(status: AnkiquestDailyGoal.Status) {
+        val panel = card()
+        text(panel, getString(R.string.aq_goal_today), heading = true)
+        when {
+            status.minimumDone && status.streakMinutes > 0 ->
+                text(panel, getString(R.string.aq_goal_minimum_minutes_done, status.streakMinutes), small = true)
+            status.minimumDone -> text(panel, getString(R.string.aq_goal_minimum_any_done), small = true)
+            status.streakMinutes > 0 -> {
+                text(panel, getString(R.string.aq_goal_minimum_minutes, status.streakMinutes), small = true)
+                meter(panel, status.minutes.toLong(), status.streakMinutes.toLong())
+            }
+            else -> text(panel, getString(R.string.aq_goal_minimum_any), small = true)
+        }
+        text(
+            panel,
+            if (status.goalDone) {
+                getString(R.string.aq_goal_done_title)
+            } else {
+                getString(R.string.aq_goal_daily, AnkiquestDailyGoal.progress(this, status))
+            },
+            small = true,
+        )
+        meter(panel, status.progress.toLong(), status.goal.target.toLong())
+        if (status.mode == AnkiquestDailyGoal.Mode.BACKLOG && status.goal.backlog > 0) {
+            text(
+                panel,
+                getString(R.string.aq_goal_backlog_explained, status.goal.backlogShare, status.goal.backlog, status.backlogPercent),
+                small = true,
+            )
+        }
     }
 
     private fun renderDeckCopies() {
