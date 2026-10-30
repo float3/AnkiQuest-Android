@@ -29,10 +29,10 @@
         <item>Eine Anzahl Minuten</item>
     </string-array>
     <string-array name="ankiquest_goal_backlog_entries">
-        <item>5% (in etwa 20 Tagen abgebaut)</item>
-        <item>10% (etwa 10 Tage)</item>
-        <item>20% (etwa 5 Tage)</item>
-        <item>34% (etwa 3 Tage)</item>
+        <item>5 % (in etwa 20 Tagen abgebaut)</item>
+        <item>10 % (etwa 10 Tage)</item>
+        <item>20 % (etwa 5 Tage)</item>
+        <item>34 % (etwa 3 Tage)</item>
         <item>Alles</item>
     </string-array>
     <string name="ankiquest_streak_widget_label">AnkiQuest-Lernserie</string>

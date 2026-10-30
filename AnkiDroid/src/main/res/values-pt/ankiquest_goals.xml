@@ -29,10 +29,10 @@
         <item>Um número de minutos</item>
     </string-array>
     <string-array name="ankiquest_goal_backlog_entries">
-        <item>5% (cerca de 20 dias)</item>
-        <item>10% (cerca de 10 dias)</item>
-        <item>20% (cerca de 5 dias)</item>
-        <item>34% (cerca de 3 dias)</item>
+        <item>5 % (cerca de 20 dias)</item>
+        <item>10 % (cerca de 10 dias)</item>
+        <item>20 % (cerca de 5 dias)</item>
+        <item>34 % (cerca de 3 dias)</item>
         <item>Tudo</item>
     </string-array>
     <string name="ankiquest_streak_widget_label">Sequência AnkiQuest</string>
