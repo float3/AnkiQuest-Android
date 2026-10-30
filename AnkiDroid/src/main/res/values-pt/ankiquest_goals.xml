@@ -10,12 +10,19 @@
     <string name="aq_goal_progress_minutes">%1$d de %2$d minutos</string>
     <string name="aq_goal_daily">Meta diária: %1$s</string>
     <string name="aq_goal_backlog_explained">Os cartões de hoje mais %1$d dos seus %2$d cartões atrasados (%3$d%% por dia), para o atraso diminuir sem tomar o seu dia.</string>
+    <string name="aq_goal_minimum_title">Sequência garantida! 🔥</string>
     <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
+    <string name="aq_goal_minimum_body">%1$s Agora, sua meta diária: %2$s até agora.</string>
+    <string name="aq_goal_done_body">Você alcançou a meta de hoje: %1$s.</string>
+    <string name="aq_goal_both_body">%1$s E você alcançou a meta de hoje: %2$s.</string>
+    <string name="aq_goal_nice">Boa!</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
     <string name="ankiquest_goal_mode_title">Meta diária</string>
     <string name="ankiquest_goal_backlog_title">Atraso a reduzir por dia</string>
     <string name="ankiquest_goal_cards_title">Cartões por dia</string>
     <string name="ankiquest_goal_minutes_title">Minutos por dia</string>
+    <string name="ankiquest_goal_celebrate_title">Comemorar metas</string>
+    <string name="ankiquest_goal_celebrate_summary">Comemorar quando hoje conta para sua sequência e quando você alcança a meta diária.</string>
     <string-array name="ankiquest_goal_mode_entries">
         <item>O de hoje mais parte do atraso</item>
         <item>Um número de cartões</item>

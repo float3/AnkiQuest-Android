@@ -10,12 +10,19 @@
     <string name="aq_goal_progress_minutes">%1$d minutes sur %2$d</string>
     <string name="aq_goal_daily">Objectif du jour : %1$s</string>
     <string name="aq_goal_backlog_explained">Les cartes du jour plus %1$d de tes %2$d cartes en retard (%3$d%% par jour), pour réduire le retard sans y passer la journée.</string>
+    <string name="aq_goal_minimum_title">Série assurée ! 🔥</string>
     <string name="aq_goal_done_title">Objectif du jour atteint ! 🎉</string>
+    <string name="aq_goal_minimum_body">%1$s Prochaine étape, ton objectif du jour : %2$s pour l’instant.</string>
+    <string name="aq_goal_done_body">Tu as atteint l’objectif du jour : %1$s.</string>
+    <string name="aq_goal_both_body">%1$s Et tu as atteint l’objectif du jour : %2$s.</string>
+    <string name="aq_goal_nice">Super !</string>
     <string name="ankiquest_streak_short">%1$d minutes sur %2$d aujourd’hui</string>
     <string name="ankiquest_goal_mode_title">Objectif du jour</string>
     <string name="ankiquest_goal_backlog_title">Retard à rattraper chaque jour</string>
     <string name="ankiquest_goal_cards_title">Cartes par jour</string>
     <string name="ankiquest_goal_minutes_title">Minutes par jour</string>
+    <string name="ankiquest_goal_celebrate_title">Fêter les objectifs</string>
+    <string name="ankiquest_goal_celebrate_summary">Fêter quand aujourd’hui compte pour ta série et quand tu atteins ton objectif du jour.</string>
     <string-array name="ankiquest_goal_mode_entries">
         <item>Les cartes du jour plus une partie du retard</item>
         <item>Un nombre de cartes</item>

@@ -5,6 +5,7 @@
     <string name="ankiquest_goal_backlog_key" translatable="false">ankiquestGoalBacklogPercent</string>
     <string name="ankiquest_goal_cards_key" translatable="false">ankiquestGoalCards</string>
     <string name="ankiquest_goal_minutes_key" translatable="false">ankiquestGoalMinutes</string>
+    <string name="ankiquest_goal_celebrate_key" translatable="false">ankiquestGoalCelebrate</string>
     <string-array name="ankiquest_goal_mode_values" translatable="false">
         <item>backlog</item>
         <item>cards</item>
@@ -26,12 +27,19 @@
     <string name="aq_goal_progress_minutes">%1$d of %2$d minutes</string>
     <string name="aq_goal_daily">Daily goal: %1$s</string>
     <string name="aq_goal_backlog_explained">Today’s due cards plus %1$d of your %2$d overdue cards (%3$d%% a day), so the backlog shrinks without taking over your day.</string>
+    <string name="aq_goal_minimum_title">Streak secured! 🔥</string>
     <string name="aq_goal_done_title">Daily goal reached! 🎉</string>
+    <string name="aq_goal_minimum_body">%1$s Next up, your daily goal: %2$s so far.</string>
+    <string name="aq_goal_done_body">You reached today’s goal: %1$s.</string>
+    <string name="aq_goal_both_body">%1$s And you reached today’s goal: %2$s.</string>
+    <string name="aq_goal_nice">Nice!</string>
     <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
     <string name="ankiquest_goal_mode_title" maxLength="41">Daily goal</string>
     <string name="ankiquest_goal_backlog_title" maxLength="41">Backlog to work off each day</string>
     <string name="ankiquest_goal_cards_title" maxLength="41">Cards per day</string>
     <string name="ankiquest_goal_minutes_title" maxLength="41">Minutes per day</string>
+    <string name="ankiquest_goal_celebrate_title" maxLength="41">Goal celebrations</string>
+    <string name="ankiquest_goal_celebrate_summary">Celebrate when today counts for your streak and when you reach your daily goal.</string>
     <string-array name="ankiquest_goal_mode_entries">
         <item>Due today plus part of the backlog</item>
         <item>A number of cards</item>
