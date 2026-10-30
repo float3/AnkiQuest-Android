@@ -1,0 +1,44 @@
+name: Nix
+
+# Builds and tests through the flake's dev shell inside the nixos/nix image.
+# That image has no /lib64 loader or /usr/lib, like NixOS, so anything Gradle
+# downloads that only runs on a usual Linux fails here as it would there.
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches-ignore:
+      - 'gh-readonly-queue/**'
+      - 'dependabot/**'
+      - 'i18n_sync'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nixos:
+    name: Build and test in the dev shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the flake, build and run unit tests
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -e CI=true \
+            -e NIX_CONFIG="experimental-features = nix-command flakes" \
+            nixos/nix sh -euc '
+              git config --global --add safe.directory /src
+              nix flake check
+              nix run nixpkgs#alejandra -- --check flake.nix
+              nix develop --command ./gradlew --no-daemon assemblePlayDebug :libanki:testDebugUnitTest
+            '
