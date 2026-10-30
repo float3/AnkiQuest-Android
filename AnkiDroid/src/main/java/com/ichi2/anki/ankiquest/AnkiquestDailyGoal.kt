@@ -182,7 +182,11 @@ internal object AnkiquestDailyGoal {
                 cutoff,
                 today,
             )
-        val newCards = col.sched.deckDueTree().children.sumOf { it.newCount }
+        val newCards =
+            col.sched
+                .deckDueTree()
+                .children
+                .sumOf { it.newCount }
         return Load(today, studied, minutes, dueReviews + learning + newCards, backlog)
     }
 
