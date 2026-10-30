@@ -46,10 +46,10 @@
         <item>A number of minutes</item>
     </string-array>
     <string-array name="ankiquest_goal_backlog_entries">
-        <item>5% (clears in about 20 days)</item>
-        <item>10% (about 10 days)</item>
-        <item>20% (about 5 days)</item>
-        <item>34% (about 3 days)</item>
+        <item>5 % (clears in about 20 days)</item>
+        <item>10 % (about 10 days)</item>
+        <item>20 % (about 5 days)</item>
+        <item>34 % (about 3 days)</item>
         <item>All of it</item>
     </string-array>
 </resources>
