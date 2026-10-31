@@ -44,10 +44,10 @@ import timber.log.Timber
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.URLDecoder
-import java.net.URLEncoder
 import java.net.UnknownHostException
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Shows XP, combo, quest and level feedback from an ankiquest server after each answer.
@@ -99,6 +99,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private var activity = WeakReference<Activity>(null)
     private var syncedLastId = 0L
     private var baselineAt = 0L
+    private var baselineAccount: String? = null
+    private val refreshes = RefreshQueue()
 
     @VisibleForTesting
     internal var resumeUploadAt = 0L
@@ -412,20 +414,22 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         host is Reviewer ||
             (host as? FragmentActivity)?.supportFragmentManager?.fragments?.any { it is ReviewerFragment } == true
 
+    /** Answers arriving while a refresh waits for the running one join it instead of each queueing an upload. */
     private fun launchRefresh(
         showFeedback: Boolean,
         resync: Boolean = false,
     ) {
-        val (url, user, token) = endpoint() ?: return
-
+        if (endpoint() == null || !refreshes.offer(showFeedback, resync)) return
         scope.launch {
-            try {
-                mutex.withLock {
-                    val profile = if (token.isEmpty()) preview(url, user) else upload(url, user, token, resync)
-                    present(profile, showFeedback)
+            mutex.withLock {
+                val (feedback, again) = refreshes.take()
+                try {
+                    val (url, user, token) = endpoint() ?: return@withLock
+                    val profile = if (token.isEmpty()) preview(url, user) else upload(url, user, token, again)
+                    present(profile, feedback)
+                } catch (e: Exception) {
+                    Timber.w(e, "ankiquest refresh failed")
                 }
-            } catch (e: Exception) {
-                Timber.w(e, "ankiquest refresh failed")
             }
         }
     }
@@ -482,8 +486,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         var profile: JSONObject
         var first = true
         do {
-            val batch = if (onlyTest) JSONArray() else pendingReviews(known)
-            val full = batch.length() == MAX_PENDING
+            val limit = if (first) MAX_PENDING - restored.size else MAX_PENDING
+            val batch = if (onlyTest) JSONArray() else pendingReviews(known, limit)
+            val full = batch.length() == limit
             if (batch.length() > 0) known = batch.getJSONObject(batch.length() - 1).getLong("id")
             val body =
                 JSONObject()
@@ -587,13 +592,16 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             .put("offset_west_min", -TimeZone.getDefault().getOffset(now) / 60_000)
     }
 
-    private suspend fun pendingReviews(afterId: Long): JSONArray =
+    private suspend fun pendingReviews(
+        afterId: Long,
+        limit: Int = MAX_PENDING,
+    ): JSONArray =
         CollectionManager.withCol {
             val rows = JSONArray()
             db
                 .query(
                     "select id, cid, lastIvl, ivl, time, type from revlog " +
-                        "where id > ? and ease > 0 and type < 4 order by id limit $MAX_PENDING",
+                        "where id > ? and ease > 0 and type < 4 order by id limit ${limit.coerceAtLeast(0)}",
                     afterId,
                 ).use { cursor ->
                     while (cursor.moveToNext()) {
@@ -847,4 +855,27 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     ) {}
 
     override fun onActivityDestroyed(activity: Activity) {}
+}
+
+/** At most one refresh waits behind the running one; requests made meanwhile join it, keeping any feedback or resync they ask for. */
+internal class RefreshQueue {
+    private val queued = AtomicBoolean(false)
+    private val feedback = AtomicBoolean(false)
+    private val resync = AtomicBoolean(false)
+
+    /** Records a request; true when the caller must start a refresh, false when a waiting one will cover it. */
+    fun offer(
+        showFeedback: Boolean,
+        resync: Boolean,
+    ): Boolean {
+        if (showFeedback) feedback.set(true)
+        if (resync) this.resync.set(true)
+        return queued.compareAndSet(false, true)
+    }
+
+    /** Starts the waiting refresh, so later requests queue another; answers whether to show feedback and whether to resync. */
+    fun take(): Pair<Boolean, Boolean> {
+        queued.set(false)
+        return feedback.getAndSet(false) to resync.getAndSet(false)
+    }
 }
