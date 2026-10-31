@@ -463,7 +463,12 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val profile = atRisk(dayEndsIn = 3 * HOUR_MS)
         shadowOf(manager).setNotificationsEnabled(false)
         AnkiquestNotifier.onProfile(targetContext, profile)
-        assertTrue(AnkiDroidApp.sharedPrefs().all.keys.none { it.startsWith(AnkiquestNotifier.PREF_STREAK_DAY) })
+        assertTrue(
+            AnkiDroidApp
+                .sharedPrefs()
+                .all.keys
+                .none { it.startsWith(AnkiquestNotifier.PREF_STREAK_DAY) },
+        )
         shadowOf(manager).setNotificationsEnabled(true)
         AnkiquestNotifier.onProfile(targetContext, profile)
         assertEquals(1, shadowOf(manager).size())
