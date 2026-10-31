@@ -38,6 +38,7 @@ internal data class AnkiquestWebSession(
             actual.encodedPath in paths && queryAllowed
     }
 
+    /** The page script; a navigation can finish after the native check, so it checks the actual document again. */
     fun script(url: String?): String? {
         if (!allows(url)) return null
         val expected = checkNotNull(base)
@@ -51,7 +52,6 @@ internal data class AnkiquestWebSession(
                 .toString()
                 .removeSuffix("/")
         val session = if (token.isEmpty()) "null" else JSONObject().put("user", user).put("token", token).toString()
-        // A navigation can finish after the native check, so check the actual document again in JavaScript.
         return """
             (() => {
                 const page = new URL(window.location.href);

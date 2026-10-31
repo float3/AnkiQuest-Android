@@ -15,4 +15,5 @@ Estudo com o AnkiQuest.</string>
         <item quantity="one">Partilhado com %d amigo</item>
         <item quantity="other">Partilhado com %d amigos</item>
     </plurals>
+    <string name="ankiquest_share_account_changed">Esta conquista pertence a uma conta AnkiQuest que já não tem sessão iniciada.</string>
 </resources>

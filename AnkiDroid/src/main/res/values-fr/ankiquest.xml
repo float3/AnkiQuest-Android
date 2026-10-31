@@ -159,4 +159,5 @@
     <string name="ankiquest_streak_protected">Série protégée · Pas encore étudié</string>
     <string name="ankiquest_streak_unknown">Actualise pour voir l’état des études aujourd’hui</string>
     <string name="ankiquest_streak_description">Série de %1$s jours · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Impossible de préparer ta connexion. Ferme cet écran et réessaie.</string>
 </resources>

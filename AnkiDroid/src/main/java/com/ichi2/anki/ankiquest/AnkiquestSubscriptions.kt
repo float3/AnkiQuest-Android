@@ -15,6 +15,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 internal data class IncomingSender(
@@ -29,9 +30,9 @@ internal data class IncomingSubscriptions(
     val legacyMutes: Boolean = false,
 ) {
     companion object {
+        /** Roster entries alone are not listed: being in the roster does not mean sharing a deck with this recipient. */
         fun parse(json: JSONObject): IncomingSubscriptions {
-            fun strings(key: String): Set<String> =
-                json.getJSONArray(key).let { array -> (0 until array.length()).map { array.getString(it) }.toSet() }
+            fun strings(key: String): Set<String> = json.getJSONArray(key).strings().toSet()
             val unsubscribed = strings("unsubscribed_senders") + strings("muted_senders")
             val visible = strings("sharing_senders") + unsubscribed
             val senders =
@@ -39,7 +40,6 @@ internal data class IncomingSubscriptions(
                     val user = it.getString("user")
                     IncomingSender(user, it.getString("display").ifBlank { user })
                 }
-            // Roster identities alone do not mean someone shares a deck with this recipient.
             val retained = visible.filter { user -> senders.none { it.user == user } }.map { IncomingSender(it, it) }
             return IncomingSubscriptions(
                 json.getBoolean("enabled"),
@@ -47,7 +47,7 @@ internal data class IncomingSubscriptions(
                 (senders + retained)
                     .filter { it.user in visible }
                     .distinctBy { it.user }
-                    .sortedWith(compareBy<IncomingSender> { it.display.lowercase(java.util.Locale.ROOT) }.thenBy { it.user }),
+                    .sortedWith(compareBy<IncomingSender> { it.display.lowercase(Locale.ROOT) }.thenBy { it.user }),
                 strings("muted_senders").isNotEmpty(),
             )
         }
@@ -63,8 +63,8 @@ internal class SubscriptionHttpException(
 /** Captures credentials once and keeps reads and writes ordered across recreated settings screens. */
 internal class SubscriptionRepository(
     private val client: OkHttpClient =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .callTimeout(15, TimeUnit.SECONDS)
             .followRedirects(false)
             .followSslRedirects(false)
@@ -122,6 +122,7 @@ internal class SubscriptionRepository(
             current.copy(unsubscribedSenders = if (subscribed) current.unsubscribedSenders - user else current.unsubscribedSenders + user)
         }
 
+    /** A full replacement built on a fresh read, so observed remote changes survive; simultaneous remote writes can still race. */
     private suspend fun update(
         account: HomeAccount,
         change: (IncomingSubscriptions) -> IncomingSubscriptions,
@@ -129,7 +130,6 @@ internal class SubscriptionRepository(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 currentCoroutineContext().ensureActive()
-                // Full replacement: preserve already-observed remote changes. Simultaneous remote writes can still race.
                 val wanted = change(request(account))
                 currentCoroutineContext().ensureActive()
                 request(

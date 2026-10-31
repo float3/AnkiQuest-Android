@@ -159,4 +159,5 @@
     <string name="ankiquest_streak_protected">Lernserie geschützt · Heute noch nicht gelernt</string>
     <string name="ankiquest_streak_unknown">Aktualisieren, um den heutigen Lernstatus zu sehen</string>
     <string name="ankiquest_streak_description">Lernserie von %1$s Tagen · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Deine Verbindung konnte nicht vorbereitet werden. Schließe diesen Bildschirm und versuch es noch einmal.</string>
 </resources>
