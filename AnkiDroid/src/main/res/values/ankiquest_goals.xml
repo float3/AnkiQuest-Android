@@ -44,4 +44,10 @@
         <item>34 % (about 3 days)</item>
         <item>All of it</item>
     </string-array>
+    <string name="ankiquest_streak_widget_label">AnkiQuest streak</string>
+    <string name="ankiquest_streak_widget_description">Your streak as a big number with your companion</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">day streak</item>
+        <item quantity="other">day streak</item>
+    </plurals>
 </resources>

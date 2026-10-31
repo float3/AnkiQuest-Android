@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- 3x3 and up: a big companion above a huge number. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ankiquest_streak_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/ankiquest_widget_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <ImageView
+        android:id="@+id/ankiquest_streak_companion"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:importantForAccessibility="no"
+        android:maxHeight="220dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/aki_streak" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="sans-serif-black"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/ankiquest_widget_text"
+        android:textSize="72sp" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/ankiquest_widget_text"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/ankiquest_widget_text_dim"
+        android:textSize="14sp" />
+</LinearLayout>

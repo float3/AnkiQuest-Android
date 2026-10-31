@@ -28,4 +28,10 @@
         <item>34 % (etwa 3 Tage)</item>
         <item>Alles</item>
     </string-array>
+    <string name="ankiquest_streak_widget_label">AnkiQuest-Lernserie</string>
+    <string name="ankiquest_streak_widget_description">Deine Lernserie als große Zahl mit deinem Begleiter</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">Tag Lernserie</item>
+        <item quantity="other">Tage Lernserie</item>
+    </plurals>
 </resources>

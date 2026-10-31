@@ -28,4 +28,10 @@
         <item>34 % (unos 3 días)</item>
         <item>Todo</item>
     </string-array>
+    <string name="ankiquest_streak_widget_label">Racha de AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Tu racha en grande con tu compañero</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">día de racha</item>
+        <item quantity="other">días de racha</item>
+    </plurals>
 </resources>
