@@ -18,4 +18,27 @@ Estudo com o AnkiQuest.</string>
     <string name="ankiquest_share_account_changed">Esta conquista pertence a uma conta AnkiQuest que já não tem sessão iniciada.</string>
     <string name="ankiquest_cheer">🎉 Aplaudir</string>
     <string name="ankiquest_cheer_sent">🎉 Aplaudiste: %1$s</string>
+    <string name="ankiquest_moments_title">As tuas conquistas</string>
+    <string name="ankiquest_moments_summary">Escolhe quem fica a saber de cada tipo de conquista. As tuas próprias celebrações vês sempre.</string>
+    <string name="ankiquest_share_cap_title">Conquistas automáticas por amigo e dia</string>
+    <string name="ankiquest_moments_decks_title">Baralhos concluídos</string>
+    <string name="ankiquest_moments_decks_summary">Definido por baralho: escolhe os baralhos e quem fica a saber quando os concluis</string>
+    <string name="ankiquest_decks_category_title">Baralhos</string>
+    <string-array name="ankiquest_moment_titles">
+        <item>Meta diária atingida</item>
+        <item>Série garantida por hoje</item>
+        <item>Marcos da série</item>
+        <item>Novos níveis</item>
+        <item>Conquistas desbloqueadas</item>
+        <item>Recordes pessoais</item>
+        <item>Missões diárias feitas</item>
+        <item>Cartões difíceis dominados</item>
+        <item>Top 3 da tabela semanal</item>
+        <item>Desafios concluídos</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Só eu</item>
+        <item>Perguntar-me</item>
+        <item>Avisar os amigos automaticamente</item>
+    </string-array>
 </resources>

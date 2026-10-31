@@ -18,4 +18,27 @@ Je révise avec AnkiQuest.</string>
     <string name="ankiquest_share_account_changed">Cette victoire appartient à un compte AnkiQuest qui n’est plus connecté.</string>
     <string name="ankiquest_cheer">🎉 Applaudir</string>
     <string name="ankiquest_cheer_sent">🎉 Vous avez applaudi : %1$s</string>
+    <string name="ankiquest_moments_title">Vos victoires</string>
+    <string name="ankiquest_moments_summary">Choisissez qui est prévenu de chaque type de victoire. Vous voyez toujours vos propres célébrations.</string>
+    <string name="ankiquest_share_cap_title">Victoires automatiques par ami et par jour</string>
+    <string name="ankiquest_moments_decks_title">Paquets terminés</string>
+    <string name="ankiquest_moments_decks_summary">Réglé paquet par paquet : choisissez les paquets et qui est prévenu quand vous les terminez</string>
+    <string name="ankiquest_decks_category_title">Paquets</string>
+    <string-array name="ankiquest_moment_titles">
+        <item>Objectif quotidien atteint</item>
+        <item>Série assurée pour la journée</item>
+        <item>Paliers de série</item>
+        <item>Nouveaux niveaux</item>
+        <item>Succès</item>
+        <item>Records personnels</item>
+        <item>Quêtes du jour accomplies</item>
+        <item>Cartes difficiles maîtrisées</item>
+        <item>Top 3 du classement hebdomadaire</item>
+        <item>Défis relevés</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Moi seul</item>
+        <item>Me demander</item>
+        <item>Prévenir mes amis automatiquement</item>
+    </string-array>
 </resources>

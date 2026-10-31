@@ -20,6 +20,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -41,6 +42,7 @@ import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
+import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
@@ -50,6 +52,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.util.Date
@@ -59,6 +63,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     override val analyticsScreenNameConstant = "prefs.ankiquest"
 
     private var running = false
+    private val sharingRequests = Mutex()
     private val refreshServerSettings = mutableListOf<() -> Unit>()
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -360,7 +365,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     protected fun bindSharing() {
-        bindAction(R.string.ankiquest_deck_notifications_key) {
+        val deckSharing: suspend () -> String? = {
             try {
                 showDeckNotifications(Ankiquest.deckNotificationSettings())
                 null
@@ -368,6 +373,107 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
             }
         }
+        bindAction(R.string.ankiquest_deck_notifications_key, deckSharing)
+        bindAction(R.string.ankiquest_moments_decks_key, deckSharing)
+        bindMoments()
+    }
+
+    /**
+     * Who hears about each kind of win, and how many automatic wins each friend gets a day, as the
+     * server keeps them. Requests run one at a time, so a reload after a change reads the change.
+     */
+    private fun bindMoments() {
+        val category = requirePreference<PreferenceCategory>(R.string.ankiquest_moments_key)
+        val status = requirePreference<Preference>(R.string.ankiquest_moments_status_key)
+        val cap = requirePreference<IncrementerNumberRangePreferenceCompat>(R.string.ankiquest_share_cap_key)
+        val idle = status.summary
+        val kinds = resources.getStringArray(R.array.ankiquest_moment_kinds)
+        val titles = resources.getStringArray(R.array.ankiquest_moment_titles)
+        val moments =
+            kinds.mapIndexed { index, kind ->
+                ListPreference(requireContext()).apply {
+                    key = "$MOMENT_PREFIX$kind"
+                    title = titles[index]
+                    dialogTitle = titles[index]
+                    order = index + 1
+                    isPersistent = false
+                    isEnabled = false
+                    entries = resources.getStringArray(R.array.ankiquest_moment_policy_entries)
+                    entryValues = resources.getStringArray(R.array.ankiquest_moment_policy_values)
+                    summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
+                    category.addPreference(this)
+                }
+            }
+        cap.isEnabled = false
+        var loaded: AnkiquestSharing.Settings? = null
+        var generation = 0
+
+        fun show(settings: AnkiquestSharing.Settings?) {
+            loaded = settings
+            moments.forEachIndexed { index, preference ->
+                val policy = settings?.policies?.get(kinds[index])
+                if (policy != null) preference.value = policy
+                preference.isVisible = settings == null || policy != null
+                preference.isEnabled = policy != null
+            }
+            settings?.let { cap.setValue(it.dailyCap) }
+            cap.isEnabled = settings != null
+        }
+
+        fun request(
+            saving: Boolean,
+            action: suspend (HomeAccount) -> AnkiquestSharing.Settings,
+        ) {
+            val request = ++generation
+            val previous = loaded
+            show(null)
+            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+            if (account == null) {
+                status.summary = getString(R.string.ankiquest_nudges_unavailable)
+                return
+            }
+            status.summary = getString(R.string.ankiquest_check_running)
+            lifecycleScope.launch {
+                try {
+                    val settings = sharingRequests.withLock { action(account) }
+                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
+                    status.summary = idle
+                    show(settings)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (request != generation || !isAdded) return@launch
+                    val message = serverMessage(e)
+                    showThemedToast(requireContext(), message, shortLength = false)
+                    if (saving && previous != null && AnkiquestHomeData.account()?.scope == account.scope) {
+                        status.summary = idle
+                        show(previous)
+                    } else {
+                        status.summary = message
+                    }
+                }
+            }
+        }
+        moments.forEachIndexed { index, preference ->
+            preference.setOnPreferenceChangeListener { _, value ->
+                val policy = value as? String
+                val dailyCap = loaded?.dailyCap
+                if (policy != null && dailyCap != null) {
+                    request(saving = true) { AnkiquestSharing.saveSettings(it, mapOf(kinds[index] to policy), dailyCap) }
+                }
+                false
+            }
+        }
+        cap.setOnPreferenceChangeListener(
+            Preference.OnPreferenceChangeListener { _, value ->
+                val dailyCap = value as? Int
+                if (dailyCap != null && loaded != null) {
+                    request(saving = true) { AnkiquestSharing.saveSettings(it, emptyMap(), dailyCap) }
+                }
+                false
+            },
+        )
+        refreshServerSettings.add { request(saving = false) { AnkiquestSharing.settings(it) } }
     }
 
     protected fun bindMaintenance() {
@@ -891,5 +997,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     companion object {
         private const val PREF_ASKED = "ankiquestAskedNotifications"
+        private const val MOMENT_PREFIX = "ankiquestMoment:"
     }
 }

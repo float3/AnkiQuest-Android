@@ -4,14 +4,41 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/ankiquest_sharing_title"
     android:key="@string/ankiquest_sharing_screen_key">
-    <Preference
-        android:key="@string/ankiquest_deck_notifications_key"
-        android:title="@string/ankiquest_deck_notifications_title"
-        android:summary="@string/ankiquest_deck_notifications_summary" />
-    <Preference
-        android:key="@string/ankiquest_subscriptions_key"
-        android:fragment="com.ichi2.anki.preferences.AnkiquestSubscriptionsFragment"
-        android:persistent="false"
-        android:title="@string/ankiquest_subscriptions_title"
-        android:summary="@string/ankiquest_subscriptions_summary" />
+    <PreferenceCategory
+        android:key="@string/ankiquest_moments_key"
+        android:title="@string/ankiquest_moments_title">
+        <Preference
+            android:key="@string/ankiquest_moments_status_key"
+            android:order="0"
+            android:persistent="false"
+            android:selectable="false"
+            android:summary="@string/ankiquest_moments_summary" />
+        <com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
+            android:key="@string/ankiquest_share_cap_key"
+            android:order="50"
+            android:persistent="false"
+            android:title="@string/ankiquest_share_cap_title"
+            app:min="1"
+            app:max="10"
+            app:useSimpleSummaryProvider="true" />
+        <Preference
+            android:key="@string/ankiquest_moments_decks_key"
+            android:order="51"
+            android:persistent="false"
+            android:title="@string/ankiquest_moments_decks_title"
+            android:summary="@string/ankiquest_moments_decks_summary" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/ankiquest_decks_category_title">
+        <Preference
+            android:key="@string/ankiquest_deck_notifications_key"
+            android:title="@string/ankiquest_deck_notifications_title"
+            android:summary="@string/ankiquest_deck_notifications_summary" />
+        <Preference
+            android:key="@string/ankiquest_subscriptions_key"
+            android:fragment="com.ichi2.anki.preferences.AnkiquestSubscriptionsFragment"
+            android:persistent="false"
+            android:title="@string/ankiquest_subscriptions_title"
+            android:summary="@string/ankiquest_subscriptions_summary" />
+    </PreferenceCategory>
 </PreferenceScreen>

@@ -18,4 +18,27 @@ Ich lerne mit AnkiQuest.</string>
     <string name="ankiquest_share_account_changed">Dieser Erfolg gehört zu einem AnkiQuest-Konto, das nicht mehr angemeldet ist.</string>
     <string name="ankiquest_cheer">🎉 Jubeln</string>
     <string name="ankiquest_cheer_sent">🎉 Du hast gejubelt: %1$s</string>
+    <string name="ankiquest_moments_title">Deine Erfolge</string>
+    <string name="ankiquest_moments_summary">Wähle, wer von welcher Art Erfolg erfährt. Deine eigenen Feiern siehst du immer.</string>
+    <string name="ankiquest_share_cap_title">Automatische Erfolge pro Freund am Tag</string>
+    <string name="ankiquest_moments_decks_title">Abgeschlossene Stapel</string>
+    <string name="ankiquest_moments_decks_summary">Pro Stapel einstellbar: Wähle die Stapel und wer erfährt, wenn du sie schaffst</string>
+    <string name="ankiquest_decks_category_title">Stapel</string>
+    <string-array name="ankiquest_moment_titles">
+        <item>Tagesziel erreicht</item>
+        <item>Lernserie für heute gesichert</item>
+        <item>Meilensteine der Lernserie</item>
+        <item>Neue Level</item>
+        <item>Errungenschaften</item>
+        <item>Persönliche Bestleistungen</item>
+        <item>Tagesaufgaben erledigt</item>
+        <item>Schwierige Karten gemeistert</item>
+        <item>Top 3 der Wochenrangliste</item>
+        <item>Herausforderungen geschafft</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Nur ich</item>
+        <item>Frag mich</item>
+        <item>Freunden automatisch sagen</item>
+    </string-array>
 </resources>

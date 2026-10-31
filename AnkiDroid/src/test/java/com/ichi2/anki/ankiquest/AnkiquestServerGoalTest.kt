@@ -231,10 +231,33 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         }
 
     @Test
+    fun `sharing settings change one kind at a time`() =
+        runBlocking {
+            val loaded = AnkiquestSharing.settings(account())
+            assertEquals("private", loaded.policies["quest"])
+            assertEquals(3, loaded.dailyCap)
+            val saved = AnkiquestSharing.saveSettings(account(), mapOf("level" to "auto"), loaded.dailyCap)
+            assertEquals("auto", saved.policies["level"])
+            assertEquals("ask", saved.policies["daily_goal"])
+            val sent = puts("/api/sharing/hill").single().third!!
+            assertEquals(
+                setOf("level"),
+                sent
+                    .getJSONObject("policies")
+                    .keys()
+                    .asSequence()
+                    .toSet(),
+            )
+            assertEquals(3, sent.getInt("daily_cap"))
+            assertFailsWith<IllegalArgumentException> { AnkiquestSharing.saveSettings(account(), emptyMap(), 11) }
+        }
+
+    @Test
     fun `settings are never read or written for an account that is no longer signed in`() =
         runBlocking {
             val captured = account()
             prefs.edit { putString(Ankiquest.PREF_TOKEN, "another-credential") }
+            assertFailsWith<HomeAccountChanged> { AnkiquestSharing.settings(captured) }
             assertFailsWith<HomeAccountChanged> { AnkiquestDailyGoal.fetch(captured) }
             assertTrue(requests.isEmpty())
         }

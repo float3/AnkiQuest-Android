@@ -12,8 +12,10 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/** The daily goal, as kept by the server for every client of one player. */
+/** Which wins reach friends, and the daily goal, as kept by the server for every client of one player. */
 internal object AnkiquestSharing {
+    val DAILY_CAP = 1..10
+
     private val client =
         AnkiquestHttp.client
             .newBuilder()
@@ -28,6 +30,35 @@ internal object AnkiquestSharing {
         val code: Int,
         val text: String?,
     ) : IOException(text ?: "HTTP $code")
+
+    /** A sharing policy, `private`, `ask` or `auto`, for each kind of win, and how many automatic wins each friend gets a day. */
+    data class Settings(
+        val policies: Map<String, String>,
+        val dailyCap: Int,
+    ) {
+        companion object {
+            fun parse(json: JSONObject): Settings {
+                val policies = json.getJSONObject("policies")
+                return Settings(policies.keys().asSequence().associateWith { policies.getString(it) }, json.getInt("daily_cap"))
+            }
+        }
+    }
+
+    suspend fun settings(account: HomeAccount): Settings = Settings.parse(call(account, "GET", "api/sharing/${account.encodedUser}"))
+
+    /** Changes only the given [policies] and, when set, the [dailyCap]; answers the settings as now stored. */
+    suspend fun saveSettings(
+        account: HomeAccount,
+        policies: Map<String, String>,
+        dailyCap: Int?,
+    ): Settings {
+        val body = JSONObject().put("policies", JSONObject(policies))
+        dailyCap?.let {
+            require(it in DAILY_CAP)
+            body.put("daily_cap", it)
+        }
+        return Settings.parse(call(account, "PUT", "api/sharing/${account.encodedUser}", body))
+    }
 
     /** The goal as `{mode, value}`. */
     suspend fun goal(account: HomeAccount): JSONObject = call(account, "GET", "api/goal/${account.encodedUser}")
