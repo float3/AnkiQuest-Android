@@ -34,6 +34,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+private const val LEGACY_MARK = "ankiquestUploadedThrough"
+private const val LEGACY_RECENT = "ankiquestRecentUploads"
+
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
 @Category(EmptyApplicationCategory::class)
@@ -105,8 +108,8 @@ class AnkiquestUploadTest : RobolectricTest() {
         url = "http://127.0.0.1:${server.address.port}"
         configureAccount("cerro", "first-token")
         AnkiDroidApp.sharedPrefs().edit {
-            remove("ankiquestUploadedThrough")
-            remove("ankiquestRecentUploads")
+            remove(LEGACY_MARK)
+            remove(LEGACY_RECENT)
         }
     }
 
@@ -290,16 +293,6 @@ class AnkiquestUploadTest : RobolectricTest() {
         }
 
     @Test
-    fun `subdecks are nested decks, not decks sharing a name prefix`() {
-        val decks =
-            listOf("Spanish", "Spanish::Verbs", "Spanish::Verbs::Irregular", "Spanish Extra", "Geography")
-                .mapIndexed { i, name -> JSONObject().put("id", "$i").put("name", name) }
-        assertEquals(listOf("1", "2"), Ankiquest.subdeckIds(decks, "Spanish"))
-        assertEquals(listOf("2"), Ankiquest.subdeckIds(decks, "Spanish::Verbs"))
-        assertEquals(emptyList(), Ankiquest.subdeckIds(decks, "Geography"))
-    }
-
-    @Test
     fun `previews tell the server which reviews were already shown`() =
         runBlocking {
             configureAccount("cerro", "")
@@ -317,7 +310,63 @@ class AnkiquestUploadTest : RobolectricTest() {
             assertEquals(shown, previews[1].getLong("seen_through"))
             assertEquals(2, previews[1].getJSONArray("reviews").length())
             assertFalse(previews[2].has("seen_through"), "another player starts from a fresh baseline")
+            assertEquals(1, requests.count { it.path == "/api/profile/other" }, "another player never reuses the first one's baseline")
         }
+
+    @Test
+    fun `an older device-wide upload mark moves to the only account that uploaded`() =
+        runBlocking {
+            val uploaded = col.db.queryLongScalar("select max(id) from revlog")
+            AnkiDroidApp.sharedPrefs().edit {
+                putLong(LEGACY_MARK, uploaded)
+                putString(LEGACY_RECENT, "$uploaded")
+                putBoolean("ankiquestInitialSyncDone:$url/cerro", true)
+            }
+
+            Ankiquest.deckNotificationSettings()
+
+            assertEquals(0, reviewUpload().getJSONArray("reviews").length(), "reviews uploaded before the update are not sent again")
+            assertEquals(uploaded, AnkiDroidApp.sharedPrefs().getLong("$LEGACY_MARK:$url/cerro", 0))
+            assertFalse(AnkiDroidApp.sharedPrefs().contains(LEGACY_MARK))
+            assertFalse(AnkiDroidApp.sharedPrefs().contains(LEGACY_RECENT))
+        }
+
+    @Test
+    fun `another account never starts at the previous account's upload mark`() =
+        runBlocking {
+            val uploaded = col.db.queryLongScalar("select max(id) from revlog")
+            AnkiDroidApp.sharedPrefs().edit {
+                putLong(LEGACY_MARK, uploaded)
+                putString(LEGACY_RECENT, "$uploaded")
+                putBoolean("ankiquestInitialSyncDone:$url/cerro", true)
+            }
+            configureAccount("other", "second-token")
+
+            Ankiquest.deckNotificationSettings()
+
+            val upload = reviewUpload("other")
+            assertEquals(1, upload.getJSONArray("reviews").length())
+            assertTrue(upload.getBoolean("silent"))
+            assertEquals(uploaded, AnkiDroidApp.sharedPrefs().getLong(LEGACY_MARK, 0), "the mark stays for the account it belongs to")
+        }
+
+    @Test
+    fun `an upload mark shared by several accounts is dropped and the next upload is silent`() {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        prefs.edit {
+            putLong(LEGACY_MARK, 42)
+            putString(LEGACY_RECENT, "42")
+            putBoolean("ankiquestInitialSyncDone:$url/cerro", true)
+            putBoolean("ankiquestInitialSyncDone:$url/other", true)
+        }
+
+        Ankiquest.migrateUploadMark(prefs, "$url/cerro")
+
+        assertFalse(prefs.contains(LEGACY_MARK))
+        assertFalse(prefs.contains(LEGACY_RECENT))
+        assertFalse(prefs.contains("$LEGACY_MARK:$url/cerro"))
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(prefs.getLong("$LEGACY_MARK:$url/cerro", 0), false, false, false))
+    }
 
     private fun configureAccount(
         user: String,

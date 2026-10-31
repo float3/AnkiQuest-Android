@@ -463,7 +463,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val profile = atRisk(dayEndsIn = 3 * HOUR_MS)
         shadowOf(manager).setNotificationsEnabled(false)
         AnkiquestNotifier.onProfile(targetContext, profile)
-        assertFalse(AnkiDroidApp.sharedPrefs().contains("ankiquestStreakNotifiedDay"))
+        assertTrue(AnkiDroidApp.sharedPrefs().all.keys.none { it.startsWith(AnkiquestNotifier.PREF_STREAK_DAY) })
         shadowOf(manager).setNotificationsEnabled(true)
         AnkiquestNotifier.onProfile(targetContext, profile)
         assertEquals(1, shadowOf(manager).size())
@@ -532,6 +532,25 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals(3, bodies.size)
                 assertEquals(0, bodies[0].getJSONArray("previous").length(), "a new device has seen no order yet")
                 assertEquals(listOf("cerro", "hill"), bodies[1].getJSONArray("previous").let { (0 until it.length()).map(it::getString) })
+            } finally {
+                server.stop(0)
+            }
+        }
+
+    @Test
+    fun `another account never compares against the order seen by the previous one`() =
+        runBlocking {
+            val bodies = CopyOnWriteArrayList<JSONObject>()
+            val server =
+                rankServer { body ->
+                    bodies += body
+                    JSONObject().put("order", JSONArray(listOf("hill", "cerro"))).put("change", JSONObject.NULL)
+                }
+            try {
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "another-credential") }
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                assertEquals(0, bodies[1].getJSONArray("previous").length(), "a switched account has seen no order yet")
             } finally {
                 server.stop(0)
             }

@@ -439,12 +439,13 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         user: String,
     ): JSONObject {
         val now = TimeManager.time.intTimeMS()
-        if (now - baselineAt > BASELINE_MAX_AGE_MS) {
+        val account = "$url/$user"
+        if (baselineAccount != account || now - baselineAt > BASELINE_MAX_AGE_MS) {
             syncedLastId = get("$url/api/profile/$user").optLong("last_review_id")
             baselineAt = now
+            baselineAccount = account
         }
         val reviews = pendingReviews(syncedLastId)
-        val account = "$url/$user"
         val body = JSONObject().put("reviews", reviews)
         seenThrough?.takeIf { it.first == account }?.let { body.put("seen_through", it.second) }
         val profile =
@@ -469,14 +470,17 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         catalog: Boolean = false,
     ): JSONObject {
         val prefs = AnkiDroidApp.sharedPrefs()
-        val mark = prefs.getLong(PREF_MARK, 0L)
-        val initialSyncKey = "$INITIAL_SYNC_KEY:$url/$user"
-        val initialSyncDone = prefs.getBoolean(initialSyncKey, false)
+        val account = "$url/$user"
+        migrateUploadMark(prefs, account)
+        val markKey = markKey(account)
+        val mark = prefs.getLong(markKey, 0L)
+        val initialSyncKey = initialSyncKey(account)
+        val initialSyncDone = prefs.contains(markKey) && prefs.getBoolean(initialSyncKey, false)
         var known = if (resync) maxOf(0L, mark - RESYNC_WINDOW_MS) else mark
         val clock = clock()
 
         val windowStart = TimeManager.time.intTimeMS() - UNDO_WINDOW_MS
-        val recent = recentUploads(prefs, windowStart)
+        val recent = recentUploads(prefs, recentKey(account), windowStart)
         val window = if (onlyTest) emptyList() else pendingReviews(windowStart).objects()
         val present = window.map { it.getLong("id") }
         val reconciled = AnkiquestCompletionPolicy.reconcile(present, recent, known, if (onlyTest) 0L else mark)
@@ -528,24 +532,57 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                         .post(body.toString().toRequestBody(json))
                         .build(),
                 )
-            prefs.edit { putLong(PREF_MARK, maxOf(known, mark)) }
+            if (!onlyTest) prefs.edit { putLong(markKey, maxOf(known, mark)) }
             first = false
         } while (full)
         if (!onlyTest) {
             prefs.edit {
-                putString(PREF_RECENT, present.joinToString(","))
+                putString(recentKey(account), present.joinToString(","))
                 putBoolean(initialSyncKey, true)
             }
         }
         return profile
     }
 
+    private fun markKey(account: String) = "$PREF_MARK:$account"
+
+    private fun recentKey(account: String) = "$PREF_RECENT:$account"
+
+    private fun initialSyncKey(account: String) = "$INITIAL_SYNC_KEY:$account"
+
+    /**
+     * Gives the upload mark that older versions kept for every account to the [account] it belongs to.
+     *
+     * It is only known to be [account]'s when no other account has completed an upload on this device.
+     * Otherwise [account] starts afresh: its first upload is then silent, and the server keeps one copy
+     * of any review it already had. A mark that belongs to another single account is left for it.
+     */
+    @VisibleForTesting
+    internal fun migrateUploadMark(
+        prefs: SharedPreferences,
+        account: String,
+    ) {
+        if (!prefs.contains(PREF_MARK) && !prefs.contains(PREF_RECENT)) return
+        if (prefs.contains(markKey(account))) return
+        val owner = prefs.all.keys.filter { it.startsWith("$INITIAL_SYNC_KEY:") }.singleOrNull()
+        if (owner != null && owner != initialSyncKey(account)) return
+        prefs.edit {
+            if (owner != null) {
+                putLong(markKey(account), prefs.getLong(PREF_MARK, 0L))
+                prefs.getString(PREF_RECENT, null)?.let { putString(recentKey(account), it) }
+            }
+            remove(PREF_MARK)
+            remove(PREF_RECENT)
+        }
+    }
+
     private fun recentUploads(
         prefs: SharedPreferences,
+        key: String,
         windowStart: Long,
     ): Set<Long> =
         prefs
-            .getString(PREF_RECENT, "")
+            .getString(key, "")
             .orEmpty()
             .split(',')
             .mapNotNull { it.toLongOrNull() }
@@ -716,8 +753,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     } else {
                         if (uploadAll) {
                             AnkiDroidApp.sharedPrefs().edit {
-                                remove(PREF_MARK)
-                                remove("$INITIAL_SYNC_KEY:$url/$user")
+                                remove(markKey("$url/$user"))
+                                remove(initialSyncKey("$url/$user"))
                             }
                         }
                         upload(url, user, token, resync = false, onlyTest = !uploadAll)

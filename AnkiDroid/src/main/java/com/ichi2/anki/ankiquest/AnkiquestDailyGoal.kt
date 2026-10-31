@@ -129,10 +129,14 @@ internal object AnkiquestDailyGoal {
     ) {
         val today = profile.optJSONObject("today") ?: return
         val minutes = today.optInt("streak_minutes", 0).coerceAtLeast(0)
-        if (prefs.getInt(PREF_STREAK_MINUTES, -1) != minutes) prefs.edit { putInt(PREF_STREAK_MINUTES, minutes) }
+        val key = streakMinutesKey(prefs)
+        if (prefs.getInt(key, -1) != minutes) prefs.edit { putInt(key, minutes) }
     }
 
-    fun streakMinutes(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Int = prefs.getInt(PREF_STREAK_MINUTES, 0)
+    /** The streak minimum of the configured account; another account's minimum is never assumed. */
+    fun streakMinutes(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Int = prefs.getInt(streakMinutesKey(prefs), 0)
+
+    private fun streakMinutesKey(prefs: SharedPreferences) = scopedKey(PREF_STREAK_MINUTES, AnkiquestHomeData.account(prefs)?.scope)
 
     fun load(col: Collection): Load {
         val today = col.sched.today
