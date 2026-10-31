@@ -9,6 +9,7 @@ import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.ankiquest.AnkiquestActivity
+import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.multimedia.MultimediaActivity
@@ -156,11 +157,12 @@ class AllActivitiesRecreationTest : RobolectricTest() {
     companion object {
         /**
          * Activities which finish on the way up given what this test provides: an empty
-         * collection, no card to review, no notetype and no widget id.
+         * collection, no card to review, no notetype, no widget id and no signed-in account.
          */
         private val finishesDuringStartup =
             listOf(
                 AnkiquestActivity::class.java,
+                AnkiquestShareActivity::class.java,
                 AnkiquestWidgetConfig::class.java,
                 CardAnalysisWidgetConfig::class.java,
                 DeckPickerWidgetConfig::class.java,

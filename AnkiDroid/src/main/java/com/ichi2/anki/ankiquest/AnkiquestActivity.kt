@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.text.TextUtils
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -21,6 +20,7 @@ import android.widget.ProgressBar
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
+import androidx.core.text.htmlEncode
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type.displayCutout
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
@@ -250,7 +250,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                 }
                 if (!ready) {
                     findViewById<ProgressBar>(R.id.progress_bar).visibility = View.GONE
-                    val message = TextUtils.htmlEncode(getString(R.string.ankiquest_web_prepare_failed))
+                    val message = getString(R.string.ankiquest_web_prepare_failed).htmlEncode()
                     webView.loadDataWithBaseURL(null, "<p>$message</p>", "text/html", "UTF-8", null)
                     return@launch
                 }

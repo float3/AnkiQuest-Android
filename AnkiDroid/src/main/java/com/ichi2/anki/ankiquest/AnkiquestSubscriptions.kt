@@ -15,7 +15,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 internal data class IncomingSender(
@@ -47,7 +46,7 @@ internal data class IncomingSubscriptions(
                 (senders + retained)
                     .filter { it.user in visible }
                     .distinctBy { it.user }
-                    .sortedWith(compareBy<IncomingSender> { it.display.lowercase(Locale.ROOT) }.thenBy { it.user }),
+                    .sortedWith(compareBy<IncomingSender, String>(String.CASE_INSENSITIVE_ORDER) { it.display }.thenBy { it.user }),
                 strings("muted_senders").isNotEmpty(),
             )
         }
