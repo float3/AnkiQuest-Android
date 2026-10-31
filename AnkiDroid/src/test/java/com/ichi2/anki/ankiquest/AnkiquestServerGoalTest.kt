@@ -296,7 +296,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         }
 
     @Test
-    fun `a report the server will not take is not sent again`() =
+    fun `a report the server will not take is not sent again`(): Unit =
         runBlocking {
             reachedStatus = 409
             assertFalse(AnkiquestSharing.goalReached(account(), 20391))
@@ -307,7 +307,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         }
 
     @Test
-    fun `a refused goal carries the server's explanation`() =
+    fun `a refused goal carries the server's explanation`(): Unit =
         runBlocking {
             val refusal =
                 assertFailsWith<AnkiquestSharing.Refusal> {
@@ -322,7 +322,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         }
 
     @Test
-    fun `sharing settings change one kind at a time`() =
+    fun `sharing settings change one kind at a time`(): Unit =
         runBlocking {
             val loaded = AnkiquestSharing.settings(account())
             assertEquals("private", loaded.policies["quest"])
