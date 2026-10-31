@@ -52,6 +52,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                 R.string.ankiquest_goal_backlog_key,
                 R.string.ankiquest_goal_cards_key,
                 R.string.ankiquest_goal_minutes_key,
+                R.string.ankiquest_goal_celebrate_key,
                 R.string.ankiquest_deck_status_key,
                 R.string.ankiquest_streak_protection_key,
                 R.string.ankiquest_notify_rank_key,

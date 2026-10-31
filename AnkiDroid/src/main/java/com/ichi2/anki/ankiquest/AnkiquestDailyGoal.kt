@@ -25,8 +25,10 @@ internal object AnkiquestDailyGoal {
     const val PREF_BACKLOG_PERCENT = "ankiquestGoalBacklogPercent"
     const val PREF_CARDS = "ankiquestGoalCards"
     const val PREF_MINUTES = "ankiquestGoalMinutes"
+    const val PREF_CELEBRATE = "ankiquestGoalCelebrate"
     private const val PREF_STREAK_MINUTES = "ankiquestStreakMinutes"
     private const val PREF_DAY_GOAL = "ankiquestDayGoal"
+    private const val PREF_CELEBRATED = "ankiquestGoalCelebrated"
 
     const val DEFAULT_BACKLOG_PERCENT = 10
     const val DEFAULT_CARDS = 100
@@ -89,6 +91,8 @@ internal object AnkiquestDailyGoal {
         val goalDone: Boolean get() = progress > 0 && progress >= goal.target
     }
 
+    enum class Celebration { MINIMUM, GOAL, BOTH }
+
     /** Cards from a [backlog] to work off today: at least one while any is left. */
     fun backlogShare(
         backlog: Int,
@@ -114,6 +118,21 @@ internal object AnkiquestDailyGoal {
             }
         }
 
+    /** Which celebrations [status] has earned that were not [shown] yet today. */
+    fun celebration(
+        status: Status,
+        shown: Set<Celebration>,
+    ): Celebration? {
+        val minimum = status.minimumDone && Celebration.MINIMUM !in shown
+        val goal = status.goalDone && Celebration.GOAL !in shown
+        return when {
+            minimum && goal -> Celebration.BOTH
+            goal -> Celebration.GOAL
+            minimum -> Celebration.MINIMUM
+            else -> null
+        }
+    }
+
     fun settings(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Settings =
         Settings(
             Mode.of(prefs.getString(PREF_MODE, null)),
@@ -121,6 +140,8 @@ internal object AnkiquestDailyGoal {
             prefs.intOr(PREF_CARDS, DEFAULT_CARDS),
             prefs.intOr(PREF_MINUTES, DEFAULT_MINUTES),
         )
+
+    fun celebrationsEnabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_CELEBRATE, true)
 
     /** Keeps the server's streak minimum, so it is known offline and right after studying. */
     fun remember(
@@ -203,6 +224,35 @@ internal object AnkiquestDailyGoal {
                 }
             }
         return Status(load.day, load.minutes, streakMinutes(prefs), load.studiedCards, settings.mode, settings.backlogPercent, goal)
+    }
+
+    /** The celebration [status] earned since the last one shown, marking it shown. */
+    fun claim(
+        status: Status,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Celebration? {
+        val stored = prefs.getString(PREF_CELEBRATED, null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+        val shown =
+            if (stored != null && stored.optInt("day", -1) == status.day) {
+                buildSet {
+                    if (stored.optBoolean("minimum")) add(Celebration.MINIMUM)
+                    if (stored.optBoolean("goal")) add(Celebration.GOAL)
+                }
+            } else {
+                emptySet()
+            }
+        val earned = celebration(status, shown) ?: return null
+        prefs.edit {
+            putString(
+                PREF_CELEBRATED,
+                JSONObject()
+                    .put("day", status.day)
+                    .put("minimum", Celebration.MINIMUM in shown || earned != Celebration.GOAL)
+                    .put("goal", Celebration.GOAL in shown || earned != Celebration.MINIMUM)
+                    .toString(),
+            )
+        }
+        return earned
     }
 
     /** "34 of 50 cards" or "12 of 20 minutes", toward the daily goal. */
