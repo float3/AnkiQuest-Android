@@ -548,7 +548,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     ) {
         if (!prefs.contains(PREF_MARK) && !prefs.contains(PREF_RECENT)) return
         if (prefs.contains(markKey(account))) return
-        val owner = prefs.all.keys.filter { it.startsWith("$INITIAL_SYNC_KEY:") }.singleOrNull()
+        val owner =
+            prefs.all.keys
+                .filter { it.startsWith("$INITIAL_SYNC_KEY:") }
+                .singleOrNull()
         if (owner != null && owner != initialSyncKey(account)) return
         prefs.edit {
             if (owner != null) {
@@ -775,7 +778,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     /** A typed server address that can never be used is reported as such rather than as missing settings. */
     private fun unconfigured(context: Context): String {
-        val typed = AnkiDroidApp.sharedPrefs().getString(PREF_URL, "").orEmpty().trim()
+        val typed =
+            AnkiDroidApp
+                .sharedPrefs()
+                .getString(PREF_URL, "")
+                .orEmpty()
+                .trim()
         return if (typed.isNotEmpty() && HomeAccount.from(mapOf(PREF_URL to typed), "player") == null) {
             context.getString(R.string.ankiquest_check_bad_url, typed)
         } else {
