@@ -20,6 +20,7 @@
         <item>Les cartes du jour plus une partie du retard</item>
         <item>Un nombre de cartes</item>
         <item>Un nombre de minutes</item>
+        <item>Pas d’objectif quotidien</item>
     </string-array>
     <string-array name="ankiquest_goal_backlog_entries">
         <item>5 % (environ 20 jours)</item>

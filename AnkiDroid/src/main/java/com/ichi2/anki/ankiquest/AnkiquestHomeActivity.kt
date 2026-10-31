@@ -283,7 +283,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
-        local?.goal?.let { renderGoal(it) }
+        local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile)) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -324,6 +324,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
             else -> text(panel, getString(R.string.aq_goal_minimum_any), small = true)
         }
+        if (status.mode == AnkiquestDailyGoal.Mode.OFF) return
         text(
             panel,
             if (status.goalDone) {

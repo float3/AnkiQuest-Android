@@ -15,32 +15,32 @@
         android:summary="@string/ankiquest_summary_preference_summary"
         android:title="@string/ankiquest_summary_preference_title" />
     <ListPreference
-        android:defaultValue="backlog"
         android:entries="@array/ankiquest_goal_mode_entries"
         android:entryValues="@array/ankiquest_goal_mode_values"
         android:key="@string/ankiquest_goal_mode_key"
+        android:persistent="false"
         android:title="@string/ankiquest_goal_mode_title"
         app:useSimpleSummaryProvider="true" />
     <ListPreference
-        android:defaultValue="10"
         android:entries="@array/ankiquest_goal_backlog_entries"
         android:entryValues="@array/ankiquest_goal_backlog_values"
         android:key="@string/ankiquest_goal_backlog_key"
+        android:persistent="false"
         android:title="@string/ankiquest_goal_backlog_title"
         app:useSimpleSummaryProvider="true" />
     <com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
-        android:defaultValue="100"
         android:key="@string/ankiquest_goal_cards_key"
+        android:persistent="false"
         android:title="@string/ankiquest_goal_cards_title"
         app:min="1"
-        app:max="9999"
+        app:max="5000"
         app:useSimpleSummaryProvider="true" />
     <com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
-        android:defaultValue="20"
         android:key="@string/ankiquest_goal_minutes_key"
+        android:persistent="false"
         android:title="@string/ankiquest_goal_minutes_title"
         app:min="1"
-        app:max="1440"
+        app:max="600"
         app:useSimpleSummaryProvider="true" />
     <SwitchPreferenceCompat
         android:defaultValue="true"

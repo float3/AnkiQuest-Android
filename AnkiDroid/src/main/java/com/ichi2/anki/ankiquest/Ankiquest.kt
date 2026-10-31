@@ -461,9 +461,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             mutex.withLock {
                 val (feedback, again) = refreshes.take()
                 try {
-                    val (url, user, token) = endpoint() ?: return@withLock
+                    val account = HomeAccount.current() ?: return@withLock
+                    val (url, user, token) = Triple(account.server, account.encodedUser, account.token)
                     val profile = if (token.isEmpty()) preview(url, user) else upload(url, user, token, again)
                     present(profile, feedback)
+                    if (token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
                 } catch (e: Exception) {
                     Timber.w(e, "ankiquest refresh failed")
                 }
@@ -660,12 +662,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     }
 
     private suspend fun clock(): JSONObject {
-        val rollover =
-            CollectionManager.withCol {
-                runCatching {
-                    db.queryString("select cast(val as text) from config where key = 'rollover'").trim().toInt()
-                }.getOrDefault(4)
-            }
+        val rollover = CollectionManager.withCol { AnkiquestDecks.rollover(this) }
         val now = TimeManager.time.intTimeMS()
         return JSONObject()
             .put("rollover_hour", rollover)

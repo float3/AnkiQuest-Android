@@ -20,6 +20,7 @@
         <item>O de hoje mais parte do atraso</item>
         <item>Um número de cartões</item>
         <item>Um número de minutos</item>
+        <item>Sem meta diária</item>
     </string-array>
     <string-array name="ankiquest_goal_backlog_entries">
         <item>5 % (cerca de 20 dias)</item>
