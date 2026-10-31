@@ -24,7 +24,6 @@ import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.observability.ChangeManager
-import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -76,8 +75,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .callTimeout(20, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 chain.proceed(
@@ -129,24 +128,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     fun isConfigured(): Boolean = endpoint() != null
 
     /** The configured player name, or the sync username when none is set. */
-    fun player(): String? =
-        AnkiDroidApp
-            .sharedPrefs()
-            .getString(PREF_USER, "")
-            .orEmpty()
-            .trim()
-            .ifEmpty { Prefs.username.orEmpty() }
-            .ifEmpty { null }
+    fun player(): String? = HomeAccount.current()?.user
 
-    private fun endpoint(): Triple<String, String, String>? {
-        // Keep credentials tied to one server even when settings change during a queued request.
-        val settings = AnkiDroidApp.sharedPrefs().all
-        val url = (settings[PREF_URL] as? String).orEmpty().trim().trimEnd('/')
-        val user = (settings[PREF_USER] as? String).orEmpty().trim().ifEmpty { Prefs.username.orEmpty() }
-        val token = (settings[PREF_TOKEN] as? String).orEmpty().trim()
-        if (url.isEmpty() || user.isEmpty()) return null
-        return Triple(url, URLEncoder.encode(user, "UTF-8").replace("+", "%20"), token)
-    }
+    /** The server, encoded member and token of one settings snapshot, so a queued request never mixes accounts. */
+    private fun endpoint(): Triple<String, String, String>? = HomeAccount.current()?.let { Triple(it.server, it.encodedUser, it.token) }
 
     /** This week's standings, as served by `/api/leaderboard`. */
     suspend fun leaderboard(): JSONArray =
@@ -562,8 +547,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             .filter { it > windowStart }
             .toSet()
 
-    private fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }
-
     private suspend fun present(
         profile: JSONObject,
         showFeedback: Boolean,
@@ -582,7 +565,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         showFeedback: Boolean,
     ): Pair<String, Boolean>? {
         if (feedback == null) return null
-        val headlines = feedback.optJSONArray("headlines")?.let { lines -> (0 until lines.length()).map { lines.getString(it) } }.orEmpty()
+        val headlines = feedback.optJSONArray("headlines")?.strings().orEmpty()
         val status = if (feedback.isNull("status")) null else feedback.getString("status").ifEmpty { null }
         return when {
             headlines.isNotEmpty() -> (headlines + listOfNotNull(status)).joinToString("\n") to true
@@ -715,7 +698,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         context: Context,
         uploadAll: Boolean,
     ): String {
-        val (url, user, token) = endpoint() ?: return context.getString(R.string.ankiquest_check_unconfigured)
+        val (url, user, token) = endpoint() ?: return unconfigured(context)
 
         return try {
             mutex.withLock {
@@ -759,6 +742,20 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
+    /** A typed server address that can never be used is reported as such rather than as missing settings. */
+    private fun unconfigured(context: Context): String {
+        val typed = AnkiDroidApp.sharedPrefs().getString(PREF_URL, "").orEmpty().trim()
+        return if (typed.isNotEmpty() && HomeAccount.from(mapOf(PREF_URL to typed), "player") == null) {
+            context.getString(R.string.ankiquest_check_bad_url, typed)
+        } else {
+            context.getString(R.string.ankiquest_check_unconfigured)
+        }
+    }
+
+    /**
+     * Shows [text] briefly over the current screen. It is discoverable with accessibility services
+     * but not announced, because the session recap carries the same feedback without interrupting every answer.
+     */
     private fun showBanner(
         text: String,
         important: Boolean,

@@ -8,7 +8,7 @@ import com.ichi2.anki.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import timber.log.Timber
@@ -34,8 +34,8 @@ object AnkiquestAccount {
     )
 
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .callTimeout(20, TimeUnit.SECONDS)
             .build()
 
@@ -44,14 +44,14 @@ object AnkiquestAccount {
     internal fun httpRequest(
         request: Credentials,
         device: String,
-    ): okhttp3.Request {
+    ): Request {
         val body =
             JSONObject()
                 .put("user", request.user)
                 .put("password", request.password)
                 .put("device", device)
         if (request.create && request.display.isNotBlank()) body.put("display", request.display)
-        return okhttp3.Request
+        return Request
             .Builder()
             .url(request.url.trimEnd('/') + if (request.create) "/api/accounts" else "/api/accounts/tokens")
             .header("Accept-Language", AnkiquestLanguage.tag())

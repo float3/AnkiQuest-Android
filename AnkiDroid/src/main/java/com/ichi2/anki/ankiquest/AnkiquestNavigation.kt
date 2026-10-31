@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
-import java.security.MessageDigest
 
 /** Entry policy is independent of connectivity: the local study library always works. */
 object AnkiquestNavigation {
@@ -50,13 +49,11 @@ object AnkiquestNavigation {
             (settings[Ankiquest.PREF_USER] as? String).orEmpty().trim().ifEmpty {
                 (settings["username"] as? String).orEmpty().trim()
             }
-        val identity =
-            listOf(
-                settings[Ankiquest.PREF_URL].toString(),
-                settings[Ankiquest.PREF_USER].toString(),
-                player,
-                settings[Ankiquest.PREF_TOKEN].toString(),
-            ).joinToString("\u0000")
-        return MessageDigest.getInstance("SHA-256").digest(identity.toByteArray()).joinToString("") { "%02x".format(it) }
+        return sha256(
+            settings[Ankiquest.PREF_URL].toString(),
+            settings[Ankiquest.PREF_USER].toString(),
+            player,
+            settings[Ankiquest.PREF_TOKEN].toString(),
+        )
     }
 }
