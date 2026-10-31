@@ -48,6 +48,11 @@
         android:summary="@string/ankiquest_goal_celebrate_summary"
         android:title="@string/ankiquest_goal_celebrate_title" />
     <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="@string/ankiquest_mood_icon_key"
+        android:summary="@string/ankiquest_mood_icon_summary"
+        android:title="@string/ankiquest_mood_icon_title" />
+    <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="@string/ankiquest_deck_status_key"
         android:summary="@string/ankiquest_deck_status_summary"

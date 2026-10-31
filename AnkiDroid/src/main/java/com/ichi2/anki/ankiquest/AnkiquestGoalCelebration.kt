@@ -70,7 +70,7 @@ internal object AnkiquestGoalCelebration {
                     AnkiquestAki
                         .image(
                             activity,
-                            if (celebration == Celebration.MINIMUM) R.drawable.aki_streak else R.drawable.aki_celebrate,
+                            if (celebration == Celebration.MINIMUM) R.drawable.aki_minimum else R.drawable.aki_goal,
                             128,
                         ).apply {
                             layoutParams = LinearLayout.LayoutParams(layoutParams).apply { gravity = Gravity.CENTER_HORIZONTAL }

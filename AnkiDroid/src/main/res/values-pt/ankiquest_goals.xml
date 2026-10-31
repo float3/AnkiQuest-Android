@@ -41,4 +41,6 @@
         <item quantity="one">dia de sequência</item>
         <item quantity="other">dias de sequência</item>
     </plurals>
+    <string name="ankiquest_mood_icon_title">O humor da Aki no ícone</string>
+    <string name="ankiquest_mood_icon_summary">O ícone sorri quando hoje já conta, se preocupa no fim do dia e mostra um protetor quando ele te cobre. Alguns launchers escondem o ícone por um instante ao trocar.</string>
 </resources>

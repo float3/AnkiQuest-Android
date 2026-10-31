@@ -77,10 +77,13 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         ): Int =
             when {
                 state == "unknown" -> R.drawable.aki_face
-                state == "protected" -> R.drawable.aki_freeze
+                state == "protected" -> R.drawable.aki_freeze_used
+                state == "studied" && streak >= 100 -> R.drawable.aki_streak_legend
+                state == "studied" && streak >= 30 -> R.drawable.aki_streak_blazing
+                state == "studied" && streak >= 7 -> R.drawable.aki_streak_hot
                 state == "studied" -> R.drawable.aki_streak
-                streak == 0 -> R.drawable.aki_welcome
-                else -> R.drawable.aki_review
+                streak == 0 -> R.drawable.aki_comeback
+                else -> R.drawable.aki_at_risk
             }
 
         /** Draws your row of [board] into every placed streak widget; null means not configured. */

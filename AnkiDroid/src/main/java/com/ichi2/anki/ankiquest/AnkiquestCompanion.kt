@@ -42,10 +42,15 @@ internal object AnkiquestCompanion {
             aki
         } else {
             when (aki) {
-                R.drawable.aki_face -> R.drawable.ankilope_face
-                R.drawable.aki_welcome -> R.drawable.ankilope_welcome
-                R.drawable.aki_celebrate, R.drawable.aki_winner -> R.drawable.ankilope_celebrate
-                R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze -> R.drawable.ankilope_study
+                R.drawable.aki_face, R.drawable.aki_icon_happy, R.drawable.aki_icon_worried,
+                R.drawable.aki_icon_frozen, R.drawable.aki_icon_sleepy,
+                -> R.drawable.ankilope_face
+                R.drawable.aki_welcome, R.drawable.aki_comeback -> R.drawable.ankilope_welcome
+                R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_goal, R.drawable.aki_minimum,
+                -> R.drawable.ankilope_celebrate
+                R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze, R.drawable.aki_freeze_used,
+                R.drawable.aki_streak_hot, R.drawable.aki_streak_blazing, R.drawable.aki_streak_legend, R.drawable.aki_at_risk,
+                -> R.drawable.ankilope_study
                 else -> aki
             }
         }

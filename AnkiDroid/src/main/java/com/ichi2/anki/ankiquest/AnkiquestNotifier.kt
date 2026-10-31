@@ -137,6 +137,7 @@ object AnkiquestNotifier {
     ) {
         val prefs = AnkiDroidApp.sharedPrefs()
         AnkiquestDailyGoal.remember(profile, prefs)
+        AnkiquestIcon.update(context, profile, TimeManager.time.intTimeMS(), prefs)
         val hours = prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
         val warning = profile.optJSONObject("streak_warning")
         if (hours <= 0 || warning == null) return

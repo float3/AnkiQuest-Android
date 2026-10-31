@@ -35,6 +35,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
@@ -219,6 +220,14 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             requirePreference<Preference>(R.string.ankiquest_goal_minutes_key).isVisible = chosen == AnkiquestDailyGoal.Mode.MINUTES
         }
         showGoalFields(mode.value)
+        requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_mood_icon_key).setOnPreferenceChangeListener { _, enabled ->
+            if (enabled == true) {
+                AnkiquestPoll.refreshNow(requireContext())
+            } else {
+                AnkiquestIcon.show(requireContext(), AnkiquestIcon.Mood.DEFAULT)
+            }
+            true
+        }
         mode.setOnPreferenceChangeListener { _, value ->
             showGoalFields(value as? String)
             true
