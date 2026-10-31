@@ -259,23 +259,47 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         place: Int?,
         expectedScope: String,
     ): Int =
+        share(
+            JSONObject().apply {
+                notification?.let { put("notification", it) }
+                place?.let { put("place", it) }
+            },
+            expectedScope,
+        ).optInt("recipients")
+
+    /** Sends the server's [win] to everyone in the player's circle; answers how many friends got it. */
+    suspend fun shareWinWithFriends(
+        win: Long,
+        expectedScope: String,
+    ): Int = share(JSONObject().put("win", win).put("to", "friends"), expectedScope).optInt("recipients")
+
+    /** The public link for the server's [win], with its card and invitation text; the server makes it once and reuses it. */
+    internal suspend fun shareWinLink(
+        win: Long,
+        expectedScope: String,
+    ): AnkiquestShare.Link {
+        val answer = share(JSONObject().put("win", win).put("to", "link"), expectedScope)
+        return AnkiquestShare.Link(answer.getString("url"), answer.getString("image"), answer.getString("text"))
+    }
+
+    private suspend fun share(
+        body: JSONObject,
+        expectedScope: String,
+    ): JSONObject =
         withContext(Dispatchers.IO) {
             val account = AnkiquestHomeData.account()?.takeIf { it.scope == expectedScope } ?: throw HomeAccountChanged()
             check(account.token.isNotEmpty()) { "Set your ankiquest token to share a win." }
-            execute(
-                Request
-                    .Builder()
-                    .url(account.url("api/share/${account.encodedUser}"))
-                    .header("Authorization", "Bearer ${account.token}")
-                    .post(
-                        JSONObject()
-                            .apply {
-                                notification?.let { put("notification", it) }
-                                place?.let { put("place", it) }
-                            }.toString()
-                            .toRequestBody(json),
-                    ).build(),
-            ).optInt("recipients")
+            val answer =
+                execute(
+                    Request
+                        .Builder()
+                        .url(account.url("api/share/${account.encodedUser}"))
+                        .header("Authorization", "Bearer ${account.token}")
+                        .post(body.toString().toRequestBody(json))
+                        .build(),
+                )
+            if (AnkiquestHomeData.account()?.scope != expectedScope) throw HomeAccountChanged()
+            answer
         }
 
     /** The server's address, for inviting people met outside the app. */
@@ -349,6 +373,38 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             }
         }
 
+    /**
+     * Cheers 🎉 on a win a friend shared, one inbox [notification]; the friend is told who cheered.
+     * Answers whether this player had already cheered it.
+     */
+    suspend fun react(
+        notification: Long,
+        expectedAccount: String,
+        expectedScope: String,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val account = AnkiquestHomeData.account() ?: throw Rejected(401)
+            if (account.token.isEmpty() || account.notificationAccount != expectedAccount ||
+                account.scope != expectedScope
+            ) {
+                throw Rejected(401)
+            }
+            val request =
+                Request
+                    .Builder()
+                    .url(account.url("api/react/${account.encodedUser}"))
+                    .header("Authorization", "Bearer ${account.token}")
+                    .post(JSONObject().put("notification", notification).toString().toRequestBody(json))
+                    .build()
+            try {
+                val already = execute(request, sessionClient).optBoolean("already")
+                if (AnkiquestHomeData.account()?.scope != account.scope) throw Rejected(401)
+                already
+            } catch (e: HttpStatusException) {
+                throw if (e.code in 400..499) Rejected(e.code) else e
+            }
+        }
+
     internal data class CompletionNotifications(
         val account: String,
         val notifications: JSONArray,
@@ -405,9 +461,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             mutex.withLock {
                 val (feedback, again) = refreshes.take()
                 try {
-                    val (url, user, token) = endpoint() ?: return@withLock
+                    val account = HomeAccount.current() ?: return@withLock
+                    val (url, user, token) = Triple(account.server, account.encodedUser, account.token)
                     val profile = if (token.isEmpty()) preview(url, user) else upload(url, user, token, again)
                     present(profile, feedback)
+                    if (token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
                 } catch (e: Exception) {
                     Timber.w(e, "ankiquest refresh failed")
                 }
@@ -604,12 +662,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     }
 
     private suspend fun clock(): JSONObject {
-        val rollover =
-            CollectionManager.withCol {
-                runCatching {
-                    db.queryString("select cast(val as text) from config where key = 'rollover'").trim().toInt()
-                }.getOrDefault(4)
-            }
+        val rollover = CollectionManager.withCol { AnkiquestDecks.rollover(this) }
         val now = TimeManager.time.intTimeMS()
         return JSONObject()
             .put("rollover_hour", rollover)

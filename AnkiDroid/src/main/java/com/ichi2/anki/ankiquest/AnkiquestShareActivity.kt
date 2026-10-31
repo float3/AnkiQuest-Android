@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.os.Bundle
-import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
@@ -26,11 +25,11 @@ class AnkiquestShareActivity : AnkiActivity() {
         super.onCreate(savedInstanceState)
         val title = intent.getStringExtra(AnkiquestShare.EXTRA_TITLE).orEmpty()
         val body = intent.getStringExtra(AnkiquestShare.EXTRA_BODY).orEmpty()
-        val art = intent.getIntExtra(AnkiquestShare.EXTRA_ART, R.drawable.aki_celebrate)
+        val win = intent.getLongExtra(AnkiquestShare.EXTRA_WIN, 0).takeIf { it > 0 }
         val notification = intent.getLongExtra(AnkiquestShare.EXTRA_NOTIFICATION, 0).takeIf { it > 0 }
         val place = intent.getIntExtra(AnkiquestShare.EXTRA_PLACE, 0).takeIf { it in 1..3 }
         val scope = intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE)
-        if (title.isEmpty() || (notification == null && place == null)) {
+        if (title.isEmpty() || (win == null && notification == null && place == null)) {
             finish()
             return
         }
@@ -46,47 +45,60 @@ class AnkiquestShareActivity : AnkiActivity() {
                 language.getString(R.string.ankiquest_share_friends),
                 language.getString(R.string.ankiquest_share_elsewhere),
             )
-        var drawing = false
+        var leaving = false
         AlertDialog
             .Builder(this)
             .setTitle(language.getString(R.string.ankiquest_share_title))
             .setItems(choices) { _, which ->
                 if (which == 0) {
-                    shareWithFriends(applicationContext, notification, place, scope)
+                    shareWithFriends(applicationContext, win, notification, place, scope)
                 } else {
-                    drawing = true
-                    shareElsewhere(title, body, art)
+                    leaving = true
+                    shareElsewhere(win, title, body, scope)
                 }
-            }.setOnDismissListener { if (!drawing) finish() }
+            }.setOnDismissListener { if (!leaving) finish() }
             .show()
     }
 
-    /** Draws the card away from the main thread, then opens the share sheet and closes. */
+    /**
+     * Fetches the win's link and card away from the main thread, then opens the share sheet and closes.
+     * Without a [win] the server keeps no card, so only a line of text is shared.
+     */
     private fun shareElsewhere(
+        win: Long?,
         title: String,
         body: String,
-        @DrawableRes art: Int,
+        scope: String,
     ) {
         lifecycleScope.launch {
-            try {
-                val chooser = withContext(Dispatchers.IO) { AnkiquestShare.chooser(applicationContext, title, body, art) }
-                startActivity(chooser)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Timber.w(e, "ankiquest share card failed")
-                showThemedToast(
-                    this@AnkiquestShareActivity,
-                    AnkiquestLanguage.context(this@AnkiquestShareActivity).getString(R.string.ankiquest_share_failed),
-                    shortLength = false,
-                )
-            }
+            val language = AnkiquestLanguage.context(this@AnkiquestShareActivity)
+            val failure =
+                try {
+                    val chooser =
+                        if (win == null) {
+                            AnkiquestShare.textChooser(applicationContext, title, body)
+                        } else {
+                            val link = Ankiquest.shareWinLink(win, scope)
+                            withContext(Dispatchers.IO) { AnkiquestShare.linkChooser(applicationContext, link) }
+                        }
+                    startActivity(chooser)
+                    null
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: HomeAccountChanged) {
+                    R.string.ankiquest_share_account_changed
+                } catch (e: Exception) {
+                    Timber.w(e, "ankiquest share link failed")
+                    R.string.ankiquest_share_failed
+                }
+            failure?.let { showThemedToast(this@AnkiquestShareActivity, language.getString(it), shortLength = false) }
             finish()
         }
     }
 
     private fun shareWithFriends(
         context: Context,
+        win: Long?,
         notification: Long?,
         place: Int?,
         scope: String,
@@ -95,7 +107,12 @@ class AnkiquestShareActivity : AnkiActivity() {
             val language = AnkiquestLanguage.context(context)
             val message =
                 try {
-                    val friends = Ankiquest.shareWin(notification, place, scope)
+                    val friends =
+                        if (win != null) {
+                            Ankiquest.shareWinWithFriends(win, scope)
+                        } else {
+                            Ankiquest.shareWin(notification, place, scope)
+                        }
                     if (friends == 0) {
                         language.getString(R.string.ankiquest_share_nobody)
                     } else {

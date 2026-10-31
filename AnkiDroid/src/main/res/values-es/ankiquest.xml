@@ -8,7 +8,7 @@
     <string name="ankiquest_notifications_title">Recordatorios y alertas</string>
     <string name="ankiquest_notifications_summary">Recordatorios, avisos y alertas</string>
     <string name="ankiquest_sharing_title">Amigos y contenido compartido</string>
-    <string name="ankiquest_sharing_summary">Avisos de mazos y suscripciones</string>
+    <string name="ankiquest_sharing_summary">Logros, avisos de mazos y suscripciones</string>
     <string name="ankiquest_maintenance_title">Aplicación y datos</string>
     <string name="ankiquest_maintenance_summary">Subida de repasos y actualizaciones</string>
     <string name="ankiquest_notification_events_title">Cuándo avisar</string>

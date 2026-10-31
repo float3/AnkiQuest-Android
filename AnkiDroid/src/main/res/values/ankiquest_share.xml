@@ -5,7 +5,6 @@
     <string name="ankiquest_share_title">Share this win</string>
     <string name="ankiquest_share_friends">With my AnkiQuest friends</string>
     <string name="ankiquest_share_elsewhere">Somewhere else…</string>
-    <string name="ankiquest_share_footer" translatable="false">AnkiQuest</string>
     <string name="ankiquest_share_text">%1$s: %2$s
 Study with me on AnkiQuest: %3$s</string>
     <string name="ankiquest_share_text_offline">%1$s: %2$s
@@ -17,4 +16,49 @@ I study with AnkiQuest.</string>
         <item quantity="other">Shared with %d friends</item>
     </plurals>
     <string name="ankiquest_share_account_changed">This win belongs to an AnkiQuest account that is no longer signed in.</string>
+    <string name="ankiquest_cheer">🎉 Cheer</string>
+    <string name="ankiquest_cheer_sent">🎉 You cheered: %1$s</string>
+    <string name="ankiquest_moments_key" translatable="false">ankiquestMoments</string>
+    <string name="ankiquest_moments_status_key" translatable="false">ankiquestMomentsStatus</string>
+    <string name="ankiquest_share_cap_key" translatable="false">ankiquestShareCap</string>
+    <string name="ankiquest_moments_decks_key" translatable="false">ankiquestMomentsDecks</string>
+    <string name="ankiquest_moments_title" maxLength="41">Your wins</string>
+    <string name="ankiquest_moments_summary">Choose who hears about each kind of win. You always see your own celebrations.</string>
+    <string name="ankiquest_share_cap_title" maxLength="41">Automatic wins per friend each day</string>
+    <string name="ankiquest_moments_decks_title" maxLength="41">Finished decks</string>
+    <string name="ankiquest_moments_decks_summary">Set per deck: choose the decks and who hears when you finish them</string>
+    <string-array name="ankiquest_moment_kinds" translatable="false">
+        <item>daily_goal</item>
+        <item>streak_secured</item>
+        <item>streak</item>
+        <item>level</item>
+        <item>achievement</item>
+        <item>record</item>
+        <item>quest</item>
+        <item>conquered</item>
+        <item>place</item>
+        <item>challenge</item>
+    </string-array>
+    <string-array name="ankiquest_moment_titles">
+        <item>Daily goal reached</item>
+        <item>Streak secured for the day</item>
+        <item>Streak milestones</item>
+        <item>New levels</item>
+        <item>Achievements</item>
+        <item>Personal bests</item>
+        <item>Daily quests done</item>
+        <item>Tough cards conquered</item>
+        <item>Top 3 on the weekly board</item>
+        <item>Challenges completed</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_values" translatable="false">
+        <item>private</item>
+        <item>ask</item>
+        <item>auto</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Only me</item>
+        <item>Ask me</item>
+        <item>Tell friends automatically</item>
+    </string-array>
 </resources>

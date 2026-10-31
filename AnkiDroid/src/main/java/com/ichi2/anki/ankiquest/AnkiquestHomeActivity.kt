@@ -104,6 +104,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         account = AnkiquestHomeData.account()
         render()
+        if (savedInstanceState == null) AnkiquestGoalDialog.offerSetup(this) { refresh() }
     }
 
     private var localRefreshJob: Job? = null
@@ -283,7 +284,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
-        local?.goal?.let { renderGoal(it) }
+        local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile)) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -324,6 +325,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
             else -> text(panel, getString(R.string.aq_goal_minimum_any), small = true)
         }
+        if (status.mode == AnkiquestDailyGoal.Mode.OFF) return
         text(
             panel,
             if (status.goalDone) {
@@ -337,7 +339,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (status.mode == AnkiquestDailyGoal.Mode.BACKLOG && status.goal.backlog > 0) {
             text(
                 panel,
-                getString(R.string.aq_goal_backlog_explained, status.goal.backlogShare, status.goal.backlog, status.backlogPercent),
+                getString(R.string.aq_goal_backlog_explained, status.goal.extra, status.goal.backlog, status.goal.daysLeft),
                 small = true,
             )
         }

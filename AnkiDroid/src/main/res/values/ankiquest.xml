@@ -12,7 +12,7 @@
     <string name="ankiquest_notifications_summary">Reminders, nudges and alert delivery</string>
     <string name="ankiquest_sharing_screen_key" translatable="false">ankiquestSharingScreen</string>
     <string name="ankiquest_sharing_title" maxLength="41">Friends &amp; sharing</string>
-    <string name="ankiquest_sharing_summary">Deck updates and subscriptions</string>
+    <string name="ankiquest_sharing_summary">Wins, deck updates and subscriptions</string>
     <string name="ankiquest_maintenance_screen_key" translatable="false">ankiquestMaintenanceScreen</string>
     <string name="ankiquest_maintenance_title" maxLength="41">App &amp; data</string>
     <string name="ankiquest_maintenance_summary">Review uploads and app updates</string>

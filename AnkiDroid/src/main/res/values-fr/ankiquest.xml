@@ -8,7 +8,7 @@
     <string name="ankiquest_notifications_title">Rappels et alertes</string>
     <string name="ankiquest_notifications_summary">Rappels, encouragements et alertes</string>
     <string name="ankiquest_sharing_title">Amis et partage</string>
-    <string name="ankiquest_sharing_summary">Actualités des paquets et abonnements</string>
+    <string name="ankiquest_sharing_summary">Victoires, actualités des paquets et abonnements</string>
     <string name="ankiquest_maintenance_title">Application et données</string>
     <string name="ankiquest_maintenance_summary">Envois de révisions et mises à jour</string>
     <string name="ankiquest_notification_events_title">Quand notifier</string>
