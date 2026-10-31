@@ -6,10 +6,17 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatCheckBox
 import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type.navigationBars
+import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
+import androidx.fragment.app.commit
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.BottomNavController.NavigationItem
 import com.ichi2.anki.CollectionManager.withCol
@@ -142,6 +149,47 @@ object AnkiquestDeckPickerHooks {
         if (navigationMode?.let { it != AnkiquestNavigation.enabled() } != true) return false
         activity.intent.putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
         activity.recreate()
+        return true
+    }
+
+    /**
+     * Turns the bottom navigation into the AnkiQuest shell, with the deck library as its fourth destination.
+     * Card browsing and all existing library tools remain native.
+     *
+     * @return true if AnkiQuest set up the bottom navigation, in which case the caller skips its own setup.
+     */
+    fun setupBottomNavigation(
+        deckPicker: DeckPicker,
+        bottomNav: BottomNavigationView,
+        fragmentContainer: View,
+        contentWrapper: View,
+    ): Boolean {
+        if (!AnkiquestNavigation.enabled()) return false
+        fragmentContainer.isVisible = false
+        deckPicker.supportFragmentManager.commit {
+            deckPicker.supportFragmentManager.fragments.forEach { fragment ->
+                if (fragment.id == R.id.bottom_nav_fragment_container) hide(fragment)
+            }
+        }
+        contentWrapper.isVisible = true
+        bottomNav.menu.clear()
+        bottomNav.inflateMenu(R.menu.ankiquest_navigation)
+        bottomNav.selectedItemId = R.id.ankiquest_nav_decks
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
+            view.updatePadding(bottom = insets.getInsets(navigationBars()).bottom)
+            insets
+        }
+        bottomNav.setOnItemSelectedListener { item ->
+            AnkiquestNavigation.destination(deckPicker, item.itemId)?.let(deckPicker::startActivity)
+            item.itemId == R.id.ankiquest_nav_decks
+        }
+        return true
+    }
+
+    /** @return true if AnkiQuest restored the Decks tab, in which case the caller skips its own restore. */
+    fun showRestoredBottomNavTab(deckPicker: DeckPicker): Boolean {
+        if (!AnkiquestNavigation.enabled() || deckPicker.fragmented) return false
+        deckPicker.binding.bottomNavigation?.selectedItemId = R.id.ankiquest_nav_decks
         return true
     }
 
