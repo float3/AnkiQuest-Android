@@ -85,7 +85,8 @@ class AnkiquestServerGoalTest : RobolectricTest() {
                     "GET /api/sharing/hill" -> 200 to sharing
                     "PUT /api/sharing/hill" -> {
                         val policies = sharing.getJSONObject("policies")
-                        body!!.getJSONObject("policies").let { changed -> changed.keys().forEach { policies.put(it, changed.get(it)) } }
+                        val changed = body!!.getJSONObject("policies")
+                        for (kind in changed.keys()) policies.put(kind, changed.getString(kind))
                         if (body.has("daily_cap")) sharing.put("daily_cap", body.getInt("daily_cap"))
                         200 to sharing
                     }
