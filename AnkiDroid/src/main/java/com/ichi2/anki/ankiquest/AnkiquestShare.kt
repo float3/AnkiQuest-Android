@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
@@ -30,6 +29,7 @@ internal object AnkiquestShare {
     const val EXTRA_NOTIFICATION = "ankiquestShareNotification"
     const val EXTRA_PLACE = "ankiquestSharePlace"
     const val EXTRA_ART = "ankiquestShareArt"
+    const val EXTRA_SCOPE = "ankiquestShareScope"
 
     private const val CARD_SIZE = 1080
     private val SHAREABLE = setOf("celebration", "challenge_complete", "reminder_weekly_recap")
@@ -40,6 +40,7 @@ internal object AnkiquestShare {
     /**
      * The Share button for a win's notification: one of the player's own [notification]s, or a
      * [place] they climbed to. Null when the win belongs to an account that is no longer signed in.
+     * The button carries the account's [scope], so a tap after switching accounts shares nothing.
      */
     fun action(
         context: Context,
@@ -58,6 +59,7 @@ internal object AnkiquestShare {
                 .putExtra(EXTRA_TITLE, title)
                 .putExtra(EXTRA_BODY, body)
                 .putExtra(EXTRA_ART, art)
+                .putExtra(EXTRA_SCOPE, current.scope)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
         notification?.let { intent.putExtra(EXTRA_NOTIFICATION, it) }
         place?.let { intent.putExtra(EXTRA_PLACE, it) }
@@ -76,30 +78,26 @@ internal object AnkiquestShare {
         body: String,
         @DrawableRes art: Int,
     ): Bitmap {
+        val language = AnkiquestLanguage.context(context)
         val bitmap = createBitmap(CARD_SIZE, CARD_SIZE)
         val canvas = Canvas(bitmap)
         canvas.drawColor(context.getColor(R.color.aq_home_background))
         val margin = 80
         var top = 90
         if (AnkiquestCompanion.visible()) {
-            BitmapFactory
-                .decodeResource(
-                    context.resources,
-                    AnkiquestCompanion.resource(art),
-                    BitmapFactory.Options().apply { inSampleSize = 2 },
-                )?.let { mascot ->
-                    val side = 520
-                    val left = (CARD_SIZE - side) / 2
-                    canvas.drawBitmap(mascot, null, Rect(left, top, left + side, top + side), Paint(Paint.FILTER_BITMAP_FLAG))
-                    top += side + 40
-                }
+            val side = 520
+            AnkiquestArt.bitmap(context, AnkiquestCompanion.resource(art), side)?.let { mascot ->
+                val left = (CARD_SIZE - side) / 2
+                canvas.drawBitmap(mascot, null, Rect(left, top, left + side, top + side), Paint(Paint.FILTER_BITMAP_FLAG))
+                top += side + 40
+            }
         }
         val width = CARD_SIZE - 2 * margin
         top = text(canvas, title, 72f, context.getColor(R.color.aq_home_text), Typeface.DEFAULT_BOLD, width, margin, top) + 24
         text(canvas, body, 44f, context.getColor(R.color.aq_home_muted), Typeface.DEFAULT, width, margin, top)
         text(
             canvas,
-            context.getString(R.string.ankiquest_share_footer),
+            language.getString(R.string.ankiquest_share_footer),
             36f,
             context.getColor(R.color.aq_home_primary),
             Typeface.DEFAULT_BOLD,
@@ -110,13 +108,13 @@ internal object AnkiquestShare {
         return bitmap
     }
 
-    /** Opens the share sheet with [card] and a line of text inviting people to the server. */
-    fun shareElsewhere(
+    /** The share sheet with [card] and a line of text inviting people to the server; it draws and writes a file. */
+    fun chooser(
         context: Context,
         title: String,
         body: String,
         @DrawableRes art: Int,
-    ) {
+    ): Intent {
         val directory = File(context.cacheDir, "ankiquest-share").apply { mkdirs() }
         val file = File(directory, "win.png")
         file.outputStream().use { card(context, title, body, art).compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -131,9 +129,7 @@ internal object AnkiquestShare {
                 .putExtra(Intent.EXTRA_STREAM, uri)
                 .putExtra(Intent.EXTRA_TEXT, text)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        context.startActivity(
-            Intent.createChooser(send, language.getString(R.string.ankiquest_share_title)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
+        return Intent.createChooser(send, language.getString(R.string.ankiquest_share_title)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     private fun text(

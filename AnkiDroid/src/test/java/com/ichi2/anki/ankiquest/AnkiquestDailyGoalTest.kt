@@ -86,4 +86,17 @@ class AnkiquestDailyGoalTest {
         AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject()), prefs)
         assertTrue(AnkiquestDailyGoal.status(Load(5, 1, 0, 30, 0), prefs).minimumDone, "older servers count any review")
     }
+
+    @Test
+    fun `another account never inherits the streak minimum`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+        }
+        AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject().put("streak_minutes", 10)), prefs)
+        prefs.edit { putString(Ankiquest.PREF_USER, "hill") }
+        assertEquals(0, AnkiquestDailyGoal.streakMinutes(prefs))
+        prefs.edit { putString(Ankiquest.PREF_USER, "cerro") }
+        assertEquals(10, AnkiquestDailyGoal.streakMinutes(prefs))
+    }
 }

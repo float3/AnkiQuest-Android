@@ -24,6 +24,7 @@ import org.robolectric.annotation.Config
 import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -65,11 +66,21 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     fun `a win is sent to the server by notification or by place`() =
         runBlocking {
-            assertEquals(2, Ankiquest.shareWin(42, null))
-            assertEquals(2, Ankiquest.shareWin(null, 1))
+            val scope = AnkiquestHomeData.account()!!.scope
+            assertEquals(2, Ankiquest.shareWin(42, null, scope))
+            assertEquals(2, Ankiquest.shareWin(null, 1, scope))
             assertEquals(42, JSONObject(posted[0]).getLong("notification"))
             assertFalse(JSONObject(posted[0]).has("place"))
             assertEquals(1, JSONObject(posted[1]).getInt("place"))
+        }
+
+    @Test
+    fun `a win is never shared by an account it does not belong to`() =
+        runBlocking {
+            val scope = AnkiquestHomeData.account()!!.scope
+            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "another-credential") }
+            assertFailsWith<HomeAccountChanged> { Ankiquest.shareWin(42, null, scope) }
+            assertTrue(posted.isEmpty())
         }
 
     @Test
@@ -91,6 +102,7 @@ class AnkiquestShareTest : RobolectricTest() {
         assertEquals(AnkiquestShareActivity::class.java.name, intent.component?.className)
         assertEquals("Level 54", intent.getStringExtra(AnkiquestShare.EXTRA_TITLE))
         assertEquals(42, intent.getLongExtra(AnkiquestShare.EXTRA_NOTIFICATION, 0))
+        assertEquals(AnkiquestHomeData.account()!!.scope, intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
         assertTrue(intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
     }
 

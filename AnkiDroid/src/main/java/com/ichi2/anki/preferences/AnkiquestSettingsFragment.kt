@@ -44,6 +44,8 @@ import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.preferences.VersatileTextPreference
 import com.ichi2.utils.Permissions.openAppSettingsScreen
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
@@ -239,16 +241,17 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             if (hours != "0") askForNotifications()
             true
         }
+        val switches = sharedRead { Ankiquest.notificationSwitches() }
         bindServerToggle(
             R.string.ankiquest_nudges_key,
-            read = { Ankiquest.nudgesEnabled() },
-            save = { Ankiquest.setNudges(it).getBoolean("nudges") },
+            read = { switches().getBoolean(Ankiquest.NUDGES) },
+            save = { Ankiquest.setNotificationSwitch(Ankiquest.NUDGES, it).getBoolean(Ankiquest.NUDGES) },
             notify = true,
         )
         bindServerToggle(
             R.string.ankiquest_celebrations_key,
-            read = { Ankiquest.celebrationsEnabled() },
-            save = { Ankiquest.setCelebrations(it).optBoolean("celebrations", it) },
+            read = { Ankiquest.celebrations(switches()) },
+            save = { Ankiquest.setNotificationSwitch(Ankiquest.CELEBRATIONS, it).optBoolean(Ankiquest.CELEBRATIONS, it) },
             notify = true,
         )
         bindDashboard(R.string.ankiquest_community_reminders_key, community = true)
@@ -497,6 +500,15 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 )
             }
             true
+        }
+    }
+
+    /** Lets toggles refreshed together share one in-flight [read] instead of each asking the server. */
+    private fun <T> sharedRead(read: suspend () -> T): suspend () -> T {
+        var running: Deferred<T>? = null
+        return {
+            val shared = running?.takeIf { it.isActive } ?: lifecycleScope.async { read() }.also { running = it }
+            shared.await()
         }
     }
 

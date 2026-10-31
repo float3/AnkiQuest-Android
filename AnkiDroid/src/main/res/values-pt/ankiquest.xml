@@ -159,4 +159,5 @@
     <string name="ankiquest_streak_protected">Sequência protegida · Ainda não estudou</string>
     <string name="ankiquest_streak_unknown">Atualiza para ver o estado do estudo de hoje</string>
     <string name="ankiquest_streak_description">Sequência de %1$s dias · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Não foi possível preparar a ligação. Fecha este ecrã e tenta outra vez.</string>
 </resources>

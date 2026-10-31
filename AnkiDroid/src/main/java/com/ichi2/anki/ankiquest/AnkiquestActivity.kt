@@ -20,6 +20,7 @@ import android.widget.ProgressBar
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
+import androidx.core.text.htmlEncode
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type.displayCutout
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
@@ -48,6 +49,10 @@ import kotlin.coroutines.resume
 internal class AnkiquestBrowserSessionBridge {
     private val mutex = Mutex()
 
+    /**
+     * Clears the old cookie and installs a fresh one while [current] holds. The clear is awaited even
+     * when cancelled: a CookieManager mutation cannot be withdrawn once enqueued.
+     */
     suspend fun prepare(
         current: () -> Boolean,
         clear: suspend () -> Boolean,
@@ -56,8 +61,6 @@ internal class AnkiquestBrowserSessionBridge {
     ): Boolean =
         mutex.withLock {
             if (!current()) return@withLock false
-            // A CookieManager mutation cannot be cancelled once enqueued. Wait for its
-            // acknowledgement before releasing the lock, even when the screen closes.
             if (!withContext(NonCancellable) { clear() }) return@withLock false
             currentCoroutineContext().ensureActive()
             if (!current()) return@withLock false
@@ -168,13 +171,13 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                     return true
                 }
 
+                /** A changed player differs only by the fragment, so about:blank first drops the old document and credentials. */
                 override fun onPageFinished(
                     view: WebView,
                     url: String?,
                 ) {
                     super.onPageFinished(view, url)
                     if (pendingDashboard != null) {
-                        // A changed player differs only by the fragment, which otherwise retains the old document and credentials.
                         if (url == "about:blank" && view.url == url) {
                             val destination = checkNotNull(pendingDashboard)
                             pendingDashboard = null
@@ -208,7 +211,10 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         }
     }
 
-    /** Re-authenticate before loading either the dashboard or a settings shortcut. */
+    /**
+     * Re-authenticate before loading either the dashboard or a settings shortcut. Without a session
+     * the page still opens, for public servers and the website's sign-in screen.
+     */
     private fun loadSession(
         destination: String,
         savedInstanceState: Bundle? = null,
@@ -231,7 +237,6 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                // A public server or the website's sign-in screen can still be opened.
                                 Timber.w(e, "ankiquest browser session failed")
                                 null
                             }
@@ -245,7 +250,8 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                 }
                 if (!ready) {
                     findViewById<ProgressBar>(R.id.progress_bar).visibility = View.GONE
-                    webView.loadData("<p>Unable to prepare your connection. Close this screen and try again.</p>", "text/html", "UTF-8")
+                    val message = getString(R.string.ankiquest_web_prepare_failed).htmlEncode()
+                    webView.loadDataWithBaseURL(null, "<p>$message</p>", "text/html", "UTF-8", null)
                     return@launch
                 }
                 if (savedInstanceState == null || savedInstanceState.getString(STATE_DASHBOARD) != expected.dashboard ||

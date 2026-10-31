@@ -14,7 +14,6 @@ import android.net.Uri
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.utils.openInputStreamSafe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +25,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
@@ -36,7 +34,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
-import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 /** Optional, bounded photos. Nothing in this cache is needed to fetch scores or private messages. */
@@ -49,8 +46,8 @@ object AnkiquestAvatars {
     private val revisionFormat = Regex("[0-9]{1,20}")
     private var nextDownload = 0
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .followRedirects(false)
             .followSslRedirects(false)
             .callTimeout(3, TimeUnit.SECONDS)
@@ -61,12 +58,8 @@ object AnkiquestAvatars {
         val user: String,
         val token: String,
     ) {
-        // The identity may be compared or saved without exposing its credential.
-        val scope: String =
-            MessageDigest
-                .getInstance("SHA-256")
-                .digest("$base\u0000$user\u0000$token".toByteArray(Charsets.UTF_8))
-                .joinToString("") { "%02x".format(it) }
+        /** Equal to [HomeAccount.scope] for the same account, without exposing its credential. */
+        val scope: String = sha256(base.toString().removeSuffix("/"), user, token)
 
         override fun toString(): String = "AvatarAccount(base=$base, user=$user)"
 
@@ -91,21 +84,11 @@ object AnkiquestAvatars {
     @Volatile
     private var cached = Cache("", emptyMap())
 
+    /** The configured account, from the same resolver as every other AnkiQuest request. */
     fun account(): Account? {
-        // Keep the server and its credentials together if settings change during a refresh.
-        val settings = AnkiDroidApp.sharedPrefs().all
-        val url = (settings[Ankiquest.PREF_URL] as? String).orEmpty().trim().trimEnd('/')
-        // username is R.string.username_key. Read the fallback from this same snapshot.
-        val user =
-            (settings[Ankiquest.PREF_USER] as? String)
-                .orEmpty()
-                .trim()
-                .ifEmpty { (settings["username"] as? String).orEmpty().trim() }
-        val token = (settings[Ankiquest.PREF_TOKEN] as? String).orEmpty().trim()
-        if (url.isEmpty() || user.isEmpty()) return null
-        val base = "$url/".toHttpUrlOrNull() ?: return null
-        if (base.username.isNotEmpty() || base.password.isNotEmpty() || base.query != null || base.fragment != null) return null
-        return Account(base, user, token)
+        val account = HomeAccount.current() ?: return null
+        val base = "${account.server}/".toHttpUrlOrNull() ?: return null
+        return Account(base, account.user, account.token)
     }
 
     class AccountChanged : IllegalStateException("Your AnkiQuest account changed. Open profile pictures again.")
@@ -326,6 +309,7 @@ object AnkiquestAvatars {
             )
         }
 
+    /** A JPEG or PNG at most 1024 pixels on its longer side, upright; EXIF rotation applies after mirroring. */
     private fun decodePickedPhoto(bytes: ByteArray): Bitmap {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
@@ -338,7 +322,6 @@ object AnkiquestAvatars {
         val exif = ExifInterface(ByteArrayInputStream(bytes))
         val matrix =
             Matrix().apply {
-                // ExifInterface defines rotation after horizontal mirroring.
                 if (exif.isFlipped) postScale(-1f, 1f)
                 postRotate(exif.rotationDegrees.toFloat())
             }

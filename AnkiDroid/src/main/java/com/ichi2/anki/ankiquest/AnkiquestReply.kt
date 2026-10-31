@@ -52,18 +52,19 @@ object AnkiquestReply {
     ): List<NotificationCompat.Action> {
         val current = AnkiquestHomeData.account() ?: return emptyList()
         if (scope.isNullOrEmpty() || current.scope != scope || current.notificationAccount != account) return emptyList()
+        val language = AnkiquestLanguage.context(context)
         val quick =
             when (kind) {
-                "completion", "share" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_cheer)
-                "reply" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_thanks)
-                "nudge" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_on_it)
+                "completion", "share" -> language.getString(R.string.ankiquest_reply_cheer)
+                "reply" -> language.getString(R.string.ankiquest_reply_thanks)
+                "nudge" -> language.getString(R.string.ankiquest_reply_on_it)
                 else -> null
             }
         val suggestions =
             when (kind) {
-                "completion", "share" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_choices)
-                "reply" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_thanks_choices)
-                "nudge" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_nudge_choices)
+                "completion", "share" -> language.resources.getStringArray(R.array.ankiquest_reply_choices)
+                "reply" -> language.resources.getStringArray(R.array.ankiquest_reply_thanks_choices)
+                "nudge" -> language.resources.getStringArray(R.array.ankiquest_reply_nudge_choices)
                 else -> emptyArray()
             }
         val choices = listOfNotNull(quick).toTypedArray<CharSequence>() + suggestions
@@ -80,14 +81,14 @@ object AnkiquestReply {
         val reply =
             RemoteInput
                 .Builder(EXTRA_MESSAGE)
-                .setLabel(AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_hint))
+                .setLabel(language.getString(R.string.ankiquest_reply_hint))
                 .setChoices(choices)
                 .build()
         return listOf(
             NotificationCompat.Action
                 .Builder(
                     R.drawable.ic_star_notify,
-                    AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply),
+                    language.getString(R.string.ankiquest_reply),
                     PendingIntent.getBroadcast(
                         context,
                         tag,
@@ -120,12 +121,41 @@ object AnkiquestReply {
 
     /** The chosen or typed text; notifications posted by older versions carry a cheer as an extra instead. */
     fun message(intent: Intent): String =
-        (
+        clean(
             RemoteInput.getResultsFromIntent(intent)?.getCharSequence(EXTRA_MESSAGE)?.toString()
-                ?: intent.getStringExtra(EXTRA_MESSAGE)
-        ).orEmpty()
-            .trim()
-            .take(MAX_MESSAGE)
+                ?: intent.getStringExtra(EXTRA_MESSAGE).orEmpty(),
+        )
+
+    /**
+     * [text] as the server accepts a message: control characters such as line breaks become spaces,
+     * and it is cut to [MAX_MESSAGE] UTF-8 bytes without splitting a character.
+     */
+    fun clean(text: String): String {
+        val spaced =
+            buildString {
+                var i = 0
+                while (i < text.length) {
+                    val point = text.codePointAt(i)
+                    if (Character.isISOControl(point)) append(' ') else appendCodePoint(point)
+                    i += Character.charCount(point)
+                }
+            }.trim()
+        var bytes = 0
+        var end = 0
+        while (end < spaced.length) {
+            val point = spaced.codePointAt(end)
+            bytes +=
+                when {
+                    point < 0x80 -> 1
+                    point < 0x800 -> 2
+                    point < 0x10000 -> 3
+                    else -> 4
+                }
+            if (bytes > MAX_MESSAGE) break
+            end += Character.charCount(point)
+        }
+        return spaced.substring(0, end).trimEnd()
+    }
 
     fun data(
         intent: Intent,
@@ -143,6 +173,10 @@ object AnkiquestReply {
             .putString(EXTRA_REPLY_SCOPE, intent.getStringExtra(EXTRA_REPLY_SCOPE))
             .build()
 
+    /**
+     * Sends one queued reply. A refused reply stays refused; only a broken connection is worth another
+     * try. After an account switch the old account's private notification is never shown again.
+     */
     suspend fun run(
         context: Context,
         data: Data,
@@ -159,10 +193,8 @@ object AnkiquestReply {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Never republish the old account's private notification after a switch.
             if (!current(data)) return Outcome.FAILED
             Timber.w(e, "ankiquest reply failed")
-            // A refused reply stays refused; only a broken connection is worth another try.
             val done = e is Ankiquest.Rejected || attempt + 1 >= ATTEMPTS
             if (done) AnkiquestNotifier.onReplyFailed(context, data)
             if (done) Outcome.FAILED else Outcome.RETRY
