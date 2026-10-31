@@ -4,11 +4,11 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.common.coroutines.applicationScope
+import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -70,7 +70,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                     Timber.w(e, "ankiquest share failed")
                     language.getString(R.string.ankiquest_share_failed)
                 }
-            launch(Dispatchers.Main) { Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
+            launch(Dispatchers.Main) { showThemedToast(context, message, shortLength = false) }
         }
     }
 }

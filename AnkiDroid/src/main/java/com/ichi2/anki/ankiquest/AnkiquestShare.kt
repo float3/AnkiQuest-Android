@@ -18,6 +18,8 @@ import android.text.TextUtils
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
 import com.ichi2.anki.R
 import java.io.File
 
@@ -74,7 +76,7 @@ internal object AnkiquestShare {
         body: String,
         @DrawableRes art: Int,
     ): Bitmap {
-        val bitmap = Bitmap.createBitmap(CARD_SIZE, CARD_SIZE, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(CARD_SIZE, CARD_SIZE)
         val canvas = Canvas(bitmap)
         canvas.drawColor(context.getColor(R.color.aq_home_background))
         val margin = 80
@@ -157,10 +159,7 @@ internal object AnkiquestShare {
                 .setMaxLines(4)
                 .setEllipsize(TextUtils.TruncateAt.END)
                 .build()
-        canvas.save()
-        canvas.translate(left.toFloat(), top.toFloat())
-        layout.draw(canvas)
-        canvas.restore()
+        canvas.withTranslation(left.toFloat(), top.toFloat()) { layout.draw(this) }
         return top + layout.height
     }
 }
