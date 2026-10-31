@@ -199,4 +199,5 @@
     <string name="ankiquest_streak_protected">Streak protected · Not studied yet</string>
     <string name="ankiquest_streak_unknown">Refresh to see today\'s study status</string>
     <string name="ankiquest_streak_description">%1$s day streak · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Unable to prepare your connection. Close this screen and try again.</string>
 </resources>

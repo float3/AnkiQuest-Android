@@ -158,4 +158,5 @@
     <string name="ankiquest_streak_protected">Racha protegida · Aún no ha estudiado</string>
     <string name="ankiquest_streak_unknown">Actualiza para ver si ha estudiado hoy</string>
     <string name="ankiquest_streak_description">Racha de %1$s días · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">No se pudo preparar la conexión. Cierra esta pantalla y vuelve a intentarlo.</string>
 </resources>
