@@ -27,7 +27,6 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_share_cap_title" maxLength="41">Automatic wins per friend each day</string>
     <string name="ankiquest_moments_decks_title" maxLength="41">Finished decks</string>
     <string name="ankiquest_moments_decks_summary">Set per deck: choose the decks and who hears when you finish them</string>
-    <string name="ankiquest_decks_category_title" maxLength="41">Decks</string>
     <string-array name="ankiquest_moment_kinds" translatable="false">
         <item>daily_goal</item>
         <item>streak_secured</item>

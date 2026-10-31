@@ -13,13 +13,10 @@ on:
         type: number
   pull_request:
   push:
-    # Ignore merge queue branches on push; avoids merge_group+push concurrency race since ref is same
-    branches-ignore:
-      - 'gh-readonly-queue/**'
-      # Dependabot branches are already checked by the pull_request trigger.
-      - 'dependabot/**'
-      # Crowdin translations are already checked by the pull_request trigger.
-      - 'i18n_sync'
+    # Other branches are checked by the pull_request trigger.
+    branches:
+      - ankiquest
+      - main
   merge_group:
 
 permissions:

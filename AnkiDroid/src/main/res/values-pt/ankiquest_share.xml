@@ -23,7 +23,6 @@ Estudo com o AnkiQuest.</string>
     <string name="ankiquest_share_cap_title">Conquistas automáticas por amigo e dia</string>
     <string name="ankiquest_moments_decks_title">Baralhos concluídos</string>
     <string name="ankiquest_moments_decks_summary">Definido por baralho: escolhe os baralhos e quem fica a saber quando os concluis</string>
-    <string name="ankiquest_decks_category_title">Baralhos</string>
     <string-array name="ankiquest_moment_titles">
         <item>Meta diária atingida</item>
         <item>Série garantida por hoje</item>

@@ -23,7 +23,6 @@ Je révise avec AnkiQuest.</string>
     <string name="ankiquest_share_cap_title">Victoires automatiques par ami et par jour</string>
     <string name="ankiquest_moments_decks_title">Paquets terminés</string>
     <string name="ankiquest_moments_decks_summary">Réglé paquet par paquet : choisissez les paquets et qui est prévenu quand vous les terminez</string>
-    <string name="ankiquest_decks_category_title">Paquets</string>
     <string-array name="ankiquest_moment_titles">
         <item>Objectif quotidien atteint</item>
         <item>Série assurée pour la journée</item>

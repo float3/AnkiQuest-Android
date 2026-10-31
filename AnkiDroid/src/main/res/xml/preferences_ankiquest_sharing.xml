@@ -29,7 +29,7 @@
             android:summary="@string/ankiquest_moments_decks_summary" />
     </PreferenceCategory>
     <PreferenceCategory
-        android:title="@string/ankiquest_decks_category_title">
+        android:title="@string/ankiquest_nav_decks">
         <Preference
             android:key="@string/ankiquest_deck_notifications_key"
             android:title="@string/ankiquest_deck_notifications_title"
