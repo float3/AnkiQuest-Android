@@ -5,19 +5,16 @@ package com.ichi2.anki.ankiquest
 import android.content.SharedPreferences
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.common.time.TimeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
-import java.security.MessageDigest
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /** A captured identity: queued work must never borrow credentials from changed preferences. */
@@ -25,21 +22,23 @@ internal data class HomeAccount(
     val server: String,
     val user: String,
     val token: String,
-    val language: String = Locale.getDefault().toLanguageTag(),
+    val language: String = AnkiquestLanguage.tag(null),
 ) {
     val encodedUser: String = URLEncoder.encode(user, "UTF-8").replace("+", "%20")
     val notificationAccount: String = "$server/$encodedUser"
-    val scope: String =
-        MessageDigest
-            .getInstance("SHA-256")
-            .digest("$server\u0000$user\u0000$token".toByteArray())
-            .joinToString("") { "%02x".format(it) }
+    val scope: String = sha256(server, user, token)
 
     fun url(path: String): HttpUrl = requireNotNull("$server/$path".toHttpUrlOrNull())
 
     override fun toString(): String = "HomeAccount(server=$server, user=$user)"
 
     companion object {
+        /** The configured account, read from one snapshot of [preferences] so its parts never come from different settings. */
+        fun current(preferences: SharedPreferences = AnkiDroidApp.sharedPrefs()): HomeAccount? {
+            val settings = preferences.all
+            return from(settings, (settings["username"] as? String).orEmpty())
+        }
+
         fun from(
             settings: Map<String, *>,
             fallbackUser: String,
@@ -53,8 +52,7 @@ internal data class HomeAccount(
             ) {
                 return null
             }
-            val language = (settings["language"] as? String)?.takeIf { it.isNotEmpty() } ?: Locale.getDefault().toLanguageTag()
-            return HomeAccount(server, user, token, language)
+            return HomeAccount(server, user, token, AnkiquestLanguage.tag(settings["language"] as? String))
         }
     }
 }
@@ -84,14 +82,11 @@ internal data class HomeLocal(
 }
 
 internal object AnkiquestHomeData {
-    fun account(preferences: SharedPreferences = AnkiDroidApp.sharedPrefs()): HomeAccount? {
-        val settings = preferences.all
-        return HomeAccount.from(settings, (settings["username"] as? String).orEmpty())
-    }
+    fun account(preferences: SharedPreferences = AnkiDroidApp.sharedPrefs()): HomeAccount? = HomeAccount.current(preferences)
 
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .callTimeout(15, TimeUnit.SECONDS)
             .followRedirects(false)
             .followSslRedirects(false)
@@ -147,9 +142,7 @@ internal object AnkiquestHomeData {
 
     suspend fun local(): HomeLocal =
         CollectionManager.withCol {
-            val now =
-                com.ichi2.anki.common.time.TimeManager.time
-                    .intTimeMS()
+            val now = TimeManager.time.intTimeMS()
             val tree = sched.deckDueTree()
             val daily = AnkiquestDecks.dailyStates(this, now, tree)
             val rows =
@@ -174,5 +167,3 @@ internal object AnkiquestHomeData {
             HomeLocal(rows, decks.selected(), next, goal)
         }
 }
-
-internal fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }

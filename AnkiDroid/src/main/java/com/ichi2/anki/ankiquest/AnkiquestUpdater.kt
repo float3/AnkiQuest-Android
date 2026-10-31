@@ -17,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import timber.log.Timber
@@ -44,8 +43,8 @@ object AnkiquestUpdater {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
@@ -168,8 +167,8 @@ object AnkiquestUpdater {
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
         val assets = json.getJSONArray("assets")
         val apk =
-            (0 until assets.length())
-                .map { assets.getJSONObject(it) }
+            assets
+                .objects()
                 .filter { it.getString("name").endsWith(".apk") }
                 .let { apks -> apks.firstOrNull { it.getString("name") == "AnkiQuest.apk" } ?: apks.firstOrNull() }
                 ?: return null

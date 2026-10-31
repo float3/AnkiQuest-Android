@@ -15,4 +15,30 @@ Estudio con AnkiQuest.</string>
         <item quantity="one">Compartido con %d amigo</item>
         <item quantity="other">Compartido con %d amigos</item>
     </plurals>
+    <string name="ankiquest_share_account_changed">Este logro es de una cuenta de AnkiQuest que ya no tiene la sesión iniciada.</string>
+    <string name="ankiquest_cheer">🎉 Aplaudir</string>
+    <string name="ankiquest_cheer_sent">🎉 Aplaudiste: %1$s</string>
+    <string name="ankiquest_moments_title">Tus logros</string>
+    <string name="ankiquest_moments_summary">Elige quién se entera de cada tipo de logro. Tus propias celebraciones siempre las ves.</string>
+    <string name="ankiquest_share_cap_title">Logros automáticos por amigo al día</string>
+    <string name="ankiquest_moments_decks_title">Mazos terminados</string>
+    <string name="ankiquest_moments_decks_summary">Se elige por mazo: los mazos y quién se entera cuando los terminas</string>
+    <string name="ankiquest_decks_category_title">Mazos</string>
+    <string-array name="ankiquest_moment_titles">
+        <item>Meta diaria cumplida</item>
+        <item>Racha asegurada por hoy</item>
+        <item>Hitos de la racha</item>
+        <item>Nuevos niveles</item>
+        <item>Insignias</item>
+        <item>Récords personales</item>
+        <item>Misiones diarias hechas</item>
+        <item>Tarjetas difíciles dominadas</item>
+        <item>Top 3 de la tabla semanal</item>
+        <item>Desafíos completados</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Solo yo</item>
+        <item>Preguntarme</item>
+        <item>Avisar a mis amigos automáticamente</item>
+    </string-array>
 </resources>

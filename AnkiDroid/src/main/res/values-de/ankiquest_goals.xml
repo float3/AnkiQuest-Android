@@ -20,6 +20,7 @@
         <item>Heute fällig plus ein Teil des Rückstands</item>
         <item>Eine Anzahl Karten</item>
         <item>Eine Anzahl Minuten</item>
+        <item>Kein Tagesziel</item>
     </string-array>
     <string-array name="ankiquest_goal_backlog_entries">
         <item>5 % (in etwa 20 Tagen abgebaut)</item>

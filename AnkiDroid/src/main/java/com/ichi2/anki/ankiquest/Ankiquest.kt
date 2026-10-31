@@ -24,7 +24,6 @@ import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.observability.ChangeManager
-import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -45,10 +44,10 @@ import timber.log.Timber
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.URLDecoder
-import java.net.URLEncoder
 import java.net.UnknownHostException
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Shows XP, combo, quest and level feedback from an ankiquest server after each answer.
@@ -63,6 +62,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private const val PREF_MARK = "ankiquestUploadedThrough"
     private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
+    const val NUDGES = "nudges"
+    const val CELEBRATIONS = "celebrations"
 
     private const val MAX_PENDING = 5000
     private const val BASELINE_MAX_AGE_MS = 10 * 60 * 1000L
@@ -76,8 +77,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .callTimeout(20, TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 chain.proceed(
@@ -100,19 +101,22 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private var activity = WeakReference<Activity>(null)
     private var syncedLastId = 0L
     private var baselineAt = 0L
+    private var baselineAccount: String? = null
+    private val refreshes = RefreshQueue()
 
     @VisibleForTesting
     internal var resumeUploadAt = 0L
     private var seenThrough: Pair<String, Long>? = null
 
+    /**
+     * Follows activities and collection changes. This singleton subscribes without a lifecycle owner,
+     * so nothing takes it off the list: any earlier registration is dropped first, because a second
+     * Application in the same process (every Robolectric test builds one) would subscribe it twice,
+     * which ChangeManager refuses in a debug build. This also survives `resetForTesting()`.
+     */
     fun init(app: Application) {
         this.app = app
         app.registerActivityLifecycleCallbacks(this)
-        // This is a JVM singleton and subscribes without a lifecycle owner, so
-        // nothing ever takes it off the list. A second Application in the same
-        // process -- every Robolectric test builds one -- would subscribe it
-        // twice, which ChangeManager refuses in a debug build. Dropping any
-        // earlier registration first also survives resetForTesting().
         ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
         AnkiquestPoll.schedule(app)
@@ -129,24 +133,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     fun isConfigured(): Boolean = endpoint() != null
 
     /** The configured player name, or the sync username when none is set. */
-    fun player(): String? =
-        AnkiDroidApp
-            .sharedPrefs()
-            .getString(PREF_USER, "")
-            .orEmpty()
-            .trim()
-            .ifEmpty { Prefs.username.orEmpty() }
-            .ifEmpty { null }
+    fun player(): String? = HomeAccount.current()?.user
 
-    private fun endpoint(): Triple<String, String, String>? {
-        // Keep credentials tied to one server even when settings change during a queued request.
-        val settings = AnkiDroidApp.sharedPrefs().all
-        val url = (settings[PREF_URL] as? String).orEmpty().trim().trimEnd('/')
-        val user = (settings[PREF_USER] as? String).orEmpty().trim().ifEmpty { Prefs.username.orEmpty() }
-        val token = (settings[PREF_TOKEN] as? String).orEmpty().trim()
-        if (url.isEmpty() || user.isEmpty()) return null
-        return Triple(url, URLEncoder.encode(user, "UTF-8").replace("+", "%20"), token)
-    }
+    /** The server, encoded member and token of one settings snapshot, so a queued request never mixes accounts. */
+    private fun endpoint(): Triple<String, String, String>? = HomeAccount.current()?.let { Triple(it.server, it.encodedUser, it.token) }
 
     /** This week's standings, as served by `/api/leaderboard`. */
     suspend fun leaderboard(): JSONArray =
@@ -223,15 +213,23 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         )
     }
 
-    /** Whether the server sends this player nudges, without touching deck progress. */
-    suspend fun nudgesEnabled(): Boolean {
+    /**
+     * The player's server-side notification switches, such as [NUDGES] and [CELEBRATIONS], in one
+     * request and without touching deck progress.
+     */
+    suspend fun notificationSwitches(): JSONObject {
         val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            fetchDeckNotificationSettings(url, user, token).getBoolean("nudges")
-        }
+        return withContext(Dispatchers.IO) { fetchDeckNotificationSettings(url, user, token) }
     }
 
-    suspend fun setNudges(enabled: Boolean): JSONObject {
+    /** Celebrations are on unless the player turned them off; older servers have no setting and always celebrate. */
+    fun celebrations(switches: JSONObject): Boolean = switches.optBoolean(CELEBRATIONS, true)
+
+    /** Turns one notification switch on or off and leaves deck sharing and the other switches as they are. */
+    suspend fun setNotificationSwitch(
+        name: String,
+        enabled: Boolean,
+    ): JSONObject {
         val (url, user, token) = authenticatedEndpoint()
         return withContext(Dispatchers.IO) {
             execute(
@@ -242,70 +240,70 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .post(
                         JSONObject()
                             .put("decks", JSONArray())
-                            .put("nudges", enabled)
+                            .put(name, enabled)
                             .toString()
                             .toRequestBody(json),
                     ).build(),
             )
-        }
-    }
-
-    /** Celebrations are on unless the player turned them off; older servers have no setting and always celebrate. */
-    suspend fun celebrationsEnabled(): Boolean {
-        val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            fetchDeckNotificationSettings(url, user, token).optBoolean("celebrations", true)
         }
     }
 
     /**
      * Shares a win with everyone in the player's circle through `/api/share`: one of their own
      * [notification]s, or their current [place] on this week's board. Answers how many friends got it.
+     *
+     * @param expectedScope the [HomeAccount.scope] the win belongs to; another signed-in account never shares it
      */
     suspend fun shareWin(
         notification: Long?,
         place: Int?,
-    ): Int {
-        val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            execute(
-                Request
-                    .Builder()
-                    .url("$url/api/share/$user")
-                    .header("Authorization", "Bearer $token")
-                    .post(
-                        JSONObject()
-                            .apply {
-                                notification?.let { put("notification", it) }
-                                place?.let { put("place", it) }
-                            }.toString()
-                            .toRequestBody(json),
-                    ).build(),
-            ).optInt("recipients")
-        }
+        expectedScope: String,
+    ): Int =
+        share(
+            JSONObject().apply {
+                notification?.let { put("notification", it) }
+                place?.let { put("place", it) }
+            },
+            expectedScope,
+        ).optInt("recipients")
+
+    /** Sends the server's [win] to everyone in the player's circle; answers how many friends got it. */
+    suspend fun shareWinWithFriends(
+        win: Long,
+        expectedScope: String,
+    ): Int = share(JSONObject().put("win", win).put("to", "friends"), expectedScope).optInt("recipients")
+
+    /** The public link for the server's [win], with its card and invitation text; the server makes it once and reuses it. */
+    internal suspend fun shareWinLink(
+        win: Long,
+        expectedScope: String,
+    ): AnkiquestShare.Link {
+        val answer = share(JSONObject().put("win", win).put("to", "link"), expectedScope)
+        return AnkiquestShare.Link(answer.getString("url"), answer.getString("image"), answer.getString("text"))
     }
+
+    private suspend fun share(
+        body: JSONObject,
+        expectedScope: String,
+    ): JSONObject =
+        withContext(Dispatchers.IO) {
+            val account = AnkiquestHomeData.account()?.takeIf { it.scope == expectedScope } ?: throw HomeAccountChanged()
+            check(account.token.isNotEmpty()) { "Set your ankiquest token to share a win." }
+            val answer =
+                execute(
+                    Request
+                        .Builder()
+                        .url(account.url("api/share/${account.encodedUser}"))
+                        .header("Authorization", "Bearer ${account.token}")
+                        .post(body.toString().toRequestBody(json))
+                        .build(),
+                )
+            if (AnkiquestHomeData.account()?.scope != expectedScope) throw HomeAccountChanged()
+            answer
+        }
 
     /** The server's address, for inviting people met outside the app. */
     fun serverUrl(): String? = endpoint()?.first
-
-    suspend fun setCelebrations(enabled: Boolean): JSONObject {
-        val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            execute(
-                Request
-                    .Builder()
-                    .url("$url/api/decks/$user")
-                    .header("Authorization", "Bearer $token")
-                    .post(
-                        JSONObject()
-                            .put("decks", JSONArray())
-                            .put("celebrations", enabled)
-                            .toString()
-                            .toRequestBody(json),
-                    ).build(),
-            )
-        }
-    }
 
     /** Streak protection is stored on the server; never infer it from a local default. */
     suspend fun streakProtectionEnabled(): Boolean {
@@ -334,12 +332,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             ).getBoolean("enabled")
         }
     }
-
-    /** The ids of every deck nested below the deck called [name] in the settings deck list. */
-    fun subdeckIds(
-        decks: List<JSONObject>,
-        name: String,
-    ): List<String> = decks.filter { it.getString("name").startsWith("$name::") }.map { it.getString("id") }
 
     /** A reply the server will never take, such as one already answered elsewhere. */
     class Rejected(
@@ -376,6 +368,38 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 val recipient = execute(request, sessionClient).getString("sent_to")
                 if (AnkiquestHomeData.account()?.scope != account.scope) throw Rejected(401)
                 recipient
+            } catch (e: HttpStatusException) {
+                throw if (e.code in 400..499) Rejected(e.code) else e
+            }
+        }
+
+    /**
+     * Cheers 🎉 on a win a friend shared, one inbox [notification]; the friend is told who cheered.
+     * Answers whether this player had already cheered it.
+     */
+    suspend fun react(
+        notification: Long,
+        expectedAccount: String,
+        expectedScope: String,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val account = AnkiquestHomeData.account() ?: throw Rejected(401)
+            if (account.token.isEmpty() || account.notificationAccount != expectedAccount ||
+                account.scope != expectedScope
+            ) {
+                throw Rejected(401)
+            }
+            val request =
+                Request
+                    .Builder()
+                    .url(account.url("api/react/${account.encodedUser}"))
+                    .header("Authorization", "Bearer ${account.token}")
+                    .post(JSONObject().put("notification", notification).toString().toRequestBody(json))
+                    .build()
+            try {
+                val already = execute(request, sessionClient).optBoolean("already")
+                if (AnkiquestHomeData.account()?.scope != account.scope) throw Rejected(401)
+                already
             } catch (e: HttpStatusException) {
                 throw if (e.code in 400..499) Rejected(e.code) else e
             }
@@ -427,20 +451,24 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         host is Reviewer ||
             (host as? FragmentActivity)?.supportFragmentManager?.fragments?.any { it is ReviewerFragment } == true
 
+    /** Answers arriving while a refresh waits for the running one join it instead of each queueing an upload. */
     private fun launchRefresh(
         showFeedback: Boolean,
         resync: Boolean = false,
     ) {
-        val (url, user, token) = endpoint() ?: return
-
+        if (endpoint() == null || !refreshes.offer(showFeedback, resync)) return
         scope.launch {
-            try {
-                mutex.withLock {
-                    val profile = if (token.isEmpty()) preview(url, user) else upload(url, user, token, resync)
-                    present(profile, showFeedback)
+            mutex.withLock {
+                val (feedback, again) = refreshes.take()
+                try {
+                    val account = HomeAccount.current() ?: return@withLock
+                    val (url, user, token) = Triple(account.server, account.encodedUser, account.token)
+                    val profile = if (token.isEmpty()) preview(url, user) else upload(url, user, token, again)
+                    present(profile, feedback)
+                    if (token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
+                } catch (e: Exception) {
+                    Timber.w(e, "ankiquest refresh failed")
                 }
-            } catch (e: Exception) {
-                Timber.w(e, "ankiquest refresh failed")
             }
         }
     }
@@ -450,12 +478,13 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         user: String,
     ): JSONObject {
         val now = TimeManager.time.intTimeMS()
-        if (now - baselineAt > BASELINE_MAX_AGE_MS) {
+        val account = "$url/$user"
+        if (baselineAccount != account || now - baselineAt > BASELINE_MAX_AGE_MS) {
             syncedLastId = get("$url/api/profile/$user").optLong("last_review_id")
             baselineAt = now
+            baselineAccount = account
         }
         val reviews = pendingReviews(syncedLastId)
-        val account = "$url/$user"
         val body = JSONObject().put("reviews", reviews)
         seenThrough?.takeIf { it.first == account }?.let { body.put("seen_through", it.second) }
         val profile =
@@ -471,6 +500,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         return profile
     }
 
+    /**
+     * Uploads reviews after the account's mark in batches the server accepts. Only the final batch
+     * carries deck progress, and connection tests never do. Sharing is fetched for the captured
+     * account on every upload, so changed or revoked sharing is respected.
+     */
     private suspend fun upload(
         url: String,
         user: String,
@@ -480,14 +514,17 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         catalog: Boolean = false,
     ): JSONObject {
         val prefs = AnkiDroidApp.sharedPrefs()
-        val mark = prefs.getLong(PREF_MARK, 0L)
-        val initialSyncKey = "$INITIAL_SYNC_KEY:$url/$user"
-        val initialSyncDone = prefs.getBoolean(initialSyncKey, false)
+        val account = "$url/$user"
+        migrateUploadMark(prefs, account)
+        val markKey = markKey(account)
+        val mark = prefs.getLong(markKey, 0L)
+        val initialSyncKey = initialSyncKey(account)
+        val initialSyncDone = prefs.contains(markKey) && prefs.getBoolean(initialSyncKey, false)
         var known = if (resync) maxOf(0L, mark - RESYNC_WINDOW_MS) else mark
         val clock = clock()
 
         val windowStart = TimeManager.time.intTimeMS() - UNDO_WINDOW_MS
-        val recent = recentUploads(prefs, windowStart)
+        val recent = recentUploads(prefs, recentKey(account), windowStart)
         val window = if (onlyTest) emptyList() else pendingReviews(windowStart).objects()
         val present = window.map { it.getLong("id") }
         val reconciled = AnkiquestCompletionPolicy.reconcile(present, recent, known, if (onlyTest) 0L else mark)
@@ -497,8 +534,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         var profile: JSONObject
         var first = true
         do {
-            val batch = if (onlyTest) JSONArray() else pendingReviews(known)
-            val full = batch.length() == MAX_PENDING
+            val limit = if (first) MAX_PENDING - restored.size else MAX_PENDING
+            val batch = if (onlyTest) JSONArray() else pendingReviews(known, limit)
+            val full = batch.length() == limit
             if (batch.length() > 0) known = batch.getJSONObject(batch.length() - 1).getLong("id")
             val body =
                 JSONObject()
@@ -509,13 +547,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 body.put("deleted", JSONArray(reconciled.deleted))
             }
             body.put("reviews", batch)
-            // Only the final batch represents complete progress; connection checks are not study.
             if (!full && !onlyTest) {
                 runCatching {
                     if (catalog) {
                         deckSnapshots(clock)
                     } else {
-                        // Fetch for this captured account each time so changed or revoked sharing is respected.
                         val enabled =
                             fetchDeckNotificationSettings(url, user, token)
                                 .getJSONArray("decks")
@@ -538,31 +574,65 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                         .post(body.toString().toRequestBody(json))
                         .build(),
                 )
-            prefs.edit { putLong(PREF_MARK, maxOf(known, mark)) }
+            if (!onlyTest) prefs.edit { putLong(markKey, maxOf(known, mark)) }
             first = false
         } while (full)
         if (!onlyTest) {
             prefs.edit {
-                putString(PREF_RECENT, present.joinToString(","))
+                putString(recentKey(account), present.joinToString(","))
                 putBoolean(initialSyncKey, true)
             }
         }
         return profile
     }
 
+    private fun markKey(account: String) = "$PREF_MARK:$account"
+
+    private fun recentKey(account: String) = "$PREF_RECENT:$account"
+
+    private fun initialSyncKey(account: String) = "$INITIAL_SYNC_KEY:$account"
+
+    /**
+     * Gives the upload mark that older versions kept for every account to the [account] it belongs to.
+     *
+     * It is only known to be [account]'s when no other account has completed an upload on this device.
+     * Otherwise [account] starts afresh: its first upload is then silent, and the server keeps one copy
+     * of any review it already had. A mark that belongs to another single account is left for it.
+     */
+    @VisibleForTesting
+    internal fun migrateUploadMark(
+        prefs: SharedPreferences,
+        account: String,
+    ) {
+        if (!prefs.contains(PREF_MARK) && !prefs.contains(PREF_RECENT)) return
+        if (prefs.contains(markKey(account))) return
+        val owner =
+            prefs.all.keys
+                .filter { it.startsWith("$INITIAL_SYNC_KEY:") }
+                .singleOrNull()
+        if (owner != null && owner != initialSyncKey(account)) return
+        prefs.edit {
+            if (owner != null) {
+                putLong(markKey(account), prefs.getLong(PREF_MARK, 0L))
+                prefs.getString(PREF_RECENT, null)?.let { putString(recentKey(account), it) }
+            }
+            remove(PREF_MARK)
+            remove(PREF_RECENT)
+        }
+    }
+
     private fun recentUploads(
         prefs: SharedPreferences,
+        key: String,
         windowStart: Long,
     ): Set<Long> =
         prefs
-            .getString(PREF_RECENT, "")
+            .getString(key, "")
             .orEmpty()
             .split(',')
             .mapNotNull { it.toLongOrNull() }
             .filter { it > windowStart }
             .toSet()
-
-    private fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }
 
     private suspend fun present(
         profile: JSONObject,
@@ -582,7 +652,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         showFeedback: Boolean,
     ): Pair<String, Boolean>? {
         if (feedback == null) return null
-        val headlines = feedback.optJSONArray("headlines")?.let { lines -> (0 until lines.length()).map { lines.getString(it) } }.orEmpty()
+        val headlines = feedback.optJSONArray("headlines")?.strings().orEmpty()
         val status = if (feedback.isNull("status")) null else feedback.getString("status").ifEmpty { null }
         return when {
             headlines.isNotEmpty() -> (headlines + listOfNotNull(status)).joinToString("\n") to true
@@ -592,25 +662,23 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     }
 
     private suspend fun clock(): JSONObject {
-        val rollover =
-            CollectionManager.withCol {
-                runCatching {
-                    db.queryString("select cast(val as text) from config where key = 'rollover'").trim().toInt()
-                }.getOrDefault(4)
-            }
+        val rollover = CollectionManager.withCol { AnkiquestDecks.rollover(this) }
         val now = TimeManager.time.intTimeMS()
         return JSONObject()
             .put("rollover_hour", rollover)
             .put("offset_west_min", -TimeZone.getDefault().getOffset(now) / 60_000)
     }
 
-    private suspend fun pendingReviews(afterId: Long): JSONArray =
+    private suspend fun pendingReviews(
+        afterId: Long,
+        limit: Int = MAX_PENDING,
+    ): JSONArray =
         CollectionManager.withCol {
             val rows = JSONArray()
             db
                 .query(
                     "select id, cid, lastIvl, ivl, time, type from revlog " +
-                        "where id > ? and ease > 0 and type < 4 order by id limit $MAX_PENDING",
+                        "where id > ? and ease > 0 and type < 4 order by id limit ${limit.coerceAtLeast(0)}",
                     afterId,
                 ).use { cursor ->
                     while (cursor.moveToNext()) {
@@ -663,7 +731,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         token: String = "",
     ): JSONObject = execute(readRequest(url, token))
 
-    /** Exchange the configured token for an HttpOnly browser cookie without exposing it to the page. */
+    /**
+     * Exchange the configured token for an HttpOnly browser cookie without exposing it to the page.
+     * Older public servers have no session endpoint and answer null.
+     */
     internal suspend fun dashboardSession(dashboard: String): String? =
         withContext(Dispatchers.IO) {
             val (url, user, token) = endpoint() ?: return@withContext null
@@ -677,7 +748,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .post(ByteArray(0).toRequestBody())
                     .build()
             sessionClient.newCall(request).execute().use { response ->
-                // Older public servers do not have the session endpoint.
                 if (response.code == 404) return@withContext null
                 if (!response.isSuccessful) throw HttpStatusException(response.code)
                 response.headers.values("Set-Cookie").firstOrNull { value ->
@@ -715,7 +785,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         context: Context,
         uploadAll: Boolean,
     ): String {
-        val (url, user, token) = endpoint() ?: return context.getString(R.string.ankiquest_check_unconfigured)
+        val (url, user, token) = endpoint() ?: return unconfigured(context)
 
         return try {
             mutex.withLock {
@@ -725,8 +795,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     } else {
                         if (uploadAll) {
                             AnkiDroidApp.sharedPrefs().edit {
-                                remove(PREF_MARK)
-                                remove("$INITIAL_SYNC_KEY:$url/$user")
+                                remove(markKey("$url/$user"))
+                                remove(initialSyncKey("$url/$user"))
                             }
                         }
                         upload(url, user, token, resync = false, onlyTest = !uploadAll)
@@ -759,6 +829,25 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
+    /** A typed server address that can never be used is reported as such rather than as missing settings. */
+    private fun unconfigured(context: Context): String {
+        val typed =
+            AnkiDroidApp
+                .sharedPrefs()
+                .getString(PREF_URL, "")
+                .orEmpty()
+                .trim()
+        return if (typed.isNotEmpty() && HomeAccount.from(mapOf(PREF_URL to typed), "player") == null) {
+            context.getString(R.string.ankiquest_check_bad_url, typed)
+        } else {
+            context.getString(R.string.ankiquest_check_unconfigured)
+        }
+    }
+
+    /**
+     * Shows [text] briefly over the current screen. It is discoverable with accessibility services
+     * but not announced, because the session recap carries the same feedback without interrupting every answer.
+     */
     private fun showBanner(
         text: String,
         important: Boolean,
@@ -776,8 +865,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 gravity = Gravity.CENTER
                 isClickable = false
                 isFocusable = false
-                // Discoverable when navigating with accessibility; the persistent session recap
-                // carries this feedback without interrupting every answer with an announcement.
                 importantForAccessibility = TextView.IMPORTANT_FOR_ACCESSIBILITY_YES
                 val pad = (10 * density).toInt()
                 setPadding(pad * 2, pad, pad * 2, pad)
@@ -850,4 +937,27 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     ) {}
 
     override fun onActivityDestroyed(activity: Activity) {}
+}
+
+/** At most one refresh waits behind the running one; requests made meanwhile join it, keeping any feedback or resync they ask for. */
+internal class RefreshQueue {
+    private val queued = AtomicBoolean(false)
+    private val feedback = AtomicBoolean(false)
+    private val resync = AtomicBoolean(false)
+
+    /** Records a request; true when the caller must start a refresh, false when a waiting one will cover it. */
+    fun offer(
+        showFeedback: Boolean,
+        resync: Boolean,
+    ): Boolean {
+        if (showFeedback) feedback.set(true)
+        if (resync) this.resync.set(true)
+        return queued.compareAndSet(false, true)
+    }
+
+    /** Starts the waiting refresh, so later requests queue another; answers whether to show feedback and whether to resync. */
+    fun take(): Pair<Boolean, Boolean> {
+        queued.set(false)
+        return feedback.getAndSet(false) to resync.getAndSet(false)
+    }
 }
