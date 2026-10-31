@@ -241,7 +241,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        AnkiquestCompanion.show(findViewById<ImageView>(R.id.aq_home_companion), R.drawable.aki_face)
+        val face = findViewById<ImageView>(R.id.aq_home_companion)
+        AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
         scroll.post { scroll.scrollTo(0, position) }
