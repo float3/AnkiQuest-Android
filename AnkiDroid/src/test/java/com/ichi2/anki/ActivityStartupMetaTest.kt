@@ -39,6 +39,7 @@ class ActivityStartupMetaTest : AndroidTest {
                 // activity aliases
                 .filter { it != "com.ichi2.anki.AnkiCardContextMenuAction" }
                 .filter { it != "com.ichi2.anki.CardBrowserDeepLink" }
+                .filter { !it.startsWith("com.ichi2.anki.ankiquest.AnkiquestIcon") }
                 // ACRA-specific
                 .filter { it != "com.ichi2.anki.analytics.AnkiDroidCrashReportDialog" }
                 .filter { !it.startsWith("androidx") }
