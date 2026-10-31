@@ -94,6 +94,8 @@ object AnkiquestNotifier {
                             scope,
                             entry.optString("kind", "completion"),
                         )
+                    } else if (AnkiquestShare.shareable(entry.optString("kind"))) {
+                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, id, null, scope, R.drawable.aki_celebrate))
                     } else {
                         emptyList()
                     },
@@ -121,13 +123,28 @@ object AnkiquestNotifier {
         prefs.edit { putString(PREF_ORDER, order.joinToString(",")) }
         if (!prefs.getBoolean(PREF_RANK, true)) return
         val change = result.optJSONObject("change") ?: return
+        val title = change.getString("title")
+        val body = change.getString("body")
+        val place = climbedTo(previous, order, Ankiquest.player())?.takeIf { it <= 3 }
         notify(
             context,
             RANK_ID,
-            change.getString("title"),
-            change.getString("body"),
+            title,
+            body,
             AnkiquestActivity.intent(context, "/week").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, it, null, R.drawable.aki_winner) }),
         )
+    }
+
+    /** The 1-based place [me] climbed to between two leaderboard orders, or null when they did not climb. */
+    internal fun climbedTo(
+        previous: List<String>,
+        order: List<String>,
+        me: String?,
+    ): Int? {
+        val now = order.indexOf(me)
+        val before = previous.indexOf(me)
+        return if (now >= 0 && before > now) now + 1 else null
     }
 
     /** Posts the server's streak warning once per study day, within the chosen hours before it ends. */

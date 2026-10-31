@@ -52,6 +52,24 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
+    fun `a celebration can be shared and a friend's completion can be answered`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val level = message(1, 30).put("kind", "celebration").put("title", "Level 54").put("body", "You reached level 54.")
+        val completion = message(2, 30).put("sender", "cerro").put("kind", "completion")
+        AnkiquestNotifier.onDeckCompletions(
+            targetContext,
+            account.notificationAccount,
+            JSONArray().put(level).put(completion),
+            account.scope,
+        )
+        val celebration = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(listOf("Share"), celebration.actions.map { it.title.toString() })
+        val reply = shadowOf(manager).getNotification(5_140_002)
+        assertFalse(reply.actions.any { it.title.toString() == "Share" })
+    }
+
+    @Test
     fun `Spanish contextual replies follow the Anki language and retain notification kind`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         val account = replyAccount()

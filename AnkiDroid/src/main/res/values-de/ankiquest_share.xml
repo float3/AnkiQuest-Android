@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_share">Teilen</string>
+    <string name="ankiquest_share_title">Diesen Erfolg teilen</string>
+    <string name="ankiquest_share_friends">Mit meinen AnkiQuest-Freunden</string>
+    <string name="ankiquest_share_elsewhere">Woanders …</string>
+    <string name="ankiquest_share_text">%1$s: %2$s
+Lern mit mir auf AnkiQuest: %3$s</string>
+    <string name="ankiquest_share_text_offline">%1$s: %2$s
+Ich lerne mit AnkiQuest.</string>
+    <string name="ankiquest_share_nobody">Niemand Neues hat es bekommen: Deine Freunde haben es schon, oder du hast noch keine Freunde in AnkiQuest.</string>
+    <string name="ankiquest_share_failed">Teilen hat nicht geklappt. Prüfe deine Verbindung und versuch es noch einmal.</string>
+    <plurals name="ankiquest_share_sent">
+        <item quantity="one">Mit %d Freund geteilt</item>
+        <item quantity="other">Mit %d Freunden geteilt</item>
+    </plurals>
+</resources>

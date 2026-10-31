@@ -54,14 +54,14 @@ object AnkiquestReply {
         if (scope.isNullOrEmpty() || current.scope != scope || current.notificationAccount != account) return emptyList()
         val quick =
             when (kind) {
-                "completion" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_cheer)
+                "completion", "share" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_cheer)
                 "reply" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_thanks)
                 "nudge" -> AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_on_it)
                 else -> null
             }
         val suggestions =
             when (kind) {
-                "completion" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_choices)
+                "completion", "share" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_choices)
                 "reply" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_thanks_choices)
                 "nudge" -> AnkiquestLanguage.context(context).resources.getStringArray(R.array.ankiquest_reply_nudge_choices)
                 else -> emptyArray()
