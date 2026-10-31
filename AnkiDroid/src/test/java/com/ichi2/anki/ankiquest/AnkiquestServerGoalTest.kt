@@ -247,6 +247,8 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     @Test
     fun `a reached backlog goal is reported once a day`() =
         runBlocking {
+            // The native scheduler logs reviews by the system clock, not RobolectricTest's 2020 clock.
+            TimeManager.reset()
             addBasicNote()
             col.sched.answerCard(col.sched.card!!, Rating.EASY)
             val profile = JSONObject().put("goal", JSONObject().put("mode", "backlog").put("value", 100).put("reached", false))
