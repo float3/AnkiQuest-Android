@@ -16,4 +16,6 @@ Estudio con AnkiQuest.</string>
         <item quantity="other">Compartido con %d amigos</item>
     </plurals>
     <string name="ankiquest_share_account_changed">Este logro es de una cuenta de AnkiQuest que ya no tiene la sesión iniciada.</string>
+    <string name="ankiquest_cheer">🎉 Aplaudir</string>
+    <string name="ankiquest_cheer_sent">🎉 Aplaudiste: %1$s</string>
 </resources>

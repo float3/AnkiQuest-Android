@@ -16,4 +16,6 @@ Je révise avec AnkiQuest.</string>
         <item quantity="other">Partagé avec %d amis</item>
     </plurals>
     <string name="ankiquest_share_account_changed">Cette victoire appartient à un compte AnkiQuest qui n’est plus connecté.</string>
+    <string name="ankiquest_cheer">🎉 Applaudir</string>
+    <string name="ankiquest_cheer_sent">🎉 Vous avez applaudi : %1$s</string>
 </resources>

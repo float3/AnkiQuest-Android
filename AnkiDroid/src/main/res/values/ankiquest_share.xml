@@ -5,7 +5,6 @@
     <string name="ankiquest_share_title">Share this win</string>
     <string name="ankiquest_share_friends">With my AnkiQuest friends</string>
     <string name="ankiquest_share_elsewhere">Somewhere else…</string>
-    <string name="ankiquest_share_footer" translatable="false">AnkiQuest</string>
     <string name="ankiquest_share_text">%1$s: %2$s
 Study with me on AnkiQuest: %3$s</string>
     <string name="ankiquest_share_text_offline">%1$s: %2$s
@@ -17,4 +16,6 @@ I study with AnkiQuest.</string>
         <item quantity="other">Shared with %d friends</item>
     </plurals>
     <string name="ankiquest_share_account_changed">This win belongs to an AnkiQuest account that is no longer signed in.</string>
+    <string name="ankiquest_cheer">🎉 Cheer</string>
+    <string name="ankiquest_cheer_sent">🎉 You cheered: %1$s</string>
 </resources>

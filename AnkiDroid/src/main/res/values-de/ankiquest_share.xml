@@ -16,4 +16,6 @@ Ich lerne mit AnkiQuest.</string>
         <item quantity="other">Mit %d Freunden geteilt</item>
     </plurals>
     <string name="ankiquest_share_account_changed">Dieser Erfolg gehört zu einem AnkiQuest-Konto, das nicht mehr angemeldet ist.</string>
+    <string name="ankiquest_cheer">🎉 Jubeln</string>
+    <string name="ankiquest_cheer_sent">🎉 Du hast gejubelt: %1$s</string>
 </resources>

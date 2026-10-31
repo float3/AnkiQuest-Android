@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -82,6 +83,11 @@ object AnkiquestNotifier {
                     language.getString(R.string.ankiquest_reply_context, body, original)
                 } ?: body
             val answerable = entry.optString("sender").isNotEmpty() && !entry.optBoolean("replied")
+            val kind = entry.optString("kind", "completion")
+            val win = entry.optLong("win").takeIf { it > 0 }
+            val friendsWin = kind == "share" && win != null
+            val cheerable = friendsWin && !entry.optBoolean("reacted")
+            val card = entry.optString("image").takeIf { fresh && kind == "share" && it.isNotEmpty() }
             if (fresh &&
                 notify(
                     context,
@@ -89,7 +95,7 @@ object AnkiquestNotifier {
                     title,
                     shownBody,
                     notificationIntent(context, entry, account),
-                    if (answerable) {
+                    if (answerable || cheerable) {
                         AnkiquestReply.actions(
                             context,
                             id,
@@ -98,14 +104,18 @@ object AnkiquestNotifier {
                             shownBody,
                             account,
                             scope,
-                            entry.optString("kind", "completion"),
+                            kind,
+                            win = friendsWin,
+                            cheer = cheerable,
+                            reply = answerable,
                         )
-                    } else if (AnkiquestShare.shareable(entry.optString("kind"))) {
-                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, id, null, scope, R.drawable.aki_celebrate))
+                    } else if (AnkiquestShare.shareable(kind)) {
+                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, win, id, null, scope))
                     } else {
                         emptyList()
                     },
-                    entry.optString("kind") == "nudge",
+                    kind == "nudge",
+                    picture = card?.let { AnkiquestShare.picture(it) },
                 ) == Delivery.DISABLED
             ) {
                 return
@@ -140,7 +150,7 @@ object AnkiquestNotifier {
             title,
             body,
             AnkiquestActivity.intent(context, "/week").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, it, scope, R.drawable.aki_winner) }),
+            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
         )
     }
 
@@ -194,6 +204,37 @@ object AnkiquestNotifier {
         )
     }
 
+    /** Says the cheer went out; the friend's win can still be answered in words. */
+    fun onCheered(
+        context: Context,
+        data: Data,
+    ) {
+        if (!AnkiquestReply.current(data)) return
+        val tag = data.getInt(AnkiquestReply.EXTRA_TAG, 0)
+        val title = data.getString(AnkiquestReply.EXTRA_TITLE).orEmpty()
+        val body = data.getString(AnkiquestReply.EXTRA_BODY).orEmpty()
+        notify(
+            context,
+            tag,
+            title,
+            AnkiquestLanguage.context(context).getString(R.string.ankiquest_cheer_sent, body),
+            replyIntent(context, data),
+            AnkiquestReply.actions(
+                context,
+                data.getLong(AnkiquestReply.EXTRA_NOTIFICATION, 0),
+                tag,
+                title,
+                body,
+                data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT),
+                data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
+                data.getString(AnkiquestReply.EXTRA_KIND) ?: "share",
+                win = true,
+                cheer = false,
+            ),
+            silent = true,
+        )
+    }
+
     /** Keeps the buttons so a reply that never left can be sent again. */
     fun onReplyFailed(
         context: Context,
@@ -219,6 +260,7 @@ object AnkiquestNotifier {
                 data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT),
                 data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
                 data.getString(AnkiquestReply.EXTRA_KIND) ?: "completion",
+                win = data.getBoolean(AnkiquestReply.EXTRA_WIN, false),
             ),
             silent = true,
         )
@@ -313,7 +355,8 @@ object AnkiquestNotifier {
     /**
      * Before channels, Android reads alert behaviour from the notification itself; the phone's ringer
      * and Do Not Disturb still apply. A permission revoked after the check reports [Delivery.DISABLED],
-     * which keeps the inbox pending.
+     * which keeps the inbox pending. A [picture], such as a friend's win card, is shown expanded with
+     * the text beneath it.
      */
     @SuppressLint("MissingPermission")
     private fun notify(
@@ -325,6 +368,7 @@ object AnkiquestNotifier {
         actions: List<NotificationCompat.Action> = emptyList(),
         nudge: Boolean = false,
         silent: Boolean = false,
+        picture: Bitmap? = null,
     ): Delivery {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -337,6 +381,9 @@ object AnkiquestNotifier {
         if (manager.getNotificationChannel(channel)?.importance == NotificationManagerCompat.IMPORTANCE_NONE) {
             return Delivery.CHANNEL_BLOCKED
         }
+        val style =
+            picture?.let { NotificationCompat.BigPictureStyle().bigPicture(it).setSummaryText(body) }
+                ?: NotificationCompat.BigTextStyle().bigText(body)
         val notification =
             NotificationCompat
                 .Builder(context, channel)
@@ -344,7 +391,7 @@ object AnkiquestNotifier {
                 .setLargeIcon(AnkiquestAki.notificationIcon(context))
                 .setContentTitle(title)
                 .setContentText(body)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setStyle(style)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setDefaults(NotificationCompat.DEFAULT_SOUND)
