@@ -424,6 +424,11 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     getString(R.string.aq_copies_sent)
                 } catch (error: CancellationException) {
                     throw error
+                } catch (_: HomeAccountChanged) {
+                    copyBusy = false
+                    copyStatus = null
+                    refresh()
+                    return@launch
                 } catch (error: AnkiquestDeckCopies.TooLarge) {
                     getString(R.string.aq_copies_too_large)
                 } catch (error: Exception) {

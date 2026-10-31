@@ -62,6 +62,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private const val PREF_MARK = "ankiquestUploadedThrough"
     private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
+    const val NUDGES = "nudges"
+    const val CELEBRATIONS = "celebrations"
 
     private const val MAX_PENDING = 5000
     private const val BASELINE_MAX_AGE_MS = 10 * 60 * 1000L
@@ -210,15 +212,23 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         )
     }
 
-    /** Whether the server sends this player nudges, without touching deck progress. */
-    suspend fun nudgesEnabled(): Boolean {
+    /**
+     * The player's server-side notification switches, such as [NUDGES] and [CELEBRATIONS], in one
+     * request and without touching deck progress.
+     */
+    suspend fun notificationSwitches(): JSONObject {
         val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            fetchDeckNotificationSettings(url, user, token).getBoolean("nudges")
-        }
+        return withContext(Dispatchers.IO) { fetchDeckNotificationSettings(url, user, token) }
     }
 
-    suspend fun setNudges(enabled: Boolean): JSONObject {
+    /** Celebrations are on unless the player turned them off; older servers have no setting and always celebrate. */
+    fun celebrations(switches: JSONObject): Boolean = switches.optBoolean(CELEBRATIONS, true)
+
+    /** Turns one notification switch on or off and leaves deck sharing and the other switches as they are. */
+    suspend fun setNotificationSwitch(
+        name: String,
+        enabled: Boolean,
+    ): JSONObject {
         val (url, user, token) = authenticatedEndpoint()
         return withContext(Dispatchers.IO) {
             execute(
@@ -229,7 +239,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .post(
                         JSONObject()
                             .put("decks", JSONArray())
-                            .put("nudges", enabled)
+                            .put(name, enabled)
                             .toString()
                             .toRequestBody(json),
                     ).build(),
@@ -237,29 +247,25 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
-    /** Celebrations are on unless the player turned them off; older servers have no setting and always celebrate. */
-    suspend fun celebrationsEnabled(): Boolean {
-        val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            fetchDeckNotificationSettings(url, user, token).optBoolean("celebrations", true)
-        }
-    }
-
     /**
      * Shares a win with everyone in the player's circle through `/api/share`: one of their own
      * [notification]s, or their current [place] on this week's board. Answers how many friends got it.
+     *
+     * @param expectedScope the [HomeAccount.scope] the win belongs to; another signed-in account never shares it
      */
     suspend fun shareWin(
         notification: Long?,
         place: Int?,
-    ): Int {
-        val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
+        expectedScope: String,
+    ): Int =
+        withContext(Dispatchers.IO) {
+            val account = AnkiquestHomeData.account()?.takeIf { it.scope == expectedScope } ?: throw HomeAccountChanged()
+            check(account.token.isNotEmpty()) { "Set your ankiquest token to share a win." }
             execute(
                 Request
                     .Builder()
-                    .url("$url/api/share/$user")
-                    .header("Authorization", "Bearer $token")
+                    .url(account.url("api/share/${account.encodedUser}"))
+                    .header("Authorization", "Bearer ${account.token}")
                     .post(
                         JSONObject()
                             .apply {
@@ -270,29 +276,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     ).build(),
             ).optInt("recipients")
         }
-    }
 
     /** The server's address, for inviting people met outside the app. */
     fun serverUrl(): String? = endpoint()?.first
-
-    suspend fun setCelebrations(enabled: Boolean): JSONObject {
-        val (url, user, token) = authenticatedEndpoint()
-        return withContext(Dispatchers.IO) {
-            execute(
-                Request
-                    .Builder()
-                    .url("$url/api/decks/$user")
-                    .header("Authorization", "Bearer $token")
-                    .post(
-                        JSONObject()
-                            .put("decks", JSONArray())
-                            .put("celebrations", enabled)
-                            .toString()
-                            .toRequestBody(json),
-                    ).build(),
-            )
-        }
-    }
 
     /** Streak protection is stored on the server; never infer it from a local default. */
     suspend fun streakProtectionEnabled(): Boolean {
@@ -321,12 +307,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             ).getBoolean("enabled")
         }
     }
-
-    /** The ids of every deck nested below the deck called [name] in the settings deck list. */
-    fun subdeckIds(
-        decks: List<JSONObject>,
-        name: String,
-    ): List<String> = decks.filter { it.getString("name").startsWith("$name::") }.map { it.getString("id") }
 
     /** A reply the server will never take, such as one already answered elsewhere. */
     class Rejected(

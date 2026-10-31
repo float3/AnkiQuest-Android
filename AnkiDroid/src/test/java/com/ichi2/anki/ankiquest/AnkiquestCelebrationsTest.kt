@@ -67,14 +67,14 @@ class AnkiquestCelebrationsTest : RobolectricTest() {
     @Test
     fun `celebrations default to on for servers without the setting`() =
         runBlocking {
-            assertTrue(Ankiquest.celebrationsEnabled())
+            assertTrue(Ankiquest.celebrations(Ankiquest.notificationSwitches()))
         }
 
     @Test
     fun `turning celebrations off only sends that choice`() =
         runBlocking {
-            assertFalse(Ankiquest.setCelebrations(false).getBoolean("celebrations"))
-            assertFalse(Ankiquest.celebrationsEnabled())
+            assertFalse(Ankiquest.setNotificationSwitch(Ankiquest.CELEBRATIONS, false).getBoolean("celebrations"))
+            assertFalse(Ankiquest.celebrations(Ankiquest.notificationSwitches()))
             val body = JSONObject(posted.single())
             assertEquals(0, body.getJSONArray("decks").length())
             assertFalse(body.has("nudges"), "leaves nudges as they were")

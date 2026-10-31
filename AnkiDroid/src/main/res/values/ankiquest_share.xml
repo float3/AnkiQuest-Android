@@ -16,4 +16,5 @@ I study with AnkiQuest.</string>
         <item quantity="one">Shared with %d friend</item>
         <item quantity="other">Shared with %d friends</item>
     </plurals>
+    <string name="ankiquest_share_account_changed">This win belongs to an AnkiQuest account that is no longer signed in.</string>
 </resources>
