@@ -38,7 +38,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     private lateinit var server: HttpServer
     private val requests = CopyOnWriteArrayList<Triple<String, String, JSONObject?>>()
 
-    @Volatile private var goal = JSONObject().put("mode", "cards").put("value", 100)
+    @Volatile private var goal = JSONObject().put("mode", "backlog").put("value", 10)
 
     @Volatile private var reachedStatus = 200
 

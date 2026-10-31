@@ -65,7 +65,7 @@ internal object AnkiquestDailyGoal {
         fun json(): JSONObject = JSONObject().put("mode", mode.key).apply { if (mode != Mode.OFF) put("value", value) }
 
         companion object {
-            val DEFAULT = Choice(Mode.CARDS, 100)
+            val DEFAULT = Choice(Mode.BACKLOG, DEFAULT_BACKLOG_PERCENT)
 
             /** The values the server accepts for [mode]; any for [Mode.OFF]. */
             fun range(mode: Mode): IntRange? =
@@ -79,8 +79,10 @@ internal object AnkiquestDailyGoal {
             /** The server's value for a goal switched to [mode]. */
             fun defaultValue(mode: Mode): Int =
                 when (mode) {
-                    Mode.MINUTES -> 20
-                    else -> 100
+                    Mode.BACKLOG -> DEFAULT_BACKLOG_PERCENT
+                    Mode.CARDS -> DEFAULT_CARDS
+                    Mode.MINUTES -> DEFAULT_MINUTES
+                    Mode.OFF -> DEFAULT_CARDS
                 }
 
             fun parse(json: JSONObject?): Choice? {
