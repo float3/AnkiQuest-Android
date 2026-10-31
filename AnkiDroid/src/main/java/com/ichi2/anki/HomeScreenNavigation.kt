@@ -20,6 +20,7 @@ import com.google.android.material.behavior.HideViewOnScrollBehavior
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.color.MaterialColors
 import com.ichi2.anki.BottomNavController.NavigationItem
+import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.browser.CardBrowserFragment
 import com.ichi2.anki.browser.CardBrowserViewModel
@@ -110,25 +111,7 @@ fun setupBottomNavigation() {
         ViewCompat.requestApplyInsets(deckPicker.deckPickerBinding.root)
     }
 
-    if (AnkiquestNavigation.enabled()) {
-        // The deck library is the fourth destination of the same mobile shell.
-        // Card browsing and all existing library tools remain native.
-        fragmentContainer.isVisible = false
-        deckPicker.supportFragmentManager.commit { hideBottomNavFragments() }
-        contentWrapper.isVisible = true
-        bottomNav.menu.clear()
-        bottomNav.inflateMenu(R.menu.ankiquest_navigation)
-        bottomNav.selectedItemId = R.id.ankiquest_nav_decks
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
-            view.updatePadding(bottom = insets.getInsets(navigationBars()).bottom)
-            insets
-        }
-        bottomNav.setOnItemSelectedListener { item ->
-            AnkiquestNavigation.destination(deckPicker, item.itemId)?.let(deckPicker::startActivity)
-            item.itemId == R.id.ankiquest_nav_decks
-        }
-        return
-    }
+    if (AnkiquestDeckPickerHooks.setupBottomNavigation(deckPicker, bottomNav, fragmentContainer, contentWrapper)) return
 
     NavigationItem.populateMenu(bottomNav, deckPicker)
 
@@ -168,10 +151,7 @@ fun setupBottomNavigation() {
 
 context(deckPicker: DeckPicker)
 fun showRestoredBottomNavTab() {
-    if (AnkiquestNavigation.enabled() && !deckPicker.fragmented) {
-        deckPicker.binding.bottomNavigation?.selectedItemId = R.id.ankiquest_nav_decks
-        return
-    }
+    if (AnkiquestDeckPickerHooks.showRestoredBottomNavTab(deckPicker)) return
     if (!deckPicker.bottomNavigationEnabled) return
     val bottomNav = deckPicker.binding.bottomNavigation ?: return
     bottomNav.selectedItemId = bottomNav.selectedItemId
