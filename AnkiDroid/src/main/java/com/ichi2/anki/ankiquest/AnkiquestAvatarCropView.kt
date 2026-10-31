@@ -18,8 +18,11 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withClip
 import com.ichi2.anki.R
 
-/** A large circular preview; the uploaded square contains exactly the same crop. */
-@SuppressLint("ViewConstructor") // Created by the editor with a decoded image, never inflated from XML.
+/**
+ * A large circular preview; the uploaded square contains exactly the same crop.
+ * Created by the editor with a decoded image, never inflated from XML.
+ */
+@SuppressLint("ViewConstructor")
 class AnkiquestAvatarCropView(
     context: Context,
     bitmap: Bitmap,

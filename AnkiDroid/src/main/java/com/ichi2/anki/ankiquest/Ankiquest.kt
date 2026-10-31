@@ -108,14 +108,15 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     internal var resumeUploadAt = 0L
     private var seenThrough: Pair<String, Long>? = null
 
+    /**
+     * Follows activities and collection changes. This singleton subscribes without a lifecycle owner,
+     * so nothing takes it off the list: any earlier registration is dropped first, because a second
+     * Application in the same process (every Robolectric test builds one) would subscribe it twice,
+     * which ChangeManager refuses in a debug build. This also survives `resetForTesting()`.
+     */
     fun init(app: Application) {
         this.app = app
         app.registerActivityLifecycleCallbacks(this)
-        // This is a JVM singleton and subscribes without a lifecycle owner, so
-        // nothing ever takes it off the list. A second Application in the same
-        // process -- every Robolectric test builds one -- would subscribe it
-        // twice, which ChangeManager refuses in a debug build. Dropping any
-        // earlier registration first also survives resetForTesting().
         ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
         AnkiquestPoll.schedule(app)
@@ -441,6 +442,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         return profile
     }
 
+    /**
+     * Uploads reviews after the account's mark in batches the server accepts. Only the final batch
+     * carries deck progress, and connection tests never do. Sharing is fetched for the captured
+     * account on every upload, so changed or revoked sharing is respected.
+     */
     private suspend fun upload(
         url: String,
         user: String,
@@ -483,13 +489,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 body.put("deleted", JSONArray(reconciled.deleted))
             }
             body.put("reviews", batch)
-            // Only the final batch represents complete progress; connection checks are not study.
             if (!full && !onlyTest) {
                 runCatching {
                     if (catalog) {
                         deckSnapshots(clock)
                     } else {
-                        // Fetch for this captured account each time so changed or revoked sharing is respected.
                         val enabled =
                             fetchDeckNotificationSettings(url, user, token)
                                 .getJSONArray("decks")
@@ -671,7 +675,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         token: String = "",
     ): JSONObject = execute(readRequest(url, token))
 
-    /** Exchange the configured token for an HttpOnly browser cookie without exposing it to the page. */
+    /**
+     * Exchange the configured token for an HttpOnly browser cookie without exposing it to the page.
+     * Older public servers have no session endpoint and answer null.
+     */
     internal suspend fun dashboardSession(dashboard: String): String? =
         withContext(Dispatchers.IO) {
             val (url, user, token) = endpoint() ?: return@withContext null
@@ -685,7 +692,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .post(ByteArray(0).toRequestBody())
                     .build()
             sessionClient.newCall(request).execute().use { response ->
-                // Older public servers do not have the session endpoint.
                 if (response.code == 404) return@withContext null
                 if (!response.isSuccessful) throw HttpStatusException(response.code)
                 response.headers.values("Set-Cookie").firstOrNull { value ->
@@ -798,8 +804,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 gravity = Gravity.CENTER
                 isClickable = false
                 isFocusable = false
-                // Discoverable when navigating with accessibility; the persistent session recap
-                // carries this feedback without interrupting every answer with an announcement.
                 importantForAccessibility = TextView.IMPORTANT_FOR_ACCESSIBILITY_YES
                 val pad = (10 * density).toInt()
                 setPadding(pad * 2, pad, pad * 2, pad)

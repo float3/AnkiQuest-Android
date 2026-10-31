@@ -23,6 +23,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.core.widget.TextViewCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
@@ -31,12 +32,15 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
@@ -102,7 +106,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         render()
     }
 
-    private var localRefreshJob: kotlinx.coroutines.Job? = null
+    private var localRefreshJob: Job? = null
 
     override fun onPause() {
         localRefreshJob?.cancel()
@@ -114,14 +118,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (nextAt == null) return
         localRefreshJob =
             lifecycleScope.launch {
-                kotlinx.coroutines.delay(
-                    (
-                        nextAt -
-                            com.ichi2.anki.common.time.TimeManager.time
-                                .intTimeMS()
-                    ).coerceAtLeast(1_000L),
-                )
-                if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) refresh()
+                delay((nextAt - TimeManager.time.intTimeMS()).coerceAtLeast(1_000L))
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) refresh()
             }
     }
 
@@ -201,7 +199,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                         if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_home_server_error
                     } catch (_: IOException) {
                         R.string.aq_home_offline
-                    } catch (_: org.json.JSONException) {
+                    } catch (_: JSONException) {
                         R.string.aq_home_server_error
                     }
                 if (turn == generation) {
