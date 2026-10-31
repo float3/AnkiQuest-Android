@@ -10,6 +10,7 @@ import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Choice
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.ServerGoal
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
@@ -38,7 +39,14 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     private lateinit var server: HttpServer
     private val requests = CopyOnWriteArrayList<Triple<String, String, JSONObject?>>()
 
-    @Volatile private var goal = JSONObject().put("mode", "backlog").put("value", 10)
+    @Volatile private var goal =
+        JSONObject()
+            .put("mode", "backlog")
+            .put("value", 30)
+            .put("since", 20391)
+            .put("chosen", false)
+
+    @Volatile private var today = 20391L
 
     @Volatile private var reachedStatus = 200
 
@@ -65,8 +73,13 @@ class AnkiquestServerGoalTest : RobolectricTest() {
                         if (body!!.optInt("value", 1) > 5000) {
                             400 to JSONObject().put("error", "Pick 1 to 5000 cards.")
                         } else {
-                            goal = body
-                            200 to body
+                            goal =
+                                JSONObject()
+                                    .put("mode", body.getString("mode"))
+                                    .put("value", body.optInt("value", goal.optInt("value")))
+                                    .put("since", today)
+                                    .put("chosen", true)
+                            200 to goal
                         }
                     "POST /api/goal/hill/reached" -> reachedStatus to JSONObject()
                     "GET /api/sharing/hill" -> 200 to sharing
@@ -109,8 +122,35 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         assertNull(Choice.parse(JSONObject().put("mode", "weekly")))
         assertFalse(Choice(Mode.CARDS, 5001).valid)
         assertFalse(Choice(Mode.MINUTES, 0).valid)
-        assertTrue(Choice(Mode.BACKLOG, 100).valid)
+        assertTrue(Choice(Mode.BACKLOG, 365).valid)
+        assertFalse(Choice(Mode.BACKLOG, 366).valid)
+        assertEquals(Choice(Mode.BACKLOG, 30), Choice.DEFAULT)
+        assertEquals("""{"mode":"backlog","value":30,"restart":true}""", Choice.DEFAULT.json(restart = true).toString())
     }
+
+    @Test
+    fun `the server's goal says when its plan started and whether one was chosen`() {
+        val goal =
+            ServerGoal.parse(
+                JSONObject()
+                    .put("mode", "backlog")
+                    .put("value", 14)
+                    .put("since", 20391)
+                    .put("chosen", true),
+            )
+        assertEquals(ServerGoal(Choice(Mode.BACKLOG, 14), 20391, true), goal)
+        assertEquals(ServerGoal(Choice(Mode.CARDS, 50)), ServerGoal.parse(JSONObject().put("mode", "cards").put("value", 50)))
+    }
+
+    @Test
+    fun `a goal saved on this device counts as chosen`() =
+        runBlocking {
+            assertEquals(false, AnkiquestDailyGoal.fetch(account()).chosen)
+            val saved = AnkiquestDailyGoal.save(account(), Choice(Mode.BACKLOG, 14), restart = true)
+            assertEquals(true, saved.chosen)
+            assertTrue(puts("/api/goal/hill").single().third!!.getBoolean("restart"))
+            assertEquals(true, AnkiquestDailyGoal.fetch(account()).chosen)
+        }
 
     @Test
     fun `a goal chosen on this device moves to a server that still has its default, once`() =
@@ -119,11 +159,15 @@ class AnkiquestServerGoalTest : RobolectricTest() {
                 putString(AnkiquestDailyGoal.PREF_MODE, "minutes")
                 putInt(AnkiquestDailyGoal.PREF_MINUTES, 25)
             }
-            assertEquals(Choice(Mode.MINUTES, 25), AnkiquestDailyGoal.fetch(account()))
+            assertEquals(Choice(Mode.MINUTES, 25), AnkiquestDailyGoal.fetch(account()).choice)
             assertEquals(1, puts("/api/goal/hill").size)
             assertEquals(25, puts("/api/goal/hill").single().third!!.getInt("value"))
             goal = JSONObject().put("mode", "cards").put("value", 100)
-            assertEquals(Choice(Mode.CARDS, 100), AnkiquestDailyGoal.fetch(account()), "the server is the source of truth afterwards")
+            assertEquals(
+                Choice(Mode.CARDS, 100),
+                AnkiquestDailyGoal.fetch(account()).choice,
+                "the server is the source of truth afterwards",
+            )
             assertEquals(1, puts("/api/goal/hill").size)
             assertEquals(Mode.CARDS, AnkiquestDailyGoal.settings(prefs).mode)
         }
@@ -133,9 +177,31 @@ class AnkiquestServerGoalTest : RobolectricTest() {
         runBlocking {
             prefs.edit { putString(AnkiquestDailyGoal.PREF_MODE, "backlog") }
             goal = JSONObject().put("mode", "minutes").put("value", 30)
-            assertEquals(Choice(Mode.MINUTES, 30), AnkiquestDailyGoal.fetch(account()))
+            assertEquals(Choice(Mode.MINUTES, 30), AnkiquestDailyGoal.fetch(account()).choice)
             assertTrue(puts("/api/goal/hill").isEmpty())
             assertEquals(30, AnkiquestDailyGoal.settings(prefs).minutes)
+        }
+
+    @Test
+    fun `an old backlog percentage moves to the server as days`() =
+        runBlocking {
+            prefs.edit {
+                putString(AnkiquestDailyGoal.PREF_MODE, "backlog")
+                putString(AnkiquestDailyGoal.PREF_BACKLOG_PERCENT, "5")
+            }
+            assertEquals(Choice(Mode.BACKLOG, 60), AnkiquestDailyGoal.fetch(account()).choice)
+            assertEquals(60, puts("/api/goal/hill").single().third!!.getInt("value"))
+        }
+
+    @Test
+    fun `an old default backlog percentage leaves the server's default alone`() =
+        runBlocking {
+            prefs.edit {
+                putString(AnkiquestDailyGoal.PREF_MODE, "backlog")
+                putString(AnkiquestDailyGoal.PREF_BACKLOG_PERCENT, "10")
+            }
+            assertEquals(Choice.DEFAULT, AnkiquestDailyGoal.fetch(account()).choice)
+            assertTrue(puts("/api/goal/hill").isEmpty())
         }
 
     @Test
@@ -154,7 +220,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     @Test
     fun `the server judges goals in cards and minutes`() {
         val local =
-            AnkiquestDailyGoal.Status(5, 3, 0, 4, Mode.BACKLOG, 10, AnkiquestDailyGoal.Goal(40))
+            AnkiquestDailyGoal.Status(5, 3, 0, 4, Mode.BACKLOG, AnkiquestDailyGoal.Goal(40))
         val now = TimeManager.time.intTimeMS()
         AnkiquestDailyGoal.remember(JSONObject().put("goal", JSONObject().put("mode", "cards").put("value", 50)), prefs)
         val profile =
@@ -202,6 +268,31 @@ class AnkiquestServerGoalTest : RobolectricTest() {
             AnkiquestDailyGoal.afterUpload(account(), JSONObject().put("goal", JSONObject().put("mode", "cards").put("value", 1)), prefs)
             AnkiquestDailyGoal.afterUpload(account(), JSONObject(), prefs)
             assertTrue(requests.none { it.second == "/api/goal/hill/reached" })
+        }
+
+    @Test
+    fun `a backlog plan that ran out starts again once`() =
+        runBlocking {
+            today = AnkiquestDecks.studyDay(col, TimeManager.time.intTimeMS())
+            val ended =
+                JSONObject()
+                    .put("mode", "backlog")
+                    .put("value", 30)
+                    .put("since", today - 30)
+                    .put("reached", true)
+            AnkiquestDailyGoal.afterUpload(account(), JSONObject().put("goal", ended), prefs)
+            val restart = puts("/api/goal/hill").single().third!!
+            assertTrue(restart.getBoolean("restart"))
+            assertEquals(30, restart.getInt("value"))
+            assertEquals(today, AnkiquestDailyGoal.cached(prefs, account().scope)?.since)
+            val running =
+                JSONObject()
+                    .put("mode", "backlog")
+                    .put("value", 30)
+                    .put("since", today)
+                    .put("reached", true)
+            AnkiquestDailyGoal.afterUpload(account(), JSONObject().put("goal", running), prefs)
+            assertEquals(1, puts("/api/goal/hill").size)
         }
 
     @Test

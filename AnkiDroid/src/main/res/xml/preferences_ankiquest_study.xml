@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/ankiquest_study_title"
     android:key="@string/ankiquest_study_screen_key">
     <SwitchPreferenceCompat
@@ -14,34 +13,10 @@
         android:key="@string/ankiquest_summary_preference_key"
         android:summary="@string/ankiquest_summary_preference_summary"
         android:title="@string/ankiquest_summary_preference_title" />
-    <ListPreference
-        android:entries="@array/ankiquest_goal_mode_entries"
-        android:entryValues="@array/ankiquest_goal_mode_values"
-        android:key="@string/ankiquest_goal_mode_key"
+    <Preference
+        android:key="@string/ankiquest_goal_key"
         android:persistent="false"
-        android:title="@string/ankiquest_goal_mode_title"
-        app:useSimpleSummaryProvider="true" />
-    <ListPreference
-        android:entries="@array/ankiquest_goal_backlog_entries"
-        android:entryValues="@array/ankiquest_goal_backlog_values"
-        android:key="@string/ankiquest_goal_backlog_key"
-        android:persistent="false"
-        android:title="@string/ankiquest_goal_backlog_title"
-        app:useSimpleSummaryProvider="true" />
-    <com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
-        android:key="@string/ankiquest_goal_cards_key"
-        android:persistent="false"
-        android:title="@string/ankiquest_goal_cards_title"
-        app:min="1"
-        app:max="5000"
-        app:useSimpleSummaryProvider="true" />
-    <com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
-        android:key="@string/ankiquest_goal_minutes_key"
-        android:persistent="false"
-        android:title="@string/ankiquest_goal_minutes_title"
-        app:min="1"
-        app:max="600"
-        app:useSimpleSummaryProvider="true" />
+        android:title="@string/ankiquest_goal_title" />
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="@string/ankiquest_deck_status_key"

@@ -104,6 +104,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         account = AnkiquestHomeData.account()
         render()
+        if (savedInstanceState == null) AnkiquestGoalDialog.offerSetup(this) { refresh() }
     }
 
     private var localRefreshJob: Job? = null
@@ -338,7 +339,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (status.mode == AnkiquestDailyGoal.Mode.BACKLOG && status.goal.backlog > 0) {
             text(
                 panel,
-                getString(R.string.aq_goal_backlog_explained, status.goal.backlogShare, status.goal.backlog, status.backlogPercent),
+                getString(R.string.aq_goal_backlog_explained, status.goal.extra, status.goal.backlog, status.goal.daysLeft),
                 small = true,
             )
         }

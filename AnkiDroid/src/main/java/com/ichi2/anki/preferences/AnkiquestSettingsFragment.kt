@@ -35,6 +35,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
+import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
@@ -208,6 +209,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
                     AnkiquestPoll.refreshNow(requireContext())
+                    AnkiquestGoalDialog.offerSetup(requireActivity())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -228,47 +230,29 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         )
     }
 
-    /** The daily goal lives on the server: it shows the last known goal and changes once the server takes the new one. */
+    /**
+     * The daily goal lives on the server: the setting shows the last known goal, and opens the goal
+     * dialog once the server's goal is loaded.
+     */
     private fun bindGoal() {
-        val mode = requirePreference<ListPreference>(R.string.ankiquest_goal_mode_key)
-        val backlog = requirePreference<ListPreference>(R.string.ankiquest_goal_backlog_key)
-        val cards = requirePreference<IncrementerNumberRangePreferenceCompat>(R.string.ankiquest_goal_cards_key)
-        val minutes = requirePreference<IncrementerNumberRangePreferenceCompat>(R.string.ankiquest_goal_minutes_key)
-        val fields = listOf(mode, backlog, cards, minutes)
+        val preference = requirePreference<Preference>(R.string.ankiquest_goal_key)
         var generation = 0
-        var saving = false
-        var refreshPending = false
 
         fun show(choice: AnkiquestDailyGoal.Choice) {
-            mode.value = choice.mode.key
-            when (choice.mode) {
-                AnkiquestDailyGoal.Mode.BACKLOG -> backlog.value = choice.value.toString()
-                AnkiquestDailyGoal.Mode.CARDS -> cards.setValue(choice.value)
-                AnkiquestDailyGoal.Mode.MINUTES -> minutes.setValue(choice.value)
-                AnkiquestDailyGoal.Mode.OFF -> Unit
-            }
-            backlog.isVisible = choice.mode == AnkiquestDailyGoal.Mode.BACKLOG
-            cards.isVisible = choice.mode == AnkiquestDailyGoal.Mode.CARDS
-            minutes.isVisible = choice.mode == AnkiquestDailyGoal.Mode.MINUTES
+            preference.summary = AnkiquestDailyGoal.describe(requireContext(), choice)
         }
-
-        fun enable(enabled: Boolean) = fields.forEach { it.isEnabled = enabled }
 
         val refresh = refresh@{
             val request = ++generation
-            enable(false)
+            preference.isEnabled = false
             show(AnkiquestDailyGoal.choice())
             val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return@refresh
-            if (saving) {
-                refreshPending = true
-                return@refresh
-            }
             lifecycleScope.launch {
                 try {
-                    val choice = AnkiquestDailyGoal.fetch(account)
+                    val goal = AnkiquestDailyGoal.fetch(account)
                     if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
-                    show(choice)
-                    enable(true)
+                    show(goal.choice)
+                    preference.isEnabled = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -277,55 +261,12 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             }
         }
         refreshServerSettings.add { refresh() }
-
-        fun save(choice: AnkiquestDailyGoal.Choice) {
-            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return
-            val request = ++generation
-            saving = true
-            enable(false)
-            lifecycleScope.launch {
-                try {
-                    val saved = AnkiquestDailyGoal.save(account, choice)
-                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
-                    show(saved)
-                    enable(true)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (request == generation && isAdded) showThemedToast(requireContext(), serverMessage(e), shortLength = false)
-                } finally {
-                    saving = false
-                    if (isAdded && (refreshPending || !mode.isEnabled)) {
-                        refreshPending = false
-                        refresh()
-                    }
-                }
+        preference.setOnPreferenceClickListener {
+            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return@setOnPreferenceClickListener true
+            AnkiquestGoalDialog.show(requireActivity(), account, AnkiquestDailyGoal.choice()) { saved ->
+                if (isAdded && AnkiquestHomeData.account()?.scope == account.scope) show(saved.choice)
             }
-        }
-        mode.setOnPreferenceChangeListener { _, value ->
-            val chosen = AnkiquestDailyGoal.Mode.of(value as? String)
-            val shown =
-                when (chosen) {
-                    AnkiquestDailyGoal.Mode.BACKLOG -> backlog.value?.toIntOrNull()
-                    AnkiquestDailyGoal.Mode.CARDS -> cards.text?.toIntOrNull()
-                    AnkiquestDailyGoal.Mode.MINUTES -> minutes.text?.toIntOrNull()
-                    AnkiquestDailyGoal.Mode.OFF -> AnkiquestDailyGoal.choice().value
-                } ?: AnkiquestDailyGoal.Choice.defaultValue(chosen)
-            val range = AnkiquestDailyGoal.Choice.range(chosen)
-            save(AnkiquestDailyGoal.Choice(chosen, if (range == null) shown else shown.coerceIn(range)))
-            false
-        }
-        backlog.setOnPreferenceChangeListener { _, value ->
-            (value as? String)?.toIntOrNull()?.let { save(AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, it)) }
-            false
-        }
-        for ((field, fieldMode) in listOf(cards to AnkiquestDailyGoal.Mode.CARDS, minutes to AnkiquestDailyGoal.Mode.MINUTES)) {
-            field.setOnPreferenceChangeListener(
-                Preference.OnPreferenceChangeListener { _, value ->
-                    (value as? Int)?.let { save(AnkiquestDailyGoal.Choice(fieldMode, it)) }
-                    false
-                },
-            )
+            true
         }
     }
 

@@ -9,24 +9,54 @@
     <string name="aq_goal_progress_cards">%1$d de %2$d tarjetas</string>
     <string name="aq_goal_progress_minutes">%1$d de %2$d minutos</string>
     <string name="aq_goal_daily">Objetivo diario: %1$s</string>
-    <string name="aq_goal_backlog_explained">Las tarjetas de hoy más %1$d de tus %2$d tarjetas atrasadas (%3$d%% al día), para que el atraso baje sin ocupar todo tu día.</string>
+    <string name="aq_goal_backlog_explained">Las tarjetas de hoy más %1$d de tus %2$d tarjetas atrasadas. Días que quedan en tu plan: %3$d.</string>
     <string name="aq_goal_done_title">¡Objetivo diario logrado! 🎉</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoy</string>
-    <string name="ankiquest_goal_mode_title">Objetivo diario</string>
-    <string name="ankiquest_goal_backlog_title">Atraso a reducir cada día</string>
     <string name="ankiquest_goal_cards_title">Tarjetas por día</string>
     <string name="ankiquest_goal_minutes_title">Minutos por día</string>
-    <string-array name="ankiquest_goal_mode_entries">
-        <item>Lo de hoy más parte del atraso</item>
-        <item>Un número de tarjetas</item>
-        <item>Un número de minutos</item>
-        <item>Sin meta diaria</item>
-    </string-array>
-    <string-array name="ankiquest_goal_backlog_entries">
-        <item>5 % (unos 20 días)</item>
-        <item>10 % (unos 10 días)</item>
-        <item>20 % (unos 5 días)</item>
-        <item>34 % (unos 3 días)</item>
-        <item>Todo</item>
-    </string-array>
+    <string name="ankiquest_goal_title">Objetivo diario</string>
+    <string name="ankiquest_goal_setup_title">Elige tu objetivo diario</string>
+    <string name="ankiquest_goal_mode_backlog">Eliminar mi atraso en un número de días</string>
+    <string name="ankiquest_goal_off">Sin objetivo diario</string>
+    <string name="ankiquest_goal_custom">Otro</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d día</item>
+        <item quantity="other">%d días</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">De %1$d a %2$d</string>
+    <string name="ankiquest_goal_invalid">Elige un número de %1$d a %2$d.</string>
+    <string name="ankiquest_goal_estimating">Calculando qué significa para tu colección…</string>
+    <string name="ankiquest_goal_estimate_failed">No se pudo leer tu colección, así que no hay estimaciones.</string>
+    <string name="ankiquest_goal_estimate_off">Sin objetivo: cada repaso sigue contando para tu racha.</string>
+    <string name="ankiquest_goal_estimate_cards">Tarjetas hoy: %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Tiempo hoy: %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Atraso eliminado en %d día</item>
+        <item quantity="other">Atraso eliminado en %d días</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Atraso eliminado: nunca, solo tus repasos ya suman %d tarjeta al día</item>
+        <item quantity="other">Atraso eliminado: nunca, solo tus repasos ya suman %d tarjetas al día</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Para reducir tu atraso, estudia al menos %d tarjeta al día.</item>
+        <item quantity="other">Para reducir tu atraso, estudia al menos %d tarjetas al día.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Nada atrasado. Cada día vence alrededor de %d tarjeta.</item>
+        <item quantity="other">Nada atrasado. Cada día vencen alrededor de %d tarjetas.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">Guardando…</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Eliminar el atraso en %d día</item>
+        <item quantity="other">Eliminar el atraso en %d días</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d tarjeta al día</item>
+        <item quantity="other">%d tarjetas al día</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d minuto al día</item>
+        <item quantity="other">%d minutos al día</item>
+    </plurals>
 </resources>

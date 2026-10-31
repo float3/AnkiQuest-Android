@@ -9,24 +9,54 @@
     <string name="aq_goal_progress_cards">%1$d von %2$d Karten</string>
     <string name="aq_goal_progress_minutes">%1$d von %2$d Minuten</string>
     <string name="aq_goal_daily">Tagesziel: %1$s</string>
-    <string name="aq_goal_backlog_explained">Die heute fälligen Karten plus %1$d deiner %2$d überfälligen Karten (%3$d%% pro Tag). So schrumpft der Rückstand, ohne deinen Tag zu füllen.</string>
+    <string name="aq_goal_backlog_explained">Die heute fälligen Karten plus %1$d deiner %2$d überfälligen Karten. Verbleibende Tage im Plan: %3$d.</string>
     <string name="aq_goal_done_title">Tagesziel erreicht! 🎉</string>
     <string name="ankiquest_streak_short">Heute %1$d von %2$d Minuten</string>
-    <string name="ankiquest_goal_mode_title">Tagesziel</string>
-    <string name="ankiquest_goal_backlog_title">Rückstand pro Tag abbauen</string>
     <string name="ankiquest_goal_cards_title">Karten pro Tag</string>
     <string name="ankiquest_goal_minutes_title">Minuten pro Tag</string>
-    <string-array name="ankiquest_goal_mode_entries">
-        <item>Heute fällig plus ein Teil des Rückstands</item>
-        <item>Eine Anzahl Karten</item>
-        <item>Eine Anzahl Minuten</item>
-        <item>Kein Tagesziel</item>
-    </string-array>
-    <string-array name="ankiquest_goal_backlog_entries">
-        <item>5 % (in etwa 20 Tagen abgebaut)</item>
-        <item>10 % (etwa 10 Tage)</item>
-        <item>20 % (etwa 5 Tage)</item>
-        <item>34 % (etwa 3 Tage)</item>
-        <item>Alles</item>
-    </string-array>
+    <string name="ankiquest_goal_title">Tagesziel</string>
+    <string name="ankiquest_goal_setup_title">Wähle dein Tagesziel</string>
+    <string name="ankiquest_goal_mode_backlog">Rückstand in einer Anzahl Tage abbauen</string>
+    <string name="ankiquest_goal_off">Kein Tagesziel</string>
+    <string name="ankiquest_goal_custom">Eigener Wert</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">%1$d bis %2$d</string>
+    <string name="ankiquest_goal_invalid">Wähle eine Zahl von %1$d bis %2$d.</string>
+    <string name="ankiquest_goal_estimating">Wird für deine Sammlung berechnet …</string>
+    <string name="ankiquest_goal_estimate_failed">Deine Sammlung konnte nicht gelesen werden, daher gibt es keine Schätzung.</string>
+    <string name="ankiquest_goal_estimate_off">Kein Ziel: Jede Wiederholung zählt trotzdem für deine Lernserie.</string>
+    <string name="ankiquest_goal_estimate_cards">Karten heute: %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Zeit heute: %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Rückstand abgebaut in %d Tag</item>
+        <item quantity="other">Rückstand abgebaut in %d Tagen</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Rückstand abgebaut: nie, allein deine Wiederholungen ergeben %d Karte pro Tag</item>
+        <item quantity="other">Rückstand abgebaut: nie, allein deine Wiederholungen ergeben %d Karten pro Tag</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Damit dein Rückstand schrumpft, lerne mindestens %d Karte pro Tag.</item>
+        <item quantity="other">Damit dein Rückstand schrumpft, lerne mindestens %d Karten pro Tag.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Nichts überfällig. Pro Tag wird etwa %d Karte fällig.</item>
+        <item quantity="other">Nichts überfällig. Pro Tag werden etwa %d Karten fällig.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">Wird gespeichert …</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Rückstand in %d Tag abbauen</item>
+        <item quantity="other">Rückstand in %d Tagen abbauen</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d Karte pro Tag</item>
+        <item quantity="other">%d Karten pro Tag</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d Minute pro Tag</item>
+        <item quantity="other">%d Minuten pro Tag</item>
+    </plurals>
 </resources>
