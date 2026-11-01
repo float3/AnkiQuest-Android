@@ -59,4 +59,10 @@
         <item quantity="one">%d minute par jour</item>
         <item quantity="other">%d minutes par jour</item>
     </plurals>
+    <string name="ankiquest_streak_widget_label">Série AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Ta série en grand avec ton compagnon</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">jour de série</item>
+        <item quantity="other">jours de série</item>
+    </plurals>
 </resources>
