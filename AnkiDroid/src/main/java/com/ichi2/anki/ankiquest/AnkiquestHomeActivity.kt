@@ -196,7 +196,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                         null
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: Ankiquest.HttpStatusException) {
+                    } catch (e: AnkiquestHttpException) {
                         if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_home_server_error
                     } catch (_: IOException) {
                         R.string.aq_home_offline

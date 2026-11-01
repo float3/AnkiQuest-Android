@@ -13,11 +13,11 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.IncomingSender
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
-import com.ichi2.anki.ankiquest.SubscriptionHttpException
 import com.ichi2.anki.ankiquest.SubscriptionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -161,7 +161,7 @@ class AnkiquestSubscriptionsFragmentTest : RobolectricTest() {
 
     @Test
     fun `unsupported server shows update guidance and no editable subscriptions`() {
-        coEvery { repository.load(any()) } throws SubscriptionHttpException(404)
+        coEvery { repository.load(any()) } throws AnkiquestHttpException(404)
         val fragment = open().second
         assertEquals(targetContext.getString(R.string.ankiquest_subscriptions_unsupported), fragment.status().summary)
         assertFalse(fragment.all().isEnabled)

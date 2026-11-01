@@ -133,7 +133,7 @@ object AnkiquestPoll {
                 Timber.w(e, "ankiquest completion inbox fetch failed")
                 val transient =
                     e is IOException &&
-                        (e !is Ankiquest.HttpStatusException || e.code == 408 || e.code == 429 || e.code in 500..599)
+                        (e !is AnkiquestHttpException || e.code == 408 || e.code == 429 || e.code in 500..599)
                 if (transient) Result.retry() else Result.success()
             }
         photoBoard?.let { board ->

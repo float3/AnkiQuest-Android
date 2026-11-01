@@ -255,7 +255,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "invalid-token") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
             protectedManifest = true
-            assertFailsWith<Ankiquest.HttpStatusException> { AnkiquestAvatars.refresh(listOf("cerro")) }
+            assertFailsWith<AnkiquestHttpException> { AnkiquestAvatars.refresh(listOf("cerro")) }
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "test-token") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
         }

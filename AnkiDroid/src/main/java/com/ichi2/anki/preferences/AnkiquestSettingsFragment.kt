@@ -37,6 +37,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
@@ -272,7 +273,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     /** What the server said when it turned a change down, or why it could not be asked. */
     private fun serverMessage(e: Exception): String =
-        (e as? AnkiquestSharing.Refusal)?.text ?: getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
+        (e as? AnkiquestHttpException)?.explanation ?: getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
 
     protected fun bindNotifications() {
         requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_notify_rank_key).setOnPreferenceChangeListener { _, enabled ->
