@@ -23,6 +23,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.core.widget.TextViewCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
@@ -31,12 +32,15 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
@@ -100,9 +104,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         account = AnkiquestHomeData.account()
         render()
+        if (savedInstanceState == null) AnkiquestGoalDialog.offerSetup(this) { refresh() }
     }
 
-    private var localRefreshJob: kotlinx.coroutines.Job? = null
+    private var localRefreshJob: Job? = null
 
     override fun onPause() {
         localRefreshJob?.cancel()
@@ -114,14 +119,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (nextAt == null) return
         localRefreshJob =
             lifecycleScope.launch {
-                kotlinx.coroutines.delay(
-                    (
-                        nextAt -
-                            com.ichi2.anki.common.time.TimeManager.time
-                                .intTimeMS()
-                    ).coerceAtLeast(1_000L),
-                )
-                if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) refresh()
+                delay((nextAt - TimeManager.time.intTimeMS()).coerceAtLeast(1_000L))
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) refresh()
             }
     }
 
@@ -201,7 +200,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                         if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_home_server_error
                     } catch (_: IOException) {
                         R.string.aq_home_offline
-                    } catch (_: org.json.JSONException) {
+                    } catch (_: JSONException) {
                         R.string.aq_home_server_error
                     }
                 if (turn == generation) {
@@ -241,7 +240,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        AnkiquestCompanion.show(findViewById<ImageView>(R.id.aq_home_companion), R.drawable.aki_face)
+        val face = findViewById<ImageView>(R.id.aq_home_companion)
+        AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
         scroll.post { scroll.scrollTo(0, position) }
@@ -284,7 +284,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
-        local?.goal?.let { renderGoal(it) }
+        local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile)) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -325,12 +325,13 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
             else -> text(panel, getString(R.string.aq_goal_minimum_any), small = true)
         }
+        if (status.mode == AnkiquestDailyGoal.Mode.OFF) return
         text(
             panel,
             if (status.goalDone) {
                 getString(R.string.aq_goal_done_title)
             } else {
-                getString(R.string.aq_goal_daily, AnkiquestGoalCelebration.progress(this, status))
+                getString(R.string.aq_goal_daily, AnkiquestDailyGoal.progress(this, status))
             },
             small = true,
         )
@@ -338,7 +339,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (status.mode == AnkiquestDailyGoal.Mode.BACKLOG && status.goal.backlog > 0) {
             text(
                 panel,
-                getString(R.string.aq_goal_backlog_explained, status.goal.backlogShare, status.goal.backlog, status.backlogPercent),
+                getString(R.string.aq_goal_backlog_explained, status.goal.extra, status.goal.backlog, status.goal.daysLeft),
                 small = true,
             )
         }
@@ -423,6 +424,11 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     getString(R.string.aq_copies_sent)
                 } catch (error: CancellationException) {
                     throw error
+                } catch (_: HomeAccountChanged) {
+                    copyBusy = false
+                    copyStatus = null
+                    refresh()
+                    return@launch
                 } catch (error: AnkiquestDeckCopies.TooLarge) {
                     getString(R.string.aq_copies_too_large)
                 } catch (error: Exception) {

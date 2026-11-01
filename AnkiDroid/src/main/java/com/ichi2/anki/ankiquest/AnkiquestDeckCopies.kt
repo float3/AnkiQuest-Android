@@ -5,11 +5,9 @@ package com.ichi2.anki.ankiquest
 import anki.import_export.exportLimit
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.libanki.exportAnkiPackage
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.json.JSONArray
@@ -26,12 +24,10 @@ internal object AnkiquestDeckCopies {
     class TooLarge : IOException("Deck copy exceeds 25 MB")
 
     private val client =
-        OkHttpClient
-            .Builder()
-            .connectTimeout(
-                15,
-                TimeUnit.SECONDS,
-            ).readTimeout(90, TimeUnit.SECONDS)
+        AnkiquestHttp.client
+            .newBuilder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS)
             .writeTimeout(90, TimeUnit.SECONDS)
             .build()
 
@@ -54,7 +50,7 @@ internal object AnkiquestDeckCopies {
         recipients: List<String>,
         cache: File,
     ) = withContext(Dispatchers.IO) {
-        if (AnkiquestHomeData.account()?.scope != account.scope) throw CancellationException("AnkiQuest account changed")
+        if (AnkiquestHomeData.account()?.scope != account.scope) throw HomeAccountChanged()
         val packageFile = File(cache, "ankiquest-share-${UUID.randomUUID()}.apkg")
         try {
             CollectionManager.withCol {
@@ -67,7 +63,7 @@ internal object AnkiquestDeckCopies {
                     legacy = false,
                 )
             }
-            if (AnkiquestHomeData.account()?.scope != account.scope) throw CancellationException("AnkiQuest account changed")
+            if (AnkiquestHomeData.account()?.scope != account.scope) throw HomeAccountChanged()
             if (packageFile.length() > MAX_BYTES) throw TooLarge()
             val url =
                 account

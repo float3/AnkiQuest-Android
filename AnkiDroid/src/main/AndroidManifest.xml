@@ -422,6 +422,12 @@
             android:label="@string/ankiquest_screen_title"
             android:exported="false"
             />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestShareActivity"
+            android:label="@string/ankiquest_share_title"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            />
 
         <activity-alias
             android:name="com.ichi2.anki.AnkiCardContextMenuAction"
@@ -556,6 +562,9 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_provider_ankiquest" />
         </receiver>
+        <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestWidgetRefreshReceiver"
+            android:exported="false" />
         <receiver
             android:name="com.ichi2.anki.ankiquest.AnkiquestTransparentWidget"
             android:label="@string/ankiquest_widget_transparent_label"

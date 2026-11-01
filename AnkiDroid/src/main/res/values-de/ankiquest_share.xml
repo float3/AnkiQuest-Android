@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_share">Teilen</string>
+    <string name="ankiquest_share_title">Diesen Erfolg teilen</string>
+    <string name="ankiquest_share_friends">Mit meinen AnkiQuest-Freunden</string>
+    <string name="ankiquest_share_elsewhere">Woanders …</string>
+    <string name="ankiquest_share_text">%1$s: %2$s
+Lern mit mir auf AnkiQuest: %3$s</string>
+    <string name="ankiquest_share_text_offline">%1$s: %2$s
+Ich lerne mit AnkiQuest.</string>
+    <string name="ankiquest_share_nobody">Niemand Neues hat es bekommen: Deine Freunde haben es schon, oder du hast noch keine Freunde in AnkiQuest.</string>
+    <string name="ankiquest_share_failed">Teilen hat nicht geklappt. Prüfe deine Verbindung und versuch es noch einmal.</string>
+    <plurals name="ankiquest_share_sent">
+        <item quantity="one">Mit %d Freund geteilt</item>
+        <item quantity="other">Mit %d Freunden geteilt</item>
+    </plurals>
+    <string name="ankiquest_share_account_changed">Dieser Erfolg gehört zu einem AnkiQuest-Konto, das nicht mehr angemeldet ist.</string>
+    <string name="ankiquest_cheer">🎉 Jubeln</string>
+    <string name="ankiquest_cheer_sent">🎉 Du hast gejubelt: %1$s</string>
+    <string name="ankiquest_moments_title">Deine Erfolge</string>
+    <string name="ankiquest_moments_summary">Wähle, wer von welcher Art Erfolg erfährt. Deine eigenen Feiern siehst du immer.</string>
+    <string name="ankiquest_share_cap_title">Automatische Erfolge pro Freund am Tag</string>
+    <string name="ankiquest_moments_decks_title">Abgeschlossene Stapel</string>
+    <string name="ankiquest_moments_decks_summary">Pro Stapel einstellbar: Wähle die Stapel und wer erfährt, wenn du sie schaffst</string>
+    <string-array name="ankiquest_moment_titles">
+        <item>Tagesziel erreicht</item>
+        <item>Lernserie für heute gesichert</item>
+        <item>Meilensteine der Lernserie</item>
+        <item>Neue Level</item>
+        <item>Errungenschaften</item>
+        <item>Persönliche Bestleistungen</item>
+        <item>Tagesaufgaben erledigt</item>
+        <item>Schwierige Karten gemeistert</item>
+        <item>Top 3 der Wochenrangliste</item>
+        <item>Herausforderungen geschafft</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Nur ich</item>
+        <item>Frag mich</item>
+        <item>Freunden automatisch sagen</item>
+    </string-array>
+</resources>

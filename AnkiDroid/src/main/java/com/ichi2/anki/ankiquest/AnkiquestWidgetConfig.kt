@@ -25,11 +25,12 @@ class AnkiquestWidgetConfig : AnkiActivity() {
             return
         }
         setResult(Activity.RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
-        val labels = AnkiquestWidget.PERIODS.map { getString(it.label) }.toTypedArray()
-        val chosen = AnkiquestWidget.PERIODS.indexOfFirst { it.name == AnkiquestWidget.periodOf(this, widgetId) }
+        val language = AnkiquestLanguage.context(this)
+        val labels = AnkiquestWidget.PERIODS.map { language.getString(it.label) }.toTypedArray()
+        val chosen = AnkiquestWidget.PERIODS.indexOfFirst { it.name == AnkiquestWidget.periodOf(widgetId) }
         AlertDialog
             .Builder(this)
-            .setTitle(R.string.ankiquest_widget_period_title)
+            .setTitle(language.getString(R.string.ankiquest_widget_period_title))
             .setSingleChoiceItems(labels, chosen) { dialog, which ->
                 AnkiquestWidget.setPeriod(this, widgetId, AnkiquestWidget.PERIODS[which].name)
                 setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))

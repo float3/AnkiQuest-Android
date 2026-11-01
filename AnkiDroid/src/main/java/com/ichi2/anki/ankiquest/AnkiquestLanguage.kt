@@ -10,12 +10,10 @@ import java.util.Locale
 
 /** Use AnkiDroid's selected language even in services and launcher widgets. */
 internal object AnkiquestLanguage {
-    fun tag(): String =
-        AnkiDroidApp
-            .sharedPrefs()
-            .getString("language", LanguageUtil.SYSTEM_LANGUAGE_TAG)
-            ?.takeIf { it.isNotEmpty() }
-            ?: LanguageUtil.getSystemLocale().toLanguageTag()
+    fun tag(): String = tag(AnkiDroidApp.sharedPrefs().getString("language", LanguageUtil.SYSTEM_LANGUAGE_TAG))
+
+    /** The tag for a [stored] `language` preference, which is empty or missing to follow the phone. */
+    fun tag(stored: String?): String = stored?.takeIf { it.isNotEmpty() } ?: LanguageUtil.getSystemLocale().toLanguageTag()
 
     fun locale(): Locale = Locale.forLanguageTag(tag().replace('_', '-'))
 

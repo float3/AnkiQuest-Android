@@ -1,23 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_goal_mode_key" translatable="false">ankiquestGoalMode</string>
-    <string name="ankiquest_goal_backlog_key" translatable="false">ankiquestGoalBacklogPercent</string>
-    <string name="ankiquest_goal_cards_key" translatable="false">ankiquestGoalCards</string>
-    <string name="ankiquest_goal_minutes_key" translatable="false">ankiquestGoalMinutes</string>
-    <string name="ankiquest_goal_celebrate_key" translatable="false">ankiquestGoalCelebrate</string>
-    <string-array name="ankiquest_goal_mode_values" translatable="false">
-        <item>backlog</item>
-        <item>cards</item>
-        <item>minutes</item>
-    </string-array>
-    <string-array name="ankiquest_goal_backlog_values" translatable="false">
-        <item>5</item>
-        <item>10</item>
-        <item>20</item>
-        <item>34</item>
-        <item>100</item>
-    </string-array>
     <string name="aq_goal_today">Today’s goal</string>
     <string name="aq_goal_minimum_minutes">Streak minimum: %1$d minutes of review today</string>
     <string name="aq_goal_minimum_any">Any review today keeps your streak going.</string>
@@ -26,32 +9,57 @@
     <string name="aq_goal_progress_cards">%1$d of %2$d cards</string>
     <string name="aq_goal_progress_minutes">%1$d of %2$d minutes</string>
     <string name="aq_goal_daily">Daily goal: %1$s</string>
-    <string name="aq_goal_backlog_explained">Today’s due cards plus %1$d of your %2$d overdue cards (%3$d%% a day), so the backlog shrinks without taking over your day.</string>
-    <string name="aq_goal_minimum_title">Streak secured! 🔥</string>
+    <string name="aq_goal_backlog_explained">Today’s due cards plus %1$d of your %2$d overdue cards. Days left in your plan: %3$d.</string>
     <string name="aq_goal_done_title">Daily goal reached! 🎉</string>
-    <string name="aq_goal_minimum_body">%1$s Next up, your daily goal: %2$s so far.</string>
-    <string name="aq_goal_done_body">You reached today’s goal: %1$s.</string>
-    <string name="aq_goal_both_body">%1$s And you reached today’s goal: %2$s.</string>
-    <string name="aq_goal_nice">Nice!</string>
     <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
-    <string name="ankiquest_goal_mode_title" maxLength="41">Daily goal</string>
-    <string name="ankiquest_goal_backlog_title" maxLength="41">Backlog to work off each day</string>
     <string name="ankiquest_goal_cards_title" maxLength="41">Cards per day</string>
     <string name="ankiquest_goal_minutes_title" maxLength="41">Minutes per day</string>
-    <string name="ankiquest_goal_celebrate_title" maxLength="41">Goal celebrations</string>
-    <string name="ankiquest_goal_celebrate_summary">Celebrate when today counts for your streak and when you reach your daily goal.</string>
-    <string-array name="ankiquest_goal_mode_entries">
-        <item>Due today plus part of the backlog</item>
-        <item>A number of cards</item>
-        <item>A number of minutes</item>
-    </string-array>
-    <string-array name="ankiquest_goal_backlog_entries">
-        <item>5 % (clears in about 20 days)</item>
-        <item>10 % (about 10 days)</item>
-        <item>20 % (about 5 days)</item>
-        <item>34 % (about 3 days)</item>
-        <item>All of it</item>
-    </string-array>
+    <string name="ankiquest_goal_key" translatable="false">ankiquestGoal</string>
+    <string name="ankiquest_goal_title" maxLength="41">Daily goal</string>
+    <string name="ankiquest_goal_setup_title">Choose your daily goal</string>
+    <string name="ankiquest_goal_mode_backlog">Clear my backlog in a number of days</string>
+    <string name="ankiquest_goal_off">No daily goal</string>
+    <string name="ankiquest_goal_custom" maxLength="28">Custom</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">%1$d to %2$d</string>
+    <string name="ankiquest_goal_invalid">Choose a number from %1$d to %2$d.</string>
+    <string name="ankiquest_goal_estimating">Working out what this means for your collection…</string>
+    <string name="ankiquest_goal_estimate_failed">Your collection could not be read, so there are no estimates.</string>
+    <string name="ankiquest_goal_estimate_off">No goal: every review still counts for your streak.</string>
+    <string name="ankiquest_goal_estimate_cards">Cards today: %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Time today: %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Backlog cleared in %d day</item>
+        <item quantity="other">Backlog cleared in %d days</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Backlog cleared: never, your reviews alone come to %d card a day</item>
+        <item quantity="other">Backlog cleared: never, your reviews alone come to %d cards a day</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">To shrink your backlog, study at least %d card a day.</item>
+        <item quantity="other">To shrink your backlog, study at least %d cards a day.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Nothing overdue. About %d card comes due each day.</item>
+        <item quantity="other">Nothing overdue. About %d cards come due each day.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">Saving…</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Clear the backlog in %d day</item>
+        <item quantity="other">Clear the backlog in %d days</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d card a day</item>
+        <item quantity="other">%d cards a day</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d minute a day</item>
+        <item quantity="other">%d minutes a day</item>
+    </plurals>
     <string name="ankiquest_streak_widget_label">AnkiQuest streak</string>
     <string name="ankiquest_streak_widget_description">Your streak as a big number with your companion</string>
     <plurals name="ankiquest_streak_widget_days">
