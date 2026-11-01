@@ -55,7 +55,6 @@ open class AnkiquestWidget : AppWidgetProvider() {
 
         /** The companion's size in the widget layouts. */
         private const val COMPANION_DP = 28
-        private val medals = arrayOf("👑", "🥈", "🥉")
 
         /** The leaderboard periods a widget can show, as served by the ankiquest API. */
         class Period(
@@ -298,7 +297,16 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     "setBackgroundResource",
                     if (entry.getString("user") == me) style.ownRow else 0,
                 )
-                views.setTextViewText(R.id.ankiquest_widget_rank, medals.getOrNull(i) ?: "${i + 1}")
+                val medal = AnkiquestArt.medal(i + 1)
+                views.setTextViewText(R.id.ankiquest_widget_rank, if (medal == null) "${i + 1}" else "")
+                views.setViewVisibility(R.id.ankiquest_widget_medal, if (medal == null) View.GONE else View.VISIBLE)
+                if (medal != null) {
+                    views.setImageViewResource(R.id.ankiquest_widget_medal, medal)
+                    views.setContentDescription(
+                        R.id.ankiquest_widget_medal,
+                        languageContext.getString(R.string.ankiquest_widget_place, i + 1),
+                    )
+                }
                 views.setTextViewText(R.id.ankiquest_widget_name, entry.getString("display"))
                 val photo = AnkiquestAvatars.bitmap(entry.getString("user"))
                 val display = entry.getString("display").trim().ifEmpty { entry.getString("user") }

@@ -97,6 +97,7 @@
     <string name="ankiquest_widget_transparent_description">AnkiQuest-Rangliste dieser Woche ohne Hintergrund</string>
     <string name="ankiquest_widget_description">AnkiQuest-Rangliste dieser Woche</string>
     <string name="ankiquest_widget_level">Stufe %1$d</string>
+    <string name="ankiquest_widget_place">Platz %1$d</string>
     <string name="ankiquest_widget_unconfigured">Richte AnkiQuest in den Einstellungen ein</string>
     <string name="ankiquest_widget_empty">Noch niemand hat Wiederholungen hochgeladen</string>
     <string name="ankiquest_widget_offline">AnkiQuest-Server nicht erreichbar</string>
