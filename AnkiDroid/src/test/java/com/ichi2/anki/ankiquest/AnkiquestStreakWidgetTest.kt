@@ -90,10 +90,13 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
 
     @Test
     fun `the companion's pose follows the streak`() {
-        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose("studied", 10))
-        assertEquals(R.drawable.aki_freeze, AnkiquestStreakWidget.pose("protected", 10))
-        assertEquals(R.drawable.aki_review, AnkiquestStreakWidget.pose("short", 10))
-        assertEquals(R.drawable.aki_welcome, AnkiquestStreakWidget.pose("pending", 0))
+        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose("studied", 3))
+        assertEquals(R.drawable.aki_streak_hot, AnkiquestStreakWidget.pose("studied", 10))
+        assertEquals(R.drawable.aki_streak_blazing, AnkiquestStreakWidget.pose("studied", 45))
+        assertEquals(R.drawable.aki_streak_legend, AnkiquestStreakWidget.pose("studied", 365))
+        assertEquals(R.drawable.aki_freeze_used, AnkiquestStreakWidget.pose("protected", 10))
+        assertEquals(R.drawable.aki_at_risk, AnkiquestStreakWidget.pose("short", 10))
+        assertEquals(R.drawable.aki_comeback, AnkiquestStreakWidget.pose("pending", 0))
         assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose("unknown", 10))
     }
 }

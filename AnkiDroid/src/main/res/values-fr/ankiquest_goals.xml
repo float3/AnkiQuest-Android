@@ -65,4 +65,6 @@
         <item quantity="one">jour de série</item>
         <item quantity="other">jours de série</item>
     </plurals>
+    <string name="ankiquest_mood_icon_title">L’humeur d’Aki sur l’icône</string>
+    <string name="ankiquest_mood_icon_summary">L’icône sourit quand la journée compte, s’inquiète tard le soir et montre une protection quand elle te couvre. Certains lanceurs masquent brièvement l’icône pendant le changement.</string>
 </resources>

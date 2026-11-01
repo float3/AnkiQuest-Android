@@ -37,6 +37,7 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
@@ -223,6 +224,14 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     protected fun bindStudy() {
         bindGoal()
+        requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_mood_icon_key).setOnPreferenceChangeListener { _, enabled ->
+            if (enabled == true) {
+                AnkiquestPoll.refreshNow(requireContext())
+            } else {
+                AnkiquestIcon.show(requireContext(), AnkiquestIcon.Mood.DEFAULT)
+            }
+            true
+        }
         bindServerToggle(
             R.string.ankiquest_streak_protection_key,
             read = { Ankiquest.streakProtectionEnabled() },

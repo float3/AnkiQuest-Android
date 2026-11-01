@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Placeholder artwork until the images requested in float3/ankiquest#88 land.
+     To use a new image, delete its line and add a WebP with the same name to drawable-nodpi. -->
+<resources>
+    <!-- App icon: studied today -->
+    <drawable name="aki_icon_happy">@drawable/aki_face</drawable>
+    <!-- App icon: streak ends soon and today does not count yet -->
+    <drawable name="aki_icon_worried">@drawable/aki_face</drawable>
+    <!-- App icon: a freeze is protecting the streak -->
+    <drawable name="aki_icon_frozen">@drawable/aki_face</drawable>
+    <!-- App icon: no streak running -->
+    <drawable name="aki_icon_sleepy">@drawable/aki_face</drawable>
+    <!-- Streak of 7+ days -->
+    <drawable name="aki_streak_hot">@drawable/aki_streak</drawable>
+    <!-- Streak of 30+ days -->
+    <drawable name="aki_streak_blazing">@drawable/aki_streak</drawable>
+    <!-- Streak of 100+ days -->
+    <drawable name="aki_streak_legend">@drawable/aki_streak</drawable>
+    <!-- Streak at risk today -->
+    <drawable name="aki_at_risk">@drawable/aki_review</drawable>
+    <!-- Starting again after a lost streak -->
+    <drawable name="aki_comeback">@drawable/aki_welcome</drawable>
+    <!-- A freeze just saved the streak -->
+    <drawable name="aki_freeze_used">@drawable/aki_freeze</drawable>
+    <!-- Aki and Ankilope together, for friends and sharing -->
+    <drawable name="duo_friends">@drawable/aki_welcome</drawable>
+</resources>

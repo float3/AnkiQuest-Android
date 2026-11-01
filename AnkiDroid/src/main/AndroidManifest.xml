@@ -123,11 +123,7 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="true"
             >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
+            <!-- The launcher entries are the AnkiquestIcon aliases below, so the icon can show Aki's mood. -->
             <!-- *.apkg matcher. NOTE: when pathPattern is used, host and scheme must also be specified -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -298,6 +294,71 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconDefault"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ankiquest_launcher"
+            android:roundIcon="@mipmap/ankiquest_launcher"
+            android:targetActivity="com.ichi2.anki.IntentHandler">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconHappy"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ankiquest_launcher_happy"
+            android:roundIcon="@mipmap/ankiquest_launcher_happy"
+            android:targetActivity="com.ichi2.anki.IntentHandler">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconWorried"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ankiquest_launcher_worried"
+            android:roundIcon="@mipmap/ankiquest_launcher_worried"
+            android:targetActivity="com.ichi2.anki.IntentHandler">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconFrozen"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ankiquest_launcher_frozen"
+            android:roundIcon="@mipmap/ankiquest_launcher_frozen"
+            android:targetActivity="com.ichi2.anki.IntentHandler">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name="com.ichi2.anki.ankiquest.AnkiquestIconSleepy"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ankiquest_launcher_sleepy"
+            android:roundIcon="@mipmap/ankiquest_launcher_sleepy"
+            android:targetActivity="com.ichi2.anki.IntentHandler">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity
             android:name="com.ichi2.anki.DeckPicker"
             android:theme="@style/Theme_Dark.Launcher"

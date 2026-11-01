@@ -66,4 +66,7 @@
         <item quantity="one">day streak</item>
         <item quantity="other">day streak</item>
     </plurals>
+    <string name="ankiquest_mood_icon_key" translatable="false">ankiquestMoodIcon</string>
+    <string name="ankiquest_mood_icon_title" maxLength="41">Aki’s mood on the app icon</string>
+    <string name="ankiquest_mood_icon_summary">The icon smiles once today counts, worries late in the day, and shows a freeze when one protects you. Some launchers briefly drop the icon while it changes.</string>
 </resources>
