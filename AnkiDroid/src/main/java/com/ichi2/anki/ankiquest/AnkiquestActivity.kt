@@ -34,6 +34,7 @@ import com.ichi2.anki.snackbar.showSnackbar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -227,6 +228,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         prepareSession =
             lifecycleScope.launch {
                 var installed = false
+                val features = async { AnkiquestHomeData.account()?.let { AnkiquestCapabilities.current(it) }.orEmpty() }
                 val ready =
                     sessionBridge.prepare(
                         current = {
@@ -251,7 +253,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                 ) {
                     return@launch
                 }
-                sessionCookie = ready && installed
+                sessionCookie = ready && installed && AnkiquestCapabilities.COOKIE_SESSION in features.await()
                 if (!ready) {
                     findViewById<ProgressBar>(R.id.progress_bar).visibility = View.GONE
                     val message = getString(R.string.ankiquest_web_prepare_failed).htmlEncode()

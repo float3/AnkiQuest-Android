@@ -25,7 +25,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Uploads pending reviews and fetches the leaderboard and profile in the background, redraws the
- * widget and raises rank and streak notifications. Runs every 15 minutes and on demand.
+ * widget and raises rank and streak notifications, and keeps the server's capabilities current.
+ * Runs every 15 minutes and on demand.
  */
 object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
@@ -158,6 +159,7 @@ object AnkiquestPoll {
                 Timber.d(e, "ankiquest optional photos could not refresh")
             }
         }
+        AnkiquestHomeData.account(prefs)?.let { AnkiquestCapabilities.current(it) }
         return result
     }
 }

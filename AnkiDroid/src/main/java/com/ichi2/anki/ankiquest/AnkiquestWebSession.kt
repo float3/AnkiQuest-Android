@@ -40,8 +40,8 @@ internal data class AnkiquestWebSession(
 
     /**
      * The page script; a navigation can finish after the native check, so it checks the actual document again.
-     * With [cookie], the HttpOnly session cookie is installed, so the page learns only who is signed in and
-     * never sees the token.
+     * With [cookie], the HttpOnly session cookie is installed and the server reports
+     * [AnkiquestCapabilities.COOKIE_SESSION], so the page learns only who is signed in and never sees the token.
      */
     fun script(
         url: String?,
