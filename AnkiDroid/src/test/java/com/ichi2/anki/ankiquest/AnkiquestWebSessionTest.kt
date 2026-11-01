@@ -83,7 +83,7 @@ class AnkiquestWebSessionTest {
         assertEquals("secret", handed.getString("token"))
         assertEquals(setOf("user", "token"), handed.keys().asSequence().toSet())
         assertTrue(script.contains("window.ankiquestLanguage = \"es-ES\";"))
-        assertTrue(script.contains("page.origin !== \"https://quest.example\""), "the page checks its own origin first")
+        assertTrue(script.contains("page.origin !== ${JSONObject.quote("https://quest.example")}"), "the page checks its own origin first")
         assertTrue(script.contains("new CustomEvent('ankiquest-auth')"))
     }
 
