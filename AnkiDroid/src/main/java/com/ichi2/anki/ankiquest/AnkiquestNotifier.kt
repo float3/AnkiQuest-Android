@@ -149,7 +149,7 @@ object AnkiquestNotifier {
             RANK_ID,
             title,
             body,
-            AnkiquestActivity.intent(context, "/week").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
         )
     }
@@ -180,7 +180,7 @@ object AnkiquestNotifier {
         if (remaining <= 0 || remaining > hours * HOUR_MS) return
         val dayKey = scopedKey(PREF_STREAK_DAY, AnkiquestHomeData.account(prefs)?.scope)
         if (prefs.getLong(dayKey, Long.MIN_VALUE) == dayEndsAt) return
-        val open = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
+        val open = AnkiquestHomeActivity.intent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (notify(context, STREAK_ID, warning.getString("title"), warning.getString("body"), open) != Delivery.DISABLED) {
             prefs.edit { putLong(dayKey, dayEndsAt) }
         }
@@ -274,15 +274,27 @@ object AnkiquestNotifier {
             .intent(context, AnkiquestNavigation.ACTIVITY_PATH, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** IDs become known website routes; server-supplied URLs never become arbitrary app destinations. */
+    /** IDs and kinds become known screens; server-supplied URLs never become arbitrary app destinations. */
     internal fun notificationIntent(
         context: Context,
         entry: JSONObject,
         account: String,
     ): Intent {
-        val challenge = entry.optLong("challenge_id")
-        val path = if (challenge > 0) AnkiquestNavigation.challengePath(challenge) else AnkiquestNavigation.ACTIVITY_PATH
-        return AnkiquestActivity.intent(context, path, account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val destination =
+            AnkiquestNavigation.notificationDestination(
+                entry.optString("kind", "completion"),
+                if (entry.isNull("topic")) null else entry.optString("topic"),
+                entry.optLong("challenge_id"),
+            )
+        val open =
+            when (destination) {
+                is AnkiquestNavigation.Destination.Today ->
+                    AnkiquestHomeActivity
+                        .intent(context)
+                        .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
+                is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
+            }
+        return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     /** Existing channel behavior belongs to Android settings, not app updates. */
