@@ -301,6 +301,18 @@ class AnkiquestWidgetTest : RobolectricTest() {
         assertEquals(ComponentName(targetContext, DeckPicker::class.java), intent.component)
     }
 
+    @Test
+    fun `refresh button targets the unexported receiver instead of the exported widget`() {
+        val intent = shadowOf(AnkiquestWidget.refreshIntent(targetContext))
+        assertTrue(intent.isBroadcast)
+        assertEquals(ComponentName(targetContext, AnkiquestWidgetRefreshReceiver::class.java), intent.savedIntent.component)
+        val receiver = targetContext.packageManager.getReceiverInfo(intent.savedIntent.component!!, 0)
+        assertFalse(receiver.exported)
+        for (style in AnkiquestWidget.styles) {
+            assertTrue(targetContext.packageManager.getReceiverInfo(ComponentName(targetContext, style.provider), 0).exported)
+        }
+    }
+
     private fun populatedWidget(
         board: JSONArray = leaderboard(),
         transparent: Boolean = false,
