@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const workflow = name => fs.readFileSync(path.join(__dirname, `../workflows/${name}.yml`), 'utf8');
-const compare = workflow('screenshot_compare');
+const compare = workflow('ankiquest_screenshot_compare');
 
 function step(source, name) {
   const start = source.indexOf(`      - name: ${name}\n`);

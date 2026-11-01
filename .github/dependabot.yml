@@ -5,7 +5,7 @@ updates:
   schedule:
     interval: "daily"
   open-pull-requests-limit: 10
-  target-branch: ankiquest
+  target-branch: dependency-updates
   labels:
   - "dependencies"
   cooldown:
@@ -16,7 +16,7 @@ updates:
     interval: daily
     time: "10:00"
   open-pull-requests-limit: 10
-  target-branch: ankiquest
+  target-branch: dependency-updates
   labels:
   - "dependencies"
   cooldown:
@@ -34,22 +34,12 @@ updates:
     interval: weekly
     time: "10:00"
   open-pull-requests-limit: 10
-  target-branch: ankiquest
+  target-branch: dependency-updates
   groups:
     non-breaking:
       update-types:
         - "minor"
         - "patch"
-  labels:
-  - "dependencies"
-  cooldown:
-    default-days: 3
-- package-ecosystem: nix
-  directory: "/"
-  schedule:
-    interval: weekly
-  open-pull-requests-limit: 10
-  target-branch: ankiquest
   labels:
   - "dependencies"
   cooldown:
