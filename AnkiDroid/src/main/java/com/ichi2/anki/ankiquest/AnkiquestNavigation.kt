@@ -13,6 +13,41 @@ object AnkiquestNavigation {
     const val PREF_SESSION_SUMMARY = "ankiquestSessionSummary"
     const val FRIENDS_PATH = "/community#challenges"
     const val ACTIVITY_PATH = "/community#activity"
+    const val WEEK_PATH = "/week"
+
+    /** Where an inbox notification leads: the native Today screen, or one known website route. */
+    sealed interface Destination {
+        data class Today(
+            val focus: String? = null,
+        ) : Destination
+
+        data class Website(
+            val path: String,
+        ) : Destination
+    }
+
+    private val weekly = setOf("reminder_weekly_recap", "reminder_weekly_closing")
+    private val feed = setOf("completion", "conquest", "share", "reaction", "message", "reply")
+
+    /**
+     * What a notification of [kind] is about. Study reminders, celebrations and nudges lead to Today,
+     * weekly results to the leaderboard, challenges to their goal and friends' news to the activity
+     * feed. Only ids and known kinds choose the route; unknown kinds open Today.
+     */
+    fun notificationDestination(
+        kind: String,
+        topic: String?,
+        challenge: Long,
+    ): Destination =
+        when {
+            challenge > 0 -> Destination.Website(challengePath(challenge))
+            kind.startsWith("challenge_") -> Destination.Website(FRIENDS_PATH)
+            kind in weekly -> Destination.Website(WEEK_PATH)
+            kind in feed -> Destination.Website(ACTIVITY_PATH)
+            kind == "reminder_freeze_refill" || topic?.substringBefore(':') == "quest" ->
+                Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
+            else -> Destination.Today()
+        }
 
     fun enabled(): Boolean = Ankiquest.dashboardUrl() != null
 

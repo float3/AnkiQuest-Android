@@ -13,6 +13,8 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.preferences.PreferencesActivity
+import com.ichi2.testutils.mockWebResourceRequest
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -104,6 +106,42 @@ class AnkiquestSettingsTest : RobolectricTest() {
         val menu = RoboMenu()
         controller.get().onCreateOptionsMenu(menu)
         assertTrue((0 until menu.size()).any { menu.getItem(it).title == targetContext.getString(CommonString.settings) })
+    }
+
+    @Test
+    @SuppressLint("AuthLeak")
+    fun `website links stay in the app and the website sign-in opens the native one`() {
+        val controller = Robolectric.buildActivity(AnkiquestActivity::class.java).create().also { shadowOf(Looper.getMainLooper()).idle() }
+        saveControllerForCleanup(controller)
+        val activity = controller.get()
+        val webView = activity.findViewById<WebView>(R.id.web_view)
+        val client = shadowOf(webView).webViewClient
+        for (url in listOf(
+            "https://quest.example/anki/today?embed=1",
+            "https://quest.example/anki/friends?embed=1",
+            "https://quest.example/anki/join/abc?embed=1",
+            "https://quest.example/w/example-link",
+        )) {
+            assertFalse(client.shouldOverrideUrlLoading(webView, mockWebResourceRequest(url)), url)
+        }
+        assertNull(shadowOf(activity).nextStartedActivity)
+        for (url in listOf("https://quest.example/login?next=%2Fanki%2Ftoday", "https://quest.example/auth/oauth/github?link=1")) {
+            assertTrue(client.shouldOverrideUrlLoading(webView, mockWebResourceRequest(url)), url)
+            val opened = assertNotNull(shadowOf(activity).nextStartedActivity, url)
+            assertEquals(PreferencesActivity::class.java.name, opened.component?.className, url)
+        }
+        assertTrue(client.shouldOverrideUrlLoading(webView, mockWebResourceRequest("https://member:secret@quest.example/anki/today")))
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `without a token the page is replaced by the native sign-in`() {
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "") }
+        val controller = Robolectric.buildActivity(AnkiquestActivity::class.java).create()
+        saveControllerForCleanup(controller)
+        val opened = assertNotNull(shadowOf(controller.get()).nextStartedActivity)
+        assertEquals(PreferencesActivity::class.java.name, opened.component?.className)
+        assertTrue(controller.get().isFinishing)
     }
 
     @Test
