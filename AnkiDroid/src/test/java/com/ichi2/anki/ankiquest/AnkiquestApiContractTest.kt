@@ -61,7 +61,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
         server.createContext("/") { exchange ->
             val path = exchange.requestURI.path
             requests += "${exchange.requestMethod} $path"
-            val body = route(exchange.requestMethod, path)?.let(::example)?.toByteArray(Charsets.UTF_8)
+            val sent = exchange.requestBody.bufferedReader().use { it.readText() }
+            val body = route(exchange.requestMethod, path, sent)?.let(::example)?.toByteArray(Charsets.UTF_8)
             exchange.responseHeaders.set("Content-Type", "application/json")
             if (body == null) {
                 exchange.sendResponseHeaders(404, -1)
@@ -200,6 +201,10 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `sharing a win, cheering one and the stored settings are read`() =
         runBlocking {
             assertEquals(2, Ankiquest.shareWinWithFriends(1, account.scope))
+            val link = Ankiquest.shareWinLink(1, account.scope)
+            assertTrue(link.url.contains("/w/"), link.url)
+            assertTrue(link.image.endsWith(".png"), link.image)
+            assertTrue(link.text.contains(link.url), link.text)
             assertFalse(Ankiquest.react(6, account.notificationAccount, account.scope))
             val sharing = AnkiquestSharing.settings(account)
             assertEquals(3, sharing.dailyCap)
@@ -220,9 +225,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private fun route(
         method: String,
         path: String,
+        sent: String,
     ): String? {
         val parts = path.removePrefix("/api/").split('/')
         return when {
+            parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).optString("to") == "link" -> "share_to_link"
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
             path == "/api/leaderboard" -> "leaderboard"
@@ -253,7 +260,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "streak-freezes" to "streak_freezes",
             )
 
-        val CONSUMED = ROUTES.values.toSet() + setOf("sign_up", "sign_in", "leaderboard")
+        val CONSUMED = ROUTES.values.toSet() + setOf("sign_up", "sign_in", "leaderboard", "share_to_link")
 
         val UNUSED = setOf("capabilities", "devices", "wins")
     }
