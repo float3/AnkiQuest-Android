@@ -49,20 +49,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
         AnkiDroidApp.sharedPrefs().edit { appWidgetIds.forEach { remove("$PERIOD_KEY:$it") } }
     }
 
-    override fun onReceive(
-        context: Context,
-        intent: Intent,
-    ) {
-        if (intent.action == ACTION_REFRESH) {
-            showRefreshing(context)
-            AnkiquestPoll.refreshNow(context)
-            return
-        }
-        super.onReceive(context, intent)
-    }
-
     companion object {
-        private const val ACTION_REFRESH = "com.ichi2.anki.ankiquest.WIDGET_REFRESH"
         private const val MIN_REFRESH_MS = 30 * 1000L
         private const val PERIOD_KEY = "ankiquestWidgetPeriod"
 
@@ -160,6 +147,21 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 .putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
+        /** The refresh button's broadcast, sent to [AnkiquestWidgetRefreshReceiver] which other apps cannot reach. */
+        internal fun refreshIntent(context: Context): PendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                1,
+                Intent(context, AnkiquestWidgetRefreshReceiver::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+
+        /** Shows every placed widget as refreshing and fetches the leaderboard now. */
+        internal fun refresh(context: Context) {
+            showRefreshing(context)
+            AnkiquestPoll.refreshNow(context)
+        }
+
         private fun showRefreshing(context: Context) {
             for (style in styles) {
                 val ids = widgetIds(context, style)
@@ -245,12 +247,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(
                 R.id.ankiquest_widget_refresh,
-                PendingIntent.getBroadcast(
-                    context,
-                    1,
-                    Intent(context, style.provider).setAction(ACTION_REFRESH),
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                ),
+                refreshIntent(context),
             )
 
             val time = if (fetchedAt > 0) DateUtils.formatDateTime(language, fetchedAt, DateUtils.FORMAT_SHOW_TIME) else ""

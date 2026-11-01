@@ -563,6 +563,9 @@
                 android:resource="@xml/widget_provider_ankiquest" />
         </receiver>
         <receiver
+            android:name="com.ichi2.anki.ankiquest.AnkiquestWidgetRefreshReceiver"
+            android:exported="false" />
+        <receiver
             android:name="com.ichi2.anki.ankiquest.AnkiquestTransparentWidget"
             android:label="@string/ankiquest_widget_transparent_label"
             android:exported="true">
