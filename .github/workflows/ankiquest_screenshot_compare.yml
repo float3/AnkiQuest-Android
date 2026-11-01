@@ -55,27 +55,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Pick the baseline workflow
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
+        run: |
+          workflow=ankiquest_screenshot_store.yml
+          runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=${BRANCH}&status=success&per_page=1" --jq .total_count 2>/dev/null || echo 0)
+          [ "$runs" -gt 0 ] || workflow=screenshot_store.yml
+          echo "workflow=${workflow}" >> "$GITHUB_OUTPUT"
+
       - name: Download base branch screenshots
         id: baseline
-        continue-on-error: true
         uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         with:
           name: screenshot
-          workflow: ankiquest_screenshot_store.yml
-          workflow_conclusion: success
-          search_artifacts: true
-          allow_forks: false
-          if_no_artifact_found: fail
-          branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
-
-      - name: Download base branch screenshots stored before the rename
-        id: legacy
-        if: ${{ steps.baseline.outcome == 'failure' }}
-        continue-on-error: true
-        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
-        with:
-          name: screenshot
-          workflow: screenshot_store.yml
+          workflow: ${{ steps.source.outputs.workflow }}
           workflow_conclusion: success
           search_artifacts: true
           allow_forks: false
@@ -83,11 +79,10 @@ jobs:
           branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
 
       - name: Explain unavailable baseline
-        if: ${{ steps.baseline.outcome == 'failure' && steps.legacy.outcome != 'success' }}
+        if: ${{ failure() && steps.baseline.outcome == 'failure' }}
         run: |
           echo '::error::Screenshot comparison did not run. Restore the base branch baseline with the ankiquest Screenshots: Store Baseline workflow, then rerun this check.'
           echo 'Screenshot comparison did not run because the base branch baseline could not be downloaded. Run **ankiquest Screenshots: Store Baseline** on the PR base branch, then rerun this check.' >> "$GITHUB_STEP_SUMMARY"
-          exit 1
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
