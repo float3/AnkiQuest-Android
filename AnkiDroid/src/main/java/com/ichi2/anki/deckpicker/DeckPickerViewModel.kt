@@ -21,6 +21,7 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.InitialActivity
 import com.ichi2.anki.OnErrorListener
 import com.ichi2.anki.StoragePermissionSet
+import com.ichi2.anki.ankiquest.AnkiquestDeckListStates
 import com.ichi2.anki.common.destinations.BrowserDestination
 import com.ichi2.anki.common.destinations.DeckOptionsDestination
 import com.ichi2.anki.common.destinations.NoteEditorDestination
@@ -466,21 +467,7 @@ class DeckPickerViewModel :
                     withCol {
                         Pair(sched.deckDueTree(), isEmpty)
                     }
-                dailyDeckStates.value =
-                    if (com.ichi2.anki.ankiquest.AnkiquestDecks
-                            .statusInDeckList()
-                    ) {
-                        withCol {
-                            com.ichi2.anki.ankiquest.AnkiquestDecks.dailyStates(
-                                this,
-                                com.ichi2.anki.common.time.TimeManager.time
-                                    .intTimeMS(),
-                                deckDueTree,
-                            )
-                        }
-                    } else {
-                        emptyMap()
-                    }
+                dailyDeckStates.value = AnkiquestDeckListStates.load(deckDueTree)
                 dueTree = deckDueTree
 
                 flowOfCollectionHasNoCards.value = collectionHasNoCards

@@ -31,6 +31,8 @@ import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
+import com.ichi2.anki.ankiquest.AnkiquestShare
+import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
 import com.ichi2.anki.browser.IdsFile
 import com.ichi2.anki.instantnoteeditor.InstantNoteEditorActivity
@@ -130,6 +132,11 @@ object ActivityList {
             get(AccountActivity::class.java, normalIntent = { AccountActivity.getIntent(targetContext) }),
             get(AnkiquestActivity::class.java),
             get(AnkiquestHomeActivity::class.java),
+            get(AnkiquestShareActivity::class.java) {
+                Intent(it, AnkiquestShareActivity::class.java)
+                    .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")
+                    .putExtra(AnkiquestShare.EXTRA_PLACE, 1)
+            },
             get(AnkiquestWidgetConfig::class.java) { intentForWidgetConfig() },
         )
 

@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import com.ichi2.anki.libanki.Collection
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.TimeZone
 
 /** Deck completion uses Anki's daily limits, including subdecks and learning later today. */
 internal object AnkiquestDecks {
@@ -72,6 +73,21 @@ internal object AnkiquestDecks {
         offsetWestMinutes: Int,
         rolloverHour: Int,
     ): Long = AnkiquestCompletionPolicy.studyDay(now, offsetWestMinutes, rolloverHour)
+
+    /** The hour [col]'s Anki day starts, 4 when the setting cannot be read. */
+    fun rollover(col: Collection): Int =
+        runCatching {
+            col.db
+                .queryString("select cast(val as text) from config where key = 'rollover'")
+                .trim()
+                .toInt()
+        }.getOrDefault(4)
+
+    /** The player's Anki day at [now] as the server counts it, by the clock reviews are uploaded with. */
+    fun studyDay(
+        col: Collection,
+        now: Long,
+    ): Long = day(now, -TimeZone.getDefault().getOffset(now) / 60_000, rollover(col))
 
     fun snapshots(
         col: Collection,

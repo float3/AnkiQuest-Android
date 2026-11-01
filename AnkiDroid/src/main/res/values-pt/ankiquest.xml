@@ -8,7 +8,7 @@
     <string name="ankiquest_notifications_title">Lembretes e alertas</string>
     <string name="ankiquest_notifications_summary">Lembretes, incentivos e alertas</string>
     <string name="ankiquest_sharing_title">Amigos e partilha</string>
-    <string name="ankiquest_sharing_summary">Avisos de baralhos e subscrições</string>
+    <string name="ankiquest_sharing_summary">Conquistas, avisos de baralhos e subscrições</string>
     <string name="ankiquest_maintenance_title">Aplicação e dados</string>
     <string name="ankiquest_maintenance_summary">Envio de revisões e atualizações</string>
     <string name="ankiquest_notification_events_title">Quando notificar</string>
@@ -159,4 +159,5 @@
     <string name="ankiquest_streak_protected">Sequência protegida · Ainda não estudou</string>
     <string name="ankiquest_streak_unknown">Atualiza para ver o estado do estudo de hoje</string>
     <string name="ankiquest_streak_description">Sequência de %1$s dias · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Não foi possível preparar a ligação. Fecha este ecrã e tenta outra vez.</string>
 </resources>

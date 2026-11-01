@@ -9,6 +9,7 @@ import com.ichi2.anki.RobolectricTest
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -54,5 +55,35 @@ class AnkiquestUpdaterTest : RobolectricTest() {
         assertEquals(AnkiquestUpdater.Channel.STABLE, AnkiquestUpdater.channel())
         AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestUpdater.PREF_CHANNEL, "nightly") }
         assertEquals(AnkiquestUpdater.Channel.NIGHTLY, AnkiquestUpdater.channel())
+    }
+
+    private fun downloads(): Pair<File, File> {
+        val dir = File(targetContext.cacheDir, "ankiquest").apply { mkdirs() }
+        val apk = File(dir, "AnkiQuest.apk").apply { writeText("apk") }
+        val part = File(dir, "AnkiQuest.apk.part").apply { writeText("part") }
+        return apk to part
+    }
+
+    @Test
+    fun `a downloaded apk that is already installed is deleted`() {
+        val (apk, part) = downloads()
+        AnkiquestUpdater.cleanStale(targetContext, installedCode = 100) { 100 }
+        assertFalse(apk.exists())
+        assertFalse(part.exists())
+    }
+
+    @Test
+    fun `a downloaded apk newer than the installed build is kept`() {
+        val (apk, part) = downloads()
+        AnkiquestUpdater.cleanStale(targetContext, installedCode = 100) { 101 }
+        assertTrue(apk.exists())
+        assertFalse(part.exists())
+    }
+
+    @Test
+    fun `an unreadable downloaded apk is deleted`() {
+        val (apk, _) = downloads()
+        AnkiquestUpdater.cleanStale(targetContext, installedCode = 100)
+        assertFalse(apk.exists())
     }
 }

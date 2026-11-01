@@ -6,11 +6,24 @@ name: Nix
 on:
   workflow_dispatch:
   pull_request:
+    paths:
+      - 'flake.*'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - '**/*.gradle.kts'
+      - 'buildSrc/**'
+      - '.github/workflows/nix.yml'
   push:
-    branches-ignore:
-      - 'gh-readonly-queue/**'
-      - 'dependabot/**'
-      - 'i18n_sync'
+    branches:
+      - ankiquest
+      - main
+    paths:
+      - 'flake.*'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - '**/*.gradle.kts'
+      - 'buildSrc/**'
+      - '.github/workflows/nix.yml'
 
 permissions:
   contents: read
@@ -32,7 +45,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Check the flake, build and run unit tests
+      - name: Check the flake and build
         run: |
           docker run --rm -v "$PWD:/src" -w /src -e CI=true \
             -e NIX_CONFIG="experimental-features = nix-command flakes" \
@@ -40,5 +53,5 @@ jobs:
               git config --global --add safe.directory /src
               nix flake check
               nix run nixpkgs#alejandra -- --check flake.nix
-              nix develop --command ./gradlew --no-daemon assemblePlayDebug :libanki:testDebugUnitTest
+              nix develop --command ./gradlew --no-daemon assemblePlayDebug
             '

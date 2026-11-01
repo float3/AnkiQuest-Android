@@ -8,9 +8,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -35,12 +37,18 @@ object AnkiquestNotifier {
     private const val NUDGE_CHANNEL = "ankiquestNudges"
     private val BUZZ = longArrayOf(0, 250, 150, 250)
     private const val PREF_ORDER = "ankiquestLastOrder"
-    private const val PREF_STREAK_DAY = "ankiquestStreakNotifiedDay"
+
+    @VisibleForTesting
+    internal const val PREF_STREAK_DAY = "ankiquestStreakNotifiedDay"
     private const val RANK_ID = 5_130_001
     private const val STREAK_ID = 5_130_002
     private const val TEST_ID = 5_130_003
     private const val HOUR_MS = 60 * 60 * 1000L
 
+    /**
+     * Posts new inbox messages for [account]. Only the first contact discards an old backlog; unseen
+     * messages never age out while offline or waiting for notification permission.
+     */
     @Synchronized
     fun onDeckCompletions(
         context: Context,
@@ -52,10 +60,9 @@ object AnkiquestNotifier {
         val prefs = AnkiDroidApp.sharedPrefs()
         val key = "ankiquestCompletionCursor:$account"
         val firstPollKey = "ankiquestCompletionFirstPollAt:$account"
-        val entries = (0 until notifications.length()).map { notifications.getJSONObject(it) }.sortedBy { it.getLong("id") }
+        val entries = notifications.objects().sortedBy { it.getLong("id") }
         var previous = prefs.getLong(key, 0L)
-        // Only discard an old backlog on first contact. Unseen messages must not
-        // age out while offline or waiting for notification permission.
+        val language by lazy { AnkiquestLanguage.context(context) }
         val firstPoll =
             if (prefs.contains(firstPollKey)) {
                 prefs.getLong(firstPollKey, 0L)
@@ -73,9 +80,14 @@ object AnkiquestNotifier {
             val body = entry.getString("body")
             val shownBody =
                 entry.optJSONObject("reply_to")?.optString("body")?.takeIf { it.isNotBlank() }?.let { original ->
-                    AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_context, body, original)
+                    language.getString(R.string.ankiquest_reply_context, body, original)
                 } ?: body
             val answerable = entry.optString("sender").isNotEmpty() && !entry.optBoolean("replied")
+            val kind = entry.optString("kind", "completion")
+            val win = entry.optLong("win").takeIf { it > 0 }
+            val friendsWin = kind == "share" && win != null
+            val cheerable = friendsWin && !entry.optBoolean("reacted")
+            val card = entry.optString("image").takeIf { fresh && kind == "share" && it.isNotEmpty() }
             if (fresh &&
                 notify(
                     context,
@@ -83,7 +95,7 @@ object AnkiquestNotifier {
                     title,
                     shownBody,
                     notificationIntent(context, entry, account),
-                    if (answerable) {
+                    if (answerable || cheerable) {
                         AnkiquestReply.actions(
                             context,
                             id,
@@ -92,12 +104,18 @@ object AnkiquestNotifier {
                             shownBody,
                             account,
                             scope,
-                            entry.optString("kind", "completion"),
+                            kind,
+                            win = friendsWin,
+                            cheer = cheerable,
+                            reply = answerable,
                         )
+                    } else if (AnkiquestShare.shareable(kind)) {
+                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, win, id, null, scope))
                     } else {
                         emptyList()
                     },
-                    entry.optString("kind") == "nudge",
+                    kind == "nudge",
+                    picture = card?.let { AnkiquestShare.picture(it) },
                 ) == Delivery.DISABLED
             ) {
                 return
@@ -110,24 +128,41 @@ object AnkiquestNotifier {
     /** Asks the server how this player moved since the order stored here, and says so when they did. */
     suspend fun onLeaderboard(context: Context) {
         val prefs = AnkiDroidApp.sharedPrefs()
+        val scope = AnkiquestHomeData.account(prefs)?.scope ?: return
+        val orderKey = scopedKey(PREF_ORDER, scope)
         val previous =
             prefs
-                .getString(PREF_ORDER, null)
+                .getString(orderKey, null)
                 ?.split(',')
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
         val result = Ankiquest.rank(previous)
-        val order = result.getJSONArray("order").let { users -> (0 until users.length()).map { users.getString(it) } }
-        prefs.edit { putString(PREF_ORDER, order.joinToString(",")) }
+        val order = result.getJSONArray("order").strings()
+        prefs.edit { putString(orderKey, order.joinToString(",")) }
         if (!prefs.getBoolean(PREF_RANK, true)) return
         val change = result.optJSONObject("change") ?: return
+        val title = change.getString("title")
+        val body = change.getString("body")
+        val place = climbedTo(previous, order, Ankiquest.player())?.takeIf { it <= 3 }
         notify(
             context,
             RANK_ID,
-            change.getString("title"),
-            change.getString("body"),
+            title,
+            body,
             AnkiquestActivity.intent(context, "/week").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
         )
+    }
+
+    /** The 1-based place [me] climbed to between two leaderboard orders, or null when they did not climb. */
+    internal fun climbedTo(
+        previous: List<String>,
+        order: List<String>,
+        me: String?,
+    ): Int? {
+        val now = order.indexOf(me)
+        val before = previous.indexOf(me)
+        return if (now >= 0 && before > now) now + 1 else null
     }
 
     /** Posts the server's streak warning once per study day, within the chosen hours before it ends. */
@@ -143,10 +178,11 @@ object AnkiquestNotifier {
         val dayEndsAt = profile.optLong("day_ends_at")
         val remaining = dayEndsAt - TimeManager.time.intTimeMS()
         if (remaining <= 0 || remaining > hours * HOUR_MS) return
-        if (prefs.getLong(PREF_STREAK_DAY, Long.MIN_VALUE) == dayEndsAt) return
+        val dayKey = scopedKey(PREF_STREAK_DAY, AnkiquestHomeData.account(prefs)?.scope)
+        if (prefs.getLong(dayKey, Long.MIN_VALUE) == dayEndsAt) return
         val open = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
         if (notify(context, STREAK_ID, warning.getString("title"), warning.getString("body"), open) != Delivery.DISABLED) {
-            prefs.edit { putLong(PREF_STREAK_DAY, dayEndsAt) }
+            prefs.edit { putLong(dayKey, dayEndsAt) }
         }
     }
 
@@ -164,6 +200,37 @@ object AnkiquestNotifier {
             data.getString(AnkiquestReply.EXTRA_TITLE).orEmpty(),
             AnkiquestLanguage.context(context).getString(R.string.ankiquest_reply_sent, who, message),
             replyIntent(context, data),
+            silent = true,
+        )
+    }
+
+    /** Says the cheer went out; the friend's win can still be answered in words. */
+    fun onCheered(
+        context: Context,
+        data: Data,
+    ) {
+        if (!AnkiquestReply.current(data)) return
+        val tag = data.getInt(AnkiquestReply.EXTRA_TAG, 0)
+        val title = data.getString(AnkiquestReply.EXTRA_TITLE).orEmpty()
+        val body = data.getString(AnkiquestReply.EXTRA_BODY).orEmpty()
+        notify(
+            context,
+            tag,
+            title,
+            AnkiquestLanguage.context(context).getString(R.string.ankiquest_cheer_sent, body),
+            replyIntent(context, data),
+            AnkiquestReply.actions(
+                context,
+                data.getLong(AnkiquestReply.EXTRA_NOTIFICATION, 0),
+                tag,
+                title,
+                body,
+                data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT),
+                data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
+                data.getString(AnkiquestReply.EXTRA_KIND) ?: "share",
+                win = true,
+                cheer = false,
+            ),
             silent = true,
         )
     }
@@ -193,6 +260,7 @@ object AnkiquestNotifier {
                 data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT),
                 data.getString(AnkiquestReply.EXTRA_REPLY_SCOPE),
                 data.getString(AnkiquestReply.EXTRA_KIND) ?: "completion",
+                win = data.getBoolean(AnkiquestReply.EXTRA_WIN, false),
             ),
             silent = true,
         )
@@ -232,15 +300,17 @@ object AnkiquestNotifier {
         }
 
     /** A local alert checks Android delivery without sending a server message. */
-    fun testAlert(context: Context): Delivery =
-        notify(
+    fun testAlert(context: Context): Delivery {
+        val language = AnkiquestLanguage.context(context)
+        return notify(
             context,
             TEST_ID,
-            AnkiquestLanguage.context(context).getString(R.string.ankiquest_health_test_title),
-            AnkiquestLanguage.context(context).getString(R.string.ankiquest_health_test_body),
+            language.getString(R.string.ankiquest_health_test_title),
+            language.getString(R.string.ankiquest_health_test_body),
             context.packageManager.getLaunchIntentForPackage(context.packageName)
                 ?: Intent(context, AnkiquestHomeActivity::class.java),
         )
+    }
 
     fun alertsEnabled(
         context: Context,
@@ -266,9 +336,8 @@ object AnkiquestNotifier {
                     .Builder(channel, NotificationManagerCompat.IMPORTANCE_HIGH)
                     .setName(
                         AnkiquestLanguage
-                            .context(
-                                context,
-                            ).getString(if (nudge) R.string.ankiquest_nudges_title else R.string.ankiquest_screen_title),
+                            .context(context)
+                            .getString(if (nudge) R.string.ankiquest_nudges_title else R.string.ankiquest_screen_title),
                     ).setVibrationEnabled(true)
                     .setVibrationPattern(BUZZ)
                     .build(),
@@ -283,6 +352,12 @@ object AnkiquestNotifier {
         DISABLED,
     }
 
+    /**
+     * Before channels, Android reads alert behaviour from the notification itself; the phone's ringer
+     * and Do Not Disturb still apply. A permission revoked after the check reports [Delivery.DISABLED],
+     * which keeps the inbox pending. A [picture], such as a friend's win card, is shown expanded with
+     * the text beneath it.
+     */
     @SuppressLint("MissingPermission")
     private fun notify(
         context: Context,
@@ -293,6 +368,7 @@ object AnkiquestNotifier {
         actions: List<NotificationCompat.Action> = emptyList(),
         nudge: Boolean = false,
         silent: Boolean = false,
+        picture: Bitmap? = null,
     ): Delivery {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -305,6 +381,9 @@ object AnkiquestNotifier {
         if (manager.getNotificationChannel(channel)?.importance == NotificationManagerCompat.IMPORTANCE_NONE) {
             return Delivery.CHANNEL_BLOCKED
         }
+        val style =
+            picture?.let { NotificationCompat.BigPictureStyle().bigPicture(it).setSummaryText(body) }
+                ?: NotificationCompat.BigTextStyle().bigText(body)
         val notification =
             NotificationCompat
                 .Builder(context, channel)
@@ -312,10 +391,8 @@ object AnkiquestNotifier {
                 .setLargeIcon(AnkiquestAki.notificationIcon(context))
                 .setContentTitle(title)
                 .setContentText(body)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setStyle(style)
                 .setAutoCancel(true)
-                // Before channels, Android reads alert behavior from the notification.
-                // The system still applies the phone's ringer and Do Not Disturb settings.
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setDefaults(NotificationCompat.DEFAULT_SOUND)
                 .setVibrate(BUZZ)
@@ -333,7 +410,6 @@ object AnkiquestNotifier {
             manager.notify(id, notification)
             Delivery.POSTED
         } catch (_: SecurityException) {
-            // Permission may be revoked after the check above. Keep the inbox pending.
             Delivery.DISABLED
         }
     }

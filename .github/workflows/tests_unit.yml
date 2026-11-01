@@ -96,7 +96,7 @@ jobs:
               // we do this work to define 'name' so we don't need to update branch protection rules
               // if the os changes, the name is used in the expanded workflow run name, which is then
               // used as a "required check" on branch protection merge rules, this keeps it stable
-              // even if "macos-14" changes to "macos-15" in the future so we just change the list here
+              // even if "macos-15" changes to "macos-26" in the future so we just change the list here
               // but don't have to go into organization settings / protection rules etc etc
               includeArray.push({"os": os, "name": os.split('-')[0]});
             }

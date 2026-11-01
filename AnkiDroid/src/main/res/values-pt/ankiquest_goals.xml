@@ -9,30 +9,54 @@
     <string name="aq_goal_progress_cards">%1$d de %2$d cartões</string>
     <string name="aq_goal_progress_minutes">%1$d de %2$d minutos</string>
     <string name="aq_goal_daily">Meta diária: %1$s</string>
-    <string name="aq_goal_backlog_explained">Os cartões de hoje mais %1$d dos seus %2$d cartões atrasados (%3$d%% por dia), para o atraso diminuir sem tomar o seu dia.</string>
-    <string name="aq_goal_minimum_title">Sequência garantida! 🔥</string>
+    <string name="aq_goal_backlog_explained">Os cartões de hoje mais %1$d dos teus %2$d cartões atrasados. Dias que faltam no plano: %3$d.</string>
     <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
-    <string name="aq_goal_minimum_body">%1$s Agora, sua meta diária: %2$s até agora.</string>
-    <string name="aq_goal_done_body">Você alcançou a meta de hoje: %1$s.</string>
-    <string name="aq_goal_both_body">%1$s E você alcançou a meta de hoje: %2$s.</string>
-    <string name="aq_goal_nice">Boa!</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
-    <string name="ankiquest_goal_mode_title">Meta diária</string>
-    <string name="ankiquest_goal_backlog_title">Atraso a reduzir por dia</string>
     <string name="ankiquest_goal_cards_title">Cartões por dia</string>
     <string name="ankiquest_goal_minutes_title">Minutos por dia</string>
-    <string name="ankiquest_goal_celebrate_title">Comemorar metas</string>
-    <string name="ankiquest_goal_celebrate_summary">Comemorar quando hoje conta para sua sequência e quando você alcança a meta diária.</string>
-    <string-array name="ankiquest_goal_mode_entries">
-        <item>O de hoje mais parte do atraso</item>
-        <item>Um número de cartões</item>
-        <item>Um número de minutos</item>
-    </string-array>
-    <string-array name="ankiquest_goal_backlog_entries">
-        <item>5 % (cerca de 20 dias)</item>
-        <item>10 % (cerca de 10 dias)</item>
-        <item>20 % (cerca de 5 dias)</item>
-        <item>34 % (cerca de 3 dias)</item>
-        <item>Tudo</item>
-    </string-array>
+    <string name="ankiquest_goal_title">Meta diária</string>
+    <string name="ankiquest_goal_setup_title">Escolhe a tua meta diária</string>
+    <string name="ankiquest_goal_mode_backlog">Recuperar o atraso num número de dias</string>
+    <string name="ankiquest_goal_off">Sem meta diária</string>
+    <string name="ankiquest_goal_custom">Outro</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d dia</item>
+        <item quantity="other">%d dias</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">De %1$d a %2$d</string>
+    <string name="ankiquest_goal_invalid">Escolhe um número de %1$d a %2$d.</string>
+    <string name="ankiquest_goal_estimating">A calcular o que isto significa para a tua coleção…</string>
+    <string name="ankiquest_goal_estimate_failed">Não foi possível ler a tua coleção, por isso não há estimativas.</string>
+    <string name="ankiquest_goal_estimate_off">Sem meta: cada revisão continua a contar para a tua sequência.</string>
+    <string name="ankiquest_goal_estimate_cards">Cartões hoje: %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Tempo hoje: %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Atraso recuperado em %d dia</item>
+        <item quantity="other">Atraso recuperado em %d dias</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Atraso recuperado: nunca, só as tuas revisões já somam %d cartão por dia</item>
+        <item quantity="other">Atraso recuperado: nunca, só as tuas revisões já somam %d cartões por dia</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Para reduzir o atraso, estuda pelo menos %d cartão por dia.</item>
+        <item quantity="other">Para reduzir o atraso, estuda pelo menos %d cartões por dia.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Nada em atraso. Cerca de %d cartão fica para rever por dia.</item>
+        <item quantity="other">Nada em atraso. Cerca de %d cartões ficam para rever por dia.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">A guardar…</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Recuperar o atraso em %d dia</item>
+        <item quantity="other">Recuperar o atraso em %d dias</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d cartão por dia</item>
+        <item quantity="other">%d cartões por dia</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d minuto por dia</item>
+        <item quantity="other">%d minutos por dia</item>
+    </plurals>
 </resources>
