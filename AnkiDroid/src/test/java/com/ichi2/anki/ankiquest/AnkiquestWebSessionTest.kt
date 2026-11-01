@@ -88,6 +88,17 @@ class AnkiquestWebSessionTest {
     }
 
     @Test
+    fun `with the session cookie installed the page learns the member but not the token`() {
+        val script = assertNotNull(session.script("https://quest.example/anki/", cookie = true))
+
+        val handed = JSONObject(script.substringAfter("window.ankiquestSession = ").substringBefore(";\n"))
+        assertEquals("cerro", handed.getString("user"))
+        assertFalse(handed.has("token"))
+        assertFalse(script.contains("secret"))
+        assertNull(session.script("https://other.example/anki/", cookie = true))
+    }
+
+    @Test
     fun `without a token the page is told it is signed out`() {
         val signedOut = AnkiquestWebSession("https://quest.example/anki/#cerro", "cerro", "")
         val script = assertNotNull(signedOut.script("https://quest.example/anki/"))

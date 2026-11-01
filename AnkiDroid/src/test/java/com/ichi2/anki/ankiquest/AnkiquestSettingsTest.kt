@@ -107,6 +107,18 @@ class AnkiquestSettingsTest : RobolectricTest() {
     }
 
     @Test
+    fun `dashboard with an installed session cookie learns the member but never the token`() {
+        coEvery { Ankiquest.dashboardSession(any()) } returns "ankiquest_session=opaque; Path=/; HttpOnly; Secure; SameSite=Lax"
+        val controller = Robolectric.buildActivity(AnkiquestActivity::class.java).create().also { shadowOf(Looper.getMainLooper()).idle() }
+        saveControllerForCleanup(controller)
+        val webView = controller.get().findViewById<WebView>(R.id.web_view)
+        shadowOf(webView).webViewClient.onPageFinished(webView, "https://quest.example/anki/?embed=1#cerro")
+        val script = assertNotNull(shadowOf(webView).lastEvaluatedJavascript)
+        assertTrue(script.contains("window.ankiquestSession = {\"user\":\"cerro\"};"))
+        assertFalse(script.contains("saved-test-token"))
+    }
+
+    @Test
     fun `dashboard receives the saved account without asking for its token again`() {
         val controller = Robolectric.buildActivity(AnkiquestActivity::class.java).create().also { shadowOf(Looper.getMainLooper()).idle() }
         saveControllerForCleanup(controller)
