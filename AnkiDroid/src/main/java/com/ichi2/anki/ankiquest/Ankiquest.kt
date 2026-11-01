@@ -26,6 +26,7 @@ import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -380,17 +381,44 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         resync: Boolean = false,
     ) {
         if (HomeAccount.current() == null || !refreshes.offer(showFeedback, resync)) return
-        scope.launch {
-            mutex.withLock {
-                val (feedback, again) = refreshes.take()
-                try {
-                    val account = HomeAccount.current() ?: return@withLock
-                    val profile = if (account.token.isEmpty()) preview(account.server, account.encodedUser) else upload(account, again)
-                    present(profile, feedback)
-                    if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
-                } catch (e: Exception) {
-                    Timber.w(e, "ankiquest refresh failed")
-                }
+        scope.launch { refresh(background = false) }
+    }
+
+    /**
+     * Uploads the reviews the server does not have yet, for the background poll: reviews made offline
+     * would otherwise wait until the app is next opened. It joins a refresh that is already waiting
+     * instead of queueing another, and does nothing without a token or while the collection cannot be
+     * used, such as during a sync.
+     */
+    internal suspend fun uploadPending() {
+        if (HomeAccount.current()?.token.isNullOrEmpty() || !collectionAvailable()) return
+        if (!refreshes.offer(showFeedback = false, resync = false)) return
+        refresh(background = true)
+    }
+
+    private suspend fun collectionAvailable(): Boolean =
+        try {
+            CollectionManager.tryWithCol { } != null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.d(e, "ankiquest background upload skipped: collection unavailable")
+            false
+        }
+
+    /** Runs the waiting refresh. A background one shows nothing unless an answer asked for feedback meanwhile. */
+    private suspend fun refresh(background: Boolean) {
+        mutex.withLock {
+            val (feedback, again) = refreshes.take()
+            try {
+                val account = HomeAccount.current() ?: return@withLock
+                val profile = if (account.token.isEmpty()) preview(account.server, account.encodedUser) else upload(account, again)
+                if (!background || feedback) present(profile, feedback)
+                if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "ankiquest refresh failed")
             }
         }
     }
