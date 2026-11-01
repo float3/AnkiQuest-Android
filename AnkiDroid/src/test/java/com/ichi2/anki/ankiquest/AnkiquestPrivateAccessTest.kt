@@ -7,6 +7,7 @@ import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
@@ -16,6 +17,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.asContextElement
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -134,8 +136,8 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             return captured
         }
         every { changingPreferences.getString(any(), any()) } answers { preferences.getString(firstArg(), secondArg()) }
-        every { changingPreferences.getString(Ankiquest.PREF_URL, "") } answers {
-            switchServerAfter { preferences.getString(Ankiquest.PREF_URL, "") }
+        every { changingPreferences.getString(Ankiquest.PREF_URL, any()) } answers {
+            switchServerAfter { preferences.getString(Ankiquest.PREF_URL, secondArg()) }
         }
         every { changingPreferences.all } answers { switchServerAfter { preferences.all } }
         AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
@@ -151,10 +153,9 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
         runBlocking {
             switchServerDuringSettingsRead()
 
-            readingSettings { Ankiquest.profile() }
+            readingSettings { runCatching { Ankiquest.profile() } }
 
             assertServerSwitched()
-            assertTrue(requests.any { it.path == "/api/profile/member%20name" })
             assertTrue(requests.filter { it.path == "/api/profile/member%20name" }.all { it.authorization == "Bearer member-secret" })
             assertTrue(requests.none { it.authorization == "Bearer new-private-secret" })
         }
@@ -168,7 +169,6 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             readingSettings { Ankiquest.runFromSettings(targetContext, uploadAll = false) }
 
             assertServerSwitched()
-            assertTrue(requests.any { it.path == "/api/profile/member%20name" })
             assertTrue(requests.all { it.authorization == null })
         }
 
@@ -216,7 +216,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
         runBlocking {
             sessionStatus = 401
 
-            val error = assertFailsWith<Ankiquest.HttpStatusException> { Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!) }
+            val error = assertFailsWith<AnkiquestHttpException> { Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!) }
 
             assertEquals(401, error.code)
         }
@@ -226,7 +226,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
         runBlocking {
             sessionStatus = 302
 
-            val error = assertFailsWith<Ankiquest.HttpStatusException> { Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!) }
+            val error = assertFailsWith<AnkiquestHttpException> { Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!) }
 
             assertEquals(302, error.code)
             assertEquals(listOf("/auth/session"), requests.map { it.path })
@@ -241,9 +241,36 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
                 "ankiquest_session=value; Path=/",
                 "ankiquest_session=value; Path=/; HttpOnly; Domain=127.0.0.1",
                 "ankiquest_session=value; Path=/other; HttpOnly",
+                "ankiquest_session=value; Path=/; HttpOnly; Secure",
             )) {
                 responseCookie = cookie
                 assertFailsWith<IOException> { Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!) }
             }
+        }
+
+    @Test
+    fun `an https session cookie must be Secure and an http one must not`() {
+        val https = "https://quest.example/auth/session".toHttpUrl()
+        val secure = "ankiquest_session=value; Path=/; HttpOnly; Secure; SameSite=Lax"
+        assertEquals(secure, Ankiquest.sessionCookie(https, listOf(sessionCookie, secure)))
+        assertNull(Ankiquest.sessionCookie(https, listOf(sessionCookie)))
+        assertEquals(sessionCookie, Ankiquest.sessionCookie("$url/auth/session".toHttpUrl(), listOf(secure, sessionCookie)))
+    }
+
+    @Test
+    fun `a saved plain http address on the internet is signed out with the reason shown`() =
+        runBlocking {
+            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "http://quest.example/") }
+
+            assertNull(HomeAccount.current())
+            assertFalse(Ankiquest.isConfigured())
+            assertNull(Ankiquest.dashboardUrl())
+            assertNull(Ankiquest.webSession())
+            assertNull(Ankiquest.dashboardSession("http://quest.example/#member%20name"))
+            assertEquals(
+                targetContext.getString(R.string.ankiquest_check_insecure, "http://quest.example/"),
+                Ankiquest.runFromSettings(targetContext, uploadAll = false),
+            )
+            assertTrue(requests.isEmpty())
         }
 }

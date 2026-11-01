@@ -6,10 +6,10 @@ import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.EmptyApplicationCategory
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
-import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -26,7 +26,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
@@ -83,7 +86,7 @@ class AnkiquestHomeDataTest : RobolectricTest() {
         runBlocking {
             for (code in listOf(302, 401, 503)) {
                 status = code
-                assertEquals(code, assertFailsWith<Ankiquest.HttpStatusException> { AnkiquestHomeData.profile(account) }.code)
+                assertEquals(code, assertFailsWith<AnkiquestHttpException> { AnkiquestHomeData.profile(account) }.code)
             }
             assertEquals(3, requests.size)
         }
@@ -96,29 +99,45 @@ class AnkiquestHomeDataTest : RobolectricTest() {
         }
     }
 
-    @Test
-    fun `fallback member and credentials are captured from one preferences snapshot`() {
-        val first =
-            mapOf(
-                Ankiquest.PREF_URL to "https://first.example",
-                Ankiquest.PREF_USER to " ",
-                Ankiquest.PREF_TOKEN to "first-token",
-                "username" to "first member",
-            )
-        val second =
-            mapOf(
-                Ankiquest.PREF_URL to "https://second.example",
-                Ankiquest.PREF_USER to "",
-                Ankiquest.PREF_TOKEN to "second-token",
-                "username" to "second member",
-            )
-        val preferences = mockk<SharedPreferences>()
-        every { preferences.all } returnsMany listOf(first, second)
+    private val firstSettings =
+        mapOf(
+            Ankiquest.PREF_URL to "https://first.example",
+            Ankiquest.PREF_USER to " ",
+            Ankiquest.PREF_TOKEN to "first-token",
+            "username" to "first member",
+        )
+    private val secondSettings =
+        mapOf(
+            Ankiquest.PREF_URL to "https://second.example",
+            Ankiquest.PREF_USER to "",
+            Ankiquest.PREF_TOKEN to "second-token",
+            "username" to "second member",
+        )
 
-        assertEquals(HomeAccount("https://first.example", "first member", "first-token"), AnkiquestHomeData.account(preferences))
+    @Test
+    fun `fallback member and credentials are read from the current settings`() {
+        var stored = firstSettings
+        val preferences = mockk<SharedPreferences>()
+        every { preferences.getString(any(), any()) } answers { stored[firstArg<String>()] }
+
+        val first = AnkiquestHomeData.account(preferences)
+        assertEquals(HomeAccount("https://first.example", "first member", "first-token"), first)
+        assertSame(first, AnkiquestHomeData.account(preferences), "unchanged settings keep the account and its scope")
+        stored = secondSettings
         assertEquals(HomeAccount("https://second.example", "second member", "second-token"), AnkiquestHomeData.account(preferences))
-        verify(exactly = 2) { preferences.all }
-        confirmVerified(preferences)
+        verify(exactly = 0) { preferences.all }
+    }
+
+    @Test
+    fun `settings changed while they are read never mix two accounts`() {
+        var stored = firstSettings
+        val preferences = mockk<SharedPreferences>()
+        every { preferences.getString(any(), any()) } answers {
+            val key = firstArg<String>()
+            stored[key].also { if (key == Ankiquest.PREF_URL) stored = secondSettings }
+        }
+
+        assertEquals(HomeAccount("https://second.example", "second member", "second-token"), AnkiquestHomeData.account(preferences))
     }
 
     @Test
@@ -137,6 +156,60 @@ class AnkiquestHomeDataTest : RobolectricTest() {
         }
         assertEquals("https://example.com/member", HomeAccount.from(settings(" https://example.com/ "), "")!!.notificationAccount)
     }
+
+    @Test
+    fun `plain http is accepted only on this device and the local network`() {
+        fun settings(url: String) = mapOf(Ankiquest.PREF_URL to url, Ankiquest.PREF_USER to "member", Ankiquest.PREF_TOKEN to "secret")
+        for (url in listOf(
+            "https://example.com",
+            "http://localhost:8080",
+            "http://127.0.0.1",
+            "http://127.20.0.9",
+            "http://[::1]:3000",
+            "http://10.0.2.2:8080",
+            "http://10.1.2.3",
+            "http://172.16.0.1",
+            "http://172.31.255.254",
+            "http://192.168.1.20",
+            "http://[fc00::1]",
+            "http://[fd12:3456::1]",
+            "http://quest.local/anki",
+        )) {
+            assertNotNull(HomeAccount.from(settings(url), ""), url)
+            assertFalse(AnkiquestHosts.insecure(url), url)
+        }
+        for (url in listOf(
+            "http://example.com",
+            "http://8.8.8.8",
+            "http://11.0.0.1",
+            "http://172.15.0.1",
+            "http://172.32.0.1",
+            "http://192.169.0.1",
+            "http://[2001:db8::1]",
+            "http://[fe80::1]",
+            "http://localhost.example.com",
+            "http://quest.local.example.com",
+        )) {
+            assertNull(HomeAccount.from(settings(url), ""), url)
+            assertTrue(AnkiquestHosts.insecure(url), url)
+        }
+        assertFalse(AnkiquestHosts.insecure(""))
+        assertFalse(AnkiquestHosts.insecure("not a url"))
+    }
+
+    @Test
+    fun `a password is never sent to a plain http server on the internet`() =
+        runBlocking {
+            val credentials = AnkiquestAccount.Credentials("http://quest.example", "member", "password", "", false)
+
+            val error = assertFailsWith<AnkiquestAccount.InsecureServer> { AnkiquestAccount.submit(credentials) }
+
+            assertTrue(requests.isEmpty())
+            assertEquals(
+                targetContext.getString(R.string.ankiquest_check_insecure, "http://quest.example"),
+                AnkiquestAccount.message(targetContext, error, "http://quest.example"),
+            )
+        }
 
     @Test
     fun `local deck focus retains native scheduler counts and selected deck`() {

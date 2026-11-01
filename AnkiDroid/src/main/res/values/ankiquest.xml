@@ -114,6 +114,7 @@
     <string name="ankiquest_check_http">The server answered with HTTP %1$d.</string>
     <string name="ankiquest_check_unreachable">Could not find %1$s. Check the URL and your internet connection.</string>
     <string name="ankiquest_check_bad_url">%1$s is not a valid URL. It should look like https://anki.example.com</string>
+    <string name="ankiquest_check_insecure">%1$s does not use https, so your sign-in could be read on the way. Use an address that starts with https://</string>
     <string name="ankiquest_check_failed">Could not reach the server: %1$s</string>
     <string name="ankiquest_widget_label">ankiquest leaderboard</string>
     <string name="ankiquest_widget_transparent_label">ankiquest leaderboard (transparent)</string>

@@ -15,7 +15,6 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 /** A friend receives an independent .apkg, including media but never the sender's review history. */
 internal object AnkiquestDeckCopies {
@@ -23,24 +22,9 @@ internal object AnkiquestDeckCopies {
 
     class TooLarge : IOException("Deck copy exceeds 25 MB")
 
-    private val client =
-        AnkiquestHttp.client
-            .newBuilder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(90, TimeUnit.SECONDS)
-            .writeTimeout(90, TimeUnit.SECONDS)
-            .build()
-
     suspend fun inbox(account: HomeAccount): JSONObject =
         withContext(Dispatchers.IO) {
-            request(
-                account,
-                Request
-                    .Builder()
-                    .url(account.url("api/deck-copies/${account.encodedUser}"))
-                    .get()
-                    .build(),
-            )
+            send(AnkiquestApi.request(account, "api/deck-copies/${account.encodedUser}").build())
         }
 
     suspend fun share(
@@ -50,7 +34,7 @@ internal object AnkiquestDeckCopies {
         recipients: List<String>,
         cache: File,
     ) = withContext(Dispatchers.IO) {
-        if (AnkiquestHomeData.account()?.scope != account.scope) throw HomeAccountChanged()
+        AnkiquestApi.requireCurrent(account)
         val packageFile = File(cache, "ankiquest-share-${UUID.randomUUID()}.apkg")
         try {
             CollectionManager.withCol {
@@ -63,7 +47,7 @@ internal object AnkiquestDeckCopies {
                     legacy = false,
                 )
             }
-            if (AnkiquestHomeData.account()?.scope != account.scope) throw HomeAccountChanged()
+            AnkiquestApi.requireCurrent(account)
             if (packageFile.length() > MAX_BYTES) throw TooLarge()
             val url =
                 account
@@ -72,11 +56,9 @@ internal object AnkiquestDeckCopies {
                     .addQueryParameter("deck", deckName)
                     .addQueryParameter("recipients", JSONArray(recipients).toString())
                     .build()
-            request(
-                account,
-                Request
-                    .Builder()
-                    .url(url)
+            send(
+                AnkiquestApi
+                    .request(url, account.token, account.language)
                     .post(packageFile.asRequestBody("application/octet-stream".toMediaType()))
                     .build(),
             )
@@ -93,14 +75,8 @@ internal object AnkiquestDeckCopies {
         withContext(Dispatchers.IO) {
             val file = File.createTempFile("ankiquest-friend-", ".apkg", cache)
             try {
-                val request =
-                    Request
-                        .Builder()
-                        .url(account.url("api/deck-copies/${account.encodedUser}/$id"))
-                        .get()
-                        .build()
-                client.newCall(authorized(account, request)).execute().use { response ->
-                    if (!response.isSuccessful) throw Ankiquest.HttpStatusException(response.code)
+                val request = AnkiquestApi.request(account, "api/deck-copies/${account.encodedUser}/$id").build()
+                AnkiquestApi.call(request, AnkiquestApi.Timeout.TRANSFER) { response ->
                     val body = response.body
                     body.byteStream().use { input ->
                         file.outputStream().use { output ->
@@ -128,28 +104,11 @@ internal object AnkiquestDeckCopies {
         account: HomeAccount,
         id: Long,
     ) = withContext(Dispatchers.IO) {
-        request(
-            account,
-            Request
-                .Builder()
-                .url(account.url("api/deck-copies/${account.encodedUser}/$id"))
-                .delete()
-                .build(),
-        )
+        send(AnkiquestApi.request(account, "api/deck-copies/${account.encodedUser}/$id").delete().build())
     }
 
-    private fun authorized(
-        account: HomeAccount,
-        request: Request,
-    ): Request = request.newBuilder().header("Authorization", "Bearer ${account.token}").build()
-
-    private fun request(
-        account: HomeAccount,
-        request: Request,
-    ): JSONObject =
-        client.newCall(authorized(account, request)).execute().use { response ->
-            if (!response.isSuccessful) throw Ankiquest.HttpStatusException(response.code)
-            val body = response.body.string()
-            if (body.isEmpty()) JSONObject() else JSONObject(body)
+    private fun send(request: Request): JSONObject =
+        AnkiquestApi.call(request, AnkiquestApi.Timeout.TRANSFER) { response ->
+            AnkiquestApi.jsonObject(response)
         }
 }

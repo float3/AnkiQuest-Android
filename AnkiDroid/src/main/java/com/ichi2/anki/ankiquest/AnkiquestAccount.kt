@@ -7,13 +7,11 @@ import android.os.Build
 import com.ichi2.anki.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import timber.log.Timber
+import java.io.IOException
 import java.net.UnknownHostException
-import java.util.concurrent.TimeUnit
 
 /** Signs in with a username and password, or creates an account, and keeps only the device token it returns. */
 object AnkiquestAccount {
@@ -33,12 +31,6 @@ object AnkiquestAccount {
         val token: String,
     )
 
-    private val client =
-        AnkiquestHttp.client
-            .newBuilder()
-            .callTimeout(20, TimeUnit.SECONDS)
-            .build()
-
     fun device(): String = "AnkiDroid (${Build.MODEL})"
 
     internal fun httpRequest(
@@ -55,21 +47,25 @@ object AnkiquestAccount {
             .Builder()
             .url(request.url.trimEnd('/') + if (request.create) "/api/accounts" else "/api/accounts/tokens")
             .header("Accept-Language", AnkiquestLanguage.tag())
-            .post(body.toString().toRequestBody("application/json".toMediaType()))
+            .post(AnkiquestApi.body(body))
             .build()
     }
 
-    /** @throws Ankiquest.HttpStatusException when the server turns the request down */
+    /** The password would cross the internet unencrypted, so it is not sent. */
+    class InsecureServer : IOException("The server address does not use https")
+
+    /**
+     * @throws InsecureServer when [Credentials.url] is plain http to a host outside the local network
+     * @throws AnkiquestHttpException when the server turns the request down
+     */
     suspend fun submit(
         request: Credentials,
         device: String = device(),
     ): Signed =
         withContext(Dispatchers.IO) {
-            client.newCall(httpRequest(request, device)).execute().use { response ->
-                if (!response.isSuccessful) throw Ankiquest.HttpStatusException(response.code)
-                val answer = JSONObject(response.body.string())
-                Signed(request.url.trimEnd('/'), answer.getString("user"), answer.getString("token"))
-            }
+            if (AnkiquestHosts.insecure(request.url)) throw InsecureServer()
+            val answer = AnkiquestApi.anonymous(httpRequest(request, device))
+            Signed(request.url.trimEnd('/'), answer.getString("user"), answer.getString("token"))
         }
 
     fun message(
@@ -78,7 +74,7 @@ object AnkiquestAccount {
         url: String,
     ): String =
         when (error) {
-            is Ankiquest.HttpStatusException ->
+            is AnkiquestHttpException ->
                 when (error.code) {
                     400 -> context.getString(R.string.ankiquest_sign_in_invalid)
                     401 -> context.getString(R.string.ankiquest_sign_in_wrong)
@@ -87,6 +83,7 @@ object AnkiquestAccount {
                     429 -> context.getString(R.string.ankiquest_sign_in_limited)
                     else -> context.getString(R.string.ankiquest_check_http, error.code)
                 }
+            is InsecureServer -> context.getString(R.string.ankiquest_check_insecure, url)
             is UnknownHostException -> context.getString(R.string.ankiquest_check_unreachable, url)
             is IllegalArgumentException -> context.getString(R.string.ankiquest_check_bad_url, url)
             else -> {

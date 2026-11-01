@@ -24,8 +24,8 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
- * Fetches the leaderboard and profile in the background, redraws the widget and raises
- * rank and streak notifications. Runs every 15 minutes and on demand.
+ * Uploads pending reviews and fetches the leaderboard and profile in the background, redraws the
+ * widget and raises rank and streak notifications. Runs every 15 minutes and on demand.
  */
 object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
@@ -62,10 +62,12 @@ object AnkiquestPoll {
     }
 
     /**
+     * Reviews not yet on the server are uploaded first, so the scores fetched next include them.
      * Presentation failures must not skip the private inbox; transient inbox failures need a retry.
      * Optional pictures come after the inbox, so unavailable photos cannot delay messages.
      */
     suspend fun run(context: Context): Result {
+        Ankiquest.uploadPending()
         val prefs = AnkiDroidApp.sharedPrefs()
         val configured = Ankiquest.dashboardUrl() != null
         val cacheScope = AnkiquestHomeData.account(prefs)?.scope
@@ -133,7 +135,7 @@ object AnkiquestPoll {
                 Timber.w(e, "ankiquest completion inbox fetch failed")
                 val transient =
                     e is IOException &&
-                        (e !is Ankiquest.HttpStatusException || e.code == 408 || e.code == 429 || e.code in 500..599)
+                        (e !is AnkiquestHttpException || e.code == 408 || e.code == 429 || e.code in 500..599)
                 if (transient) Result.retry() else Result.success()
             }
         photoBoard?.let { board ->

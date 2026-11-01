@@ -240,7 +240,7 @@ object AnkiquestReply {
         } catch (e: Exception) {
             if (!current(data)) return Outcome.FAILED
             Timber.w(e, "ankiquest reply failed")
-            val done = e is Ankiquest.Rejected || attempt + 1 >= ATTEMPTS
+            val done = e is HomeAccountChanged || (e is AnkiquestHttpException && e.code in 400..499) || attempt + 1 >= ATTEMPTS
             if (done) AnkiquestNotifier.onReplyFailed(context, data)
             if (done) Outcome.FAILED else Outcome.RETRY
         }

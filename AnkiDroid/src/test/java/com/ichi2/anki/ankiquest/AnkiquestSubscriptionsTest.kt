@@ -152,7 +152,7 @@ class AnkiquestSubscriptionsTest : RobolectricTest() {
         runBlocking {
             val original = account
             account = account.copy(token = "")
-            assertFailsWith<SubscriptionHttpException> { repository.load(account) }
+            assertFailsWith<AnkiquestHttpException> { repository.load(account) }
             assertFailsWith<HomeAccountChanged> { repository.setSubscribed(original, "friend", false) }
             assertTrue(requests.isEmpty())
         }
@@ -179,7 +179,7 @@ class AnkiquestSubscriptionsTest : RobolectricTest() {
     fun `unsupported server is surfaced and cannot receive writes`() =
         runBlocking {
             status = 404
-            val error = assertFailsWith<SubscriptionHttpException> { repository.setEnabled(account, false) }
+            val error = assertFailsWith<AnkiquestHttpException> { repository.setEnabled(account, false) }
             assertEquals(404, error.code)
             assertTrue(writes.isEmpty())
         }
@@ -225,7 +225,7 @@ class AnkiquestSubscriptionsTest : RobolectricTest() {
         runBlocking {
             status = 302
             redirect = "http://127.0.0.1:${server.address.port}/redirect-target"
-            val error = assertFailsWith<SubscriptionHttpException> { repository.load(account) }
+            val error = assertFailsWith<AnkiquestHttpException> { repository.load(account) }
             assertEquals(302, error.code)
             assertEquals(1, requests.size)
             assertFalse(requests.any { it.second.contains("redirect-target") })
@@ -252,7 +252,7 @@ class AnkiquestSubscriptionsTest : RobolectricTest() {
         runBlocking {
             for (code in listOf(401, 500)) {
                 postStatus = code
-                val error = assertFailsWith<SubscriptionHttpException> { repository.setSubscribed(account, "friend", false) }
+                val error = assertFailsWith<AnkiquestHttpException> { repository.setSubscribed(account, "friend", false) }
                 assertEquals(code, error.code)
             }
             assertEquals(listOf("GET", "POST", "GET", "POST"), requests.map { it.first })

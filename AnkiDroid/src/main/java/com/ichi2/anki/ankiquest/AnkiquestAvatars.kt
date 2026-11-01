@@ -34,7 +34,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
-import java.util.concurrent.TimeUnit
 
 /** Optional, bounded photos. Nothing in this cache is needed to fetch scores or private messages. */
 object AnkiquestAvatars {
@@ -45,13 +44,6 @@ object AnkiquestAvatars {
     private val mutex = Mutex()
     private val revisionFormat = Regex("[0-9]{1,20}")
     private var nextDownload = 0
-    private val client =
-        AnkiquestHttp.client
-            .newBuilder()
-            .followRedirects(false)
-            .followSslRedirects(false)
-            .callTimeout(3, TimeUnit.SECONDS)
-            .build()
 
     data class Account(
         val base: HttpUrl,
@@ -59,7 +51,7 @@ object AnkiquestAvatars {
         val token: String,
     ) {
         /** Equal to [HomeAccount.scope] for the same account, without exposing its credential. */
-        val scope: String = sha256(base.toString().removeSuffix("/"), user, token)
+        val scope: String by lazy { sha256(base.toString().removeSuffix("/"), user, token) }
 
         override fun toString(): String = "AvatarAccount(base=$base, user=$user)"
 
@@ -109,16 +101,24 @@ object AnkiquestAvatars {
         }
     }
 
-    private fun requireResponse(
+    /** Caller holds mutex. Sends [request] for [captured] and drops every photo when the server no longer accepts its credentials. */
+    private fun <T> callLocked(
         captured: Account,
-        response: Response,
-    ) {
-        requireCurrentLocked(captured)
-        if (!response.isSuccessful) {
-            if (response.code == 401 || response.code == 403) cached = Cache("", emptyMap())
-            throw Ankiquest.HttpStatusException(response.code)
+        request: Request,
+        timeout: AnkiquestApi.Timeout,
+        read: (Response) -> T,
+    ): T =
+        try {
+            AnkiquestApi.call(request, timeout, { requireCurrentLocked(captured) }, read)
+        } catch (e: AnkiquestHttpException) {
+            if (e.code == 401 || e.code == 403) cached = Cache("", emptyMap())
+            throw e
         }
-    }
+
+    private fun request(
+        account: Account,
+        url: HttpUrl,
+    ): Request.Builder = AnkiquestApi.request(url, account.token, AnkiquestLanguage.tag())
 
     fun bitmap(user: String): Bitmap? {
         val account = runCatching { account() }.getOrNull() ?: return null
@@ -146,23 +146,19 @@ object AnkiquestAvatars {
                 nextDownload = 0
             }
             val manifest =
-                client
-                    .newCall(
-                        Request
-                            .Builder()
-                            .url(
-                                account.base
-                                    .newBuilder()
-                                    .addPathSegments("api/avatars")
-                                    .build(),
-                            ).apply {
-                                if (account.token.isNotEmpty()) header("Authorization", "Bearer ${account.token}")
-                            }.build(),
-                    ).execute()
-                    .use { response ->
-                        requireResponse(account, response)
-                        JSONObject(response.body.byteStream().use { it.boundedBytes(256 * 1024).toString(Charsets.UTF_8) })
-                    }
+                callLocked(
+                    account,
+                    request(
+                        account,
+                        account.base
+                            .newBuilder()
+                            .addPathSegments("api/avatars")
+                            .build(),
+                    ).build(),
+                    AnkiquestApi.Timeout.QUICK,
+                ) { response ->
+                    JSONObject(response.body.byteStream().use { it.boundedBytes(256 * 1024).toString(Charsets.UTF_8) })
+                }
             requireCurrentLocked(account)
             if (cached.scope != account.scope) nextDownload = 0
             val previous = cached.takeIf { it.scope == account.scope }?.photos.orEmpty()
@@ -192,16 +188,8 @@ object AnkiquestAvatars {
                             .newBuilder()
                             .addQueryParameter("v", revision)
                             .build()
-                    val request =
-                        Request
-                            .Builder()
-                            .url(url)
-                            .apply {
-                                if (account.token.isNotEmpty()) header("Authorization", "Bearer ${account.token}")
-                            }.build()
                     val bitmap =
-                        client.newCall(request).execute().use { response ->
-                            requireResponse(account, response)
+                        callLocked(account, request(account, url).build(), AnkiquestApi.Timeout.QUICK) { response ->
                             decodePhoto(response.body.byteStream().use { it.boundedBytes(MAX_IMAGE_BYTES) }, 64)
                         }
                     requireCurrentLocked(account)
@@ -211,7 +199,7 @@ object AnkiquestAvatars {
                     throw e
                 } catch (e: AccountChanged) {
                     throw e
-                } catch (e: Ankiquest.HttpStatusException) {
+                } catch (e: AnkiquestHttpException) {
                     if (e.code == 401 || e.code == 403) throw e
                     Timber.d(e, "ankiquest optional photo unavailable")
                 } catch (e: Exception) {
@@ -242,32 +230,26 @@ object AnkiquestAvatars {
         require(bytes.size <= MAX_IMAGE_BYTES) { "This picture is too large." }
         mutex.withLock {
             requireCurrentLocked(account)
-            client
-                .newCall(
-                    Request
-                        .Builder()
-                        .url(account.url())
-                        .header("Authorization", "Bearer ${account.token}")
-                        .post(bytes.toRequestBody("image/png".toMediaType()))
-                        .build(),
-                ).execute()
-                .use { response ->
-                    requireResponse(account, response)
-                    val revision =
-                        JSONObject(
-                            response.body.byteStream().use { it.boundedBytes(4096).toString(Charsets.UTF_8) },
-                        ).getString("revision")
-                    check(revisionFormat.matches(revision)) { "Invalid profile picture revision." }
-                    requireCurrentLocked(account)
-                    val photos =
-                        cached
-                            .takeIf { it.scope == account.scope }
-                            ?.photos
-                            .orEmpty()
-                            .toMutableMap()
-                    photos[account.user] = Photo(revision, circle(bitmap.scale(64, 64)))
-                    cached = Cache(account.scope, photos.toMap())
-                }
+            callLocked(
+                account,
+                request(account, account.url()).post(bytes.toRequestBody("image/png".toMediaType())).build(),
+                AnkiquestApi.Timeout.STANDARD,
+            ) { response ->
+                val revision =
+                    JSONObject(
+                        response.body.byteStream().use { it.boundedBytes(4096).toString(Charsets.UTF_8) },
+                    ).getString("revision")
+                check(revisionFormat.matches(revision)) { "Invalid profile picture revision." }
+                requireCurrentLocked(account)
+                val photos =
+                    cached
+                        .takeIf { it.scope == account.scope }
+                        ?.photos
+                        .orEmpty()
+                        .toMutableMap()
+                photos[account.user] = Photo(revision, circle(bitmap.scale(64, 64)))
+                cached = Cache(account.scope, photos.toMap())
+            }
         }
     }
 
@@ -276,19 +258,9 @@ object AnkiquestAvatars {
             requireToken(account)
             mutex.withLock {
                 requireCurrentLocked(account)
-                client
-                    .newCall(
-                        Request
-                            .Builder()
-                            .url(account.url())
-                            .header("Authorization", "Bearer ${account.token}")
-                            .delete()
-                            .build(),
-                    ).execute()
-                    .use { response ->
-                        requireResponse(account, response)
-                        if (cached.scope == account.scope) cached = Cache(account.scope, cached.photos - account.user)
-                    }
+                callLocked(account, request(account, account.url()).delete().build(), AnkiquestApi.Timeout.STANDARD) {
+                    if (cached.scope == account.scope) cached = Cache(account.scope, cached.photos - account.user)
+                }
             }
         }
 
