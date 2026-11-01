@@ -18,8 +18,7 @@ internal object AnkiquestCompanion {
 
     fun selected(): String {
         val prefs = AnkiDroidApp.sharedPrefsOrNull() ?: return "aki"
-        val settings = prefs.all
-        val account = HomeAccount.from(settings, (settings["username"] as? String).orEmpty()) ?: return "aki"
+        val account = HomeAccount.current(prefs) ?: return "aki"
         return normalize(prefs.getString(KEY_PREFIX + account.scope, "aki"))
     }
 
@@ -54,11 +53,16 @@ internal object AnkiquestCompanion {
             }
         }
 
+    /** Shows the chosen companion's version of [aki] in [view], decoded for [size] pixels. */
     fun show(
         view: ImageView,
         @DrawableRes aki: Int,
+        size: Int,
     ) {
         view.isVisible = visible()
-        if (view.isVisible) view.setImageResource(resource(aki))
+        if (!view.isVisible) return
+        val art = resource(aki)
+        val bitmap = AnkiquestArt.bitmap(view.context, art, size)
+        if (bitmap != null) view.setImageBitmap(bitmap) else view.setImageResource(art)
     }
 }

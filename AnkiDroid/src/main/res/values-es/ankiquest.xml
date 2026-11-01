@@ -8,7 +8,7 @@
     <string name="ankiquest_notifications_title">Recordatorios y alertas</string>
     <string name="ankiquest_notifications_summary">Recordatorios, avisos y alertas</string>
     <string name="ankiquest_sharing_title">Amigos y contenido compartido</string>
-    <string name="ankiquest_sharing_summary">Avisos de mazos y suscripciones</string>
+    <string name="ankiquest_sharing_summary">Logros, avisos de mazos y suscripciones</string>
     <string name="ankiquest_maintenance_title">Aplicación y datos</string>
     <string name="ankiquest_maintenance_summary">Subida de repasos y actualizaciones</string>
     <string name="ankiquest_notification_events_title">Cuándo avisar</string>
@@ -159,4 +159,5 @@
     <string name="ankiquest_streak_protected">Racha protegida · Aún no ha estudiado</string>
     <string name="ankiquest_streak_unknown">Actualiza para ver si ha estudiado hoy</string>
     <string name="ankiquest_streak_description">Racha de %1$s días · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">No se pudo preparar la conexión. Cierra esta pantalla y vuelve a intentarlo.</string>
 </resources>

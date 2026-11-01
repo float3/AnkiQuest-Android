@@ -8,7 +8,7 @@
     <string name="ankiquest_notifications_title">Erinnerungen und Hinweise</string>
     <string name="ankiquest_notifications_summary">Erinnerungen, Hinweise und Alarme</string>
     <string name="ankiquest_sharing_title">Freunde und Teilen</string>
-    <string name="ankiquest_sharing_summary">Deckmeldungen und Abonnements</string>
+    <string name="ankiquest_sharing_summary">Erfolge, Deckmeldungen und Abonnements</string>
     <string name="ankiquest_maintenance_title">App und Daten</string>
     <string name="ankiquest_maintenance_summary">Uploads und App-Updates</string>
     <string name="ankiquest_notification_events_title">Wann benachrichtigen</string>
@@ -160,4 +160,5 @@
     <string name="ankiquest_streak_protected">Lernserie geschützt · Heute noch nicht gelernt</string>
     <string name="ankiquest_streak_unknown">Aktualisieren, um den heutigen Lernstatus zu sehen</string>
     <string name="ankiquest_streak_description">Lernserie von %1$s Tagen · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Deine Verbindung konnte nicht vorbereitet werden. Schließe diesen Bildschirm und versuch es noch einmal.</string>
 </resources>

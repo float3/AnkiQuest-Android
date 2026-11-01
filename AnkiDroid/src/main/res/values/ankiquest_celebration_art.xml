@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Placeholder artwork until the images requested in float3/ankiquest#88 land.
-     To use a new image, delete its line and add a PNG with the same name to drawable-nodpi. -->
+     To use a new image, delete its line and add a WebP with the same name to drawable-nodpi. -->
 <resources>
     <!-- An achievement, level, personal best or conquered deck -->
     <drawable name="aki_achievement">@drawable/aki_winner</drawable>

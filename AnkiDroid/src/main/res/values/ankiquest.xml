@@ -12,7 +12,7 @@
     <string name="ankiquest_notifications_summary">Reminders, nudges and alert delivery</string>
     <string name="ankiquest_sharing_screen_key" translatable="false">ankiquestSharingScreen</string>
     <string name="ankiquest_sharing_title" maxLength="41">Friends &amp; sharing</string>
-    <string name="ankiquest_sharing_summary">Deck updates and subscriptions</string>
+    <string name="ankiquest_sharing_summary">Wins, deck updates and subscriptions</string>
     <string name="ankiquest_maintenance_screen_key" translatable="false">ankiquestMaintenanceScreen</string>
     <string name="ankiquest_maintenance_title" maxLength="41">App &amp; data</string>
     <string name="ankiquest_maintenance_summary">Review uploads and app updates</string>
@@ -200,4 +200,5 @@
     <string name="ankiquest_streak_protected">Streak protected · Not studied yet</string>
     <string name="ankiquest_streak_unknown">Refresh to see today\'s study status</string>
     <string name="ankiquest_streak_description">%1$s day streak · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Unable to prepare your connection. Close this screen and try again.</string>
 </resources>

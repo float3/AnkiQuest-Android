@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -29,8 +30,12 @@ import java.util.concurrent.TimeUnit
 object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
     private const val NOW_NAME = "ankiquestPollNow"
-    private const val PREF_CACHE = "ankiquestWidgetLeaderboard"
-    private const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
+
+    @VisibleForTesting
+    internal const val PREF_CACHE = "ankiquestWidgetLeaderboard"
+
+    @VisibleForTesting
+    internal const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
 
     fun schedule(context: Context) {
         try {
@@ -56,10 +61,16 @@ object AnkiquestPoll {
         }
     }
 
-    /** Presentation failures must not skip the private inbox; transient inbox failures need a retry. */
+    /**
+     * Presentation failures must not skip the private inbox; transient inbox failures need a retry.
+     * Optional pictures come after the inbox, so unavailable photos cannot delay messages.
+     */
     suspend fun run(context: Context): Result {
         val prefs = AnkiDroidApp.sharedPrefs()
         val configured = Ankiquest.dashboardUrl() != null
+        val cacheScope = AnkiquestHomeData.account(prefs)?.scope
+        val cacheKey = scopedKey(PREF_CACHE, cacheScope)
+        val cacheAtKey = scopedKey(PREF_CACHE_AT, cacheScope)
         val photoAccount = runCatching { AnkiquestAvatars.account() }.getOrNull()
         val photoScope = photoAccount?.scope
         var photoBoard: JSONArray? = null
@@ -81,18 +92,18 @@ object AnkiquestPoll {
                 if (board != null) {
                     val now = TimeManager.time.intTimeMS()
                     prefs.edit {
-                        putString(PREF_CACHE, board.toString())
-                        putLong(PREF_CACHE_AT, now)
+                        putString(cacheKey, board.toString())
+                        putLong(cacheAtKey, now)
                     }
                     AnkiquestWidget.render(context, board, now, offline = false)
                     photoBoard = board
                     photoFetchedAt = now
                     AnkiquestNotifier.onLeaderboard(context)
                 } else {
-                    val cached = prefs.getString(PREF_CACHE, null)?.let { JSONArray(it) } ?: JSONArray()
-                    AnkiquestWidget.render(context, cached, prefs.getLong(PREF_CACHE_AT, 0), offline = true)
+                    val cached = prefs.getString(cacheKey, null)?.let { JSONArray(it) } ?: JSONArray()
+                    AnkiquestWidget.render(context, cached, prefs.getLong(cacheAtKey, 0), offline = true)
                     photoBoard = cached
-                    photoFetchedAt = prefs.getLong(PREF_CACHE_AT, 0)
+                    photoFetchedAt = prefs.getLong(cacheAtKey, 0)
                     photoOffline = true
                 }
             }
@@ -125,18 +136,17 @@ object AnkiquestPoll {
                         (e !is Ankiquest.HttpStatusException || e.code == 408 || e.code == 429 || e.code in 500..599)
                 if (transient) Result.retry() else Result.success()
             }
-        // Optional pictures are fetched after the inbox, so unavailable photos cannot delay messages.
         photoBoard?.let { board ->
             val stillCurrent = {
                 photoScope != null &&
                     photoScope == runCatching { AnkiquestAvatars.account()?.scope }.getOrNull() &&
-                    prefs.getLong(PREF_CACHE_AT, 0) == photoFetchedAt &&
-                    prefs.getString(PREF_CACHE, null) == board.toString()
+                    prefs.getLong(cacheAtKey, 0) == photoFetchedAt &&
+                    prefs.getString(cacheKey, null) == board.toString()
             }
             if (!stillCurrent()) return@let
             try {
                 AnkiquestAvatars.refresh(
-                    (0 until board.length()).map { board.getJSONObject(it).getString("user") },
+                    board.objects().map { it.getString("user") },
                     photoAccount,
                 )
                 if (stillCurrent()) AnkiquestWidget.render(context, board, photoFetchedAt, photoOffline)

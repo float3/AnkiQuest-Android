@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Choice
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Load
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Settings
@@ -24,25 +25,33 @@ class AnkiquestDailyGoalTest {
     private val prefs = RuntimeEnvironment.getApplication().sharedPrefs().also { it.edit { clear() } }
 
     @Test
-    fun `the default goal is today's cards plus a tenth of the backlog`() {
+    fun `the default goal is today's cards plus the backlog spread over thirty days`() {
         val goal = AnkiquestDailyGoal.goal(Load(day = 5, studiedCards = 0, minutes = 0, dueToday = 40, backlog = 300), Settings())
-        assertEquals(30, goal.backlogShare)
-        assertEquals(70, goal.target)
+        assertEquals(10, goal.extra)
+        assertEquals(50, goal.target)
         assertEquals(300, goal.backlog)
+        assertEquals(30, goal.daysLeft)
     }
 
     @Test
-    fun `a small backlog still asks for at least one card and never more than it holds`() {
-        assertEquals(1, AnkiquestDailyGoal.backlogShare(3, 10))
-        assertEquals(0, AnkiquestDailyGoal.backlogShare(0, 10))
-        assertEquals(7, AnkiquestDailyGoal.backlogShare(7, 100))
-        assertEquals(7, AnkiquestDailyGoal.backlogShare(7, 250))
+    fun `the backlog is spread over the days left in the plan`() {
+        val load = Load(5, studiedCards = 0, minutes = 0, dueToday = 40, backlog = 300, studyDay = 20_400)
+        val plan = Settings(backlogDays = 30, since = 20_390)
+        val goal = AnkiquestDailyGoal.goal(load, plan)
+        assertEquals(20, goal.daysLeft)
+        assertEquals(15, goal.extra)
+        assertEquals(55, goal.target)
+        val lastDay = AnkiquestDailyGoal.goal(load.copy(backlog = 7), plan.copy(since = 20_371))
+        assertEquals(1, lastDay.daysLeft)
+        assertEquals(7, lastDay.extra, "the last day takes what is left")
+        val ended = AnkiquestDailyGoal.goal(load, plan.copy(since = 20_370))
+        assertEquals(30, ended.daysLeft, "a plan that ran out starts again")
     }
 
     @Test
     fun `cards studied before the goal is set stay part of it`() {
         val goal = AnkiquestDailyGoal.goal(Load(5, studiedCards = 25, minutes = 9, dueToday = 15, backlog = 100), Settings())
-        assertEquals(25 + 15 + 10, goal.target)
+        assertEquals(25 + 15 + 4, goal.target)
     }
 
     @Test
@@ -56,11 +65,35 @@ class AnkiquestDailyGoalTest {
     fun `the goal is fixed for the day so studying does not move it`() {
         val morning = AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs)
         val evening = AnkiquestDailyGoal.status(Load(5, 70, 30, 0, 270), prefs)
-        assertEquals(70, morning.goal.target)
-        assertEquals(70, evening.goal.target)
+        assertEquals(50, morning.goal.target)
+        assertEquals(50, evening.goal.target)
         assertTrue(evening.goalDone)
         val tomorrow = AnkiquestDailyGoal.status(Load(6, 0, 0, 20, 280), prefs)
-        assertEquals(48, tomorrow.goal.target)
+        assertEquals(30, tomorrow.goal.target)
+    }
+
+    @Test
+    fun `the day's goal is kept for each account`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+        }
+        assertEquals(50, AnkiquestDailyGoal.status(Load(5, 0, 0, 40, 300), prefs).goal.target)
+        prefs.edit { putString(Ankiquest.PREF_USER, "hill") }
+        assertEquals(40, AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 300), prefs).goal.target)
+        prefs.edit { putString(Ankiquest.PREF_USER, "cerro") }
+        assertEquals(50, AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 300), prefs).goal.target)
+    }
+
+    @Test
+    fun `an old daily backlog percentage becomes the closest plan length`() {
+        prefs.edit {
+            putString(AnkiquestDailyGoal.PREF_MODE, "backlog")
+            putString(AnkiquestDailyGoal.PREF_BACKLOG_PERCENT, "20")
+        }
+        assertEquals(Choice(Mode.BACKLOG, 14), AnkiquestDailyGoal.localChoice(prefs))
+        prefs.edit { putString(AnkiquestDailyGoal.PREF_BACKLOG_PERCENT, "10") }
+        assertEquals(Choice.DEFAULT, AnkiquestDailyGoal.localChoice(prefs))
     }
 
     @Test
@@ -85,5 +118,18 @@ class AnkiquestDailyGoalTest {
         assertTrue(AnkiquestDailyGoal.status(Load(5, 14, 10, 30, 0), prefs).minimumDone)
         AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject()), prefs)
         assertTrue(AnkiquestDailyGoal.status(Load(5, 1, 0, 30, 0), prefs).minimumDone, "older servers count any review")
+    }
+
+    @Test
+    fun `another account never inherits the streak minimum`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+        }
+        AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject().put("streak_minutes", 10)), prefs)
+        prefs.edit { putString(Ankiquest.PREF_USER, "hill") }
+        assertEquals(0, AnkiquestDailyGoal.streakMinutes(prefs))
+        prefs.edit { putString(Ankiquest.PREF_USER, "cerro") }
+        assertEquals(10, AnkiquestDailyGoal.streakMinutes(prefs))
     }
 }

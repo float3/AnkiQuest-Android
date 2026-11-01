@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.view.Gravity
 import android.view.View
 import android.widget.ImageView
@@ -29,6 +28,7 @@ internal object AnkiquestAki {
         FREEZE(R.drawable.aki_freeze, R.string.aki_protected),
     }
 
+    /** Aki's mood for today; the collection, not the server, says whether cards are still due. */
     fun mood(
         local: HomeLocal?,
         profile: JSONObject?,
@@ -36,7 +36,6 @@ internal object AnkiquestAki {
     ): Mood {
         val dayEndsAt = profile?.optLong("day_ends_at") ?: 0L
         val current = profile?.takeUnless { dayEndsAt > 0L && dayEndsAt <= now }
-        // The collection is the source of truth for cards still due locally.
         if (current?.optString("streak_state") == "protected" && current.optJSONObject("today")?.optLong("reviews", 0) == 0L) {
             return Mood.FREEZE
         }
@@ -60,7 +59,7 @@ internal object AnkiquestAki {
         size: Int = 80,
     ): ImageView =
         ImageView(context).apply {
-            AnkiquestCompanion.show(this, resource)
+            AnkiquestCompanion.show(this, resource, dp(context, size))
             scaleType = ImageView.ScaleType.FIT_CENTER
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             layoutParams = LinearLayout.LayoutParams(dp(context, size), dp(context, size))
@@ -94,10 +93,10 @@ internal object AnkiquestAki {
         if (!AnkiquestCompanion.visible()) {
             null
         } else {
-            BitmapFactory.decodeResource(
-                context.resources,
+            AnkiquestArt.bitmap(
+                context,
                 AnkiquestCompanion.resource(art),
-                BitmapFactory.Options().apply { inSampleSize = 8 },
+                context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width),
             )
         }
 
