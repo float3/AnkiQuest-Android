@@ -21,7 +21,6 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Bundle
 import android.text.util.Linkify
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
@@ -29,7 +28,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup.MarginLayoutParams
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
@@ -41,7 +39,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.AppCompatCheckBox
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.appcompat.widget.TooltipCompat
@@ -104,10 +101,8 @@ import com.ichi2.anki.android.back.exitViaDoubleTapBackCallback
 import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.android.view.locationInWindow
-import com.ichi2.anki.ankiquest.AnkiquestActivity
-import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
-import com.ichi2.anki.ankiquest.AnkiquestGoalCelebration
-import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
+import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
+import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.ankiquest.AnkiquestStudySession
 import com.ichi2.anki.common.android.AdaptionUtil
@@ -1299,13 +1294,7 @@ open class DeckPicker :
         // activity (see StudyOptionsFragment), and the menu host dispatches creation,
         // preparation and selection to them. This activity never drives a fragment's menu.
         menuInflater.inflate(R.menu.deck_picker, menu)
-        if (AnkiquestNavigation.enabled() && !fragmented) {
-            menu.findItem(R.id.action_ankiquest)?.apply {
-                setTitle(CommonString.browse_cards)
-                setIcon(R.drawable.ic_flashcard_black)
-                setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-            }
-        }
+        AnkiquestDeckPickerHooks.decorateMenu(this, menu)
         menu.findItem(R.id.deck_picker_action_filter)?.let {
             toolbarSearchItem = it
             setupSearchIcon(it)
@@ -1516,6 +1505,7 @@ open class DeckPicker :
         if (drawerToggle.onOptionsItemSelected(item)) {
             return true
         }
+        if (AnkiquestDeckPickerHooks.onOptionsItemSelected(this, item, ::openCardBrowser)) return true
         when (item.itemId) {
             R.id.action_undo -> {
                 Timber.i("DeckPicker:: Undo button pressed")
@@ -1536,14 +1526,6 @@ open class DeckPicker :
                     }
                 } else {
                     sync()
-                }
-                return true
-            }
-            R.id.action_ankiquest -> {
-                if (AnkiquestNavigation.enabled() && !fragmented) {
-                    openCardBrowser()
-                } else {
-                    startActivity(AnkiquestHomeActivity.intent(this))
                 }
                 return true
             }
@@ -1623,84 +1605,8 @@ open class DeckPicker :
         ExportDialogFragment.newInstance().show(supportFragmentManager, "exportDialog")
     }
 
-    /** Shows the streak-minimum or daily-goal popup when this session reached one. */
-    private suspend fun celebrateDailyGoal(summary: AnkiquestStudySession.Summary): Boolean {
-        if (!AnkiquestDailyGoal.celebrationsEnabled()) return false
-        val status = AnkiquestDailyGoal.status()
-        val celebration = AnkiquestDailyGoal.claim(status) ?: return false
-        AnkiquestGoalCelebration.show(
-            this,
-            celebration,
-            status,
-            session = getString(R.string.ankiquest_summary_body, summary.reviews, summary.duration(this), summary.remaining),
-            continueStudying = if (summary.remaining > 0) ({ openReviewer() }) else null,
-            openProgress = { startActivity(AnkiquestActivity.intent(this, null)) },
-        )
-        return true
-    }
-
     private fun processReviewResults(resultCode: Int) {
-        if (AnkiquestNavigation.enabled() &&
-            (resultCode == AbstractFlashcardViewer.RESULT_DEFAULT || resultCode == AbstractFlashcardViewer.RESULT_NO_MORE_CARDS)
-        ) {
-            launchCatchingTask {
-                val summary = AnkiquestStudySession.finish()
-                val celebrated = summary != null && celebrateDailyGoal(summary)
-                if (summary != null && !celebrated && sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
-                    val neverAgain =
-                        AppCompatCheckBox(this@DeckPicker).apply {
-                            setText(R.string.ankiquest_summary_dont_show_again)
-                        }
-                    val content =
-                        LinearLayout(this@DeckPicker).apply {
-                            orientation = LinearLayout.VERTICAL
-                            val padding = (20 * resources.displayMetrics.density).toInt()
-                            setPadding(padding, 0, padding, 0)
-                            addView(
-                                com.ichi2.anki.ankiquest.AnkiquestAki
-                                    .image(
-                                        this@DeckPicker,
-                                        if (summary.remaining == 0) R.drawable.aki_celebrate else R.drawable.aki_streak,
-                                        112,
-                                    ).apply {
-                                        layoutParams =
-                                            LinearLayout
-                                                .LayoutParams(
-                                                    layoutParams,
-                                                ).apply { gravity = Gravity.CENTER_HORIZONTAL }
-                                    },
-                            )
-                            addView(neverAgain)
-                        }
-                    val builder =
-                        AlertDialog
-                            .Builder(this@DeckPicker)
-                            .setTitle(R.string.ankiquest_summary_title)
-                            .setView(content)
-                            .setMessage(
-                                getString(
-                                    R.string.ankiquest_summary_body,
-                                    summary.reviews,
-                                    summary.duration(this@DeckPicker),
-                                    summary.remaining,
-                                ),
-                            ).setNegativeButton(CommonString.multimedia_editor_field_editing_done, null)
-                            .setNeutralButton(R.string.ankiquest_summary_progress) { _, _ ->
-                                startActivity(AnkiquestActivity.intent(this@DeckPicker, null))
-                            }
-                    if (summary.remaining > 0) {
-                        builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ -> openReviewer() }
-                    }
-                    builder.show().setOnDismissListener {
-                        if (neverAgain.isChecked) {
-                            sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
-                        }
-                    }
-                }
-                fragment?.refreshInterface()
-            }
-            return
-        }
+        if (AnkiquestDeckPickerHooks.onReviewResult(this, resultCode, ::openReviewer)) return
         if (resultCode == AbstractFlashcardViewer.RESULT_NO_MORE_CARDS) {
             launchCatchingTask {
                 val state = withCol { currentDeckStudyState() }
@@ -1717,11 +1623,7 @@ open class DeckPicker :
         // As `loadDeckCounts` is cancelled in `migrate()`
         val message = dialogHandler.popMessage()
         super.onResume()
-        if (ankiquestNavigationMode?.let { it != AnkiquestNavigation.enabled() } == true) {
-            intent.putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
-            recreate()
-            return
-        }
+        if (AnkiquestDeckPickerHooks.recreateIfNavigationChanged(this, ankiquestNavigationMode)) return
         if (navDrawerIsReady() && hasCollectionStoragePermissions()) {
             refreshState()
         }
@@ -1880,26 +1782,12 @@ open class DeckPicker :
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if ((!bottomNavigationEnabled && (!AnkiquestNavigation.enabled() || fragmented)) ||
-            event.action != KeyEvent.ACTION_DOWN ||
-            !event.isAltPressed
-        ) {
+        if (AnkiquestDeckPickerHooks.dispatchNavigationKey(this, event)) return true
+        if (!bottomNavigationEnabled || event.action != KeyEvent.ACTION_DOWN || !event.isAltPressed) {
             return super.dispatchKeyEvent(event)
         }
 
         val bottomNavigation = binding.bottomNavigation ?: return super.dispatchKeyEvent(event)
-        if (AnkiquestNavigation.enabled()) {
-            val target =
-                when (event.keyCode) {
-                    KeyEvent.KEYCODE_1 -> R.id.ankiquest_nav_today
-                    KeyEvent.KEYCODE_2 -> R.id.ankiquest_nav_friends
-                    KeyEvent.KEYCODE_3 -> R.id.ankiquest_nav_progress
-                    KeyEvent.KEYCODE_4 -> R.id.ankiquest_nav_decks
-                    else -> return super.dispatchKeyEvent(event)
-                }
-            bottomNavigation.selectedItemId = target
-            return true
-        }
         val destination =
             when (event.keyCode) {
                 KeyEvent.KEYCODE_1 -> NavigationItem.HOME
@@ -2068,17 +1956,13 @@ open class DeckPicker :
      */
     private fun onFinishedStartup() {
         launchCatchingTask {
-            val studyRequested = intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK)
-            if (handleAnkiquestEntry()) {
-                // The local destination opens before any optional network work.
-                // An explicit Study action must not start a competing sync.
-                if (!studyRequested) automaticSync(runInBackground = true)
-                return@launchCatchingTask
-            }
-            val synced = automaticSync()
-            if (!synced) {
+            val ankiquestHandled =
+                AnkiquestDeckPickerHooks.onFinishedStartup(this@DeckPicker, ::openReviewer) { automaticSync(runInBackground = true) }
+            if (ankiquestHandled) return@launchCatchingTask
+            if (!automaticSync()) {
                 BackupPromptDialog.showIfAvailable(this@DeckPicker)
             }
+            AnkiquestGoalDialog.offerSetup(this@DeckPicker)
         }
     }
 
@@ -2613,36 +2497,6 @@ open class DeckPicker :
         reviewLauncher.navigate(ReviewDeckDestination.CurrentDeck)
     }
 
-    /** Consume a home action once, after collection setup, without depending on deck-list rendering. */
-    private suspend fun handleAnkiquestEntry(): Boolean {
-        if (intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK)) {
-            val deckId = intent.getLongExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK, 0)
-            intent.removeExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK)
-            intent.putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
-            val available =
-                withCol {
-                    if (decks.get(deckId) == null) {
-                        null
-                    } else {
-                        decks.select(deckId)
-                        sched.deckDueTree().find(deckId)?.hasCardsReadyToStudy() == true
-                    }
-                }
-            when (available) {
-                true -> openReviewer()
-                false -> showSnackbar(R.string.ankiquest_deck_ready_later)
-                null -> showSnackbar(R.string.ankiquest_missing_deck)
-            }
-            return true
-        }
-        if (!fragmented && AnkiquestNavigation.opensToday(intent)) {
-            intent.putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
-            startActivity(AnkiquestHomeActivity.intent(this))
-            return true
-        }
-        return false
-    }
-
     private fun createSubDeckDialog(did: DeckId) {
         val createDeckDialog =
             CreateDeckDialog(
@@ -2689,22 +2543,8 @@ open class DeckPicker :
             fun bottomNavShortcut(
                 keys: String,
                 destination: NavigationItem,
-            ) = if (bottomNavigationEnabled || (AnkiquestNavigation.enabled() && !fragmented)) {
-                val label =
-                    if (AnkiquestNavigation.enabled()) {
-                        when (destination) {
-                            NavigationItem.HOME -> R.string.ankiquest_nav_today
-                            NavigationItem.BROWSER -> R.string.ankiquest_nav_friends
-                            NavigationItem.STATS -> R.string.ankiquest_nav_progress
-                            NavigationItem.MORE -> R.string.ankiquest_nav_decks
-                        }
-                    } else {
-                        destination.shortcutLabel
-                    }
-                shortcut(keys, label)
-            } else {
-                null
-            }
+            ) = AnkiquestDeckPickerHooks.navigationShortcut(this, keys, destination)
+                ?: if (bottomNavigationEnabled) shortcut(keys, destination.shortcutLabel) else null
 
             return ShortcutGroup(
                 listOfNotNull(
@@ -2790,11 +2630,7 @@ open class DeckPicker :
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         this.intent = intent
-        if (intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK) &&
-            ankiquestNavigationMode == AnkiquestNavigation.enabled()
-        ) {
-            launchCatchingTask { handleAnkiquestEntry() }
-        }
+        AnkiquestDeckPickerHooks.onNewIntent(this, ankiquestNavigationMode, ::openReviewer)
         if (intent.hasExtra(EXTRA_SYNC_FROM_LOGIN)) {
             Timber.i("Sync requested from Login")
             this.syncOnResume = true

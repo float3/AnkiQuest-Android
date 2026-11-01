@@ -82,9 +82,10 @@ class AnkiquestPollTest : RobolectricTest() {
                 AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
             }
             if (path == "/api/avatars" && replaceBoardDuringAvatars) {
+                val fetchedAt = cacheKey(AnkiquestPoll.PREF_CACHE_AT)
                 AnkiDroidApp.sharedPrefs().edit {
-                    putLong("ankiquestWidgetLeaderboardAt", AnkiDroidApp.sharedPrefs().getLong("ankiquestWidgetLeaderboardAt", 0) + 1)
-                    putString("ankiquestWidgetLeaderboard", "[{\"user\":\"newer\"}]")
+                    putLong(fetchedAt, AnkiDroidApp.sharedPrefs().getLong(fetchedAt, 0) + 1)
+                    putString(cacheKey(AnkiquestPoll.PREF_CACHE), "[{\"user\":\"newer\"}]")
                 }
             }
             val inbox = path.startsWith("/api/notifications/")
@@ -115,9 +116,10 @@ class AnkiquestPollTest : RobolectricTest() {
             putString(Ankiquest.PREF_URL, url)
             putString(Ankiquest.PREF_USER, "cerro")
             putString(Ankiquest.PREF_TOKEN, "test-token")
-            remove("ankiquestWidgetLeaderboard")
         }
     }
+
+    private fun cacheKey(base: String) = scopedKey(base, AnkiquestHomeData.account()?.scope)
 
     @After
     fun stopPollingServer() {
@@ -162,7 +164,7 @@ class AnkiquestPollTest : RobolectricTest() {
     fun `corrupt cached leaderboard does not prevent inbox delivery`() =
         runBlocking {
             leaderboardStatus = 503
-            AnkiDroidApp.sharedPrefs().edit { putString("ankiquestWidgetLeaderboard", "invalid JSON") }
+            AnkiDroidApp.sharedPrefs().edit { putString(cacheKey(AnkiquestPoll.PREF_CACHE), "invalid JSON") }
 
             assertEquals(Result.success(), worker().doWork())
 

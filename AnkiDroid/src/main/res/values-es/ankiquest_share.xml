@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_share">Compartir</string>
+    <string name="ankiquest_share_title">Compartir este logro</string>
+    <string name="ankiquest_share_friends">Con mis amigos de AnkiQuest</string>
+    <string name="ankiquest_share_elsewhere">En otro lugar…</string>
+    <string name="ankiquest_share_text">%1$s: %2$s
+Estudiá conmigo en AnkiQuest: %3$s</string>
+    <string name="ankiquest_share_text_offline">%1$s: %2$s
+Estudio con AnkiQuest.</string>
+    <string name="ankiquest_share_nobody">Nadie nuevo lo recibió: tus amigos ya lo tienen, o todavía no tenés amigos en AnkiQuest.</string>
+    <string name="ankiquest_share_failed">No se pudo compartir. Revisá tu conexión y volvé a intentarlo.</string>
+    <plurals name="ankiquest_share_sent">
+        <item quantity="one">Compartido con %d amigo</item>
+        <item quantity="other">Compartido con %d amigos</item>
+    </plurals>
+    <string name="ankiquest_share_account_changed">Este logro es de una cuenta de AnkiQuest que ya no tiene la sesión iniciada.</string>
+    <string name="ankiquest_cheer">🎉 Aplaudir</string>
+    <string name="ankiquest_cheer_sent">🎉 Aplaudiste: %1$s</string>
+    <string name="ankiquest_moments_title">Tus logros</string>
+    <string name="ankiquest_moments_summary">Elige quién se entera de cada tipo de logro. Tus propias celebraciones siempre las ves.</string>
+    <string name="ankiquest_share_cap_title">Logros automáticos por amigo al día</string>
+    <string name="ankiquest_moments_decks_title">Mazos terminados</string>
+    <string name="ankiquest_moments_decks_summary">Se elige por mazo: los mazos y quién se entera cuando los terminas</string>
+    <string-array name="ankiquest_moment_titles">
+        <item>Meta diaria cumplida</item>
+        <item>Racha asegurada por hoy</item>
+        <item>Hitos de la racha</item>
+        <item>Nuevos niveles</item>
+        <item>Insignias</item>
+        <item>Récords personales</item>
+        <item>Misiones diarias hechas</item>
+        <item>Tarjetas difíciles dominadas</item>
+        <item>Top 3 de la tabla semanal</item>
+        <item>Desafíos completados</item>
+    </string-array>
+    <string-array name="ankiquest_moment_policy_entries">
+        <item>Solo yo</item>
+        <item>Preguntarme</item>
+        <item>Avisar a mis amigos automáticamente</item>
+    </string-array>
+</resources>

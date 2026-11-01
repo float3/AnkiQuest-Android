@@ -20,6 +20,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -34,18 +35,27 @@ import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
+import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
+import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
+import com.ichi2.anki.ankiquest.HomeAccount
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
 import com.ichi2.preferences.VersatileTextPreference
 import com.ichi2.utils.Permissions.openAppSettingsScreen
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.util.Date
@@ -55,6 +65,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     override val analyticsScreenNameConstant = "prefs.ankiquest"
 
     private var running = false
+    private val sharingRequests = Mutex()
     private val refreshServerSettings = mutableListOf<() -> Unit>()
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -199,6 +210,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
                     AnkiquestPoll.refreshNow(requireContext())
+                    AnkiquestGoalDialog.offerSetup(requireActivity())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -211,15 +223,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     protected fun bindStudy() {
-        val mode = requirePreference<ListPreference>(R.string.ankiquest_goal_mode_key)
-
-        fun showGoalFields(value: String?) {
-            val chosen = AnkiquestDailyGoal.Mode.of(value)
-            requirePreference<Preference>(R.string.ankiquest_goal_backlog_key).isVisible = chosen == AnkiquestDailyGoal.Mode.BACKLOG
-            requirePreference<Preference>(R.string.ankiquest_goal_cards_key).isVisible = chosen == AnkiquestDailyGoal.Mode.CARDS
-            requirePreference<Preference>(R.string.ankiquest_goal_minutes_key).isVisible = chosen == AnkiquestDailyGoal.Mode.MINUTES
-        }
-        showGoalFields(mode.value)
+        bindGoal()
         requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_mood_icon_key).setOnPreferenceChangeListener { _, enabled ->
             if (enabled == true) {
                 AnkiquestPoll.refreshNow(requireContext())
@@ -228,16 +232,56 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             }
             true
         }
-        mode.setOnPreferenceChangeListener { _, value ->
-            showGoalFields(value as? String)
-            true
-        }
         bindServerToggle(
             R.string.ankiquest_streak_protection_key,
             read = { Ankiquest.streakProtectionEnabled() },
             save = { Ankiquest.setStreakProtection(it) },
         )
     }
+
+    /**
+     * The daily goal lives on the server: the setting shows the last known goal, and opens the goal
+     * dialog once the server's goal is loaded.
+     */
+    private fun bindGoal() {
+        val preference = requirePreference<Preference>(R.string.ankiquest_goal_key)
+        var generation = 0
+
+        fun show(choice: AnkiquestDailyGoal.Choice) {
+            preference.summary = AnkiquestDailyGoal.describe(requireContext(), choice)
+        }
+
+        val refresh = refresh@{
+            val request = ++generation
+            preference.isEnabled = false
+            show(AnkiquestDailyGoal.choice())
+            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return@refresh
+            lifecycleScope.launch {
+                try {
+                    val goal = AnkiquestDailyGoal.fetch(account)
+                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
+                    show(goal.choice)
+                    preference.isEnabled = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (request == generation && isAdded) showThemedToast(requireContext(), serverMessage(e), shortLength = false)
+                }
+            }
+        }
+        refreshServerSettings.add { refresh() }
+        preference.setOnPreferenceClickListener {
+            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return@setOnPreferenceClickListener true
+            AnkiquestGoalDialog.show(requireActivity(), account, AnkiquestDailyGoal.choice()) { saved ->
+                if (isAdded && AnkiquestHomeData.account()?.scope == account.scope) show(saved.choice)
+            }
+            true
+        }
+    }
+
+    /** What the server said when it turned a change down, or why it could not be asked. */
+    private fun serverMessage(e: Exception): String =
+        (e as? AnkiquestSharing.Refusal)?.text ?: getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
 
     protected fun bindNotifications() {
         requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_notify_rank_key).setOnPreferenceChangeListener { _, enabled ->
@@ -248,16 +292,17 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             if (hours != "0") askForNotifications()
             true
         }
+        val switches = sharedRead { Ankiquest.notificationSwitches() }
         bindServerToggle(
             R.string.ankiquest_nudges_key,
-            read = { Ankiquest.nudgesEnabled() },
-            save = { Ankiquest.setNudges(it).getBoolean("nudges") },
+            read = { switches().getBoolean(Ankiquest.NUDGES) },
+            save = { Ankiquest.setNotificationSwitch(Ankiquest.NUDGES, it).getBoolean(Ankiquest.NUDGES) },
             notify = true,
         )
         bindServerToggle(
             R.string.ankiquest_celebrations_key,
-            read = { Ankiquest.celebrationsEnabled() },
-            save = { Ankiquest.setCelebrations(it).optBoolean("celebrations", it) },
+            read = { Ankiquest.celebrations(switches()) },
+            save = { Ankiquest.setNotificationSwitch(Ankiquest.CELEBRATIONS, it).optBoolean(Ankiquest.CELEBRATIONS, it) },
             notify = true,
         )
         bindDashboard(R.string.ankiquest_community_reminders_key, community = true)
@@ -270,7 +315,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     protected fun bindSharing() {
-        bindAction(R.string.ankiquest_deck_notifications_key) {
+        val deckSharing: suspend () -> String? = {
             try {
                 showDeckNotifications(Ankiquest.deckNotificationSettings())
                 null
@@ -278,6 +323,107 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
             }
         }
+        bindAction(R.string.ankiquest_deck_notifications_key, deckSharing)
+        bindAction(R.string.ankiquest_moments_decks_key, deckSharing)
+        bindMoments()
+    }
+
+    /**
+     * Who hears about each kind of win, and how many automatic wins each friend gets a day, as the
+     * server keeps them. Requests run one at a time, so a reload after a change reads the change.
+     */
+    private fun bindMoments() {
+        val category = requirePreference<PreferenceCategory>(R.string.ankiquest_moments_key)
+        val status = requirePreference<Preference>(R.string.ankiquest_moments_status_key)
+        val cap = requirePreference<IncrementerNumberRangePreferenceCompat>(R.string.ankiquest_share_cap_key)
+        val idle = status.summary
+        val kinds = resources.getStringArray(R.array.ankiquest_moment_kinds)
+        val titles = resources.getStringArray(R.array.ankiquest_moment_titles)
+        val moments =
+            kinds.mapIndexed { index, kind ->
+                ListPreference(requireContext()).apply {
+                    key = "$MOMENT_PREFIX$kind"
+                    title = titles[index]
+                    dialogTitle = titles[index]
+                    order = index + 1
+                    isPersistent = false
+                    isEnabled = false
+                    entries = resources.getStringArray(R.array.ankiquest_moment_policy_entries)
+                    entryValues = resources.getStringArray(R.array.ankiquest_moment_policy_values)
+                    summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
+                    category.addPreference(this)
+                }
+            }
+        cap.isEnabled = false
+        var loaded: AnkiquestSharing.Settings? = null
+        var generation = 0
+
+        fun show(settings: AnkiquestSharing.Settings?) {
+            loaded = settings
+            moments.forEachIndexed { index, preference ->
+                val policy = settings?.policies?.get(kinds[index])
+                if (policy != null) preference.value = policy
+                preference.isVisible = settings == null || policy != null
+                preference.isEnabled = policy != null
+            }
+            settings?.let { cap.setValue(it.dailyCap) }
+            cap.isEnabled = settings != null
+        }
+
+        fun request(
+            saving: Boolean,
+            action: suspend (HomeAccount) -> AnkiquestSharing.Settings,
+        ) {
+            val request = ++generation
+            val previous = loaded
+            show(null)
+            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+            if (account == null) {
+                status.summary = getString(R.string.ankiquest_nudges_unavailable)
+                return
+            }
+            status.summary = getString(R.string.ankiquest_check_running)
+            lifecycleScope.launch {
+                try {
+                    val settings = sharingRequests.withLock { action(account) }
+                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
+                    status.summary = idle
+                    show(settings)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (request != generation || !isAdded) return@launch
+                    val message = serverMessage(e)
+                    showThemedToast(requireContext(), message, shortLength = false)
+                    if (saving && previous != null && AnkiquestHomeData.account()?.scope == account.scope) {
+                        status.summary = idle
+                        show(previous)
+                    } else {
+                        status.summary = message
+                    }
+                }
+            }
+        }
+        moments.forEachIndexed { index, preference ->
+            preference.setOnPreferenceChangeListener { _, value ->
+                val policy = value as? String
+                val dailyCap = loaded?.dailyCap
+                if (policy != null && dailyCap != null) {
+                    request(saving = true) { AnkiquestSharing.saveSettings(it, mapOf(kinds[index] to policy), dailyCap) }
+                }
+                false
+            }
+        }
+        cap.setOnPreferenceChangeListener(
+            Preference.OnPreferenceChangeListener { _, value ->
+                val dailyCap = value as? Int
+                if (dailyCap != null && loaded != null) {
+                    request(saving = true) { AnkiquestSharing.saveSettings(it, emptyMap(), dailyCap) }
+                }
+                false
+            },
+        )
+        refreshServerSettings.add { request(saving = false) { AnkiquestSharing.settings(it) } }
     }
 
     protected fun bindMaintenance() {
@@ -506,6 +652,15 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 )
             }
             true
+        }
+    }
+
+    /** Lets toggles refreshed together share one in-flight [read] instead of each asking the server. */
+    private fun <T> sharedRead(read: suspend () -> T): suspend () -> T {
+        var running: Deferred<T>? = null
+        return {
+            val shared = running?.takeIf { it.isActive } ?: lifecycleScope.async { read() }.also { running = it }
+            shared.await()
         }
     }
 
@@ -792,5 +947,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     companion object {
         private const val PREF_ASKED = "ankiquestAskedNotifications"
+        private const val MOMENT_PREFIX = "ankiquestMoment:"
     }
 }

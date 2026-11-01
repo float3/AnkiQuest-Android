@@ -8,7 +8,7 @@
     <string name="ankiquest_notifications_title">Rappels et alertes</string>
     <string name="ankiquest_notifications_summary">Rappels, encouragements et alertes</string>
     <string name="ankiquest_sharing_title">Amis et partage</string>
-    <string name="ankiquest_sharing_summary">Actualités des paquets et abonnements</string>
+    <string name="ankiquest_sharing_summary">Victoires, actualités des paquets et abonnements</string>
     <string name="ankiquest_maintenance_title">Application et données</string>
     <string name="ankiquest_maintenance_summary">Envois de révisions et mises à jour</string>
     <string name="ankiquest_notification_events_title">Quand notifier</string>
@@ -159,4 +159,5 @@
     <string name="ankiquest_streak_protected">Série protégée · Pas encore étudié</string>
     <string name="ankiquest_streak_unknown">Actualise pour voir l’état des études aujourd’hui</string>
     <string name="ankiquest_streak_description">Série de %1$s jours · %2$s</string>
+    <string name="ankiquest_web_prepare_failed">Impossible de préparer ta connexion. Ferme cet écran et réessaie.</string>
 </resources>

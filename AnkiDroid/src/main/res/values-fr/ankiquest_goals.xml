@@ -9,32 +9,56 @@
     <string name="aq_goal_progress_cards">%1$d cartes sur %2$d</string>
     <string name="aq_goal_progress_minutes">%1$d minutes sur %2$d</string>
     <string name="aq_goal_daily">Objectif du jour : %1$s</string>
-    <string name="aq_goal_backlog_explained">Les cartes du jour plus %1$d de tes %2$d cartes en retard (%3$d%% par jour), pour réduire le retard sans y passer la journée.</string>
-    <string name="aq_goal_minimum_title">Série assurée ! 🔥</string>
+    <string name="aq_goal_backlog_explained">Les cartes du jour plus %1$d de tes %2$d cartes en retard. Jours restants dans ton plan : %3$d.</string>
     <string name="aq_goal_done_title">Objectif du jour atteint ! 🎉</string>
-    <string name="aq_goal_minimum_body">%1$s Prochaine étape, ton objectif du jour : %2$s pour l’instant.</string>
-    <string name="aq_goal_done_body">Tu as atteint l’objectif du jour : %1$s.</string>
-    <string name="aq_goal_both_body">%1$s Et tu as atteint l’objectif du jour : %2$s.</string>
-    <string name="aq_goal_nice">Super !</string>
     <string name="ankiquest_streak_short">%1$d minutes sur %2$d aujourd’hui</string>
-    <string name="ankiquest_goal_mode_title">Objectif du jour</string>
-    <string name="ankiquest_goal_backlog_title">Retard à rattraper chaque jour</string>
     <string name="ankiquest_goal_cards_title">Cartes par jour</string>
     <string name="ankiquest_goal_minutes_title">Minutes par jour</string>
-    <string name="ankiquest_goal_celebrate_title">Fêter les objectifs</string>
-    <string name="ankiquest_goal_celebrate_summary">Fêter quand aujourd’hui compte pour ta série et quand tu atteins ton objectif du jour.</string>
-    <string-array name="ankiquest_goal_mode_entries">
-        <item>Les cartes du jour plus une partie du retard</item>
-        <item>Un nombre de cartes</item>
-        <item>Un nombre de minutes</item>
-    </string-array>
-    <string-array name="ankiquest_goal_backlog_entries">
-        <item>5 % (environ 20 jours)</item>
-        <item>10 % (environ 10 jours)</item>
-        <item>20 % (environ 5 jours)</item>
-        <item>34 % (environ 3 jours)</item>
-        <item>Tout</item>
-    </string-array>
+    <string name="ankiquest_goal_title">Objectif du jour</string>
+    <string name="ankiquest_goal_setup_title">Choisis ton objectif quotidien</string>
+    <string name="ankiquest_goal_mode_backlog">Rattraper mon retard en un nombre de jours</string>
+    <string name="ankiquest_goal_off">Pas d’objectif quotidien</string>
+    <string name="ankiquest_goal_custom">Autre</string>
+    <plurals name="ankiquest_goal_days">
+        <item quantity="one">%d jour</item>
+        <item quantity="other">%d jours</item>
+    </plurals>
+    <string name="ankiquest_goal_value_hint">De %1$d à %2$d</string>
+    <string name="ankiquest_goal_invalid">Choisis un nombre de %1$d à %2$d.</string>
+    <string name="ankiquest_goal_estimating">Calcul de ce que cela représente pour ta collection…</string>
+    <string name="ankiquest_goal_estimate_failed">Impossible de lire ta collection, donc pas d’estimation.</string>
+    <string name="ankiquest_goal_estimate_off">Sans objectif : chaque révision compte toujours pour ta série.</string>
+    <string name="ankiquest_goal_estimate_cards">Cartes aujourd’hui : %1$d</string>
+    <string name="ankiquest_goal_estimate_time">Temps aujourd’hui : %1$s</string>
+    <plurals name="ankiquest_goal_estimate_cleared">
+        <item quantity="one">Retard rattrapé en %d jour</item>
+        <item quantity="other">Retard rattrapé en %d jours</item>
+    </plurals>
+    <plurals name="ankiquest_goal_estimate_never">
+        <item quantity="one">Retard rattrapé : jamais, tes révisions seules font déjà %d carte par jour</item>
+        <item quantity="other">Retard rattrapé : jamais, tes révisions seules font déjà %d cartes par jour</item>
+    </plurals>
+    <plurals name="ankiquest_goal_shrink">
+        <item quantity="one">Pour réduire ton retard, étudie au moins %d carte par jour.</item>
+        <item quantity="other">Pour réduire ton retard, étudie au moins %d cartes par jour.</item>
+    </plurals>
+    <plurals name="ankiquest_goal_nothing_overdue">
+        <item quantity="one">Rien en retard. Environ %d carte arrive à échéance chaque jour.</item>
+        <item quantity="other">Rien en retard. Environ %d cartes arrivent à échéance chaque jour.</item>
+    </plurals>
+    <string name="ankiquest_goal_saving">Enregistrement…</string>
+    <plurals name="ankiquest_goal_summary_backlog">
+        <item quantity="one">Rattraper le retard en %d jour</item>
+        <item quantity="other">Rattraper le retard en %d jours</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_cards">
+        <item quantity="one">%d carte par jour</item>
+        <item quantity="other">%d cartes par jour</item>
+    </plurals>
+    <plurals name="ankiquest_goal_summary_minutes">
+        <item quantity="one">%d minute par jour</item>
+        <item quantity="other">%d minutes par jour</item>
+    </plurals>
     <string name="ankiquest_streak_widget_label">Série AnkiQuest</string>
     <string name="ankiquest_streak_widget_description">Ta série en grand avec ton compagnon</string>
     <plurals name="ankiquest_streak_widget_days">

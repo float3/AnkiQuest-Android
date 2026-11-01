@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- Placeholder artwork until the images requested in float3/ankiquest#88 land.
-     To use a new image, delete its line and add a PNG with the same name to drawable-nodpi. -->
+     To use a new image, delete its line and add a WebP with the same name to drawable-nodpi. -->
 <resources>
     <!-- App icon: studied today -->
     <drawable name="aki_icon_happy">@drawable/aki_face</drawable>
@@ -23,10 +23,6 @@
     <drawable name="aki_comeback">@drawable/aki_welcome</drawable>
     <!-- A freeze just saved the streak -->
     <drawable name="aki_freeze_used">@drawable/aki_freeze</drawable>
-    <!-- Daily streak minimum reached -->
-    <drawable name="aki_minimum">@drawable/aki_streak</drawable>
-    <!-- Daily goal reached -->
-    <drawable name="aki_goal">@drawable/aki_celebrate</drawable>
     <!-- Aki and Ankilope together, for friends and sharing -->
     <drawable name="duo_friends">@drawable/aki_welcome</drawable>
 </resources>

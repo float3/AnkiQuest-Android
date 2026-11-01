@@ -3,10 +3,15 @@
 package com.ichi2.anki.ankiquest
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
+import androidx.core.content.pm.PackageInfoCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.DeckPicker
@@ -17,7 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import timber.log.Timber
@@ -44,8 +48,8 @@ object AnkiquestUpdater {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client =
-        OkHttpClient
-            .Builder()
+        AnkiquestHttp.client
+            .newBuilder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
@@ -75,7 +79,9 @@ object AnkiquestUpdater {
     ): Boolean = if (release.nightly) release.versionCode > installedCode else release.number > installedRelease
 
     fun maybeCheck(activity: Activity) {
-        if (BuildConfig.ANKIQUEST_RELEASE <= 0 || busy || activity !is DeckPicker) return
+        if (activity !is DeckPicker) return
+        cleanOnce(activity)
+        if (BuildConfig.ANKIQUEST_RELEASE <= 0 || busy) return
         val prefs = AnkiDroidApp.sharedPrefs()
         val now = TimeManager.time.intTimeMS()
         if (now - prefs.getLong(PREF_CHECKED_AT, 0L) < CHECK_INTERVAL_MS) return
@@ -168,8 +174,8 @@ object AnkiquestUpdater {
         val number = tag.removePrefix(TAG_PREFIX).toIntOrNull() ?: return null
         val assets = json.getJSONArray("assets")
         val apk =
-            (0 until assets.length())
-                .map { assets.getJSONObject(it) }
+            assets
+                .objects()
                 .filter { it.getString("name").endsWith(".apk") }
                 .let { apks -> apks.firstOrNull { it.getString("name") == "AnkiQuest.apk" } ?: apks.firstOrNull() }
                 ?: return null
@@ -199,42 +205,101 @@ object AnkiquestUpdater {
             .show()
     }
 
+    private class Progress(
+        val host: WeakReference<Activity>,
+        val dialog: AlertDialog,
+    ) {
+        fun attached(): Activity? = host.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
+
+        fun update(message: String) {
+            if (attached() != null && dialog.isShowing) dialog.setMessage(message)
+        }
+
+        fun dismiss() {
+            if (host.get()?.isDestroyed == false && dialog.isShowing) dialog.dismiss()
+        }
+    }
+
+    private var progress: Progress? = null
+
+    @Volatile
+    private var downloading = false
+
+    @Volatile
+    private var percent = 0
+
+    @Volatile
+    private var cleaned = false
+
+    private fun showProgress(
+        activity: Activity,
+        release: Release,
+    ) {
+        progress?.dismiss()
+        val dialog =
+            AlertDialog
+                .Builder(activity)
+                .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
+                .setMessage(activity.getString(R.string.ankiquest_update_downloading, percent))
+                .setCancelable(false)
+                .show()
+        (activity as? LifecycleOwner)?.let { owner ->
+            owner.lifecycle.addObserver(
+                LifecycleEventObserver { _, event ->
+                    if (event != Lifecycle.Event.ON_DESTROY) return@LifecycleEventObserver
+                    if (dialog.isShowing) dialog.dismiss()
+                    if (progress?.dialog === dialog) progress = null
+                },
+            )
+        }
+        progress = Progress(WeakReference(activity), dialog)
+    }
+
+    /**
+     * Downloads [release] in the process scope, so the download survives the activity that asked for it.
+     * Asking again while it runs shows its progress on the new activity instead of starting over.
+     */
     private fun download(
         activity: Activity,
         release: Release,
     ) {
-        val progress =
-            AlertDialog
-                .Builder(activity)
-                .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
-                .setMessage(activity.getString(R.string.ankiquest_update_downloading, 0))
-                .setCancelable(false)
-                .show()
+        if (activity.isFinishing || activity.isDestroyed) return
+        if (downloading) {
+            showProgress(activity, release)
+            return
+        }
+        downloading = true
+        percent = 0
+        showProgress(activity, release)
         val app = activity.applicationContext
-        val host = WeakReference(activity)
         busy = true
         scope.launch {
+            val file = apkFile(app)
             try {
-                val file = File(File(app.cacheDir, "ankiquest").apply { mkdirs() }, "AnkiQuest.apk")
-                fetch(release, file) { percent ->
+                deleteDownloads(file)
+                fetch(release, file) { done ->
+                    percent = done
                     withContext(Dispatchers.Main) {
-                        progress.setMessage(app.getString(R.string.ankiquest_update_downloading, percent))
+                        progress?.update(app.getString(R.string.ankiquest_update_downloading, done))
                     }
                 }
                 withContext(Dispatchers.Main) {
-                    progress.dismiss()
+                    val host = progress?.attached()
+                    finishProgress()
                     val uri = FileProvider.getUriForFile(app, "${app.packageName}.apkgfileprovider", file)
                     val install =
                         Intent(Intent.ACTION_VIEW)
                             .setDataAndType(uri, "application/vnd.android.package-archive")
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    (host.get() ?: app).startActivity(install)
+                    (host ?: app).startActivity(install)
                 }
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update download failed")
+                deleteDownloads(file)
                 withContext(Dispatchers.Main) {
-                    progress.dismiss()
-                    host.get()?.let {
+                    val host = progress?.attached()
+                    finishProgress()
+                    host?.let {
                         AlertDialog
                             .Builder(it)
                             .setMessage(R.string.ankiquest_update_failed)
@@ -243,10 +308,62 @@ object AnkiquestUpdater {
                     }
                 }
             } finally {
+                downloading = false
                 busy = false
             }
         }
     }
+
+    private fun finishProgress() {
+        progress?.dismiss()
+        progress = null
+    }
+
+    private fun apkFile(context: Context) = File(File(context.cacheDir, "ankiquest").apply { mkdirs() }, "AnkiQuest.apk")
+
+    private fun deleteDownloads(file: File) {
+        file.delete()
+        File(file.path + ".part").delete()
+    }
+
+    private fun cleanOnce(context: Context) {
+        if (cleaned) return
+        cleaned = true
+        val app = context.applicationContext
+        scope.launch {
+            try {
+                cleanStale(app)
+            } catch (e: Exception) {
+                Timber.w(e, "ankiquest update cleanup failed")
+            }
+        }
+    }
+
+    /**
+     * Deletes a leftover partial download, and the downloaded APK unless it is still newer than the
+     * installed build and so may yet be installed.
+     */
+    internal fun cleanStale(
+        context: Context,
+        installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
+        versionOf: (File) -> Long? = { archiveVersionCode(context, it) },
+    ) {
+        if (downloading) return
+        val file = apkFile(context)
+        File(file.path + ".part").delete()
+        if (!file.exists()) return
+        val downloaded = versionOf(file)
+        if (downloaded == null || downloaded <= installedCode) file.delete()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun archiveVersionCode(
+        context: Context,
+        file: File,
+    ): Long? =
+        runCatching {
+            context.packageManager.getPackageArchiveInfo(file.path, 0)?.let { PackageInfoCompat.getLongVersionCode(it) }
+        }.getOrNull()
 
     private suspend fun fetch(
         release: Release,

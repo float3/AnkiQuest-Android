@@ -14,12 +14,12 @@ import androidx.core.content.withStyledAttributes
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
-import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestDeckRow
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.anki.databinding.ItemDeckBinding
 import com.ichi2.anki.deckpicker.DisplayDeckNode
@@ -169,42 +169,7 @@ class DeckAdapter(
         binding.deckName.text = node.lastDeckNameComponent
         binding.deckName.setTextColor(if (node.filtered) deckNameDynColor else deckNameDefaultColor)
 
-        val dailyStatus = node.dailyState?.status
-        binding.deckDailyStatus.isVisible = dailyStatus == com.ichi2.anki.ankiquest.DailyDeckStatus.LEARNING_LATER
-        val finished = dailyStatus == com.ichi2.anki.ankiquest.DailyDeckStatus.DONE
-        binding.deckName.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, if (finished) R.drawable.ic_done else 0, 0)
-        TextViewCompat.setCompoundDrawableTintList(
-            binding.deckName,
-            if (finished) {
-                android.content.res.ColorStateList
-                    .valueOf(binding.deckName.context.getColor(R.color.aq_deck_green))
-            } else {
-                null
-            },
-        )
-        binding.deckName.compoundDrawablePadding = 4.dp.toPx(binding.deckName.context)
-        node.dailyState?.let { daily ->
-            val status = binding.deckDailyStatus
-            status.text = daily.label(status.context)
-            status.setTextColor(status.context.getColor(daily.color))
-            status.setCompoundDrawablesRelativeWithIntrinsicBounds(daily.icon, 0, 0, 0)
-            TextViewCompat.setCompoundDrawableTintList(
-                status,
-                android.content.res.ColorStateList
-                    .valueOf(status.context.getColor(daily.color)),
-            )
-            status.compoundDrawablePadding = 4.dp.toPx(status.context)
-            if (daily.status == com.ichi2.anki.ankiquest.DailyDeckStatus.DONE && !node.isSelected) {
-                binding.deckLayout.backgroundTintList =
-                    android.content.res.ColorStateList
-                        .valueOf(status.context.getColor(R.color.aq_deck_done_background))
-            }
-        }
-        if (node.dailyState?.status != com.ichi2.anki.ankiquest.DailyDeckStatus.DONE ||
-            node.isSelected
-        ) {
-            binding.deckLayout.backgroundTintList = null
-        }
+        AnkiquestDeckRow.bind(binding, node)
 
         // Set the card counts and their colors
         binding.deckNew.text = node.newCount.toString()

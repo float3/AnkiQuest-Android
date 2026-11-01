@@ -18,8 +18,7 @@ internal object AnkiquestCompanion {
 
     fun selected(): String {
         val prefs = AnkiDroidApp.sharedPrefsOrNull() ?: return "aki"
-        val settings = prefs.all
-        val account = HomeAccount.from(settings, (settings["username"] as? String).orEmpty()) ?: return "aki"
+        val account = HomeAccount.current(prefs) ?: return "aki"
         return normalize(prefs.getString(KEY_PREFIX + account.scope, "aki"))
     }
 
@@ -46,8 +45,7 @@ internal object AnkiquestCompanion {
                 R.drawable.aki_icon_frozen, R.drawable.aki_icon_sleepy,
                 -> R.drawable.ankilope_face
                 R.drawable.aki_welcome, R.drawable.aki_comeback -> R.drawable.ankilope_welcome
-                R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_goal, R.drawable.aki_minimum,
-                -> R.drawable.ankilope_celebrate
+                R.drawable.aki_celebrate, R.drawable.aki_winner -> R.drawable.ankilope_celebrate
                 R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze, R.drawable.aki_freeze_used,
                 R.drawable.aki_streak_hot, R.drawable.aki_streak_blazing, R.drawable.aki_streak_legend, R.drawable.aki_at_risk,
                 -> R.drawable.ankilope_study
@@ -55,11 +53,16 @@ internal object AnkiquestCompanion {
             }
         }
 
+    /** Shows the chosen companion's version of [aki] in [view], decoded for [size] pixels. */
     fun show(
         view: ImageView,
         @DrawableRes aki: Int,
+        size: Int,
     ) {
         view.isVisible = visible()
-        if (view.isVisible) view.setImageResource(resource(aki))
+        if (!view.isVisible) return
+        val art = resource(aki)
+        val bitmap = AnkiquestArt.bitmap(view.context, art, size)
+        if (bitmap != null) view.setImageBitmap(bitmap) else view.setImageResource(art)
     }
 }

@@ -20,8 +20,7 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:layout_marginEnd="8dp"
-            android:importantForAccessibility="no"
-            android:src="@drawable/aki_face" />
+            android:importantForAccessibility="no" />
         <TextView
             android:id="@+id/aq_home_brand"
             android:layout_width="0dp"
