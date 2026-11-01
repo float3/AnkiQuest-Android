@@ -102,6 +102,7 @@
     <string name="ankiquest_check_http">El servidor respondió con HTTP %1$d.</string>
     <string name="ankiquest_check_unreachable">No se pudo encontrar %1$s. Comprueba la URL y tu conexión a internet.</string>
     <string name="ankiquest_check_bad_url">%1$s no es una URL válida. Debe ser similar a https://anki.example.com</string>
+    <string name="ankiquest_check_insecure">%1$s no usa https, así que tu sesión podría leerse por el camino. Usa una dirección que empiece por https://</string>
     <string name="ankiquest_check_failed">No se pudo conectar con el servidor: %1$s</string>
     <string name="ankiquest_widget_label">Clasificación de ankiquest</string>
     <string name="ankiquest_widget_transparent_label">Clasificación de ankiquest (transparente)</string>

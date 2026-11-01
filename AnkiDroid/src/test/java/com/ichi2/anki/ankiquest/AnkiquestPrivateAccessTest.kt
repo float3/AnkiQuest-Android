@@ -7,6 +7,7 @@ import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
@@ -16,6 +17,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.asContextElement
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -239,9 +241,36 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
                 "ankiquest_session=value; Path=/",
                 "ankiquest_session=value; Path=/; HttpOnly; Domain=127.0.0.1",
                 "ankiquest_session=value; Path=/other; HttpOnly",
+                "ankiquest_session=value; Path=/; HttpOnly; Secure",
             )) {
                 responseCookie = cookie
                 assertFailsWith<IOException> { Ankiquest.dashboardSession(Ankiquest.dashboardUrl()!!) }
             }
+        }
+
+    @Test
+    fun `an https session cookie must be Secure and an http one must not`() {
+        val https = "https://quest.example/auth/session".toHttpUrl()
+        val secure = "ankiquest_session=value; Path=/; HttpOnly; Secure; SameSite=Lax"
+        assertEquals(secure, Ankiquest.sessionCookie(https, listOf(sessionCookie, secure)))
+        assertNull(Ankiquest.sessionCookie(https, listOf(sessionCookie)))
+        assertEquals(sessionCookie, Ankiquest.sessionCookie("$url/auth/session".toHttpUrl(), listOf(secure, sessionCookie)))
+    }
+
+    @Test
+    fun `a saved plain http address on the internet is signed out with the reason shown`() =
+        runBlocking {
+            AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_URL, "http://quest.example/") }
+
+            assertNull(HomeAccount.current())
+            assertFalse(Ankiquest.isConfigured())
+            assertNull(Ankiquest.dashboardUrl())
+            assertNull(Ankiquest.webSession())
+            assertNull(Ankiquest.dashboardSession("http://quest.example/#member%20name"))
+            assertEquals(
+                targetContext.getString(R.string.ankiquest_check_insecure, "http://quest.example/"),
+                Ankiquest.runFromSettings(targetContext, uploadAll = false),
+            )
+            assertTrue(requests.isEmpty())
         }
 }

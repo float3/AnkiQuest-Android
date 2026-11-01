@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONObject
 import timber.log.Timber
+import java.io.IOException
 import java.net.UnknownHostException
 
 /** Signs in with a username and password, or creates an account, and keeps only the device token it returns. */
@@ -50,12 +51,19 @@ object AnkiquestAccount {
             .build()
     }
 
-    /** @throws AnkiquestHttpException when the server turns the request down */
+    /** The password would cross the internet unencrypted, so it is not sent. */
+    class InsecureServer : IOException("The server address does not use https")
+
+    /**
+     * @throws InsecureServer when [Credentials.url] is plain http to a host outside the local network
+     * @throws AnkiquestHttpException when the server turns the request down
+     */
     suspend fun submit(
         request: Credentials,
         device: String = device(),
     ): Signed =
         withContext(Dispatchers.IO) {
+            if (AnkiquestHosts.insecure(request.url)) throw InsecureServer()
             val answer = AnkiquestApi.anonymous(httpRequest(request, device))
             Signed(request.url.trimEnd('/'), answer.getString("user"), answer.getString("token"))
         }
@@ -75,6 +83,7 @@ object AnkiquestAccount {
                     429 -> context.getString(R.string.ankiquest_sign_in_limited)
                     else -> context.getString(R.string.ankiquest_check_http, error.code)
                 }
+            is InsecureServer -> context.getString(R.string.ankiquest_check_insecure, url)
             is UnknownHostException -> context.getString(R.string.ankiquest_check_unreachable, url)
             is IllegalArgumentException -> context.getString(R.string.ankiquest_check_bad_url, url)
             else -> {

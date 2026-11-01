@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -159,4 +160,40 @@ internal object AnkiquestApi {
         }
 
     private const val ERROR_BYTES = 16L * 1024
+}
+
+/** Which servers credentials may be sent to. Kept apart from [AnkiquestApi] so checking an address builds no HTTP client. */
+internal object AnkiquestHosts {
+    /**
+     * Whether a token or password may be sent to [url]: over https, or over plain http only to this
+     * device, the local network or the emulator's host, where it does not cross the internet unencrypted.
+     */
+    fun secure(url: HttpUrl): Boolean = url.isHttps || local(url.host)
+
+    /** Whether [server], a typed server address, is a valid address that [secure] refuses. */
+    fun insecure(server: String): Boolean {
+        val url = server.trim().trimEnd('/').toHttpUrlOrNull() ?: return false
+        return !secure(url)
+    }
+
+    /** Loopback, private IPv4 and unique local IPv6 addresses, and `.local` names; 10.0.2.2, the emulator's host, is in 10/8. */
+    fun local(host: String): Boolean {
+        val name = host.removeSuffix(".")
+        if (name == "localhost" || name.endsWith(".local")) return true
+        ipv4(name)?.let { (first, second) ->
+            return first == 127 || first == 10 || (first == 172 && second in 16..31) || (first == 192 && second == 168)
+        }
+        if (':' !in name) return false
+        if (name == "::1") return true
+        val group = name.substringBefore(':').ifEmpty { "0" }.toIntOrNull(16) ?: return false
+        return (group and 0xfe00) == 0xfc00
+    }
+
+    private fun ipv4(host: String): Pair<Int, Int>? {
+        val parts = host.split('.')
+        if (parts.size != 4 || parts.any { part -> part.isEmpty() || part.length > 3 || !part.all { it in '0'..'9' } }) return null
+        val numbers = parts.map { it.toInt() }
+        if (numbers.any { it > 255 }) return null
+        return numbers[0] to numbers[1]
+    }
 }

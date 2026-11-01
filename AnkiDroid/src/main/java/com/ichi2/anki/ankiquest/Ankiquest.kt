@@ -35,6 +35,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.Cookie
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -671,15 +672,28 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .build()
             try {
                 AnkiquestApi.call(account, request) { response ->
-                    response.headers.values("Set-Cookie").firstOrNull { value ->
-                        val cookie = Cookie.parse(request.url, value)
-                        cookie != null && cookie.name == "ankiquest_session" && cookie.hostOnly &&
-                            cookie.path == "/" && cookie.httpOnly && (!request.url.isHttps || cookie.secure)
-                    } ?: throw IOException("The ankiquest server did not return a valid session cookie")
+                    sessionCookie(request.url, response.headers.values("Set-Cookie"))
+                        ?: throw IOException("The ankiquest server did not return a valid session cookie")
                 }
             } catch (e: AnkiquestHttpException) {
                 if (e.code == 404) null else throw e
             }
+        }
+
+    /**
+     * The `Set-Cookie` value among [values] that installs the browser session for [url]: HttpOnly, for
+     * that host and every path, and Secure exactly when [url] is https, since a WebView never sends a
+     * Secure cookie over http.
+     */
+    @VisibleForTesting
+    internal fun sessionCookie(
+        url: HttpUrl,
+        values: List<String>,
+    ): String? =
+        values.firstOrNull { value ->
+            val cookie = Cookie.parse(url, value)
+            cookie != null && cookie.name == "ankiquest_session" && cookie.hostOnly &&
+                cookie.path == "/" && cookie.httpOnly && cookie.secure == url.isHttps
         }
 
     private fun dashboardOf(account: HomeAccount): String = "${account.server}/#${account.encodedUser}"
@@ -744,18 +758,22 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
-    /** A typed server address that can never be used is reported as such rather than as missing settings. */
-    private fun unconfigured(context: Context): String {
+    /**
+     * Why no account is configured. A typed server address that can never be used is reported as such
+     * rather than as missing settings, and a plain http address on the internet as insecure.
+     */
+    fun unconfigured(context: Context): String {
         val typed =
             AnkiDroidApp
                 .sharedPrefs()
                 .getString(PREF_URL, "")
                 .orEmpty()
                 .trim()
-        return if (typed.isNotEmpty() && HomeAccount.from(mapOf(PREF_URL to typed), "player") == null) {
-            context.getString(R.string.ankiquest_check_bad_url, typed)
-        } else {
-            context.getString(R.string.ankiquest_check_unconfigured)
+        return when {
+            AnkiquestHosts.insecure(typed) -> context.getString(R.string.ankiquest_check_insecure, typed)
+            typed.isNotEmpty() && HomeAccount.from(mapOf(PREF_URL to typed), "player") == null ->
+                context.getString(R.string.ankiquest_check_bad_url, typed)
+            else -> context.getString(R.string.ankiquest_check_unconfigured)
         }
     }
 

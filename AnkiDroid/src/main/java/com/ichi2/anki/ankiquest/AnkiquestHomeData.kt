@@ -107,7 +107,7 @@ internal data class HomeAccount(
             val token = credential.orEmpty().trim()
             val parsed = server.toHttpUrlOrNull() ?: return null
             if (user.isEmpty() || parsed.username.isNotEmpty() || parsed.password.isNotEmpty() || parsed.query != null ||
-                parsed.fragment != null
+                parsed.fragment != null || !AnkiquestHosts.secure(parsed)
             ) {
                 return null
             }
