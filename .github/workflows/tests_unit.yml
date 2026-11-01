@@ -13,20 +13,23 @@ on:
         required: true
         type: choice
         # If you alter system names in default + options here, also alter osArray below to match
-        default: '["windows-latest", "macos-latest", "ubuntu-latest"]'
+        default: '["windows-latest", "macos-15", "ubuntu-latest"]'
         options:
-          - '["windows-latest", "macos-latest", "ubuntu-latest"]'
+          - '["windows-latest", "macos-15", "ubuntu-latest"]'
           - '["windows-latest"]'
-          - '["macos-latest"]'
+          - '["macos-15"]'
           - '["ubuntu-latest"]'
   schedule:
     - cron: "42 0 * * 2"
   pull_request:
   push:
-    # Other branches are checked by the pull_request trigger.
-    branches:
-      - ankiquest
-      - main
+    # Ignore merge queue branches on push; avoids merge_group+push concurrency race since ref is same
+    branches-ignore:
+      - 'gh-readonly-queue/**'
+      # Dependabot branches are already checked by the pull_request trigger.
+      - 'dependabot/**'
+      # Crowdin translations are already checked by the pull_request trigger.
+      - 'i18n_sync'
   merge_group:
 
 permissions:
@@ -56,10 +59,10 @@ jobs:
         with:
           script: |
             // by default, we will include all 3 platforms we test on
-            // "macos-latest" follows GitHub's current default macOS image, so the job keeps getting a machine
-            // as older images are retired; it is Apple Silicon
+            // "latest" would be easy everywhere, but "macos-15" doesn't always happen if you choose "latest"
+            // and we want macos-15 because it has Apple Silicon and is faster
             // if you alter this, also alter it above in the workflow_dispatch options list
-            let osArray = ["ubuntu-latest", "macos-latest", "windows-latest"]
+            let osArray = ["ubuntu-latest", "macos-15", "windows-latest"]
             
             // by default, we will run one iteration on each selected system
             let iterationArray = [1]
@@ -116,7 +119,7 @@ jobs:
     if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     needs: matrix_prep
     # Windows can take 40m+ on tests
-    timeout-minutes: 75
+    timeout-minutes: 60
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     strategy:
@@ -175,7 +178,7 @@ jobs:
           # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
           # Builds on other branches will only read from main branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/ankiquest' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Gradle Dependency Download
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
