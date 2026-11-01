@@ -1,26 +1,18 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-name: Workflow regression tests
+name: ankiquest workflow regression tests
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - '.github/workflows/milestone.yml'
-      - '.github/workflows/milestone_tests.yml'
-      - '.github/tests/milestone.test.cjs'
-      - '.github/workflows/assignees.yml'
-      - '.github/tests/assignees.test.cjs'
-      - '.github/workflows/screenshot_*.yml'
+      - '.github/workflows/ankiquest_workflow_tests.yml'
+      - '.github/workflows/ankiquest_screenshot_*.yml'
       - '.github/tests/screenshots.test.cjs'
       - '.github/tests/screenshot-storage.test.cjs'
   push:
     paths:
-      - '.github/workflows/milestone.yml'
-      - '.github/workflows/milestone_tests.yml'
-      - '.github/tests/milestone.test.cjs'
-      - '.github/workflows/assignees.yml'
-      - '.github/tests/assignees.test.cjs'
-      - '.github/workflows/screenshot_*.yml'
+      - '.github/workflows/ankiquest_workflow_tests.yml'
+      - '.github/workflows/ankiquest_screenshot_*.yml'
       - '.github/tests/screenshots.test.cjs'
       - '.github/tests/screenshot-storage.test.cjs'
 
