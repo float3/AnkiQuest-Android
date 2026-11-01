@@ -107,5 +107,8 @@ internal object AnkiquestDeckCopies {
         send(AnkiquestApi.request(account, "api/deck-copies/${account.encodedUser}/$id").delete().build())
     }
 
-    private fun send(request: Request): JSONObject = AnkiquestApi.call(request, AnkiquestApi.Timeout.TRANSFER) { AnkiquestApi.objectOf(it) }
+    private fun send(request: Request): JSONObject =
+        AnkiquestApi.call(request, AnkiquestApi.Timeout.TRANSFER) { response ->
+            AnkiquestApi.jsonObject(response)
+        }
 }

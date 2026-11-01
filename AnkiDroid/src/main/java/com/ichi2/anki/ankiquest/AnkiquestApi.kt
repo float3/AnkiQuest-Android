@@ -142,14 +142,14 @@ internal object AnkiquestApi {
         account: HomeAccount,
         request: Request,
         timeout: Timeout = Timeout.STANDARD,
-    ): JSONObject = call(account, request, timeout) { objectOf(it) }
+    ): JSONObject = call(account, request, timeout) { jsonObject(it) }
 
     /** An unauthenticated [call], for previews and signing in. */
-    fun anonymous(request: Request): JSONObject = call(request) { objectOf(it) }
+    fun anonymous(request: Request): JSONObject = call(request) { jsonObject(it) }
 
-    fun objectOf(response: Response): JSONObject = response.body.string().let { if (it.isBlank()) JSONObject() else JSONObject(it) }
+    fun jsonObject(response: Response): JSONObject = response.body.string().let { if (it.isBlank()) JSONObject() else JSONObject(it) }
 
-    fun arrayOf(response: Response): JSONArray = JSONArray(response.body.string())
+    fun jsonArray(response: Response): JSONArray = JSONArray(response.body.string())
 
     /** The server explains refusals as `{"error": "..."}`. */
     fun explanation(body: String): String? =

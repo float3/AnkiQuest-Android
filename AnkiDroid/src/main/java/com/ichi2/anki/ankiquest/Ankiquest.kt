@@ -120,7 +120,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     suspend fun leaderboard(): JSONArray =
         withContext(Dispatchers.IO) {
             val account = configured()
-            AnkiquestApi.call(account, AnkiquestApi.request(account, "api/leaderboard").build()) { AnkiquestApi.arrayOf(it) }
+            AnkiquestApi.call(account, AnkiquestApi.request(account, "api/leaderboard").build()) { AnkiquestApi.jsonArray(it) }
         }
 
     /** The weekly order and how this player moved since [previous], as judged by `/api/rank/<user>`. */
@@ -352,7 +352,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             if (account.token.isEmpty()) return@withContext null
             val request = AnkiquestApi.request(account, "api/notifications/${account.encodedUser}").build()
             AnkiquestApi.call(account, request, recheck = false) { response ->
-                CompletionNotifications(account.notificationAccount, AnkiquestApi.arrayOf(response), account.scope)
+                CompletionNotifications(account.notificationAccount, AnkiquestApi.jsonArray(response), account.scope)
             }
         }
 
@@ -512,7 +512,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .request(owner, "api/reviews/${owner.encodedUser}")
                     .post(AnkiquestApi.body(body))
                     .build()
-            profile = AnkiquestApi.call(owner, request, recheck = false) { AnkiquestApi.objectOf(it) }
+            profile = AnkiquestApi.call(owner, request, recheck = false) { AnkiquestApi.jsonObject(it) }
             if (!onlyTest) prefs.edit { putLong(markKey, maxOf(known, mark)) }
             first = false
         } while (full)

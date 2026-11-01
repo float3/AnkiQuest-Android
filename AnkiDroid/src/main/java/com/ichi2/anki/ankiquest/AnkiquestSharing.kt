@@ -77,7 +77,7 @@ internal object AnkiquestSharing {
                     .request(account, path)
                     .method(method, body?.let(AnkiquestApi::body))
                     .build()
-            AnkiquestApi.call(request, check = { requireCurrent(account) }) { AnkiquestApi.objectOf(it) }
+            AnkiquestApi.call(request, check = { requireCurrent(account) }) { AnkiquestApi.jsonObject(it) }
         }
 
     private fun requireCurrent(account: HomeAccount) {
