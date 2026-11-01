@@ -38,8 +38,15 @@ internal data class AnkiquestWebSession(
             actual.encodedPath in paths && queryAllowed
     }
 
-    /** The page script; a navigation can finish after the native check, so it checks the actual document again. */
-    fun script(url: String?): String? {
+    /**
+     * The page script; a navigation can finish after the native check, so it checks the actual document again.
+     * With [cookie], the HttpOnly session cookie is installed and the server reports
+     * [AnkiquestCapabilities.COOKIE_SESSION], so the page learns only who is signed in and never sees the token.
+     */
+    fun script(
+        url: String?,
+        cookie: Boolean = false,
+    ): String? {
         if (!allows(url)) return null
         val expected = checkNotNull(base)
         val origin =
@@ -51,7 +58,12 @@ internal data class AnkiquestWebSession(
                 .build()
                 .toString()
                 .removeSuffix("/")
-        val session = if (token.isEmpty()) "null" else JSONObject().put("user", user).put("token", token).toString()
+        val session =
+            when {
+                token.isEmpty() -> "null"
+                cookie -> JSONObject().put("user", user).toString()
+                else -> JSONObject().put("user", user).put("token", token).toString()
+            }
         return """
             (() => {
                 const page = new URL(window.location.href);

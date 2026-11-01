@@ -34,6 +34,7 @@ import com.ichi2.anki.snackbar.showSnackbar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -77,6 +78,7 @@ internal class AnkiquestBrowserSessionBridge {
 class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
     private lateinit var webView: WebView
     private var session: AnkiquestWebSession? = null
+    private var sessionCookie = false
     private var account = ""
     private var refreshAfterSettings = false
     private var clearHistoryAfterLoad = false
@@ -193,7 +195,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                         clearHistoryAfterLoad = false
                         back.isEnabled = view.canGoBack()
                     }
-                    current.script(url)?.let { view.evaluateJavascript(it, null) }
+                    current.script(url, sessionCookie)?.let { view.evaluateJavascript(it, null) }
                 }
 
                 override fun doUpdateVisitedHistory(
@@ -222,8 +224,11 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         val expected = session ?: return
         val expectedAccount = account
         prepareSession?.cancel()
+        sessionCookie = false
         prepareSession =
             lifecycleScope.launch {
+                var installed = false
+                val features = async { AnkiquestHomeData.account()?.let { AnkiquestCapabilities.current(it) }.orEmpty() }
                 val ready =
                     sessionBridge.prepare(
                         current = {
@@ -241,13 +246,14 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                                 null
                             }
                         },
-                        install = { cookie -> setSessionCookie(expected.dashboard, cookie) },
+                        install = { cookie -> setSessionCookie(expected.dashboard, cookie).also { installed = it } },
                     )
                 if (expected != session || expected != Ankiquest.webSession() ||
                     expectedAccount != account || expectedAccount != AnkiquestNavigation.accountFingerprint()
                 ) {
                     return@launch
                 }
+                sessionCookie = ready && installed && AnkiquestCapabilities.COOKIE_SESSION in features.await()
                 if (!ready) {
                     findViewById<ProgressBar>(R.id.progress_bar).visibility = View.GONE
                     val message = getString(R.string.ankiquest_web_prepare_failed).htmlEncode()

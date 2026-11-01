@@ -44,6 +44,8 @@ class AnkiquestSettingsTest : RobolectricTest() {
         // These UI tests do not load Anki's native collection backend in the background.
         every { Ankiquest.onActivityResumed(any()) } returns Unit
         coEvery { Ankiquest.dashboardSession(any()) } returns null
+        mockkObject(AnkiquestCapabilities)
+        coEvery { AnkiquestCapabilities.current(any()) } returns emptySet()
         AnkiDroidApp.sharedPrefs().edit {
             putString(Ankiquest.PREF_URL, "https://quest.example/anki")
             putString(Ankiquest.PREF_USER, "cerro")
@@ -53,7 +55,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
 
     @After
     fun clearMocks() {
-        unmockkObject(Ankiquest)
+        unmockkObject(Ankiquest, AnkiquestCapabilities)
     }
 
     @Test
@@ -104,6 +106,38 @@ class AnkiquestSettingsTest : RobolectricTest() {
         val menu = RoboMenu()
         controller.get().onCreateOptionsMenu(menu)
         assertTrue((0 until menu.size()).any { menu.getItem(it).title == targetContext.getString(CommonString.settings) })
+    }
+
+    @Test
+    fun `dashboard with an installed session cookie learns the member but never the token`() {
+        coEvery { Ankiquest.dashboardSession(any()) } returns "ankiquest_session=opaque; Path=/; HttpOnly; Secure; SameSite=Lax"
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestCapabilities.COOKIE_SESSION, "wins")
+        val script = dashboardScript()
+        assertTrue(script.contains("window.ankiquestSession = {\"user\":\"cerro\"};"))
+        assertFalse(script.contains("saved-test-token"))
+    }
+
+    @Test
+    fun `dashboard keeps the token while the server does not report cookie sessions`() {
+        coEvery { Ankiquest.dashboardSession(any()) } returns "ankiquest_session=opaque; Path=/; HttpOnly; Secure; SameSite=Lax"
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf("wins")
+        val script = dashboardScript()
+        assertTrue(script.contains("saved-test-token"))
+        coVerify { AnkiquestCapabilities.current(match { it.server == "https://quest.example/anki" && it.user == "cerro" }) }
+    }
+
+    @Test
+    fun `dashboard keeps the token when no session cookie was installed`() {
+        coEvery { AnkiquestCapabilities.current(any()) } returns setOf(AnkiquestCapabilities.COOKIE_SESSION)
+        assertTrue(dashboardScript().contains("saved-test-token"))
+    }
+
+    private fun dashboardScript(): String {
+        val controller = Robolectric.buildActivity(AnkiquestActivity::class.java).create().also { shadowOf(Looper.getMainLooper()).idle() }
+        saveControllerForCleanup(controller)
+        val webView = controller.get().findViewById<WebView>(R.id.web_view)
+        shadowOf(webView).webViewClient.onPageFinished(webView, "https://quest.example/anki/?embed=1#cerro")
+        return assertNotNull(shadowOf(webView).lastEvaluatedJavascript)
     }
 
     @Test
