@@ -107,6 +107,96 @@ class AnkiquestWebSessionTest {
     }
 
     @Test
+    fun `every page the server serves keeps the session`() {
+        val pages =
+            listOf(
+                "today",
+                "history",
+                "settings",
+                "friends",
+                "join/abc-123",
+                "privacy",
+                "conquered/cerro/1793183400",
+                "records",
+                "community",
+                "dev",
+                "hour",
+                "day",
+                "week",
+                "month",
+                "year",
+                "all",
+            )
+        for (page in pages) {
+            for (query in listOf("", "?embed=1")) {
+                val url = "https://quest.example/anki/$page$query#cerro"
+                assertTrue(session.allows(url), url)
+                assertNotNull(session.script(url), url)
+                assertEquals(AnkiquestLink.SITE, session.link(url), url)
+            }
+        }
+    }
+
+    @Test
+    fun `other documents of the server stay in the app without the session`() {
+        val documents =
+            listOf(
+                "https://quest.example/anki/join/",
+                "https://quest.example/anki/join/a/b",
+                "https://quest.example/anki/conquered/cerro",
+                "https://quest.example/anki/conquered/cerro/soon",
+                "https://quest.example/anki/today/",
+                "https://quest.example/anki/today?next=elsewhere",
+                "https://quest.example/anki/settings?embed=1&unknown=x",
+                "https://quest.example/w/example-link",
+                "https://quest.example/anki/w/example-link",
+            )
+        for (url in documents) {
+            assertFalse(session.allows(url), url)
+            assertNull(session.script(url), url)
+            assertEquals(AnkiquestLink.SITE, session.link(url), url)
+        }
+    }
+
+    @Test
+    @SuppressLint("AuthLeak")
+    fun `the website sign-in is replaced by the app's and other sites open elsewhere`() {
+        val signIn =
+            listOf(
+                "https://quest.example/login",
+                "https://quest.example/login?next=%2Ftoday",
+                "https://quest.example/login?signup=1",
+                "https://quest.example/anki/login?next=%2Fanki%2Ftoday",
+                "https://quest.example/auth/oauth/github?link=1",
+                "https://quest.example/auth/oauth/google/callback?code=x",
+                "https://quest.example/anki/auth/session",
+            )
+        for (url in signIn) {
+            assertEquals(AnkiquestLink.SIGN_IN, session.link(url), url)
+            assertFalse(session.allows(url), url)
+        }
+        val external =
+            listOf(
+                null,
+                "",
+                "javascript:alert(1)",
+                "https://github.com/login/oauth/authorize",
+                "http://quest.example/anki/today",
+                "https://quest.example:8443/anki/today",
+                "https://other.example/anki/today",
+            )
+        for (url in external) assertEquals(AnkiquestLink.EXTERNAL, session.link(url), url.toString())
+        assertEquals(AnkiquestLink.REFUSED, session.link("https://member:secret@quest.example/anki/today"))
+        assertFalse(session.allows("https://member:secret@quest.example/anki/today"))
+    }
+
+    @Test
+    fun `a session without a token is signed out`() {
+        assertTrue(session.signedIn)
+        assertFalse(AnkiquestWebSession("https://quest.example/anki/#cerro", "cerro", "").signedIn)
+    }
+
+    @Test
     fun `the token never appears in logs`() {
         assertFalse(session.toString().contains("secret"))
     }

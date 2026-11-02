@@ -133,6 +133,78 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     }
 
     @Test
+    fun `each notification kind opens what it is about`() {
+        val today = AnkiquestNavigation.Destination.Today()
+        val quests = AnkiquestNavigation.Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
+        val week = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.WEEK_PATH)
+        val feed = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.ACTIVITY_PATH)
+        val challenges = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.FRIENDS_PATH)
+        val goal = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.challengePath(42))
+        val cases =
+            listOf(
+                Triple("reminder_daily", null, 0L) to today,
+                Triple("reminder_urgent", null, 0L) to today,
+                Triple("reminder_milestone", null, 0L) to today,
+                Triple("reminder_freeze_used", null, 0L) to today,
+                Triple("reminder_freeze_refill", null, 0L) to quests,
+                Triple("reminder_weekly_recap", "place:2", 0L) to week,
+                Triple("reminder_weekly_recap", null, 0L) to week,
+                Triple("reminder_weekly_closing", null, 0L) to week,
+                Triple("celebration", "goal", 0L) to today,
+                Triple("celebration", "secured", 0L) to today,
+                Triple("celebration", "streak", 0L) to today,
+                Triple("celebration", "level", 0L) to today,
+                Triple("event", "quest", 0L) to quests,
+                Triple("event", null, 0L) to today,
+                Triple("risk", null, 0L) to today,
+                Triple("nudge", null, 0L) to today,
+                Triple("challenge_invite", null, 42L) to goal,
+                Triple("challenge_accepted", null, 42L) to goal,
+                Triple("challenge_complete", null, 42L) to goal,
+                Triple("challenge_invite", null, 0L) to challenges,
+                Triple("share", "streak", 0L) to feed,
+                Triple("reaction", null, 0L) to feed,
+                Triple("completion", null, 0L) to feed,
+                Triple("conquest", null, 0L) to feed,
+                Triple("message", null, 0L) to feed,
+                Triple("reply", null, 0L) to feed,
+                Triple("something_new", null, 0L) to today,
+                Triple("", null, 0L) to today,
+            )
+        for ((input, expected) in cases) {
+            val (kind, topic, challenge) = input
+            assertEquals(expected, AnkiquestNavigation.notificationDestination(kind, topic, challenge), "$kind $topic $challenge")
+        }
+    }
+
+    @Test
+    fun `study notifications open the native Today screen and the freeze quest reminder its quests`() {
+        val owner = "https://anki.example.test/member%20name"
+        val freezeEntry = JSONObject().put("id", 73).put("kind", "reminder_freeze_refill")
+        val freeze = AnkiquestNotifier.notificationIntent(targetContext, freezeEntry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), freeze.component)
+        assertEquals(AnkiquestHomeActivity.FOCUS_QUESTS, freeze.getStringExtra(AnkiquestHomeActivity.EXTRA_FOCUS))
+        assertTrue((freeze.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+
+        val dailyEntry =
+            JSONObject()
+                .put("id", 74)
+                .put("kind", "reminder_daily")
+                .put("topic", JSONObject.NULL)
+                .put("route", "https://untrusted.test/")
+        val daily = AnkiquestNotifier.notificationIntent(targetContext, dailyEntry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), daily.component)
+        assertFalse(daily.hasExtra(AnkiquestHomeActivity.EXTRA_FOCUS))
+        assertEquals(null, daily.data)
+
+        val recapEntry = JSONObject().put("id", 75).put("kind", "reminder_weekly_recap")
+        val recap = AnkiquestNotifier.notificationIntent(targetContext, recapEntry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestActivity::class.java), recap.component)
+        assertEquals(AnkiquestNavigation.WEEK_PATH, recap.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        assertEquals(owner, recap.getStringExtra(AnkiquestActivity.EXTRA_ACCOUNT))
+    }
+
+    @Test
     fun `a notification for another account cannot open a coincident challenge id`() {
         val intent = AnkiquestNotifier.notificationIntent(targetContext, JSONObject().put("challenge_id", 42), "https://other.test/member")
         val current = AnkiquestHomeData.account()!!.notificationAccount

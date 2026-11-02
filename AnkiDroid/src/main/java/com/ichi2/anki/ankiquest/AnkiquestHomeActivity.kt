@@ -19,6 +19,7 @@ import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
@@ -74,6 +75,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             refresh()
         }
     private var generation = 0
+    private var focus: String? = null
+    private var questsHeading: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
@@ -103,6 +106,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             insets
         }
         account = AnkiquestHomeData.account()
+        if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
         if (savedInstanceState == null) AnkiquestGoalDialog.offerSetup(this) { refresh() }
     }
@@ -244,10 +248,17 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
-        scroll.post { scroll.scrollTo(0, position) }
+        val target = questsHeading?.takeIf { focus == FOCUS_QUESTS }
+        if (target != null || profile != null) focus = null
+        if (target != null) {
+            target.doOnLayout { scroll.smoothScrollTo(0, it.top) }
+        } else {
+            scroll.post { scroll.scrollTo(0, position) }
+        }
     }
 
     private fun renderToday() {
+        questsHeading = null
         title(R.string.ankiquest_nav_today, R.string.aq_home_today_subtitle)
         content.addView(AnkiquestAki.encouragement(this, AnkiquestAki.mood(local, profile)))
         profile?.let {
@@ -296,7 +307,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         profile?.optJSONArray("quests")?.objects()?.let { quests ->
             if (quests.isNotEmpty()) {
                 if (quests.all { it.optBoolean("done") }) content.addView(AnkiquestAki.image(this, R.drawable.aki_winner, 56))
-                text(content, getString(R.string.aq_home_quests), heading = true)
+                questsHeading = text(content, getString(R.string.aq_home_quests), heading = true)
                 quests.forEach { quest ->
                     val panel = card()
                     text(panel, quest.optString("title"), heading = true)
@@ -657,6 +668,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     companion object {
         const val EXTRA_SKIP_HOME = "ankiquest.skip_home"
         const val EXTRA_STUDY_DECK = "ankiquest.study_deck"
+
+        /** A section to scroll to once it is shown, such as [FOCUS_QUESTS]. */
+        const val EXTRA_FOCUS = "ankiquest.focus"
+        const val FOCUS_QUESTS = "quests"
 
         fun intent(context: Context): Intent = Intent(context, AnkiquestHomeActivity::class.java)
     }
