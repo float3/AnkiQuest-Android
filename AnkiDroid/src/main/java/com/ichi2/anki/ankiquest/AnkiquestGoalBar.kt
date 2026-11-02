@@ -22,6 +22,7 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withClip
 import com.ichi2.anki.R
 import com.ichi2.anki.common.android.Animations
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -354,10 +355,7 @@ internal class AnkiquestGoalBar
                     shinePath.lineTo(x + band, top + bar)
                     shinePath.lineTo(x, top + bar)
                     shinePath.close()
-                    canvas.save()
-                    canvas.clipPath(fillPath)
-                    canvas.drawPath(shinePath, shinePaint)
-                    canvas.restore()
+                    canvas.withClip(fillPath) { drawPath(shinePath, shinePaint) }
                 }
                 if (!gold && shown < 1f) {
                     val knob = end - radius
