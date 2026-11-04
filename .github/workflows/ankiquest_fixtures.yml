@@ -3,9 +3,9 @@ name: ankiquest shared fixtures
 
 on:
   push:
-    branches: [ankiquest]
+    branches: [main]
   pull_request:
-    branches: [ankiquest]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
