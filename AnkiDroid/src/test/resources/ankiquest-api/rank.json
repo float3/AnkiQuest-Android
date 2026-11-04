@@ -1,7 +1,10 @@
 {
     "change": {
         "body": "You passed Cerro.",
+        "share_body": "I passed Cerro.",
+        "share_title": "👑 I took the crown",
         "title": "👑 You took the crown"
     },
-    "order": ["hill", "cerro"]
+    "order": ["hill", "cerro"],
+    "week": 1792987200000
 }

@@ -158,15 +158,26 @@ object AnkiquestNotifier {
         val title = change.getString("title")
         val body = change.getString("body")
         val place = climbedTo(previous, order, Ankiquest.player())?.takeIf { it <= 3 }
+        val (shareTitle, shareBody) = shareText(change)
         notify(
             context,
             RANK_ID,
             title,
             body,
             AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
+            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
+    }
+
+    /**
+     * What sharing a rank [change] tells others: the server's first-person `share_title` and
+     * `share_body` ("👑 I took the crown"), or for older servers the notice itself.
+     */
+    internal fun shareText(change: JSONObject): Pair<String, String> {
+        val title = change.getString("title")
+        val body = change.getString("body")
+        return change.optString("share_title").ifEmpty { title } to change.optString("share_body").ifEmpty { body }
     }
 
     /** The 1-based place [me] climbed to between two leaderboard orders, or null when they did not climb. */
