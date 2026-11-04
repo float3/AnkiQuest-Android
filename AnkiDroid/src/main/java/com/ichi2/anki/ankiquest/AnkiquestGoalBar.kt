@@ -23,6 +23,7 @@ import android.view.animation.OvershootInterpolator
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withClip
+import androidx.core.graphics.withSave
 import com.ichi2.anki.R
 import com.ichi2.anki.common.android.Animations
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -326,53 +327,53 @@ internal class AnkiquestGoalBar
             val top = (height - bar) / 2f
             val radius = bar / 2f
             val center = top + radius
-            canvas.save()
-            if (layoutDirection == LAYOUT_DIRECTION_RTL) canvas.scale(-1f, 1f, full / 2f, 0f)
-            rect.set(0f, top, full, top + bar)
-            canvas.drawRoundRect(rect, radius, radius, trackPaint)
-            val shown = shownFraction.coerceIn(0f, 1f)
-            val end = if (shown <= 0f) 0f else max(bar, shown * full)
-            if (end > 0f) {
-                rect.set(0f, top, end, top + bar)
-                if (goldBlend < 1f) canvas.drawRoundRect(rect, radius, radius, fillPaint)
-                if (goldBlend > 0f) {
-                    goldPaint.alpha = (goldBlend * 255).toInt()
-                    canvas.drawRoundRect(rect, radius, radius, goldPaint)
-                }
-                if (end > bar) {
-                    rect.set(radius * 0.7f, top + bar * 0.16f, end - radius * 0.7f, top + bar * 0.38f)
-                    canvas.drawRoundRect(rect, bar * 0.11f, bar * 0.11f, glossPaint)
-                }
-                if (shine in 0f..1f) {
-                    fillPath.reset()
+            canvas.withSave {
+                if (layoutDirection == LAYOUT_DIRECTION_RTL) canvas.scale(-1f, 1f, full / 2f, 0f)
+                rect.set(0f, top, full, top + bar)
+                canvas.drawRoundRect(rect, radius, radius, trackPaint)
+                val shown = shownFraction.coerceIn(0f, 1f)
+                val end = if (shown <= 0f) 0f else max(bar, shown * full)
+                if (end > 0f) {
                     rect.set(0f, top, end, top + bar)
-                    fillPath.addRoundRect(rect, radius, radius, Path.Direction.CW)
-                    val band = bar * 1.2f
-                    val x = -band * 2 + shine * (end + band * 3)
-                    shinePath.reset()
-                    shinePath.moveTo(x + band, top)
-                    shinePath.lineTo(x + band * 2, top)
-                    shinePath.lineTo(x + band, top + bar)
-                    shinePath.lineTo(x, top + bar)
-                    shinePath.close()
-                    canvas.withClip(fillPath) { drawPath(shinePath, shinePaint) }
+                    if (goldBlend < 1f) canvas.drawRoundRect(rect, radius, radius, fillPaint)
+                    if (goldBlend > 0f) {
+                        goldPaint.alpha = (goldBlend * 255).toInt()
+                        canvas.drawRoundRect(rect, radius, radius, goldPaint)
+                    }
+                    if (end > bar) {
+                        rect.set(radius * 0.7f, top + bar * 0.16f, end - radius * 0.7f, top + bar * 0.38f)
+                        canvas.drawRoundRect(rect, bar * 0.11f, bar * 0.11f, glossPaint)
+                    }
+                    if (shine in 0f..1f) {
+                        fillPath.reset()
+                        rect.set(0f, top, end, top + bar)
+                        fillPath.addRoundRect(rect, radius, radius, Path.Direction.CW)
+                        val band = bar * 1.2f
+                        val x = -band * 2 + shine * (end + band * 3)
+                        shinePath.reset()
+                        shinePath.moveTo(x + band, top)
+                        shinePath.lineTo(x + band * 2, top)
+                        shinePath.lineTo(x + band, top + bar)
+                        shinePath.lineTo(x, top + bar)
+                        shinePath.close()
+                        canvas.withClip(fillPath) { drawPath(shinePath, shinePaint) }
+                    }
+                    if (!gold && shown < 1f) {
+                        val knob = end - radius
+                        glowMatrix.setTranslate(knob, center)
+                        glowPaint.shader?.setLocalMatrix(glowMatrix)
+                        canvas.drawCircle(knob, center, glowRadius, glowPaint)
+                        canvas.drawCircle(knob, center, radius * 0.42f, knobPaint)
+                    }
                 }
-                if (!gold && shown < 1f) {
-                    val knob = end - radius
-                    glowMatrix.setTranslate(knob, center)
-                    glowPaint.shader?.setLocalMatrix(glowMatrix)
-                    canvas.drawCircle(knob, center, glowRadius, glowPaint)
-                    canvas.drawCircle(knob, center, radius * 0.42f, knobPaint)
+                MILESTONES.forEachIndexed { index, milestone ->
+                    val x = milestone * full
+                    if (x <= radius || x >= full - radius) return@forEachIndexed
+                    val passed = shown >= milestone
+                    tickPaint.color = if (passed) Color.argb(220, 255, 255, 255) else tick
+                    canvas.drawCircle(x, center, bar * TICK_RADIUS * pops[index], tickPaint)
                 }
             }
-            MILESTONES.forEachIndexed { index, milestone ->
-                val x = milestone * full
-                if (x <= radius || x >= full - radius) return@forEachIndexed
-                val passed = shown >= milestone
-                tickPaint.color = if (passed) Color.argb(220, 255, 255, 255) else tick
-                canvas.drawCircle(x, center, bar * TICK_RADIUS * pops[index], tickPaint)
-            }
-            canvas.restore()
         }
 
         companion object {
