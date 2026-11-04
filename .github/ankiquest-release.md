@@ -1,15 +1,17 @@
 AnkiDroid with [AnkiQuest](https://github.com/float3/ankiquest): study, shared goals, and progress in one place.
 
-This update introduces a native Today screen and four consistent destinations: Today, Friends, Progress, and Decks. Start studying from your actual local due cards, find invitations and active friend goals immediately, and revisit a quiet session recap. Your deck library, card browser, statistics, import, and sync remain available. You can choose Decks as your starting screen in Settings.
+**Everything is native now.** The app no longer opens the AnkiQuest website inside the app. The activity feed, friend goals, leaderboards and player profiles, friends and groups, records and study history, the community calendar, reminder settings, conquered cards and your account settings (password, linking Google or GitHub, signed-in devices, downloading your data, deleting your account) are all native screens. The privacy notice opens in your browser. If your server is too old for a screen, the app tells you so instead of opening a web page.
 
-Friends includes quick challenge presets and direct accept/decline controls. Activity keeps invitations and encouragement together, and notifications open their related message or goal. Update the server to this companion release for 90-day Activity history, saved read status, challenge notifications, profile pictures, and shared reminder settings. Older servers retain their existing 7-day notification inbox; local studying remains available offline.
+**Today and goals.** Today shows your streak minimum and a daily goal: by default the cards due today plus a share of any overdue backlog (10% a day, adjustable), so a backlog shrinks steadily instead of all at once. You can set a fixed number of cards or minutes instead under Settings → AnkiQuest → Study. An animated bar shows your progress, and a celebration appears when today counts for your streak and again when you reach your goal. Right after the weekly reset, Today and your profile show last week's XP as "still counting" until your own day ends.
 
-The app is now called AnkiQuest. Today shows your streak minimum and a daily goal: by default the cards due today plus a share of any overdue backlog (10% a day, adjustable), so a backlog shrinks steadily instead of all at once. You can set a fixed number of cards or minutes instead under Settings → ankiquest → Study. A celebration appears when today counts for your streak and again when you reach your goal. When the server asks for a number of review minutes per day, the app and widget show how many are done.
+**Aki.** A home-screen streak widget shows your streak next to Aki or Ankilope. An optional setting changes the app icon with your streak's mood. New celebration art marks achievements, streak milestones, finished decks and the top three.
 
-Decks now includes a review heatmap with daily details and direct links to the cards you studied. Optional profile pictures appear on the website and in widgets. Personal reminder and notification settings follow the same member account across the app and website.
+**Sharing.** Share a win with your AnkiQuest friends or any other app. Shared wins and rank climbs are worded in your own voice ("I passed Mago Rojo"). A conquered card can carry a label of what it was, only if you add one. When you finish a deck, the app asks who to tell.
 
-Private servers use your saved member token and automatically sign the embedded website into your own account. A shared website password provides shared viewing access; personal controls require a member token. Private views and pending actions stay tied to their member account. Earned XP, achievements, and scoring rules are unchanged.
+**Notifications** open the screen they're about. Reviews now record the time zone they were made in, so studying offline across a time-zone change still counts toward the right day.
 
-Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then fill in Settings → ankiquest (server URL, player, token). Later releases are offered inside the app.
+Update your server to this companion release for the new screens, Google/GitHub linking from the app, the weekly recap and first-person sharing.
 
-Study uploads contain review history (card id, timestamp, previous interval, time taken, and review type), never card content. Social actions send the invitation or message you choose to share.
+Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then fill in Settings → AnkiQuest (server URL, player, token). Later releases are offered inside the app.
+
+Study uploads contain review history (card id, timestamp, previous interval, time taken, review type and your time-zone offset), never card content. Social actions send the invitation or message you choose to share.
