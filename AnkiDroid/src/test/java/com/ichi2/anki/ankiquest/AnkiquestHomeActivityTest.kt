@@ -103,6 +103,19 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `Today shows the closing week while the player's day still counts for it`() {
+        val endsAt =
+            com.ichi2.anki.common.time.TimeManager.time
+                .intTimeMS() + 60 * 60 * 1000L
+        val closing = JSONObject().put("xp", 1234).put("ends_at", endsAt)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("closing_week", closing)
+        val home = launch()
+        val line =
+            assertNotNull(AnkiquestBoards.closingLine(home, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(home.hasText(line))
+    }
+
+    @Test
     fun `offline Today keeps local study`() {
         coEvery { AnkiquestHomeData.profile(identity) } throws IOException("offline")
         val home = launch()
@@ -126,8 +139,8 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertEquals(4, nav.menu.size)
 
         nav.selectedItemId = R.id.ankiquest_nav_friends
-        val goals = assertNotNull(shadowOf(home).nextStartedActivity)
-        assertEquals(AnkiquestChallengesActivity::class.java.name, goals.component?.className)
+        val friends = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, friends.component?.className)
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
 
         nav.selectedItemId = R.id.ankiquest_nav_progress
@@ -146,6 +159,18 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertFalse(decks.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK))
         assertTrue(decks.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+    }
+
+    @Test
+    fun `Today links to the study history and the records`() {
+        val home = launch()
+        for ((label, screen) in listOf(
+            R.string.aq_history_title to AnkiquestHistoryActivity::class.java,
+            R.string.aq_records_title to AnkiquestRecordsActivity::class.java,
+        )) {
+            home.click(home.getString(label))
+            assertEquals(screen.name, assertNotNull(shadowOf(home).nextStartedActivity).component?.className)
+        }
     }
 
     private fun assertWebsite(

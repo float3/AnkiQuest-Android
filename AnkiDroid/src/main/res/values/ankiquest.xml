@@ -32,9 +32,7 @@
     <string name="ankiquest_avatar_choose">Choose picture</string>
     <string name="ankiquest_avatar_remove">Remove picture</string>
     <string name="ankiquest_avatar_remove_confirm">Remove your profile picture and use your initial again?</string>
-    <string name="ankiquest_deck_notifications_key" translatable="false">ankiquestDeckNotifications</string>
     <string name="ankiquest_deck_notifications_title" maxLength="41">Deck completion notifications</string>
-    <string name="ankiquest_deck_notifications_summary">Choose who hears when you finish a deck for the day</string>
     <string name="ankiquest_deck_notifications_empty">Create a regular deck first to set up completion notifications.</string>
     <string name="ankiquest_deck_notifications_no_people">There are no other players on this server yet.</string>
     <string name="ankiquest_deck_notifications_choose_people">Select at least one person, or switch sharing off.</string>

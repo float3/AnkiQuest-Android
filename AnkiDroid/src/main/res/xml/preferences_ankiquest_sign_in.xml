@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/ankiquest_sign_in_screen_title"
+    android:key="@string/ankiquest_sign_in_screen_key">
+    <Preference
+        android:key="@string/ankiquest_account_status_key"
+        android:persistent="false" />
+    <Preference
+        android:key="@string/ankiquest_password_key"
+        android:persistent="false"
+        android:title="@string/ankiquest_password_title" />
+    <PreferenceCategory
+        android:key="@string/ankiquest_providers_key"
+        android:title="@string/ankiquest_providers_title" />
+    <PreferenceCategory
+        android:key="@string/ankiquest_devices_key"
+        android:title="@string/ankiquest_devices_title">
+        <Preference
+            android:key="@string/ankiquest_sign_out_others_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_sign_out_others_title"
+            android:summary="@string/ankiquest_sign_out_others_summary" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/ankiquest_data_title">
+        <Preference
+            android:key="@string/ankiquest_export_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_export_title"
+            android:summary="@string/ankiquest_export_summary" />
+        <Preference
+            android:key="@string/ankiquest_delete_account_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_delete_title"
+            android:summary="@string/ankiquest_delete_summary" />
+    </PreferenceCategory>
+</PreferenceScreen>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_sign_in_screen_key" translatable="false">ankiquestSignInScreen</string>
+    <string name="ankiquest_account_status_key" translatable="false">ankiquestAccountStatus</string>
+    <string name="ankiquest_password_key" translatable="false">ankiquestPassword</string>
+    <string name="ankiquest_providers_key" translatable="false">ankiquestProviders</string>
+    <string name="ankiquest_devices_key" translatable="false">ankiquestDevices</string>
+    <string name="ankiquest_sign_out_others_key" translatable="false">ankiquestSignOutOthers</string>
+    <string name="ankiquest_export_key" translatable="false">ankiquestExport</string>
+    <string name="ankiquest_delete_account_key" translatable="false">ankiquestDeleteAccount</string>
+
+    <string name="ankiquest_sign_in_screen_title" maxLength="41">Sign-in, devices and data</string>
+    <string name="ankiquest_sign_in_screen_summary">Password, Google and GitHub, signed-in devices, your data and deleting your account</string>
+    <string name="ankiquest_providers_title" maxLength="41">Sign in with</string>
+    <string name="ankiquest_devices_title" maxLength="41">Signed-in devices</string>
+    <string name="ankiquest_data_title" maxLength="41">Your data</string>
+    <string name="ankiquest_account_configure">Sign in to AnkiQuest first.</string>
+    <string name="ankiquest_account_failed">%s Tap to try again.</string>
+    <string name="ankiquest_account_changed">You signed in as someone else in the meantime. Try again.</string>
+
+    <string name="ankiquest_password_title" maxLength="41">Password</string>
+    <string name="ankiquest_password_change">Change your password</string>
+    <string name="ankiquest_password_set">Set a password, to also sign in without your provider</string>
+    <string name="ankiquest_password_current">Current password</string>
+    <string name="ankiquest_password_new">New password</string>
+    <string name="ankiquest_password_sign_out_others">Sign out my other devices</string>
+    <string name="ankiquest_password_length">Use 10 to 256 characters.</string>
+    <string name="ankiquest_password_saved">Password saved.</string>
+
+    <string name="ankiquest_provider_linked">Linked. Tap to unlink.</string>
+    <string name="ankiquest_provider_unlinked">Not linked. Tap to link.</string>
+    <string name="ankiquest_provider_unlink_confirm">Unlink %s? You will no longer be able to sign in with it.</string>
+    <string name="ankiquest_provider_unlink">Unlink</string>
+    <string name="ankiquest_provider_unsupported">This server can only do this on its website. Ask whoever runs it to update it.</string>
+    <string name="ankiquest_browser_opened">Finish in the browser, then come back here.</string>
+    <string name="ankiquest_browser_foreign">The server sent an address on another site, so it was not opened.</string>
+    <string name="ankiquest_reauth_title">Sign in again to confirm it’s you</string>
+    <string name="ankiquest_reauth_with">Sign in with %s</string>
+    <string name="ankiquest_reauth_none">None of your linked sign-ins is offered by this server any more. Ask whoever runs the server for help.</string>
+    <string name="ankiquest_reauth_pending">You haven’t signed in again yet. Finish signing in in the browser, then come back here.</string>
+
+    <string name="ankiquest_device_website">Website</string>
+    <string name="ankiquest_device_app">App</string>
+    <string name="ankiquest_device_this">%s (this device)</string>
+    <string name="ankiquest_device_signed_in">Signed in %s</string>
+    <string name="ankiquest_device_used">Signed in %1$s, last used %2$s</string>
+    <string name="ankiquest_device_sign_out_confirm">Sign out %s? It will have to sign in again.</string>
+    <string name="ankiquest_device_sign_out">Sign out</string>
+    <string name="ankiquest_sign_out_others_title" maxLength="41">Sign out all other devices</string>
+    <string name="ankiquest_sign_out_others_summary">Every app and website session except this one</string>
+    <string name="ankiquest_sign_out_others_confirm">Sign out every other device and website session?</string>
+    <string name="ankiquest_signed_out_others">Your other devices are signed out.</string>
+
+    <string name="ankiquest_export_title" maxLength="41">Download your data</string>
+    <string name="ankiquest_export_summary">Save everything the server keeps about you as a JSON file</string>
+    <string name="ankiquest_export_saved">Your data was saved.</string>
+    <string name="ankiquest_delete_title" maxLength="41">Delete account</string>
+    <string name="ankiquest_delete_summary">Remove your account and everything about it from the server</string>
+    <string name="ankiquest_delete_password_message">This deletes your account, your study history and everything else the server keeps about you, for good. Enter your password to confirm.</string>
+    <string name="ankiquest_delete_username_message">This deletes your account, your study history and everything else the server keeps about you, for good. Type your username, %s, to confirm.</string>
+    <string name="ankiquest_delete_button">Delete for good</string>
+    <string name="ankiquest_delete_type_username">Type %s to confirm.</string>
+    <string name="ankiquest_delete_done">Your account was deleted and this device is signed out.</string>
+</resources>

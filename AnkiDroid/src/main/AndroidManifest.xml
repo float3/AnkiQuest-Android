@@ -422,6 +422,11 @@
             android:exported="false"
             />
         <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestFriendsActivity"
+            android:label="@string/ankiquest_nav_friends"
+            android:exported="false"
+            />
+        <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestFeedActivity"
             android:label="@string/aq_home_activity"
             android:exported="false"
@@ -429,6 +434,16 @@
         <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestChallengesActivity"
             android:label="@string/aq_challenges_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestRecordsActivity"
+            android:label="@string/aq_records_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestHistoryActivity"
+            android:label="@string/aq_history_title"
             android:exported="false"
             />
         <activity

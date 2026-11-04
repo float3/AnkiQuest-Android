@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_records_title">Records</string>
+    <string name="aq_records_refresh">Refresh records</string>
+    <string name="aq_records_loading">Loading records…</string>
+    <string name="aq_records_lead">Records worth chasing.</string>
+    <string name="aq_records_intro">Personal bests become shared milestones. Celebrate the sessions, streaks and study days that raised the bar.</string>
+    <string name="aq_records_connect">Connect AnkiQuest to see the records you and your friends have set.</string>
+    <string name="aq_records_scope_circle">Friends and groups</string>
+    <string name="aq_records_scope_global">Everyone</string>
+    <string name="aq_records_ended">Ended %1$s</string>
+    <string name="aq_records_since">Since %1$s</string>
+    <plurals name="aq_records_days">
+        <item quantity="one">%1$s day</item>
+        <item quantity="other">%1$s days</item>
+    </plurals>
+    <plurals name="aq_records_reviews">
+        <item quantity="one">%1$s review</item>
+        <item quantity="other">%1$s reviews</item>
+    </plurals>
+    <string name="aq_records_holder">Record: %1$s, %2$s</string>
+    <string name="aq_records_chaser">Place %1$d: %2$s, %3$s, %4$s behind</string>
+    <string name="aq_records_empty">Nobody has earned any XP yet.</string>
+    <string name="aq_records_empty_hint">A new record starts with one session.</string>
+    <string name="aq_records_server_error">Records could not be loaded. Try refreshing.</string>
+
+    <string name="aq_history_title">Study history</string>
+    <string name="aq_history_refresh">Refresh study history</string>
+    <string name="aq_history_loading">Loading your study history…</string>
+    <string name="aq_history_intro">Every day you showed up adds to your story.</string>
+    <string name="aq_history_connect">Connect AnkiQuest to see your study calendar.</string>
+    <string name="aq_history_year">Study year</string>
+    <string name="aq_history_updated">Study data updated: %1$s</string>
+    <string name="aq_history_latest_review">Latest uploaded review: %1$s</string>
+    <string name="aq_history_no_reviews">No reviews uploaded yet.</string>
+    <string name="aq_history_year_reviews">Reviews in %1$d</string>
+    <string name="aq_history_year_days">Study days in %1$d</string>
+    <string name="aq_history_year_xp">XP earned in %1$d</string>
+    <string name="aq_history_calendar">%1$d, day by day</string>
+    <string name="aq_history_choose">Choose a day</string>
+    <string name="aq_history_choose_hint">Select a square to see what happened that day.</string>
+    <string name="aq_history_frozen">Streak protected</string>
+    <string name="aq_history_minutes">Minutes studied</string>
+    <string name="aq_history_xp">XP earned</string>
+    <string name="aq_history_new_cards">New cards</string>
+    <string name="aq_history_day_hint">These totals reflect reviews uploaded to AnkiQuest.</string>
+    <string name="aq_history_day_empty">No reviews recorded for this day.</string>
+    <string name="aq_history_empty">No study days this year yet.</string>
+    <string name="aq_history_empty_hint">Your calendar fills in as reviews are uploaded.</string>
+    <string name="aq_history_cutoff">A day follows your Anki cutoff. These are uploaded reviews, so another device may have newer activity until it syncs.</string>
+    <string name="aq_history_server_error">Your study history could not be loaded. Try refreshing.</string>
+</resources>

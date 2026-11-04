@@ -111,7 +111,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
 
     @Test
     @SuppressLint("AuthLeak")
-    fun `website links stay in the app and the website sign-in opens the native one`() {
+    fun `website links stay in the app, invite links and the website sign-in open native screens`() {
         val controller = Robolectric.buildActivity(AnkiquestActivity::class.java).create().also { shadowOf(Looper.getMainLooper()).idle() }
         saveControllerForCleanup(controller)
         val activity = controller.get()
@@ -120,12 +120,16 @@ class AnkiquestSettingsTest : RobolectricTest() {
         for (url in listOf(
             "https://quest.example/anki/today?embed=1",
             "https://quest.example/anki/friends?embed=1",
-            "https://quest.example/anki/join/abc?embed=1",
             "https://quest.example/w/example-link",
         )) {
             assertFalse(client.shouldOverrideUrlLoading(webView, mockWebResourceRequest(url)), url)
         }
         assertNull(shadowOf(activity).nextStartedActivity)
+        // A group invite link opens the native confirmation.
+        assertTrue(client.shouldOverrideUrlLoading(webView, mockWebResourceRequest("https://quest.example/anki/join/abc?embed=1")))
+        val join = assertNotNull(shadowOf(activity).nextStartedActivity)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, join.component?.className)
+        assertEquals("abc", join.getStringExtra(AnkiquestFriendsActivity.EXTRA_INVITE))
         for (url in listOf("https://quest.example/login?next=%2Fanki%2Ftoday", "https://quest.example/auth/oauth/github?link=1")) {
             assertTrue(client.shouldOverrideUrlLoading(webView, mockWebResourceRequest(url)), url)
             val opened = assertNotNull(shadowOf(activity).nextStartedActivity, url)

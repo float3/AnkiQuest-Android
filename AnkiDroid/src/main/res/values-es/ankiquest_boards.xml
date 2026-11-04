@@ -16,6 +16,8 @@
     <string name="aq_board_your_place">Estás en el puesto %1$d de %2$d.</string>
     <string name="aq_board_xp">%1$s XP</string>
     <string name="aq_board_today_reviews">%1$s hoy</string>
+    <string name="aq_board_closing_xp">%1$s XP aún cuentan para la semana pasada</string>
+    <string name="aq_closing_week">La semana pasada aún cuenta: %1$s XP · cierra a las %2$s</string>
     <string name="aq_board_row_description">Puesto %1$d: %2$s, nivel %3$d, %4$s XP</string>
     <string name="aq_board_my_profile">Tu perfil</string>
     <string name="aq_board_offline">No se pudo conectar. Revisa tu conexión y actualiza.</string>

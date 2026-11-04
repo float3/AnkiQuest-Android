@@ -324,6 +324,7 @@ fun getFragmentFromXmlRes(
         R.xml.preferences_ankiquest_maintenance -> AnkiquestMaintenanceSettingsFragment()
         R.xml.preferences_ankiquest_subscriptions -> AnkiquestSubscriptionsFragment()
         R.xml.preferences_ankiquest_reminders -> AnkiquestRemindersFragment()
+        R.xml.preferences_ankiquest_sign_in -> AnkiquestSignInFragment()
         R.xml.preferences_notifications -> NotificationsSettingsFragment()
         R.xml.preferences_appearance -> AppearanceSettingsFragment()
         R.xml.preferences_controls -> ControlsSettingsFragment()

@@ -369,7 +369,25 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         if (!changes.studyQueues) return
         val reviewing = handler is Reviewer || handler is ReviewerViewModel || isReviewing(activity.get())
         if (!reviewing && handler != null) return
+        if (reviewing && HomeAccount.current() != null) {
+            scope.launch {
+                recordAnswers()
+                launchRefresh(showFeedback = true)
+            }
+            return
+        }
         launchRefresh(showFeedback = reviewing)
+    }
+
+    /** Remembers the time zone of the answers just made here, before they are uploaded. */
+    private suspend fun recordAnswers() {
+        try {
+            AnkiquestReviewOffsets.recordAnswers(AnkiDroidApp.sharedPrefs(), TimeManager.time.intTimeMS())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest could not record the time zone of an answer")
+        }
     }
 
     private fun isReviewing(host: Activity?): Boolean =
@@ -464,6 +482,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val initialSyncDone = prefs.contains(markKey) && prefs.getBoolean(initialSyncKey, false)
         var known = if (resync) maxOf(0L, mark - RESYNC_WINDOW_MS) else mark
         val clock = clock()
+        val stamps = AnkiquestReviewOffsets.read(prefs)
 
         val windowStart = TimeManager.time.intTimeMS() - UNDO_WINDOW_MS
         val recent = recentUploads(prefs, recentKey(account), windowStart)
@@ -488,7 +507,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 restored.forEach { batch.put(it) }
                 body.put("deleted", JSONArray(reconciled.deleted))
             }
-            body.put("reviews", batch)
+            body.put("reviews", AnkiquestReviewOffsets.stamp(batch, stamps))
             if (!full && !onlyTest) {
                 runCatching {
                     if (catalog) {
@@ -521,6 +540,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 putString(recentKey(account), present.joinToString(","))
                 putBoolean(initialSyncKey, true)
             }
+            AnkiquestReviewOffsets.prune(prefs, prefs.getLong(markKey, 0L), TimeManager.time.intTimeMS())
         }
         return profile
     }

@@ -248,7 +248,11 @@ class HeaderFragment : SettingsFragment() {
                 is ControlsSettingsFragment -> R.string.pref_controls_screen_key
                 is AccessibilitySettingsFragment -> R.string.pref_accessibility_screen_key
                 is BackupLimitsSettingsFragment -> R.string.pref_backup_limits_screen_key
-                is AnkiquestSettingsFragment, is AnkiquestSubscriptionsFragment, is AnkiquestRemindersFragment ->
+                is AnkiquestSettingsFragment,
+                is AnkiquestSubscriptionsFragment,
+                is AnkiquestSignInFragment,
+                is AnkiquestRemindersFragment,
+                ->
                     R.string.ankiquest_screen_key
                 is AdvancedSettingsFragment -> R.string.pref_advanced_screen_key
                 is ReviewerOptionsFragment, is ReviewerMenuSettingsFragment -> R.string.new_reviewer_options_key

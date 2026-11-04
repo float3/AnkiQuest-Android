@@ -32,6 +32,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -284,6 +285,36 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `friends and groups list requests, friends, muted players and groups, and every change answers the list`() =
+        runBlocking {
+            val overview = AnkiquestSocial.overview(account)
+            assertEquals(listOf("friend"), overview.friends.map { it.user })
+            assertEquals(listOf("ana"), overview.incoming.map { it.user })
+            assertEquals(listOf("cerro"), overview.outgoing.map { it.user })
+            assertTrue(overview.isMuted("cerro"))
+            val owned = overview.groups.single { it.owner }
+            val code = assertNotNull(owned.invite)
+            assertTrue(owned.members.any { it.user == "hill" })
+            assertTrue(overview.groups.filterNot { it.owner }.all { it.invite == null })
+            assertTrue(overview.groups.all { group -> group.members.all { it.display.isNotEmpty() } })
+
+            val invite = AnkiquestSocial.invite(account, code)
+            assertEquals(owned.name, invite.name)
+            assertEquals(owned.members.size, invite.members)
+
+            val created = AnkiquestSocial.change(account, AnkiquestSocial.Change.CreateGroup("Spanish club"))
+            assertNotNull(created.groups.single { it.name == "Spanish club" }.invite)
+            val friends = AnkiquestSocial.change(account, AnkiquestSocial.Change.Befriend("ana"))
+            assertTrue(friends.friends.any { it.user == "ana" })
+            assertTrue(friends.incoming.isEmpty())
+            val muted = AnkiquestSocial.change(account, AnkiquestSocial.Change.Mute("cerro"))
+            assertEquals(listOf("cerro"), muted.muted.map { it.user })
+            assertTrue(
+                requests.containsAll(listOf("GET /api/social/hill", "POST /api/social/hill", "GET /api/invites/$code")),
+            )
+        }
+
+    @Test
     fun `friend goals list invitations, progress and results, and answer every change with the list`() =
         runBlocking {
             val overview = AnkiquestChallenges.overview(account)
@@ -396,6 +427,72 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertTrue(requests.containsAll(listOf("GET /api/conquests/hill/$at", "POST /api/conquests/hill/$at/tell")))
         }
 
+    @Test
+    fun `account settings read sign-ins, devices and the account`() =
+        runBlocking {
+            val methods = AnkiquestAccountSettings.methods(account)
+            assertTrue(methods.account)
+            assertTrue(methods.password)
+            assertEquals(
+                listOf(
+                    AnkiquestAccountSettings.Provider("google", "Google", linked = false),
+                    AnkiquestAccountSettings.Provider("github", "GitHub", linked = true),
+                ),
+                methods.providers,
+            )
+            assertEquals(methods, AnkiquestAccountSettings.setPassword(account, "old password", "new password!", signOutOthers = false))
+
+            val devices = AnkiquestAccountSettings.devices(account)
+            assertEquals(listOf(true, false), devices.map { it.current })
+            assertEquals(listOf("Pixel 9", "Pixel 8"), devices.map { it.name })
+            assertEquals(listOf(1_793_183_400_000L, null), devices.map { it.lastUsedAt })
+            assertEquals(listOf("example-device-1"), AnkiquestAccountSettings.signOutOthers(account).map { it.id })
+
+            val summary = AnkiquestAccountSettings.summary(account)
+            assertEquals(AnkiquestAccountSettings.Summary("ana", password = true, confirmedUntil = null), summary)
+
+            assertFailsWith<AnkiquestAccountSettings.ForeignAddress>("the example points at another server than this test's") {
+                AnkiquestAccountSettings.browser(account, "github", AnkiquestAccountSettings.Purpose.REAUTH)
+            }
+            assertEquals(
+                "https://anki.example.test/auth/oauth/github?ticket=example-ticket-1",
+                JSONObject(example("sign_in_browser")).getString("url"),
+            )
+            assertTrue(
+                requests.containsAll(
+                    listOf(
+                        "GET /api/sign-in/hill",
+                        "POST /api/sign-in/hill",
+                        "GET /api/devices/hill",
+                        "POST /api/devices/hill",
+                        "GET /api/accounts/hill",
+                    ),
+                ),
+            )
+        }
+
+    @Test
+    fun `the record boards and the study calendar are read as the native screens show them`() =
+        runBlocking {
+            val boards = AnkiquestRecords.records(account)
+            assertEquals(AnkiquestRecords.Kind.entries, boards.map { it.kind }, "every board, in the website's order")
+            assertTrue(boards.all { board -> board.holders.isNotEmpty() && board.holders.all { it.display.isNotEmpty() && it.at > 0 } })
+            assertEquals(listOf("hill", "cerro"), boards.first { it.kind == AnkiquestRecords.Kind.DAY }.holders.map { it.user })
+            assertEquals(setOf("xp", "days"), boards.map { it.unit }.toSet())
+            assertTrue("GET /api/records" in requests)
+
+            val study = AnkiquestRecords.study(account)
+            assertEquals(2026, study.year)
+            assertTrue(study.year in study.years)
+            assertTrue(study.days.zipWithNext().all { (earlier, later) -> earlier.date < later.date })
+            assertTrue(study.reviews > 0 && study.studyDays > 0 && study.xp > 0)
+            assertTrue(study.days.any { it.reviews == 0 }, "days off are listed too")
+            assertNotNull(study.latest)
+            assertNotNull(study.lastReceivedAt)
+            assertEquals(study.reviews.toInt(), study.heatmap(study.days.last().date).totalReviews.toInt())
+            assertTrue("GET /api/study/hill" in requests)
+        }
+
     private fun Notification.title() = extras.getCharSequence(Notification.EXTRA_TITLE).toString()
 
     private fun Notification.text() = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -416,7 +513,15 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
             path == "/api/leaderboard" -> "leaderboard"
+            path == "/api/sign-in/hill" && method == "GET" -> "sign_in_methods"
+            path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "password" -> "password_change"
+            path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "browser" -> "sign_in_browser"
+            path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
+            path == "/api/accounts/hill" && method == "GET" -> "account"
+            path == "/api/records" -> "records"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
+            parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
+            parts.size == 2 && parts[0] == "invites" -> "invite"
             parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
                 if (method ==
                     "POST"
@@ -434,6 +539,14 @@ class AnkiquestApiContractTest : RobolectricTest() {
             else -> null
         }
     }
+
+    /** The recorded answer for one `POST /api/social` action; every action answers the same overview. */
+    private fun socialChange(sent: String): String =
+        when (JSONObject(sent).optString("action")) {
+            "create_group" -> "group_create"
+            "mute" -> "mute"
+            else -> "social_change"
+        }
 
     private fun example(name: String): String =
         assertNotNull(javaClass.classLoader?.getResource("$EXAMPLES/$name.json"), "$name.json").readText(Charsets.UTF_8)
@@ -455,6 +568,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "decks" to "decks",
                 "companion" to "companion",
                 "streak-freezes" to "streak_freezes",
+                "study" to "study",
             )
 
         val CONSUMED =
@@ -465,6 +579,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "leaderboard",
                     "share_to_link",
                     "deck_share",
+                    "social",
+                    "group_create",
+                    "invite",
+                    "social_change",
+                    "mute",
                     "challenges",
                     "challenge_create",
                     "challenge_action",
@@ -473,9 +592,16 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "reminders_save",
                     "conquest",
                     "conquest_tell",
+                    "sign_in_methods",
+                    "password_change",
+                    "sign_in_browser",
+                    "devices",
+                    "devices_sign_out",
+                    "account",
+                    "records",
                 )
 
-        val UNUSED = setOf("capabilities", "devices", "mute")
+        val UNUSED = setOf("capabilities")
 
         /** What the native leaderboard and profiles read. */
         val BOARDS = setOf("leaderboard_day", "week", "player_profile", "wins")
@@ -485,10 +611,21 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
         /**
          * Examples the server already keeps for app screens still in review (records and history,
-         * friends and groups), counted only once the server has them. Each screen's pull request
-         * moves its names into [CONSUMED].
+         * friends and groups, account settings), counted only once the server has them. Each screen's
+         * pull request moves its names into [CONSUMED].
          */
         val NOT_YET =
-            setOf("records", "study", "social", "group_create", "invite", "social_change") - CONSUMED - UNUSED
+            setOf(
+                "records",
+                "study",
+                "social",
+                "group_create",
+                "invite",
+                "social_change",
+                "account",
+                "password_change",
+                "devices_sign_out",
+                "sign_in_methods",
+            ) - CONSUMED - UNUSED
     }
 }

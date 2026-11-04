@@ -31,7 +31,6 @@
     <string name="ankiquest_avatar_remove">Eliminar foto</string>
     <string name="ankiquest_avatar_remove_confirm">¿Eliminar tu foto de perfil y volver a usar tu inicial?</string>
     <string name="ankiquest_deck_notifications_title">Avisos de mazos completados</string>
-    <string name="ankiquest_deck_notifications_summary">Elige a quién avisar cuando completes un mazo por hoy</string>
     <string name="ankiquest_deck_notifications_empty">Crea primero un mazo normal para configurar los avisos de finalización.</string>
     <string name="ankiquest_deck_notifications_no_people">Todavía no hay otros jugadores en este servidor.</string>
     <string name="ankiquest_deck_notifications_choose_people">Selecciona al menos una persona o desactiva el envío.</string>

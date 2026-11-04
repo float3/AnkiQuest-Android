@@ -324,6 +324,7 @@ object AnkiquestNotifier {
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
                 AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
+                AnkiquestNavigation.Destination.Friends -> AnkiquestFriendsActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Challenges -> AnkiquestChallengesActivity.intent(context, destination.id, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
                 is AnkiquestNavigation.Destination.Leaderboard -> AnkiquestLeaderboardActivity.intent(context, destination.period, account)
