@@ -103,6 +103,19 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `Today shows the closing week while the player's day still counts for it`() {
+        val endsAt =
+            com.ichi2.anki.common.time.TimeManager.time
+                .intTimeMS() + 60 * 60 * 1000L
+        val closing = JSONObject().put("xp", 1234).put("ends_at", endsAt)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("closing_week", closing)
+        val home = launch()
+        val line =
+            assertNotNull(AnkiquestBoards.closingLine(home, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(home.hasText(line))
+    }
+
+    @Test
     fun `offline Today keeps local study`() {
         coEvery { AnkiquestHomeData.profile(identity) } throws IOException("offline")
         val home = launch()

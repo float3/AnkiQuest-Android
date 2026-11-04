@@ -86,6 +86,23 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a player whose day began before the reset shows the XP still counting for last week`() {
+        val closing =
+            AnkiquestBoards.parseLeaderboard(
+                JSONArray()
+                    .put(AnkiquestBoardsTest.row("ana", week = 0, hour = 0).put("closing_xp", 1234).put("day_ends_at", NOW + 60_000))
+                    .put(AnkiquestBoardsTest.row("bo", week = 5, hour = 0).put("closing_xp", 9).put("day_ends_at", NOW - 1)),
+                AnkiquestBoards.Period.WEEK,
+            )
+        coEvery { AnkiquestBoards.leaderboard(identity, AnkiquestBoards.Period.WEEK) } returns closing
+        val board = launch()
+        assertTrue(board.hasText(board.getString(R.string.aq_board_closing_xp, "1,234")))
+        assertFalse(board.hasText(board.getString(R.string.aq_board_closing_xp, "9")), "a day that has ended no longer counts")
+        val described = board.getString(R.string.aq_board_closing_xp, "1,234")
+        assertTrue(board.views<View>().any { it.contentDescription?.contains(described) == true })
+    }
+
+    @Test
     fun `choosing a period loads its board`() {
         val day =
             AnkiquestBoards.parseLeaderboard(

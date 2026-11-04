@@ -9,6 +9,7 @@ import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -25,6 +26,7 @@ import org.robolectric.annotation.Config
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -70,6 +72,19 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         assertTrue(screen.hasText("Done"))
         screen.click(screen.getString(R.string.aq_home_settings))
         assertEquals(PreferencesActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `a closing week still counting shows its XP until it closes`() {
+        val endsAt = TimeManager.time.intTimeMS() + 60 * 60 * 1000L
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns
+            own.copy(profile = profile.copy(closingWeek = AnkiquestBoards.ClosingWeek(1234, endsAt)))
+        val screen = launch()
+        val line = assertNotNull(AnkiquestBoards.closingLine(screen, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(screen.hasText(line))
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own
+        val without = launch()
+        assertFalse(without.hasText(line))
     }
 
     @Test
