@@ -4,7 +4,7 @@ name: ankiquest API contract
 on:
   pull_request:
   push:
-    branches: [ankiquest]
+    branches: [main]
   schedule:
     - cron: "17 5 * * *"
   workflow_dispatch:
@@ -67,7 +67,8 @@ jobs:
         timeout-minutes: 10
         with:
           cache-provider: basic
-          cache-read-only: ${{ github.ref != 'refs/heads/ankiquest' }}
+          # Never save: this job runs code from the server checkout, which must not reach the shared cache.
+          cache-read-only: true
 
       - name: Gradle Dependency Download
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
