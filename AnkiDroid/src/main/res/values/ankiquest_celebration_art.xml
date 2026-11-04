@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
-<!-- Placeholder artwork until the images requested in float3/ankiquest#88 land.
+<!-- Placeholder artwork for images that float3/ankiquest#126 did not deliver yet.
      To use a new image, delete its line and add a WebP with the same name to drawable-nodpi. -->
 <resources>
-    <!-- An achievement, level, personal best or conquered deck -->
-    <drawable name="aki_achievement">@drawable/aki_winner</drawable>
-    <!-- A streak milestone -->
-    <drawable name="aki_streak_milestone">@drawable/aki_streak</drawable>
     <!-- Invited to or joined a friend challenge -->
     <drawable name="aki_challenge">@drawable/aki_welcome</drawable>
     <!-- A friend challenge reached its goal -->
