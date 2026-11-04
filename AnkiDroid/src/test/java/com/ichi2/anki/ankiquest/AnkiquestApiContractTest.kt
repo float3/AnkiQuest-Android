@@ -185,6 +185,15 @@ class AnkiquestApiContractTest : RobolectricTest() {
             val announced = shadowOf(manager).allNotifications.single()
             assertEquals("👑 You took the crown", announced.title())
             assertTrue("You passed Cerro." in announced.text())
+            val change = JSONObject(example("rank")).getJSONObject("change")
+            assertEquals(
+                "👑 I took the crown" to "I passed Cerro.",
+                AnkiquestNotifier.shareText(change),
+                "friends read it in the first person",
+            )
+            change.remove("share_title")
+            change.remove("share_body")
+            assertEquals("👑 You took the crown" to "You passed Cerro.", AnkiquestNotifier.shareText(change), "older servers")
         }
 
     @Test
@@ -195,13 +204,24 @@ class AnkiquestApiContractTest : RobolectricTest() {
             val celebration = shadowOf(manager).getNotification(5_140_001)
             assertEquals("Daily goal reached!", celebration.title())
             assertEquals(listOf("Share"), celebration.actions.map { it.title.toString() })
+            val sharesGoal = shadowOf(celebration.actions.single().actionIntent).savedIntent
+            assertEquals("Daily goal reached!", sharesGoal.getStringExtra(AnkiquestShare.EXTRA_TITLE), "it reads the same for anyone")
+            val level = shadowOf(manager).getNotification(5_140_009)
+            assertEquals("You reached level 3 with 400 XP.", level.text(), "the player is told about it")
+            val sharesLevel = shadowOf(level.actions.single().actionIntent).savedIntent
+            assertEquals("Level 3", sharesLevel.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+            assertEquals(
+                "I reached level 3 with 400 XP.",
+                sharesLevel.getStringExtra(AnkiquestShare.EXTRA_BODY),
+                "friends hear it from the player",
+            )
             val share = shadowOf(manager).getNotification(5_140_006)
             assertEquals("🎉 Cerro shared a win", share.title())
             assertEquals(listOf("Reply"), share.actions.map { it.title.toString() }, "the example was already cheered")
             verify { AnkiquestShare.picture("https://anki.example.test/w/example-link-2.png") }
             val reaction = shadowOf(manager).getNotification(5_140_008)
             assertEquals("🎉 Cerro cheered", reaction.title())
-            assertEquals(8L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:${inbox.account}", 0))
+            assertEquals(9L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:${inbox.account}", 0))
         }
 
     @Test

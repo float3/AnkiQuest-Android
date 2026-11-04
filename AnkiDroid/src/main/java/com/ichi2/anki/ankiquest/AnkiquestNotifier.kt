@@ -111,12 +111,13 @@ object AnkiquestNotifier {
                             reply = answerable,
                         )
                     } else if (AnkiquestShare.shareable(kind)) {
+                        val (shareTitle, shareBody) = shareText(entry)
                         listOfNotNull(
                             AnkiquestShare.action(
                                 context,
                                 tag,
-                                title,
-                                body,
+                                shareTitle,
+                                shareBody,
                                 win,
                                 id,
                                 null,
@@ -158,15 +159,27 @@ object AnkiquestNotifier {
         val title = change.getString("title")
         val body = change.getString("body")
         val place = climbedTo(previous, order, Ankiquest.player())?.takeIf { it <= 3 }
+        val (shareTitle, shareBody) = shareText(change)
         notify(
             context,
             RANK_ID,
             title,
             body,
             AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
+            listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
+    }
+
+    /**
+     * What sharing a rank change or one of the player's own [notice]s tells others: the server's
+     * first-person `share_title` and `share_body` ("👑 I took the crown", "I reached level 4 …"),
+     * or, when the server sends none, the notice itself.
+     */
+    internal fun shareText(notice: JSONObject): Pair<String, String> {
+        val title = notice.getString("title")
+        val body = notice.getString("body")
+        return notice.optString("share_title").ifEmpty { title } to notice.optString("share_body").ifEmpty { body }
     }
 
     /** The 1-based place [me] climbed to between two leaderboard orders, or null when they did not climb. */
