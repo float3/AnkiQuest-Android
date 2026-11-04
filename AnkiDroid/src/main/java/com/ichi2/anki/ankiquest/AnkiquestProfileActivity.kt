@@ -244,6 +244,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 )
                 views.text(panel, resources.getQuantityString(R.plurals.aq_profile_lapses, conquest.lapses, conquest.lapses))
                 views.text(panel, DateUtils.formatDateTime(this, conquest.at, DATE), small = true)
+                views.clickable(panel) { startActivity(AnkiquestConquestActivity.intent(this, p.user, conquest.at)) }
             }
         }
         views.section(content, getString(R.string.aq_profile_bests))

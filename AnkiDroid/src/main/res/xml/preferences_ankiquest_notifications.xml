@@ -27,6 +27,7 @@
             android:title="@string/ankiquest_celebrations_title" />
         <Preference
             android:key="@string/ankiquest_community_reminders_key"
+            android:fragment="com.ichi2.anki.preferences.AnkiquestRemindersFragment"
             android:persistent="false"
             android:summary="@string/ankiquest_community_reminders_summary"
             android:title="@string/ankiquest_community_reminders_title" />

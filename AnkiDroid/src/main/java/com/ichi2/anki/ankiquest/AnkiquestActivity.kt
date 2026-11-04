@@ -372,7 +372,6 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
     companion object {
         const val EXTRA_PATH = "ankiquest.path"
         const val EXTRA_ACCOUNT = "ankiquest.notification_account"
-        const val EXTRA_COMMUNITY_REMINDERS = "ankiquestCommunityReminders"
         private const val STATE_ACCOUNT = "ankiquest.account"
         private const val STATE_DASHBOARD = "ankiquestDashboard"
         private const val STATE_DESTINATION = "ankiquestDestination"
@@ -407,7 +406,6 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         ): String? =
             when {
                 !owned(intent, current) -> AnkiquestNavigation.ACTIVITY_PATH
-                intent.getBooleanExtra(EXTRA_COMMUNITY_REMINDERS, false) -> "/community#reminders"
                 else -> intent.getStringExtra(EXTRA_PATH)
             }
 

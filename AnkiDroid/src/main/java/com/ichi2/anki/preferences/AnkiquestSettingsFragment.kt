@@ -4,7 +4,6 @@ package com.ichi2.anki.preferences
 
 import android.Manifest
 import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
@@ -17,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
@@ -25,11 +25,11 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
-import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
@@ -41,6 +41,7 @@ import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestHosts
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.AnkiquestIcon
+import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
@@ -318,7 +319,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             save = { Ankiquest.setNotificationSwitch(Ankiquest.CELEBRATIONS, it).optBoolean(Ankiquest.CELEBRATIONS, it) },
             notify = true,
         )
-        bindDashboard(R.string.ankiquest_community_reminders_key, community = true)
         bindAlertSettings(R.string.ankiquest_message_alerts_key, nudge = false)
         bindAlertSettings(R.string.ankiquest_nudge_alerts_key, nudge = true)
         requirePreference<Preference>(R.string.ankiquest_health_key).setOnPreferenceClickListener {
@@ -451,6 +451,27 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             AnkiquestUpdater.checkSoon()
             true
         }
+        requirePreference<Preference>(R.string.aq_privacy_key).setOnPreferenceClickListener {
+            openPrivacyNotice()
+            true
+        }
+    }
+
+    /**
+     * The server's privacy notice opens in the browser: it is the operator's own legal text, filled
+     * in with their details and only published as a web page, so the app shows exactly that page.
+     */
+    private fun openPrivacyNotice() {
+        val url = Ankiquest.privacyUrl()
+        if (url == null) {
+            AlertDialog
+                .Builder(requireContext())
+                .setMessage(Ankiquest.unconfigured(requireContext()))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+        (requireActivity() as AnkiActivity).openUrl(url.toUri())
     }
 
     private fun pictureAction(action: suspend () -> Unit) {
@@ -647,10 +668,8 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             .show()
     }
 
-    private fun bindDashboard(
-        key: Int,
-        community: Boolean = false,
-    ) {
+    /** The leaderboard, natively; it shows the website's page itself on a server without the board's JSON. */
+    private fun bindDashboard(key: Int) {
         requirePreference<Preference>(key).setOnPreferenceClickListener {
             if (Ankiquest.dashboardUrl() == null) {
                 AlertDialog
@@ -659,10 +678,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             } else {
-                startActivity(
-                    Intent(requireContext(), AnkiquestActivity::class.java)
-                        .putExtra(AnkiquestActivity.EXTRA_COMMUNITY_REMINDERS, community),
-                )
+                startActivity(AnkiquestLeaderboardActivity.intent(requireContext()))
             }
             true
         }

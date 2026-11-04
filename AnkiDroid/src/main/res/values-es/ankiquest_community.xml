@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_reminders_kinds">Recordatorios de tu servidor</string>
+    <string name="aq_reminders_timing">Horario</string>
+    <string name="aq_reminder_gentle_daily">Recordatorio diario amable</string>
+    <string name="aq_reminder_gentle_daily_summary">Un empujoncito amistoso cuando aún no has estudiado.</string>
+    <string name="aq_reminder_urgent_streak">Aviso de racha sin protección</string>
+    <string name="aq_reminder_urgent_streak_summary">Un recordatorio urgente cerca de tu cambio de día cuando no te queda ninguna protección o la protección está desactivada.</string>
+    <string name="aq_reminder_freeze_used">Protección usada</string>
+    <string name="aq_reminder_freeze_used_summary">Entérate de cuándo una protección salvó tu racha y cuántas te quedan.</string>
+    <string name="aq_reminder_freeze_refill">Recargar protecciones</string>
+    <string name="aq_reminder_freeze_refill_summary">Un empujoncito para terminar tus misiones diarias cuando puedes ganar otra protección.</string>
+    <string name="aq_reminder_milestone">Hitos de racha</string>
+    <string name="aq_reminder_milestone_summary">Un poco de ánimo antes de tu próximo hito de racha.</string>
+    <string name="aq_reminder_weekly_closing">Cierre de la competición semanal</string>
+    <string name="aq_reminder_weekly_closing_summary">Un empujoncito opcional antes de que termine la competición semanal.</string>
+    <string name="aq_reminder_weekly_recap">Resumen semanal</string>
+    <string name="aq_reminder_weekly_recap_summary">Tus días de estudio, XP, victorias diarias, posición semanal y mejora.</string>
+    <string name="aq_reminders_hour">Recordatorio diario a las</string>
+    <string name="aq_reminders_quiet_start">Inicio de horas de silencio</string>
+    <string name="aq_reminders_quiet_end">Fin de horas de silencio</string>
+    <string name="aq_reminders_limit">Límite diario</string>
+    <plurals name="aq_reminders_limit_value">
+        <item quantity="one">%1$d notificación al día</item>
+        <item quantity="many">%1$d notificaciones al día</item>
+        <item quantity="other">%1$d notificaciones al día</item>
+    </plurals>
+    <string name="aq_reminders_quiet_off">Desactivadas: empiezan y terminan a la misma hora</string>
+    <string name="aq_reminders_hint">Estos recordatorios los envía tu servidor de AnkiQuest, en tu zona horaria de AnkiQuest. Los avisos de racha siguen tu cambio de día de Anki y se detienen en cuanto se registra estudio. Las horas de silencio y el límite diario se aplican a todos, incluidos los urgentes. El recordatorio de racha y las alertas de arriba son de este teléfono.</string>
+    <string name="aq_reminders_loading">Cargando tus recordatorios de la comunidad…</string>
+    <string name="aq_reminders_saving">Guardando tus recordatorios de la comunidad…</string>
+    <string name="aq_reminders_saved">Tus preferencias de recordatorios están guardadas.</string>
+    <string name="aq_reminders_configure">Inicia sesión en AnkiQuest para elegir tus recordatorios de la comunidad.</string>
+    <string name="aq_reminders_auth">Tu servidor no aceptó esta cuenta. Revísala en los ajustes de AnkiQuest y vuelve a intentarlo.</string>
+    <string name="aq_reminders_unsupported">Este servidor no tiene recordatorios de la comunidad.</string>
+    <string name="aq_reminders_error">No se pudieron confirmar tus recordatorios de la comunidad. Revisa tu conexión y vuelve a intentarlo antes de hacer otro cambio.</string>
+    <string name="aq_reminders_retry">Recargar recordatorios</string>
+    <string name="aq_privacy_title">Aviso de privacidad</string>
+    <string name="aq_privacy_summary">Qué guarda tu servidor de AnkiQuest sobre ti y quién lo gestiona. Se abre en tu navegador.</string>
+    <string name="aq_calendar_title">Calendario de la comunidad</string>
+    <string name="aq_calendar_refresh">Actualizar el calendario</string>
+    <string name="aq_calendar_loading">Cargando victorias e hitos…</string>
+    <string name="aq_calendar_days">Victorias diarias</string>
+    <string name="aq_calendar_weeks">Campeones semanales</string>
+    <string name="aq_calendar_months">Temporadas mensuales</string>
+    <string name="aq_calendar_previous_month">Mes anterior</string>
+    <string name="aq_calendar_next_month">Mes siguiente</string>
+    <string name="aq_calendar_day_hint">Toca un día para ver su clasificación. Los resultados pendientes esperan sincronizaciones tardías; los reconstruidos se rehicieron a partir del historial.</string>
+    <string name="aq_calendar_more_winners">%1$s +%2$d</string>
+    <string name="aq_calendar_no_study">Sin estudio registrado</string>
+    <string name="aq_calendar_upcoming">Aún por llegar</string>
+    <string name="aq_calendar_no_result">Sin resultado registrado</string>
+    <string name="aq_calendar_empty">Todavía no hay competiciones este año.</string>
+    <string name="aq_calendar_no_standings">Todavía no hay clasificación.</string>
+    <string name="aq_calendar_place">%1$d. %2$s</string>
+    <string name="aq_calendar_minutes">%1$s min</string>
+    <string name="aq_calendar_shared">Victoria compartida: %1$s</string>
+    <string name="aq_calendar_champion">Campeón: %1$s · %2$s XP de ventaja</string>
+    <string name="aq_calendar_leader">En cabeza: %1$s · %2$s XP de ventaja</string>
+    <string name="aq_calendar_final">Resultado final</string>
+    <string name="aq_calendar_rebuilt">Reconstruido a partir del historial</string>
+    <string name="aq_calendar_pending">Esperando sincronizaciones tardías</string>
+    <string name="aq_calendar_live">Aún en curso</string>
+    <string name="aq_calendar_partial">Periodo parcial</string>
+    <string name="aq_calendar_rebuilt_note">Reconstruido a partir del historial disponible; puede faltar actividad que nunca se sincronizó.</string>
+    <string name="aq_calendar_partial_note">Este periodo empieza antes del historial disponible de la comunidad, así que solo cuenta la parte registrada.</string>
+    <string name="aq_calendar_cutoff">Zona horaria de la competición: %1$s, cambio de día a las %2$s. Los resultados son definitivos %3$d horas después del cambio de día, para que las sincronizaciones tardías sigan contando.</string>
+    <string name="aq_conquest_refresh">Actualizar la tarjeta</string>
+    <string name="aq_conquest_loading">Cargando la tarjeta…</string>
+    <string name="aq_conquest_missing">No se encontró esta tarjeta. Puede ser privada, o se deshizo el repaso que la consiguió.</string>
+    <string name="aq_conquest_badge">Tarjeta difícil, aprendida por fin</string>
+    <string name="aq_conquest_badge_leech">Tarjeta domada</string>
+    <plurals name="aq_conquest_lead_mine">
+        <item quantity="one">Olvidaste esta tarjeta %1$d vez y aun así la aprendiste. Ahora se queda contigo durante semanas.</item>
+        <item quantity="many">Olvidaste esta tarjeta %1$d veces y aun así la aprendiste. Ahora se queda contigo durante semanas.</item>
+        <item quantity="other">Olvidaste esta tarjeta %1$d veces y aun así la aprendiste. Ahora se queda contigo durante semanas.</item>
+    </plurals>
+    <plurals name="aq_conquest_lead">
+        <item quantity="one">%1$s olvidó esta tarjeta %2$d vez y aun así la aprendió. Ahora se le queda durante semanas.</item>
+        <item quantity="many">%1$s olvidó esta tarjeta %2$d veces y aun así la aprendió. Ahora se le queda durante semanas.</item>
+        <item quantity="other">%1$s olvidó esta tarjeta %2$d veces y aun así la aprendió. Ahora se le queda durante semanas.</item>
+    </plurals>
+    <plurals name="aq_conquest_lapses">
+        <item quantity="one">%1$s fallo</item>
+        <item quantity="many">%1$s fallos</item>
+        <item quantity="other">%1$s fallos</item>
+    </plurals>
+    <plurals name="aq_conquest_answers">
+        <item quantity="one">%1$s respuesta</item>
+        <item quantity="many">%1$s respuestas</item>
+        <item quantity="other">%1$s respuestas</item>
+    </plurals>
+    <plurals name="aq_conquest_days">
+        <item quantity="one">%1$s día para aprenderla</item>
+        <item quantity="many">%1$s días para aprenderla</item>
+        <item quantity="other">%1$s días para aprenderla</item>
+    </plurals>
+    <string name="aq_conquest_tell">Contárselo a mis amigos</string>
+    <string name="aq_conquest_telling">Avisando a tus amigos…</string>
+    <string name="aq_conquest_told">Amigos avisados</string>
+    <plurals name="aq_conquest_told_count">
+        <item quantity="one">%1$d amigo lo verá en su actividad.</item>
+        <item quantity="many">%1$d amigos lo verán en su actividad.</item>
+        <item quantity="other">%1$d amigos lo verán en su actividad.</item>
+    </plurals>
+    <string name="aq_conquest_label_add">Mostrar qué tarjeta era</string>
+    <string name="aq_conquest_label_explanation">Lo verá cualquiera que pueda abrir esta tarjeta, y también los amigos a los que se lo cuentes. Puedes retirarlo más tarde.</string>
+    <string name="aq_conquest_label_save">Mostrarlo en la tarjeta</string>
+    <string name="aq_conquest_label_remove">Dejar de mostrar la tarjeta</string>
+    <string name="aq_conquest_action_failed">No ha funcionado. Revisa tu conexión y vuelve a intentarlo.</string>
+    <string name="aq_conquest_label_shown">Su dueño eligió mostrar qué tarjeta era.</string>
+    <string name="aq_conquest_numbers_only">Solo se comparten estos números, nunca la tarjeta.</string>
+    <string name="aq_conquest_profile">Ver el perfil de %1$s</string>
+    <plurals name="aq_conquest_share_mine">
+        <item quantity="one">Por fin aprendí una tarjeta que había olvidado %1$d vez. 🏆</item>
+        <item quantity="many">Por fin aprendí una tarjeta que había olvidado %1$d veces. 🏆</item>
+        <item quantity="other">Por fin aprendí una tarjeta que había olvidado %1$d veces. 🏆</item>
+    </plurals>
+    <plurals name="aq_conquest_share">
+        <item quantity="one">%1$s por fin aprendió una tarjeta que había olvidado %2$d vez. 🏆</item>
+        <item quantity="many">%1$s por fin aprendió una tarjeta que había olvidado %2$d veces. 🏆</item>
+        <item quantity="other">%1$s por fin aprendió una tarjeta que había olvidado %2$d veces. 🏆</item>
+    </plurals>
+    <plurals name="aq_conquest_share_label_mine">
+        <item quantity="one">Por fin aprendí «%1$s», una tarjeta que había olvidado %2$d vez. 🏆</item>
+        <item quantity="many">Por fin aprendí «%1$s», una tarjeta que había olvidado %2$d veces. 🏆</item>
+        <item quantity="other">Por fin aprendí «%1$s», una tarjeta que había olvidado %2$d veces. 🏆</item>
+    </plurals>
+    <plurals name="aq_conquest_share_label">
+        <item quantity="one">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d vez. 🏆</item>
+        <item quantity="many">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d veces. 🏆</item>
+        <item quantity="other">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d veces. 🏆</item>
+    </plurals>
+</resources>

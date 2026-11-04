@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.ColorRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
@@ -234,6 +236,16 @@ internal class AnkiquestBoardViews(
         view.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         parent.addView(view, LinearLayout.LayoutParams(edge, edge).apply { marginStart = dp(8) })
         return view
+    }
+
+    /** Makes [view] open something on a tap, with the ripple of a list item. */
+    fun clickable(
+        view: View,
+        click: () -> Unit,
+    ) {
+        val ripple = TypedValue().also { context.theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }
+        view.foreground = AppCompatResources.getDrawable(context, ripple.resourceId)
+        view.setOnClickListener { click() }
     }
 
     fun shape(

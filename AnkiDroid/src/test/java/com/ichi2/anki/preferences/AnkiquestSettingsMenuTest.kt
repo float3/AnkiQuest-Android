@@ -70,6 +70,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                 R.string.ankiquest_upload_all_key,
                 R.string.ankiquest_update_channel_key,
                 R.string.ankiquest_check_updates_key,
+                R.string.aq_privacy_key,
             ).map(targetContext::getString)
 
         assertEquals(expected.size, settings.size, "A setting was omitted or duplicated")

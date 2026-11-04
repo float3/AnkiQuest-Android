@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Looper
 import android.webkit.WebView
@@ -369,23 +368,6 @@ class AnkiquestSettingsTest : RobolectricTest() {
         assertEquals(user, credentials.getString("user"))
         assertEquals(token, credentials.getString("token"))
         assertFalse(script.contains(":443"))
-    }
-
-    @Test
-    fun `community reminders open with the same saved account`() {
-        val intent = Intent(targetContext, AnkiquestActivity::class.java).putExtra(AnkiquestActivity.EXTRA_COMMUNITY_REMINDERS, true)
-        val controller =
-            Robolectric
-                .buildActivity(
-                    AnkiquestActivity::class.java,
-                    intent,
-                ).create()
-                .also { shadowOf(Looper.getMainLooper()).idle() }
-        saveControllerForCleanup(controller)
-        val webView = controller.get().findViewById<WebView>(R.id.web_view)
-        assertEquals("https://quest.example/anki/community?embed=1#reminders", shadowOf(webView).lastLoadedUrl)
-        shadowOf(webView).webViewClient.onPageFinished(webView, shadowOf(webView).lastLoadedUrl)
-        assertTrue(assertNotNull(shadowOf(webView).lastEvaluatedJavascript).contains("saved-test-token"))
     }
 
     @Test
