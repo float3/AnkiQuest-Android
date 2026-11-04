@@ -54,6 +54,9 @@ jobs:
           retention-days: 1
 
       - name: Check the app's art against the server's exporter
+        # This runs the server's code, so not on the nightly run, which has the default branch's cache access.
+        # Pull requests and pushes still check the art.
+        if: github.event_name != 'schedule'
         shell: bash
         run: |
           if [ -f server/tools/export_android_art.py ]; then
