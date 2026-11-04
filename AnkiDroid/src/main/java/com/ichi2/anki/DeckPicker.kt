@@ -1593,6 +1593,7 @@ open class DeckPicker :
         if (AnkiquestDeckPickerHooks.recreateIfNavigationChanged(this, ankiquestNavigationMode)) return
         if (navDrawerIsReady() && hasCollectionStoragePermissions()) {
             refreshState()
+            AnkiquestDeckPickerHooks.refreshGoal(this)
         }
         viewModel.onScreenResumed()
         message?.let { dialogHandler.sendStoredMessage(it) }
