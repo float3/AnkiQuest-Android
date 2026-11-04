@@ -18,4 +18,9 @@
     <Preference
         android:key="@string/ankiquest_check_updates_key"
         android:title="@string/ankiquest_check_updates_title" />
+    <Preference
+        android:key="@string/aq_privacy_key"
+        android:persistent="false"
+        android:title="@string/aq_privacy_title"
+        android:summary="@string/aq_privacy_summary" />
 </PreferenceScreen>

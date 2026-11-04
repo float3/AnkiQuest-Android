@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 
@@ -87,11 +88,20 @@ object AnkiquestNavigation {
         context: Context,
         path: String,
     ): Intent? =
-        when (path.substringBefore('#').substringBefore('?').trimEnd('/')) {
+        when (val page = path.substringBefore('#').substringBefore('?').trimEnd('/')) {
             RECORDS_PATH -> AnkiquestRecordsActivity.intent(context)
             HISTORY_PATH -> AnkiquestHistoryActivity.intent(context)
-            else -> null
+            else -> conquest(page)?.let { (user, at) -> AnkiquestConquestActivity.intent(context, user, at) }
         }
+
+    /** The player and answer a conquered card's page `/conquered/{user}/{at}` names, or null for any other page. */
+    internal fun conquest(path: String): Pair<String, Long>? {
+        val parts = path.removePrefix("/").split('/')
+        if (parts.size != 3 || parts[0] != "conquered") return null
+        val user = Uri.decode(parts[1]).ifEmpty { return null }
+        val at = parts[2].toLongOrNull()?.takeIf { it > 0 } ?: return null
+        return user to at
+    }
 
     /** The website page for one friend goal, for servers without the native screen's endpoint. */
     fun challengePath(id: Long): String = "/community#challenge-$id"

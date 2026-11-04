@@ -364,6 +364,70 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `community reminders read the defaults and answer a save with what the server kept`() =
+        runBlocking {
+            val defaults = AnkiquestCommunity.reminders(account)
+            assertEquals(AnkiquestCommunity.Reminders(emptySet(), hour = 20, quietStart = 22, quietEnd = 9, dailyLimit = 2), defaults)
+            val wanted =
+                AnkiquestCommunity.Reminders(
+                    enabled =
+                        setOf(
+                            AnkiquestCommunity.Reminder.GENTLE_DAILY,
+                            AnkiquestCommunity.Reminder.URGENT_STREAK,
+                            AnkiquestCommunity.Reminder.MILESTONE,
+                            AnkiquestCommunity.Reminder.WEEKLY_RECAP,
+                        ),
+                    hour = 19,
+                    quietStart = 22,
+                    quietEnd = 8,
+                    dailyLimit = 2,
+                )
+            assertEquals(wanted, AnkiquestCommunity.saveReminders(account, wanted))
+            assertTrue(requests.containsAll(listOf("GET /api/community/reminders/hill", "POST /api/community/reminders/hill")))
+        }
+
+    @Test
+    fun `the community calendar has the month's days, the year's weeks and seasons and their standings`() =
+        runBlocking {
+            val calendar = AnkiquestCommunity.calendar(account, 2026, 10)
+            assertEquals(2026 to 10, calendar.year to calendar.month)
+            assertEquals(listOf("2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28"), calendar.days.map { it.key })
+            val first = calendar.days.first()
+            assertEquals(listOf("hill"), first.winners)
+            assertTrue(first.final && first.reconstructed)
+            assertEquals("provisional", calendar.days[2].status)
+            assertTrue(calendar.days[2].winners.isEmpty())
+            val week = calendar.weeks.last()
+            assertEquals("2026-10-26" to "2026-11-02", week.start to week.end)
+            assertEquals(listOf("hill", "cerro", "friend"), week.standings.map { it.user })
+            assertEquals(132, week.margin)
+            assertEquals(1, calendar.seasons.size)
+            assertEquals("Cerro", calendar.name("cerro"))
+            assertEquals("UTC", calendar.timeZone)
+            assertEquals(4, calendar.rolloverHour)
+            assertTrue(calendar.scoringNote.isNotEmpty())
+            assertEquals(week, calendar.find("week:2026-10-26"))
+            assertTrue(requests.contains("GET /api/community"))
+        }
+
+    @Test
+    fun `a conquered card shows its numbers, its label and the owner's choices, and tells friends`() =
+        runBlocking {
+            val at = 1_793_097_000_000L
+            val card = AnkiquestCommunity.conquest(account, "hill", at)
+            assertEquals(at, card.at)
+            assertEquals(4, card.lapses)
+            assertEquals(11, card.answers)
+            assertEquals(10, card.days)
+            assertEquals("el murciélago", card.label)
+            assertTrue(card.mine)
+            assertEquals(false, card.told)
+            assertEquals(0, card.friends)
+            assertEquals(0, AnkiquestCommunity.tell(account, at))
+            assertTrue(requests.containsAll(listOf("GET /api/conquests/hill/$at", "POST /api/conquests/hill/$at/tell")))
+        }
+
+    @Test
     fun `account settings read sign-ins, devices and the account`() =
         runBlocking {
             val methods = AnkiquestAccountSettings.methods(account)
@@ -467,6 +531,10 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "challenges"
                 }
             parts.size == 4 && parts[0] == "community" && parts[1] == "challenges" && method == "POST" -> "challenge_action"
+            path == "/api/community" -> "community"
+            parts.size == 3 && parts[0] == "community" && parts[1] == "reminders" -> if (method == "POST") "reminders_save" else "reminders"
+            parts.size == 3 && parts[0] == "conquests" && method == "GET" -> "conquest"
+            parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "POST" -> "conquest_tell"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
@@ -519,6 +587,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "challenges",
                     "challenge_create",
                     "challenge_action",
+                    "community",
+                    "reminders",
+                    "reminders_save",
+                    "conquest",
+                    "conquest_tell",
                     "sign_in_methods",
                     "password_change",
                     "sign_in_browser",

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <!-- Community reminders (settings › AnkiQuest › Reminders & alerts › Community reminders) -->
+    <string name="aq_reminders_status_key" translatable="false">ankiquestRemindersStatus</string>
+    <string name="aq_reminders_retry_key" translatable="false">ankiquestRemindersRetry</string>
+    <string name="aq_reminders_kinds_key" translatable="false">ankiquestRemindersKinds</string>
+    <string name="aq_reminders_timing_key" translatable="false">ankiquestRemindersTiming</string>
+    <string name="aq_reminders_kinds" maxLength="41">Reminders from your server</string>
+    <string name="aq_reminders_timing" maxLength="41">Timing</string>
+    <string name="aq_reminder_gentle_daily" maxLength="41">Gentle daily reminder</string>
+    <string name="aq_reminder_gentle_daily_summary">A friendly nudge when you haven’t studied yet.</string>
+    <string name="aq_reminder_urgent_streak" maxLength="41">Unprotected streak warning</string>
+    <string name="aq_reminder_urgent_streak_summary">An urgent reminder near your cutoff when no freeze is left or freeze protection is switched off.</string>
+    <string name="aq_reminder_freeze_used" maxLength="41">Freeze used</string>
+    <string name="aq_reminder_freeze_used_summary">Know when a freeze protected your streak and how many remain.</string>
+    <string name="aq_reminder_freeze_refill" maxLength="41">Freeze refill reminder</string>
+    <string name="aq_reminder_freeze_refill_summary">A nudge to finish your daily quests when you can earn another freeze.</string>
+    <string name="aq_reminder_milestone" maxLength="41">Streak milestones</string>
+    <string name="aq_reminder_milestone_summary">A little encouragement before your next streak milestone.</string>
+    <string name="aq_reminder_weekly_closing" maxLength="41">Weekly competition closing</string>
+    <string name="aq_reminder_weekly_closing_summary">An optional nudge before the weekly competition ends.</string>
+    <string name="aq_reminder_weekly_recap" maxLength="41">Weekly recap</string>
+    <string name="aq_reminder_weekly_recap_summary">Your study days, XP, daily wins, weekly position, and improvement.</string>
+    <string name="aq_reminders_hour" maxLength="41">Daily reminder at</string>
+    <string name="aq_reminders_quiet_start" maxLength="41">Quiet hours start</string>
+    <string name="aq_reminders_quiet_end" maxLength="41">Quiet hours end</string>
+    <string name="aq_reminders_limit" maxLength="41">Daily limit</string>
+    <plurals name="aq_reminders_limit_value">
+        <item quantity="one">%1$d notification a day</item>
+        <item quantity="other">%1$d notifications a day</item>
+    </plurals>
+    <string name="aq_reminders_quiet_off">Off: quiet hours start and end at the same hour</string>
+    <string name="aq_reminders_hint">These reminders come from your AnkiQuest server, in your AnkiQuest time zone. Streak warnings follow your Anki day cutoff and stop once studying is recorded. Quiet hours and the daily limit apply to all of them, urgent ones included. The streak reminder and alerts above are this phone’s own.</string>
+    <string name="aq_reminders_loading">Loading your community reminders…</string>
+    <string name="aq_reminders_saving">Saving your community reminders…</string>
+    <string name="aq_reminders_saved">Your reminder preferences are saved.</string>
+    <string name="aq_reminders_configure">Sign in to AnkiQuest to choose your community reminders.</string>
+    <string name="aq_reminders_auth">Your server did not accept this account. Check it in AnkiQuest settings, then try again.</string>
+    <string name="aq_reminders_unsupported">This server has no community reminders.</string>
+    <string name="aq_reminders_error">Could not confirm your community reminders. Check your connection and try again before making another change.</string>
+    <string name="aq_reminders_retry" maxLength="41">Reload reminders</string>
+
+    <!-- Privacy notice (settings › AnkiQuest › App & data) -->
+    <string name="aq_privacy_key" translatable="false">ankiquestPrivacy</string>
+    <string name="aq_privacy_title" maxLength="41">Privacy notice</string>
+    <string name="aq_privacy_summary">What your AnkiQuest server keeps about you and who runs it. Opens in your browser.</string>
+
+    <!-- Community calendar -->
+    <string name="aq_calendar_title">Community calendar</string>
+    <string name="aq_calendar_refresh">Refresh the calendar</string>
+    <string name="aq_calendar_loading">Loading wins and milestones…</string>
+    <string name="aq_calendar_days">Daily wins</string>
+    <string name="aq_calendar_weeks">Weekly champions</string>
+    <string name="aq_calendar_months">Monthly seasons</string>
+    <string name="aq_calendar_previous_month">Previous month</string>
+    <string name="aq_calendar_next_month">Next month</string>
+    <string name="aq_calendar_day_hint">Tap a day for its standings. Pending results wait for late syncs; rebuilt ones were reconstructed from history.</string>
+    <string name="aq_calendar_more_winners">%1$s +%2$d</string>
+    <string name="aq_calendar_no_study">No study recorded</string>
+    <string name="aq_calendar_upcoming">Still to come</string>
+    <string name="aq_calendar_no_result">No recorded result</string>
+    <string name="aq_calendar_empty">No competitions in this year yet.</string>
+    <string name="aq_calendar_no_standings">No standings yet.</string>
+    <string name="aq_calendar_place">%1$d. %2$s</string>
+    <string name="aq_calendar_minutes">%1$s min</string>
+    <string name="aq_calendar_shared">Shared win: %1$s</string>
+    <string name="aq_calendar_champion">Champion: %1$s · %2$s XP ahead</string>
+    <string name="aq_calendar_leader">Leading: %1$s · %2$s XP ahead</string>
+    <string name="aq_calendar_final">Final result</string>
+    <string name="aq_calendar_rebuilt">Rebuilt from history</string>
+    <string name="aq_calendar_pending">Waiting for late syncs</string>
+    <string name="aq_calendar_live">Still running</string>
+    <string name="aq_calendar_partial">Partial period</string>
+    <string name="aq_calendar_rebuilt_note">Reconstructed from available history; this may not include activity that was never synced.</string>
+    <string name="aq_calendar_partial_note">This period begins before the available community history, so only the recorded portion is included.</string>
+    <string name="aq_calendar_cutoff">Competition time zone: %1$s, cutoff %2$s. Results become final %3$d hours after the cutoff, so late syncs still count.</string>
+
+    <!-- A conquered card -->
+    <string name="aq_conquest_refresh">Refresh the card</string>
+    <string name="aq_conquest_loading">Loading the card…</string>
+    <string name="aq_conquest_missing">This card could not be found. It may be private, or the review behind it was undone.</string>
+    <string name="aq_conquest_badge">Hard card, learned at last</string>
+    <string name="aq_conquest_badge_leech">Card tamed</string>
+    <plurals name="aq_conquest_lead_mine">
+        <item quantity="one">You forgot this card %1$d time, and learned it anyway. It now stays with you for weeks at a time.</item>
+        <item quantity="other">You forgot this card %1$d times, and learned it anyway. It now stays with you for weeks at a time.</item>
+    </plurals>
+    <plurals name="aq_conquest_lead">
+        <item quantity="one">%1$s forgot this card %2$d time, and learned it anyway. It now stays with them for weeks at a time.</item>
+        <item quantity="other">%1$s forgot this card %2$d times, and learned it anyway. It now stays with them for weeks at a time.</item>
+    </plurals>
+    <plurals name="aq_conquest_lapses">
+        <item quantity="one">%1$s lapse</item>
+        <item quantity="other">%1$s lapses</item>
+    </plurals>
+    <plurals name="aq_conquest_answers">
+        <item quantity="one">%1$s answer</item>
+        <item quantity="other">%1$s answers</item>
+    </plurals>
+    <plurals name="aq_conquest_days">
+        <item quantity="one">%1$s day to learn</item>
+        <item quantity="other">%1$s days to learn</item>
+    </plurals>
+    <string name="aq_conquest_tell">Tell my friends</string>
+    <string name="aq_conquest_telling">Telling your friends…</string>
+    <string name="aq_conquest_told">Friends told</string>
+    <plurals name="aq_conquest_told_count">
+        <item quantity="one">%1$d friend will see it in their activity.</item>
+        <item quantity="other">%1$d friends will see it in their activity.</item>
+    </plurals>
+    <string name="aq_conquest_label_add">Show what the card was</string>
+    <string name="aq_conquest_label_explanation">Anyone who can open this card will see it, and so will friends you tell. You can take it back later.</string>
+    <string name="aq_conquest_label_save">Show it on the card</string>
+    <string name="aq_conquest_label_remove">Stop showing the card</string>
+    <string name="aq_conquest_action_failed">That did not work. Check your connection and try again.</string>
+    <string name="aq_conquest_label_shown">Its owner chose to show what the card was.</string>
+    <string name="aq_conquest_numbers_only">Only these numbers are shared, never the card itself.</string>
+    <string name="aq_conquest_profile">See %1$s’s profile</string>
+    <plurals name="aq_conquest_share_mine">
+        <item quantity="one">I finally learned a card I had forgotten %1$d time. 🏆</item>
+        <item quantity="other">I finally learned a card I had forgotten %1$d times. 🏆</item>
+    </plurals>
+    <plurals name="aq_conquest_share">
+        <item quantity="one">%1$s finally learned a card they had forgotten %2$d time. 🏆</item>
+        <item quantity="other">%1$s finally learned a card they had forgotten %2$d times. 🏆</item>
+    </plurals>
+    <plurals name="aq_conquest_share_label_mine">
+        <item quantity="one">I finally learned “%1$s”, a card I had forgotten %2$d time. 🏆</item>
+        <item quantity="other">I finally learned “%1$s”, a card I had forgotten %2$d times. 🏆</item>
+    </plurals>
+    <plurals name="aq_conquest_share_label">
+        <item quantity="one">%1$s finally learned “%2$s”, a card they had forgotten %3$d time. 🏆</item>
+        <item quantity="other">%1$s finally learned “%2$s”, a card they had forgotten %3$d times. 🏆</item>
+    </plurals>
+</resources>

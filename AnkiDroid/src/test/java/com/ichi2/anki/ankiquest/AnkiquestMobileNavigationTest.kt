@@ -21,6 +21,7 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -221,6 +222,17 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         val unscoped = AnkiquestActivity.intent(targetContext, "/week")
         assertTrue(AnkiquestActivity.owned(unscoped, current))
         assertEquals("/week", AnkiquestActivity.route(unscoped, null))
+    }
+
+    @Test
+    fun `a conquered card's page opens its native screen`() {
+        val opened = assertNotNull(AnkiquestNavigation.nativeScreen(targetContext, "/conquered/member%20name/1793097000000"))
+        assertEquals(ComponentName(targetContext, AnkiquestConquestActivity::class.java), opened.component)
+        assertEquals("member name", opened.getStringExtra(AnkiquestConquestActivity.EXTRA_USER))
+        assertEquals(1_793_097_000_000L, opened.getLongExtra(AnkiquestConquestActivity.EXTRA_AT, 0))
+        for (path in listOf("/conquered/hill", "/conquered/hill/x", "/conquered//5", "/conquered/hill/5/more")) {
+            assertEquals(null, AnkiquestNavigation.nativeScreen(targetContext, path), path)
+        }
     }
 
     @Test

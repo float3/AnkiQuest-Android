@@ -851,6 +851,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     fun dashboardUrl(): String? = HomeAccount.current()?.let(::dashboardOf)
 
+    /** The configured server's privacy notice, `/privacy`, an HTML page with the operator's details; null without a server. */
+    fun privacyUrl(): String? = HomeAccount.current()?.let { "${it.server}/privacy" }
+
     internal fun webSession(): AnkiquestWebSession? =
         HomeAccount.current()?.let { account -> AnkiquestWebSession(dashboardOf(account), account.user, account.token, account.language) }
 

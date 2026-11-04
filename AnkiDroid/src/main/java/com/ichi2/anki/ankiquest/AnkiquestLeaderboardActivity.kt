@@ -228,6 +228,7 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
             if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         views.button(content, getString(R.string.aq_board_my_profile)) { openProfile(current.user) }
+        views.button(content, getString(R.string.aq_calendar_title)) { startActivity(AnkiquestCalendarActivity.intent(this)) }
         scroll.post { scroll.scrollTo(0, position) }
     }
 

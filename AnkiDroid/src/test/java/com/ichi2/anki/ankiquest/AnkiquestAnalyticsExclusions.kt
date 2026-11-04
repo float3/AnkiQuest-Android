@@ -59,6 +59,11 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_subscriptions_status_key,
             R.string.ankiquest_subscriptions_retry_key,
             R.string.ankiquest_subscriptions_people_key,
+            R.string.aq_reminders_status_key,
+            R.string.aq_reminders_retry_key,
+            R.string.aq_reminders_kinds_key,
+            R.string.aq_reminders_timing_key,
+            R.string.aq_privacy_key,
         )
 
     fun keys(context: Context): Set<String> =
