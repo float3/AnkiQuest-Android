@@ -28,29 +28,52 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ankiquest
+          ref: main
           fetch-depth: 0
 
-      - name: Open a pull request from ankidroid:main into ankiquest
+      - name: Open a pull request from ankidroid:main into main
         env:
           GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
         run: |
           git fetch --no-tags https://github.com/ankidroid/Anki-Android.git main:refs/remotes/upstream/main
           behind=$(git rev-list --count HEAD..refs/remotes/upstream/main)
           if [ "$behind" -eq 0 ]; then
-            echo "ankiquest already contains every upstream commit"
+            echo "main already contains every upstream commit"
             exit 0
           fi
-          open=$(gh api "repos/$GITHUB_REPOSITORY/pulls?head=ankidroid:main&base=ankiquest&state=open" --jq '.[0].number // empty')
+
+          # Try the merge here so a conflict is reported by file instead of only on the pull request page
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          conflicts=""
+          if ! git merge --no-commit --no-ff refs/remotes/upstream/main; then
+            conflicts=$(git diff --name-only --diff-filter=U)
+            [ -n "$conflicts" ] || conflicts="(the trial merge failed without listing files; see the log above)"
+          fi
+          git merge --abort 2>/dev/null || true
+          if [ -n "$conflicts" ]; then
+            echo "::warning::Upstream main conflicts with main in: $(echo "$conflicts" | paste -sd ' ')"
+            {
+              echo "### Upstream main conflicts with main"
+              echo
+              echo "Merge ankidroid/Anki-Android main into a branch from main, resolve these, and merge that branch:"
+              echo
+              echo "$conflicts" | while IFS= read -r file; do printf -- '- %s\n' "$file"; done
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "$behind upstream commits merge cleanly" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          open=$(gh api "repos/$GITHUB_REPOSITORY/pulls?head=ankidroid:main&base=main&state=open" --jq '.[0].number // empty')
           if [ -n "$open" ]; then
             echo "Pull request #$open is open and now includes the new commits"
             exit 0
           fi
           gh api "repos/$GITHUB_REPOSITORY/pulls" --jq .html_url \
-            -f base=ankiquest -f head=ankidroid:main \
+            -f base=main -f head=ankidroid:main \
             -f title="Merge upstream AnkiDroid" \
             -f body="$behind new commits from ankidroid/Anki-Android main.
 
-          Merge with a merge commit, never squash or rebase, so ankiquest keeps upstream's history.
+          Merge with a merge commit, never squash or rebase, so main keeps upstream's history.
 
-          If this conflicts, merge ankidroid/Anki-Android main into a branch from ankiquest, resolve there, and merge that branch instead; this pull request then shows as merged."
+          If this conflicts, merge ankidroid/Anki-Android main into a branch from main, resolve there, and merge that branch instead; this pull request then shows as merged."
