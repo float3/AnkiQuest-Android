@@ -320,10 +320,15 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
             ViewCompat.setAccessibilityHeading(this, false)
         }
         views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = Gravity.END
+        val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
+        closing?.let { xp ->
+            views.text(score, getString(R.string.aq_board_closing_xp, views.number(xp)), small = true).gravity = Gravity.END
+        }
         panel.contentDescription =
             listOfNotNull(
                 getString(R.string.aq_board_row_description, place, name, row.level, views.number(row.xp)),
                 streak?.let { getString(R.string.ankiquest_streak_description, views.number(row.streak.toLong()), it) },
+                closing?.let { getString(R.string.aq_board_closing_xp, views.number(it)) },
             ).joinToString(". ")
         val ripple = TypedValue().also { theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }
         panel.foreground = AppCompatResources.getDrawable(this, ripple.resourceId)

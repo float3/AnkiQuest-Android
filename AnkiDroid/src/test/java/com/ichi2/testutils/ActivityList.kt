@@ -33,9 +33,11 @@ import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestChallengesActivity
 import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
 import com.ichi2.anki.ankiquest.AnkiquestFriendsActivity
+import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
 import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
 import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
 import com.ichi2.anki.ankiquest.AnkiquestProfileActivity
+import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
 import com.ichi2.anki.ankiquest.AnkiquestShare
 import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
@@ -140,6 +142,8 @@ object ActivityList {
             get(AnkiquestFeedActivity::class.java),
             get(AnkiquestFriendsActivity::class.java),
             get(AnkiquestChallengesActivity::class.java),
+            get(AnkiquestRecordsActivity::class.java),
+            get(AnkiquestHistoryActivity::class.java),
             get(AnkiquestShareActivity::class.java) {
                 Intent(it, AnkiquestShareActivity::class.java)
                     .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")

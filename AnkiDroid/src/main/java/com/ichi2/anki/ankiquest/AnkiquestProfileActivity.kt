@@ -20,6 +20,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.Job
@@ -28,7 +29,9 @@ import kotlinx.coroutines.launch
 /**
  * A player's profile, natively, as the website's `/week#<user>` shows it: level and XP, streak and
  * freezes, today, daily quests, personal bests, hard-won cards and achievements. The player's own
- * profile adds their latest wins and leads to the native settings, never to a web page.
+ * profile adds their latest wins and leads to the native settings, never to a web page. Personal bests
+ * lead on to the records ([AnkiquestRecordsActivity]) and, for the player, their study history
+ * ([AnkiquestHistoryActivity]).
  */
 class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board) {
     private lateinit var content: LinearLayout
@@ -189,6 +192,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 }
             views.text(notice, line)
         }
+        AnkiquestBoards.closingLine(this, p.closingWeek, TimeManager.time.intTimeMS())?.let { line ->
+            views.text(views.card(content, tinted = true), line)
+        }
         tiles(
             listOf(
                 Triple(getString(R.string.aq_profile_streak), views.number(p.streak.toLong()), streakStatus(p)),
@@ -268,6 +274,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 ).apply { ViewCompat.setAccessibilityHeading(this, false) }
             views.text(panel, days(p.daysActive), small = true)
         }
+        // The bests lead on to the records everyone is chasing and, on the player's own profile, their study calendar.
+        views.button(content, getString(R.string.aq_records_title)) { startActivity(AnkiquestRecordsActivity.intent(this)) }
+        if (page.own) views.button(content, getString(R.string.aq_history_title)) { startActivity(AnkiquestHistoryActivity.intent(this)) }
         views.section(content, getString(R.string.aq_profile_lifetime))
         tiles(
             listOf(

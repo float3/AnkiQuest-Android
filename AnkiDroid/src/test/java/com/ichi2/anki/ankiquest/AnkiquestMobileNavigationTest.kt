@@ -224,6 +224,33 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     }
 
     @Test
+    fun `records and study history open natively, and their web pages remain for older servers`() {
+        for ((path, screen) in listOf(
+            "/records" to AnkiquestRecordsActivity::class.java,
+            "/records/" to AnkiquestRecordsActivity::class.java,
+            "/history" to AnkiquestHistoryActivity::class.java,
+            "/history?year=2025#day" to AnkiquestHistoryActivity::class.java,
+        )) {
+            assertEquals(ComponentName(targetContext, screen), AnkiquestNavigation.nativeScreen(targetContext, path)?.component, path)
+        }
+        for (path in listOf("/", "/week", "/community#challenges", "/friends", "/records/other")) {
+            assertEquals(null, AnkiquestNavigation.nativeScreen(targetContext, path), path)
+        }
+        val session = AnkiquestWebSession("https://anki.example.test/prefix/#member%20name", "member name", "member-token")
+        assertEquals(
+            "https://anki.example.test/prefix/records?embed=1",
+            AnkiquestActivity.destinationUrl(session.dashboard, AnkiquestNavigation.RECORDS_PATH),
+        )
+        assertEquals(
+            "https://anki.example.test/prefix/history?embed=1",
+            AnkiquestActivity.destinationUrl(session.dashboard, AnkiquestNavigation.HISTORY_PATH),
+        )
+        for (path in listOf(AnkiquestNavigation.RECORDS_PATH, AnkiquestNavigation.HISTORY_PATH)) {
+            assertTrue(session.allows(AnkiquestActivity.destinationUrl(session.dashboard, path)), path)
+        }
+    }
+
+    @Test
     fun `community routes are pages the web session may authenticate`() {
         val session = AnkiquestWebSession("https://anki.example.test/prefix/#member%20name", "member name", "member-token")
         for (path in listOf(

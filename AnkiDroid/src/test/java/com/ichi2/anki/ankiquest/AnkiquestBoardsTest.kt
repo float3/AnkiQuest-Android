@@ -11,6 +11,7 @@ import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -58,6 +59,33 @@ class AnkiquestBoardsTest : RobolectricTest() {
         assertTrue(profile.conquests.single().leech)
         assertEquals(listOf("Done", "Close", "Far"), AnkiquestBoards.ordered(profile.achievements).map { it.title })
         assertNull(AnkiquestBoards.parseProfile(JSONObject().put("user", "x")).records[AnkiquestBoards.Period.HOUR])
+    }
+
+    @Test
+    fun `the closing week is read while the player's day still counts for it`() {
+        // Just after the shared reset, a Californian's Sunday still counts toward last week.
+        val endsAt = 1_793_200_000_000L
+        val json = JSONObject(PROFILE).put("closing_week", JSONObject().put("xp", 1234).put("ends_at", endsAt))
+        val closing = AnkiquestBoards.parseProfile(json).closingWeek
+        assertEquals(AnkiquestBoards.ClosingWeek(1234, endsAt), closing)
+        val line = AnkiquestBoards.closingLine(targetContext, closing, endsAt - 1)
+        assertNotNull(line)
+        assertTrue(line.startsWith("Last week still counting: 1,234 XP · closes at "), line)
+        assertNull(AnkiquestBoards.closingLine(targetContext, closing, endsAt), "gone once their day ends")
+        assertNull(AnkiquestBoards.parseProfile(JSONObject(PROFILE)).closingWeek, "older servers and most of the week have none")
+        assertNull(AnkiquestBoards.closingLine(targetContext, null, 0))
+        assertNull(AnkiquestBoards.parseClosingWeek(JSONObject().put("closing_week", JSONObject().put("xp", 5))))
+
+        val rows =
+            AnkiquestBoards.parseLeaderboard(
+                JSONArray()
+                    .put(row("ana", week = 0, hour = 0).put("closing_xp", 70).put("day_ends_at", endsAt))
+                    .put(row("bo", week = 5, hour = 0)),
+                AnkiquestBoards.Period.WEEK,
+            )
+        assertEquals(70L, rows.first { it.user == "ana" }.closingXp(endsAt - 1))
+        assertNull(rows.first { it.user == "ana" }.closingXp(endsAt))
+        assertNull(rows.first { it.user == "bo" }.closingXp(0))
     }
 
     @Test
