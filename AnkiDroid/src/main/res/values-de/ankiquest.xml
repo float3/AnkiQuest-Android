@@ -24,7 +24,6 @@
     <string name="ankiquest_avatar_remove">Bild entfernen</string>
     <string name="ankiquest_avatar_remove_confirm">Dein Profilbild entfernen und wieder deinen Anfangsbuchstaben verwenden?</string>
     <string name="ankiquest_deck_notifications_title">Benachrichtigungen über abgeschlossene Stapel</string>
-    <string name="ankiquest_deck_notifications_summary">Wähle, wer benachrichtigt wird, wenn du einen Stapel für heute abgeschlossen hast</string>
     <string name="ankiquest_deck_notifications_empty">Erstelle zuerst einen normalen Stapel, um Abschlussmeldungen einzurichten.</string>
     <string name="ankiquest_deck_notifications_no_people">Es gibt noch keine anderen Spieler auf diesem Server.</string>
     <string name="ankiquest_deck_notifications_choose_people">Wähle mindestens eine Person oder schalte das Teilen aus.</string>

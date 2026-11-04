@@ -328,7 +328,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     protected fun bindSharing() {
-        val deckSharing: suspend () -> String? = {
+        bindAction(R.string.ankiquest_moments_decks_key) {
             try {
                 showDeckNotifications(Ankiquest.deckNotificationSettings())
                 null
@@ -336,8 +336,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
             }
         }
-        bindAction(R.string.ankiquest_deck_notifications_key, deckSharing)
-        bindAction(R.string.ankiquest_moments_decks_key, deckSharing)
         bindMoments()
     }
 

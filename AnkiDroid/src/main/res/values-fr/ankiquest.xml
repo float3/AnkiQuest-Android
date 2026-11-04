@@ -24,7 +24,6 @@
     <string name="ankiquest_avatar_remove">Supprimer l\'image</string>
     <string name="ankiquest_avatar_remove_confirm">Supprimer ta photo de profil et réutiliser ton initiale ?</string>
     <string name="ankiquest_deck_notifications_title">Notifications de fin de paquet</string>
-    <string name="ankiquest_deck_notifications_summary">Choisis qui sera prévenu quand tu termineras un paquet pour la journée</string>
     <string name="ankiquest_deck_notifications_empty">Crée d’abord un paquet normal pour configurer ces notifications.</string>
     <string name="ankiquest_deck_notifications_no_people">Il n\'y a pas encore d\'autres joueurs sur ce serveur.</string>
     <string name="ankiquest_deck_notifications_choose_people">Choisis au moins une personne ou désactive le partage.</string>

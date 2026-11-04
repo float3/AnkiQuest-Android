@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_sign_in_screen_title">Anmeldung, Geräte und Daten</string>
+    <string name="ankiquest_sign_in_screen_summary">Passwort, Google und GitHub, angemeldete Geräte, deine Daten und Konto löschen</string>
+    <string name="ankiquest_providers_title">Anmelden mit</string>
+    <string name="ankiquest_devices_title">Angemeldete Geräte</string>
+    <string name="ankiquest_data_title">Deine Daten</string>
+    <string name="ankiquest_account_configure">Melde dich zuerst bei AnkiQuest an.</string>
+    <string name="ankiquest_account_failed">%s Tippe, um es erneut zu versuchen.</string>
+    <string name="ankiquest_account_changed">Du hast dich inzwischen als jemand anderes angemeldet. Versuche es erneut.</string>
+    <string name="ankiquest_password_title">Passwort</string>
+    <string name="ankiquest_password_change">Ändere dein Passwort</string>
+    <string name="ankiquest_password_set">Lege ein Passwort fest, um dich auch ohne deinen Anbieter anzumelden</string>
+    <string name="ankiquest_password_current">Aktuelles Passwort</string>
+    <string name="ankiquest_password_new">Neues Passwort</string>
+    <string name="ankiquest_password_sign_out_others">Meine anderen Geräte abmelden</string>
+    <string name="ankiquest_password_length">Verwende 10 bis 256 Zeichen.</string>
+    <string name="ankiquest_password_saved">Passwort gespeichert.</string>
+    <string name="ankiquest_provider_linked">Verknüpft. Tippe zum Trennen.</string>
+    <string name="ankiquest_provider_unlinked">Nicht verknüpft. Tippe zum Verknüpfen.</string>
+    <string name="ankiquest_provider_unlink_confirm">%s trennen? Du kannst dich dann nicht mehr damit anmelden.</string>
+    <string name="ankiquest_provider_unlink">Trennen</string>
+    <string name="ankiquest_provider_unsupported">Dieser Server kann das nur auf seiner Website. Bitte die Person, die ihn betreibt, ihn zu aktualisieren.</string>
+    <string name="ankiquest_browser_opened">Schließe den Vorgang im Browser ab und kehre dann hierher zurück.</string>
+    <string name="ankiquest_browser_foreign">Der Server hat eine Adresse auf einer anderen Website geschickt, deshalb wurde sie nicht geöffnet.</string>
+    <string name="ankiquest_reauth_title">Melde dich zur Bestätigung erneut an</string>
+    <string name="ankiquest_reauth_with">Mit %s anmelden</string>
+    <string name="ankiquest_reauth_none">Keine deiner verknüpften Anmeldungen wird von diesem Server noch angeboten. Bitte die Person, die den Server betreibt, um Hilfe.</string>
+    <string name="ankiquest_reauth_pending">Du hast dich noch nicht erneut angemeldet. Melde dich im Browser an und kehre dann hierher zurück.</string>
+    <string name="ankiquest_device_website">Website</string>
+    <string name="ankiquest_device_app">App</string>
+    <string name="ankiquest_device_this">%s (dieses Gerät)</string>
+    <string name="ankiquest_device_signed_in">Angemeldet am %s</string>
+    <string name="ankiquest_device_used">Angemeldet am %1$s, zuletzt genutzt am %2$s</string>
+    <string name="ankiquest_device_sign_out_confirm">%s abmelden? Es muss sich dann neu anmelden.</string>
+    <string name="ankiquest_device_sign_out">Abmelden</string>
+    <string name="ankiquest_sign_out_others_title">Alle anderen Geräte abmelden</string>
+    <string name="ankiquest_sign_out_others_summary">Alle Apps und Website-Sitzungen außer dieser</string>
+    <string name="ankiquest_sign_out_others_confirm">Alle anderen Geräte und Website-Sitzungen abmelden?</string>
+    <string name="ankiquest_signed_out_others">Deine anderen Geräte sind abgemeldet.</string>
+    <string name="ankiquest_export_title">Deine Daten herunterladen</string>
+    <string name="ankiquest_export_summary">Alles, was der Server über dich speichert, als JSON-Datei sichern</string>
+    <string name="ankiquest_export_saved">Deine Daten wurden gespeichert.</string>
+    <string name="ankiquest_delete_title">Konto löschen</string>
+    <string name="ankiquest_delete_summary">Dein Konto und alles darüber vom Server entfernen</string>
+    <string name="ankiquest_delete_password_message">Damit werden dein Konto, dein Lernverlauf und alles andere, was der Server über dich speichert, endgültig gelöscht. Gib zur Bestätigung dein Passwort ein.</string>
+    <string name="ankiquest_delete_username_message">Damit werden dein Konto, dein Lernverlauf und alles andere, was der Server über dich speichert, endgültig gelöscht. Gib zur Bestätigung deinen Benutzernamen %s ein.</string>
+    <string name="ankiquest_delete_button">Endgültig löschen</string>
+    <string name="ankiquest_delete_type_username">Gib zur Bestätigung %s ein.</string>
+    <string name="ankiquest_delete_done">Dein Konto wurde gelöscht und dieses Gerät ist abgemeldet.</string>
+</resources>
