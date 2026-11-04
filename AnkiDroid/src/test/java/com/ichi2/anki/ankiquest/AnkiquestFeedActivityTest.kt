@@ -223,18 +223,6 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         assertFalse(launch(identity.notificationAccount).hasText(feed.getString(R.string.aq_home_account_route_changed)))
     }
 
-    @Test
-    fun `a web page for another account opens this account's native feed instead`() {
-        val web =
-            startRegularActivity<AnkiquestActivity>(
-                AnkiquestActivity.intent(targetContext, AnkiquestNavigation.challengePath(42), "https://other.example.test/member"),
-            )
-        val opened = assertNotNull(shadowOf(web).nextStartedActivity)
-        assertEquals(AnkiquestFeedActivity::class.java.name, opened.component?.className)
-        assertEquals("https://other.example.test/member", opened.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
-        assertTrue(web.isFinishing)
-    }
-
     private fun launch(account: String? = null): AnkiquestFeedActivity =
         startRegularActivity<AnkiquestFeedActivity>(AnkiquestFeedActivity.intent(targetContext, account))
             .also { feed -> advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_feed_loading).isVisible } }

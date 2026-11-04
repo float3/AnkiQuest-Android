@@ -130,17 +130,11 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
                         }
                     }
                 if (turn != generation) return@launch
-                if (gone) {
-                    // A server without the board's JSON still has its page.
-                    startActivity(AnkiquestActivity.intent(this@AnkiquestLeaderboardActivity, asked.path))
-                    finish()
-                    return@launch
-                }
                 if (problem == R.string.aq_feed_account_changed) {
                     load()
                     return@launch
                 }
-                failure = problem
+                failure = if (gone) R.string.aq_server_outdated else problem
                 loading = false
                 render()
                 if (problem == null) loadPictures(current)

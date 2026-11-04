@@ -326,7 +326,6 @@ object AnkiquestNotifier {
                 AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
                 AnkiquestNavigation.Destination.Friends -> AnkiquestFriendsActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Challenges -> AnkiquestChallengesActivity.intent(context, destination.id, account)
-                is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
                 is AnkiquestNavigation.Destination.Leaderboard -> AnkiquestLeaderboardActivity.intent(context, destination.period, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

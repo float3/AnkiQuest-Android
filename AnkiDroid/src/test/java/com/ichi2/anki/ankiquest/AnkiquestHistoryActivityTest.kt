@@ -29,6 +29,7 @@ import java.time.format.FormatStyle
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -143,13 +144,12 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `a server without the calendar opens the history page on the website`() {
+    fun `a server without the calendar says it needs updating`() {
         coEvery { AnkiquestRecords.study(identity, any()) } throws AnkiquestHttpException(404)
-        val history = startRegularActivity<AnkiquestHistoryActivity>(AnkiquestHistoryActivity.intent(targetContext))
-        advanceRobolectricLooperUntil { history.isFinishing }
-        val opened = assertNotNull(shadowOf(history).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(AnkiquestNavigation.HISTORY_PATH, opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        val history = launch()
+        assertTrue(history.hasText(history.getString(R.string.aq_server_outdated)))
+        assertNull(shadowOf(history).nextStartedActivity)
+        assertFalse(history.isFinishing)
     }
 
     private fun date(day: LocalDate): String =

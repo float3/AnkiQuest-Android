@@ -36,7 +36,7 @@ import java.util.TimeZone
 /**
  * The community calendar, natively, as the website's `/community#calendar` shows it: who won each day
  * of a month, each week's champions and each month's season, whether a result is final, and the full
- * standings of any of them. It reads `GET /api/community`; a server without it shows its page.
+ * standings of any of them. It reads `GET /api/community`; a server without it says it needs updating.
  */
 class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board) {
     private lateinit var content: LinearLayout
@@ -133,18 +133,12 @@ class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board
                         }
                     }
                 if (turn != generation) return@launch
-                if (gone) {
-                    // A server without the calendar's JSON still has its page.
-                    startActivity(AnkiquestActivity.intent(this@AnkiquestCalendarActivity, WEB_PATH, current.notificationAccount))
-                    finish()
-                    return@launch
-                }
                 if (problem == R.string.aq_feed_account_changed) {
                     load()
                     return@launch
                 }
                 answer?.let { calendar = it }
-                failure = problem
+                failure = if (gone) R.string.aq_server_outdated else problem
                 loading = false
                 render()
             }
@@ -536,9 +530,6 @@ class AnkiquestCalendarActivity : AnkiActivity(R.layout.activity_ankiquest_board
     companion object {
         /** The view to open, as [AnkiquestCommunity.Kind.query]; days when missing. */
         const val EXTRA_KIND = "ankiquest.calendar_kind"
-
-        /** The website's calendar, for servers without its JSON. */
-        const val WEB_PATH = "/community#calendar"
 
         private const val STATE_KIND = "ankiquest.calendar_kind"
         private const val STATE_YEAR = "ankiquest.calendar_year"

@@ -34,6 +34,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -248,22 +249,12 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `an older server without the endpoint opens the website's page instead`() {
+    fun `an older server without the endpoint says it needs updating`() {
         coEvery { AnkiquestChallenges.overview(identity) } throws AnkiquestHttpException(404)
-        val goals =
-            startRegularActivity<AnkiquestChallengesActivity>(
-                AnkiquestChallengesActivity.intent(targetContext, 42, identity.notificationAccount),
-            )
-        advanceRobolectricLooper()
-        val opened = assertNotNull(shadowOf(goals).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(AnkiquestNavigation.challengePath(42), opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
-        assertEquals(identity.notificationAccount, opened.getStringExtra(AnkiquestActivity.EXTRA_ACCOUNT))
-        assertTrue(goals.isFinishing)
-
-        val list = startRegularActivity<AnkiquestChallengesActivity>(AnkiquestChallengesActivity.intent(targetContext))
-        advanceRobolectricLooper()
-        assertEquals(AnkiquestNavigation.FRIENDS_PATH, shadowOf(list).nextStartedActivity.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        val goals = launch(challenge = 42, account = identity.notificationAccount)
+        assertTrue(goals.hasText(goals.getString(R.string.aq_server_outdated)))
+        assertNull(shadowOf(goals).nextStartedActivity)
+        assertFalse(goals.isFinishing)
     }
 
     @Test

@@ -160,7 +160,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
             val capabilities = requests.indexOf("/api/capabilities")
             assertTrue(capabilities > requests.indexOfFirst { it.startsWith("/api/notifications/") })
-            assertFalse(AnkiquestCapabilities.has(assertNotNull(AnkiquestHomeData.account()), AnkiquestCapabilities.COOKIE_SESSION))
+            assertFalse(AnkiquestCapabilities.has(assertNotNull(AnkiquestHomeData.account()), "cookie_session"))
             requests.clear()
             assertEquals(Result.success(), worker().doWork())
             assertTrue(requests.none { it == "/api/capabilities" }, "fresh capabilities are not asked again")

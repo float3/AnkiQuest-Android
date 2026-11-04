@@ -28,6 +28,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -168,13 +169,12 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `a server without the board's JSON opens its web page instead`() {
+    fun `a server without the board's JSON says it needs updating`() {
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } throws AnkiquestHttpException(404)
         val board = launch(AnkiquestBoards.Period.YEAR.query)
-        val opened = assertNotNull(shadowOf(board).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals("/year", opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
-        assertTrue(board.isFinishing)
+        assertTrue(board.hasText(board.getString(R.string.aq_server_outdated)))
+        assertNull(shadowOf(board).nextStartedActivity)
+        assertFalse(board.isFinishing)
     }
 
     @Test

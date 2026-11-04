@@ -364,7 +364,6 @@ class AnkiquestWidgetTest : RobolectricTest() {
         assertFalse(AnkiquestNavigation.opensToday(intent))
         val deckLaunchFlags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         assertEquals(deckLaunchFlags, intent.flags and deckLaunchFlags)
-        assertFalse(intent.hasExtra(AnkiquestActivity.EXTRA_PATH))
     }
 
     private fun measureWidget(root: View) {

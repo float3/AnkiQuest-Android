@@ -31,6 +31,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -299,20 +300,12 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `an older server without the endpoint opens the website's page instead`() {
+    fun `an older server without the endpoint says it needs updating`() {
         coEvery { AnkiquestSocial.overview(identity) } throws AnkiquestHttpException(404)
-        val friends =
-            startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext, identity.notificationAccount))
-        advanceRobolectricLooper()
-        val opened = assertNotNull(shadowOf(friends).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(AnkiquestFriendsActivity.WEB_PATH, opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
-        assertEquals(identity.notificationAccount, opened.getStringExtra(AnkiquestActivity.EXTRA_ACCOUNT))
-        assertTrue(friends.isFinishing)
-
-        val join = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext, invite = code))
-        advanceRobolectricLooper()
-        assertEquals("/join/$code", shadowOf(join).nextStartedActivity.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        val friends = launch(invite = code)
+        assertTrue(friends.hasText(friends.getString(R.string.aq_server_outdated)))
+        assertNull(shadowOf(friends).nextStartedActivity)
+        assertFalse(friends.isFinishing)
     }
 
     @Test

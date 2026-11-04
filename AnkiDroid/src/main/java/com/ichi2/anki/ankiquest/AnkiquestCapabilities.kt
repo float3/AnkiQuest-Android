@@ -23,9 +23,6 @@ import java.util.concurrent.ConcurrentHashMap
  * reported still count.
  */
 internal object AnkiquestCapabilities {
-    /** The server keeps a dashboard signed in by its HttpOnly cookie alone, without the token. */
-    const val COOKIE_SESSION = "cookie_session"
-
     @VisibleForTesting
     internal const val PREF_CAPABILITIES = "ankiquestCapabilities"
 

@@ -555,25 +555,6 @@ class AnkiquestAvatarsTest : RobolectricTest() {
         }
     }
 
-    @Test
-    fun `picture chooser accepts explicit and default ports of the same origin`() {
-        for ((scheme, port) in listOf("https" to 443, "http" to 80)) {
-            val explicit = "$scheme://example.test:$port/profile".toUri()
-            val implicit = "$scheme://example.test/settings".toUri()
-            assertTrue(AnkiquestActivity.acceptsPictureOrigin(implicit, explicit), "$scheme explicit configured port")
-            assertTrue(AnkiquestActivity.acceptsPictureOrigin(explicit, implicit), "$scheme implicit configured port")
-        }
-    }
-
-    @Test
-    fun `picture chooser rejects different origins and absent pages`() {
-        val base = "https://example.test/profile".toUri()
-        for (url in listOf("http://example.test/profile", "https://example.test:8443/profile", "https://other.test/profile")) {
-            assertFalse(AnkiquestActivity.acceptsPictureOrigin(url.toUri(), base), url)
-        }
-        assertFalse(AnkiquestActivity.acceptsPictureOrigin(null, base))
-    }
-
     private fun png(): ByteArray =
         ByteArrayOutputStream()
             .also { out ->

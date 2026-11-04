@@ -714,18 +714,18 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 refreshPending = true
                 return@refresh
             }
-            val account = Ankiquest.webSession()
+            val account = HomeAccount.current()
             lifecycleScope.launch {
                 try {
                     val enabled = read()
-                    if (request != generation || account != Ankiquest.webSession() || !isAdded) return@launch
+                    if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
                     preference.isChecked = enabled
                     preference.isEnabled = true
                     preference.summary = summary
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    if (request != generation || account != Ankiquest.webSession() || !isAdded) return@launch
+                    if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
                     preference.summary = getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
                 }
             }
@@ -734,21 +734,21 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         preference.setOnPreferenceChangeListener { _, value ->
             val wanted = value == true
             val request = ++generation
-            val account = Ankiquest.webSession()
+            val account = HomeAccount.current()
             preference.isEnabled = false
             saving = true
             lifecycleScope.launch {
                 try {
-                    if (account != Ankiquest.webSession()) return@launch
+                    if (account != HomeAccount.current()) return@launch
                     val enabled = save(wanted)
-                    if (request != generation || account != Ankiquest.webSession() || !isAdded) return@launch
+                    if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
                     preference.isChecked = enabled
                     preference.isEnabled = true
                     if (enabled && notify) askForNotifications()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    if (request != generation || account != Ankiquest.webSession() || !isAdded) return@launch
+                    if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
                     AlertDialog
                         .Builder(requireContext())
                         .setTitle(preference.title)

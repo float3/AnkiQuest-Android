@@ -29,7 +29,6 @@ import com.ichi2.anki.SingleFragmentActivity
 import com.ichi2.anki.StoragePermissionSet
 import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.account.AccountActivity
-import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestCalendarActivity
 import com.ichi2.anki.ankiquest.AnkiquestChallengesActivity
 import com.ichi2.anki.ankiquest.AnkiquestConquestActivity
@@ -139,7 +138,6 @@ object ActivityList {
             get(DeckPickerWidgetConfig::class.java, normalIntent = { intentForWidgetConfig() }),
             get(CardAnalysisWidgetConfig::class.java) { intentForWidgetConfig() },
             get(AccountActivity::class.java, normalIntent = { AccountActivity.getIntent(targetContext) }),
-            get(AnkiquestActivity::class.java),
             get(AnkiquestHomeActivity::class.java),
             get(AnkiquestFeedActivity::class.java),
             get(AnkiquestFriendsActivity::class.java),

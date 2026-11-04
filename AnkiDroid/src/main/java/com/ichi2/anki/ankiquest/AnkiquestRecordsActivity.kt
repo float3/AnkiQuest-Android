@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
  * hours, 7, 30 and 365 days, the longest streak and the most days studied among the player's
  * friends and groups, everyone, or one group, each with whoever came closest; a name opens that
  * player's profile ([AnkiquestProfileActivity]). A server without the
- * boards' JSON shows its page in [AnkiquestActivity].
+ * boards' JSON says it needs updating.
  */
 class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_records) {
     private lateinit var views: AnkiquestRecordViews
@@ -120,17 +120,11 @@ class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_record
                         }
                     }
                 if (turn != generation) return@launch
-                if (gone) {
-                    // A server without the boards' JSON still has its page.
-                    startActivity(AnkiquestActivity.intent(this@AnkiquestRecordsActivity, AnkiquestNavigation.RECORDS_PATH))
-                    finish()
-                    return@launch
-                }
                 if (problem == R.string.aq_feed_account_changed) {
                     reload()
                     return@launch
                 }
-                failure = problem
+                failure = if (gone) R.string.aq_server_outdated else problem
                 loading = false
                 render()
             }
