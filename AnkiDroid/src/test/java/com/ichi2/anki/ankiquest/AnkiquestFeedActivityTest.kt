@@ -166,8 +166,8 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         val feed = launch()
         feed.click(feed.getString(R.string.aq_feed_view_invitation))
         val opened = assertNotNull(shadowOf(feed).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(AnkiquestNavigation.challengePath(8), opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        assertEquals(AnkiquestChallengesActivity::class.java.name, opened.component?.className)
+        assertEquals(8L, opened.getLongExtra(AnkiquestChallengesActivity.EXTRA_CHALLENGE, 0))
         coVerify { AnkiquestFeed.markRead(identity, listOf(42L)) }
     }
 
