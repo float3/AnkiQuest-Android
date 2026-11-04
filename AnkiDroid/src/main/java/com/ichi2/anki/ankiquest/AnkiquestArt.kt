@@ -56,7 +56,7 @@ internal object AnkiquestArt {
 
     /**
      * Art for an inbox notification of [kind]. [topic] is what a celebration or a friend's shared win
-     * is about ("streak", "goal", "secured", "achievement", …) or "place:N" for a weekly recap; older
+     * is about ("streak", "goal", "secured", "conquered", "achievement", …) or "place:N" for a weekly recap; older
      * servers send none.
      */
     @DrawableRes
@@ -76,8 +76,9 @@ internal object AnkiquestArt {
     private fun forTopic(topic: String?): Int =
         when {
             topic == "streak" -> R.drawable.aki_streak_milestone
-            topic == "secured" -> R.drawable.aki_streak
-            topic == "goal" -> R.drawable.aki_celebrate
+            topic == "secured" -> R.drawable.aki_minimum
+            topic == "goal" -> R.drawable.aki_goal
+            topic == "conquered" -> R.drawable.aki_deck_conquered
             topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: R.drawable.aki_achievement
             else -> R.drawable.aki_achievement
         }

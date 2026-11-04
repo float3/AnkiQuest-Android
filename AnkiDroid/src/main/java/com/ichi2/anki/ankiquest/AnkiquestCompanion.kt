@@ -45,9 +45,11 @@ internal object AnkiquestCompanion {
                 R.drawable.aki_welcome -> R.drawable.ankilope_welcome
                 R.drawable.aki_challenge -> R.drawable.ankilope_welcome
                 R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_achievement, R.drawable.aki_challenge_won,
+                R.drawable.aki_goal, R.drawable.aki_deck_conquered,
                 R.drawable.aki_place_1, R.drawable.aki_place_2, R.drawable.aki_place_3,
                 -> R.drawable.ankilope_celebrate
                 R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze, R.drawable.aki_streak_milestone,
+                R.drawable.aki_minimum,
                 -> R.drawable.ankilope_study
                 else -> aki
             }
