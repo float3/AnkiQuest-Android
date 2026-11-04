@@ -22,6 +22,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
@@ -369,7 +370,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
                 .setTitle(R.string.ankiquest_password_title)
                 .setView(column(current, password, others, message))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.save, null)
+                .setPositiveButton(CommonString.save, null)
                 .show()
         val submit = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
         submit.setOnClickListener {
@@ -384,7 +385,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
             val save: suspend (HomeAccount) -> Unit = {
                 this.methods = AnkiquestAccountSettings.setPassword(it, old, typed, signOutOthers)
                 if (signOutOthers) devices = AnkiquestAccountSettings.devices(it)
-                showSnackbar(R.string.saved)
+                showSnackbar(R.string.ankiquest_password_saved)
             }
             submit.isEnabled = false
             message.setText(R.string.ankiquest_check_running)
