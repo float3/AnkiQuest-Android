@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_feed_back">Voltar</string>
+    <string name="aq_feed_refresh">Atualizar atividade</string>
+    <string name="aq_feed_loading">Carregando sua atividade…</string>
+    <string name="aq_feed_connect">Conecte o AnkiQuest para ver as conquistas, torcidas e mensagens dos seus amigos.</string>
+    <string name="aq_feed_inbox">Recebidas</string>
+    <string name="aq_feed_sent">Enviadas</string>
+    <string name="aq_feed_all">Tudo</string>
+    <string name="aq_feed_needs_action">Precisa de resposta</string>
+    <string name="aq_feed_needs_action_count">Precisa de resposta · %1$d</string>
+    <string name="aq_feed_messages">Mensagens</string>
+    <string name="aq_feed_challenges">Desafios</string>
+    <string name="aq_feed_deck_completions">Baralhos concluídos</string>
+    <string name="aq_feed_study_updates">Novidades de estudo</string>
+    <string name="aq_feed_unread_only">Só não lidas</string>
+    <string name="aq_feed_mark_all_read">Marcar tudo como lido</string>
+    <string name="aq_feed_mark_read">Marcar como lida</string>
+    <string name="aq_feed_all_read">Tudo está marcado como lido.</string>
+    <string name="aq_feed_needs_action_hint">Os convites ficam aqui até você responder, mesmo depois de lidos.</string>
+    <string name="aq_feed_view_invitation">Ver convite</string>
+    <string name="aq_feed_open_goal">Abrir meta</string>
+    <string name="aq_feed_all_invitations">Ver todos os convites</string>
+    <string name="aq_feed_legacy">Este servidor mostra os últimos 7 dias. Atualize o servidor para salvar o status de leitura e ter um histórico maior.</string>
+    <string name="aq_feed_yesterday">Ontem</string>
+    <string name="aq_feed_time_unread">%1$s · Não lida</string>
+    <string name="aq_feed_card">Cartão: %1$s</string>
+    <string name="aq_feed_cheered">🎉 Torcida enviada</string>
+    <string name="aq_feed_cheer_sent">Sua torcida foi enviada.</string>
+    <string name="aq_feed_cheer_failed">Sua torcida não foi enviada.</string>
+    <string name="aq_feed_reply">Responder…</string>
+    <string name="aq_feed_reply_to">Responder a %1$s</string>
+    <string name="aq_feed_send">Enviar</string>
+    <string name="aq_feed_reply_done">Sua resposta foi enviada.</string>
+    <string name="aq_feed_reply_failed">Sua resposta não foi enviada.</string>
+    <string name="aq_feed_reply_sent">Resposta enviada</string>
+    <string name="aq_feed_read_failed">O status de leitura não foi salvo.</string>
+    <string name="aq_feed_failed_because">%1$s %2$s</string>
+    <string name="aq_feed_in_reply_to">Em resposta a</string>
+    <string name="aq_feed_empty">Você está em dia.</string>
+    <string name="aq_feed_empty_rest">Todo o resto está em dia.</string>
+    <string name="aq_feed_empty_unread">Não há notificações não lidas aqui.</string>
+    <string name="aq_feed_empty_invitations">Nenhum convite espera resposta.</string>
+    <string name="aq_feed_empty_category">Ainda não há nada nesta categoria.</string>
+    <string name="aq_feed_empty_hint">As novas atividades aparecerão aqui.</string>
+    <string name="aq_feed_more">Carregar atividades anteriores</string>
+    <string name="aq_feed_more_sent">Carregar mensagens anteriores</string>
+    <string name="aq_feed_sent_to">Para %1$s</string>
+    <string name="aq_feed_seen">Vista %1$s</string>
+    <string name="aq_feed_not_seen">Ainda não vista</string>
+    <string name="aq_feed_sent_empty">Nada enviado ainda.</string>
+    <string name="aq_feed_sent_empty_hint">As respostas e cutucadas que você enviar aparecem aqui, com quando foram lidas.</string>
+    <string name="aq_feed_offline">Não foi possível conectar. Verifique sua conexão; nada foi marcado como lido.</string>
+    <string name="aq_feed_server_error">Não foi possível carregar a atividade. Tente de novo.</string>
+    <string name="aq_feed_account_changed">Sua conta do AnkiQuest mudou.</string>
+</resources>

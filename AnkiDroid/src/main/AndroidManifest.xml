@@ -423,6 +423,11 @@
             android:exported="false"
             />
         <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestFeedActivity"
+            android:label="@string/aq_home_activity"
+            android:exported="false"
+            />
+        <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestShareActivity"
             android:label="@string/ankiquest_share_title"
             android:excludeFromRecents="true"

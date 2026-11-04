@@ -114,7 +114,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     }
 
     @Test
-    fun `notifications open the goal or activity page for their owning account`() {
+    fun `notifications open the goal page or the native activity feed for their owning account`() {
         val owner = "https://anki.example.test/member%20name"
         val goal = JSONObject().put("id", 71).put("challenge_id", 42).put("route", "https://untrusted.test/")
         val intent = AnkiquestNotifier.notificationIntent(targetContext, goal, owner)
@@ -129,7 +129,10 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         )
 
         val message = AnkiquestNotifier.notificationIntent(targetContext, JSONObject().put("id", 72), owner)
-        assertEquals("/community#activity", message.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        assertEquals(ComponentName(targetContext, AnkiquestFeedActivity::class.java), message.component)
+        assertEquals(owner, message.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
+        assertTrue((message.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+        assertEquals(null, message.data)
     }
 
     @Test
@@ -137,7 +140,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         val today = AnkiquestNavigation.Destination.Today()
         val quests = AnkiquestNavigation.Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
         val week = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.WEEK_PATH)
-        val feed = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.ACTIVITY_PATH)
+        val feed = AnkiquestNavigation.Destination.Activity
         val challenges = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.FRIENDS_PATH)
         val goal = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.challengePath(42))
         val cases =

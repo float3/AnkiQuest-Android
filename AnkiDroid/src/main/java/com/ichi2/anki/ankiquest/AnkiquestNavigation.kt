@@ -15,11 +15,14 @@ object AnkiquestNavigation {
     const val ACTIVITY_PATH = "/community#activity"
     const val WEEK_PATH = "/week"
 
-    /** Where an inbox notification leads: the native Today screen, or one known website route. */
+    /** Where an inbox notification leads: a native screen, or one known website route. */
     sealed interface Destination {
         data class Today(
             val focus: String? = null,
         ) : Destination
+
+        /** The native activity feed, [AnkiquestFeedActivity]. */
+        data object Activity : Destination
 
         data class Website(
             val path: String,
@@ -43,7 +46,7 @@ object AnkiquestNavigation {
             challenge > 0 -> Destination.Website(challengePath(challenge))
             kind.startsWith("challenge_") -> Destination.Website(FRIENDS_PATH)
             kind in weekly -> Destination.Website(WEEK_PATH)
-            kind in feed -> Destination.Website(ACTIVITY_PATH)
+            kind in feed -> Destination.Activity
             kind == "reminder_freeze_refill" || topic?.substringBefore(':') == "quest" ->
                 Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
             else -> Destination.Today()

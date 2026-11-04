@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_feed_back">Zurück</string>
+    <string name="aq_feed_refresh">Aktivität aktualisieren</string>
+    <string name="aq_feed_loading">Deine Aktivität wird geladen…</string>
+    <string name="aq_feed_connect">Verbinde AnkiQuest, um Erfolge, Jubel und Nachrichten deiner Freunde zu sehen.</string>
+    <string name="aq_feed_inbox">Eingang</string>
+    <string name="aq_feed_sent">Gesendet</string>
+    <string name="aq_feed_all">Alle</string>
+    <string name="aq_feed_needs_action">Antwort nötig</string>
+    <string name="aq_feed_needs_action_count">Antwort nötig · %1$d</string>
+    <string name="aq_feed_messages">Nachrichten</string>
+    <string name="aq_feed_challenges">Herausforderungen</string>
+    <string name="aq_feed_deck_completions">Abgeschlossene Stapel</string>
+    <string name="aq_feed_study_updates">Lern-Updates</string>
+    <string name="aq_feed_unread_only">Nur ungelesene</string>
+    <string name="aq_feed_mark_all_read">Alle als gelesen markieren</string>
+    <string name="aq_feed_mark_read">Als gelesen markieren</string>
+    <string name="aq_feed_all_read">Alles ist als gelesen markiert.</string>
+    <string name="aq_feed_needs_action_hint">Einladungen bleiben hier, bis du antwortest, auch wenn du sie gelesen hast.</string>
+    <string name="aq_feed_view_invitation">Einladung ansehen</string>
+    <string name="aq_feed_open_goal">Ziel öffnen</string>
+    <string name="aq_feed_all_invitations">Alle Einladungen ansehen</string>
+    <string name="aq_feed_legacy">Dieser Server zeigt die letzten 7 Tage. Aktualisiere den Server für gespeicherten Lesestatus und einen längeren Verlauf.</string>
+    <string name="aq_feed_yesterday">Gestern</string>
+    <string name="aq_feed_time_unread">%1$s · Ungelesen</string>
+    <string name="aq_feed_card">Karte: %1$s</string>
+    <string name="aq_feed_cheered">🎉 Gejubelt</string>
+    <string name="aq_feed_cheer_sent">Dein Jubel wurde gesendet.</string>
+    <string name="aq_feed_cheer_failed">Dein Jubel wurde nicht gesendet.</string>
+    <string name="aq_feed_reply">Antworten…</string>
+    <string name="aq_feed_reply_to">Antwort an %1$s</string>
+    <string name="aq_feed_send">Senden</string>
+    <string name="aq_feed_reply_done">Deine Antwort wurde gesendet.</string>
+    <string name="aq_feed_reply_failed">Deine Antwort wurde nicht gesendet.</string>
+    <string name="aq_feed_reply_sent">Antwort gesendet</string>
+    <string name="aq_feed_read_failed">Der Lesestatus wurde nicht gespeichert.</string>
+    <string name="aq_feed_failed_because">%1$s %2$s</string>
+    <string name="aq_feed_in_reply_to">Antwort auf</string>
+    <string name="aq_feed_empty">Du bist auf dem neuesten Stand.</string>
+    <string name="aq_feed_empty_rest">Alles andere ist auf dem neuesten Stand.</string>
+    <string name="aq_feed_empty_unread">Hier gibt es keine ungelesenen Benachrichtigungen.</string>
+    <string name="aq_feed_empty_invitations">Keine Einladung wartet auf eine Antwort.</string>
+    <string name="aq_feed_empty_category">In dieser Kategorie gibt es noch nichts.</string>
+    <string name="aq_feed_empty_hint">Neue Aktivität erscheint hier.</string>
+    <string name="aq_feed_more">Frühere Aktivität laden</string>
+    <string name="aq_feed_more_sent">Frühere Nachrichten laden</string>
+    <string name="aq_feed_sent_to">An %1$s</string>
+    <string name="aq_feed_seen">Gesehen %1$s</string>
+    <string name="aq_feed_not_seen">Noch nicht gesehen</string>
+    <string name="aq_feed_sent_empty">Noch nichts gesendet.</string>
+    <string name="aq_feed_sent_empty_hint">Deine Antworten und Stupser erscheinen hier, mit dem Zeitpunkt, zu dem sie gelesen wurden.</string>
+    <string name="aq_feed_offline">Keine Verbindung. Prüfe deine Verbindung; nichts wurde als gelesen markiert.</string>
+    <string name="aq_feed_server_error">Die Aktivität konnte nicht geladen werden. Versuche es erneut.</string>
+    <string name="aq_feed_account_changed">Dein AnkiQuest-Konto hat sich geändert.</string>
+</resources>

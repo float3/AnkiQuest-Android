@@ -120,7 +120,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `navigation keeps Today native and opens community pages on the website`() {
+    fun `navigation keeps Today and Activity native and opens community pages on the website`() {
         val home = launch()
         val nav = home.findViewById<BottomNavigationView>(R.id.aq_home_navigation)
         assertEquals(4, nav.menu.size)
@@ -133,7 +133,9 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertWebsite(home, null)
 
         home.findViewById<View>(R.id.aq_home_activity).performClick()
-        assertWebsite(home, AnkiquestNavigation.ACTIVITY_PATH)
+        val feed = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestFeedActivity::class.java.name, feed.component?.className)
+        assertNull(feed.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
 
         nav.selectedItemId = R.id.ankiquest_nav_decks
         val decks = assertNotNull(shadowOf(home).nextStartedActivity)

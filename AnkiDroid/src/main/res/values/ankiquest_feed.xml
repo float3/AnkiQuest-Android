@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_feed_back">Back</string>
+    <string name="aq_feed_refresh">Refresh activity</string>
+    <string name="aq_feed_loading">Loading your activity…</string>
+    <string name="aq_feed_connect">Connect AnkiQuest to see your friends’ wins, cheers and messages.</string>
+    <string name="aq_feed_inbox">Inbox</string>
+    <string name="aq_feed_sent">Sent</string>
+    <string name="aq_feed_all">All</string>
+    <string name="aq_feed_needs_action">Needs action</string>
+    <string name="aq_feed_needs_action_count">Needs action · %1$d</string>
+    <string name="aq_feed_messages">Messages</string>
+    <string name="aq_feed_challenges">Challenges</string>
+    <string name="aq_feed_deck_completions">Deck completions</string>
+    <string name="aq_feed_study_updates">Study updates</string>
+    <string name="aq_feed_unread_only">Unread only</string>
+    <string name="aq_feed_mark_all_read">Mark all as read</string>
+    <string name="aq_feed_mark_read">Mark read</string>
+    <string name="aq_feed_all_read">Everything is marked read.</string>
+    <string name="aq_feed_needs_action_hint">Invitations stay here until you respond, even after you read them.</string>
+    <string name="aq_feed_view_invitation">View invitation</string>
+    <string name="aq_feed_open_goal">Open goal</string>
+    <string name="aq_feed_all_invitations">View all invitations</string>
+    <string name="aq_feed_legacy">This server shows the last 7 days. Update the server for saved read status and longer history.</string>
+    <string name="aq_feed_yesterday">Yesterday</string>
+    <string name="aq_feed_time_unread">%1$s · Unread</string>
+    <string name="aq_feed_card">Card: %1$s</string>
+    <string name="aq_feed_cheered">🎉 Cheered</string>
+    <string name="aq_feed_cheer_sent">Your cheer was sent.</string>
+    <string name="aq_feed_cheer_failed">Your cheer was not sent.</string>
+    <string name="aq_feed_reply">Reply…</string>
+    <string name="aq_feed_reply_to">Reply to %1$s</string>
+    <string name="aq_feed_send">Send</string>
+    <string name="aq_feed_reply_done">Your reply was sent.</string>
+    <string name="aq_feed_reply_failed">Your reply was not sent.</string>
+    <string name="aq_feed_reply_sent">Reply sent</string>
+    <string name="aq_feed_read_failed">Read status was not saved.</string>
+    <string name="aq_feed_failed_because">%1$s %2$s</string>
+    <string name="aq_feed_in_reply_to">In reply to</string>
+    <string name="aq_feed_empty">You’re all caught up.</string>
+    <string name="aq_feed_empty_rest">Everything else is up to date.</string>
+    <string name="aq_feed_empty_unread">No unread notifications here.</string>
+    <string name="aq_feed_empty_invitations">No invitations need a response.</string>
+    <string name="aq_feed_empty_category">Nothing in this category yet.</string>
+    <string name="aq_feed_empty_hint">New activity will appear here.</string>
+    <string name="aq_feed_more">Load earlier activity</string>
+    <string name="aq_feed_more_sent">Load earlier messages</string>
+    <string name="aq_feed_sent_to">To %1$s</string>
+    <string name="aq_feed_seen">Seen %1$s</string>
+    <string name="aq_feed_not_seen">Not seen yet</string>
+    <string name="aq_feed_sent_empty">Nothing sent yet.</string>
+    <string name="aq_feed_sent_empty_hint">Replies and nudges you send appear here, with when they were read.</string>
+    <string name="aq_feed_offline">Could not connect. Check your connection; nothing has been marked read.</string>
+    <string name="aq_feed_server_error">Activity could not be loaded. Try refreshing.</string>
+    <string name="aq_feed_account_changed">Your AnkiQuest account changed.</string>
+</resources>
