@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.provider.Settings
 import com.ichi2.anki.ScreenshotTest
 import io.mockk.coEvery
 import io.mockk.every
@@ -60,11 +61,31 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
     @Test
     fun todayLargeText() = captureToday(largeText = true)
 
-    private fun captureToday(largeText: Boolean = false) {
+    @Test
+    fun todayGoal() {
+        Settings.Global.putFloat(targetContext.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
+        val goal =
+            AnkiquestDailyGoal.Status(
+                day = 1,
+                minutes = 7,
+                streakMinutes = 10,
+                studiedCards = 48,
+                mode = AnkiquestDailyGoal.Mode.CARDS,
+                goal = AnkiquestDailyGoal.Goal(140),
+            )
+        coEvery { AnkiquestHomeData.local() } returns
+            HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12, goal = goal, secondsPerCard = 6.0)
+        captureToday(prefix = "today_goal")
+    }
+
+    private fun captureToday(
+        largeText: Boolean = false,
+        prefix: String = "today",
+    ) {
         RuntimeEnvironment.setFontScale(if (largeText) 2f else 1f)
         startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
         advanceRobolectricLooper()
         val size = if (device == DeviceConfig.PHONE) "320dp" else "default"
-        captureScreen("today_${size}${if (largeText) "_200percent" else ""}")
+        captureScreen("${prefix}_${size}${if (largeText) "_200percent" else ""}")
     }
 }
