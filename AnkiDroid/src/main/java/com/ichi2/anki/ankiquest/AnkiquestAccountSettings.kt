@@ -6,7 +6,6 @@ import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import java.io.IOException
 import java.io.OutputStream
@@ -119,7 +118,8 @@ internal object AnkiquestAccountSettings {
         }
 
     /**
-     * An address on [account]'s server to open in the browser, to link [provider] or sign in with it
+     * An address on [account]'s server to open in the browser, which shows what it is for and asks
+     * the person to confirm before going on to the provider, to link [provider] or sign in with it
      * again; it works once, for a few minutes.
      *
      * @throws ForeignAddress when the address is not on the account's server
@@ -136,13 +136,13 @@ internal object AnkiquestAccountSettings {
                     signInPath(account),
                     JSONObject().put("action", "browser").put("provider", provider).put("purpose", purpose.value),
                 )
-            val url = answer.getString("url")
-            val parsed = url.toHttpUrlOrNull()
             val server = account.url("")
+            // Relative when the server has no public address configured.
+            val parsed = server.resolve(answer.getString("url"))
             if (parsed == null || parsed.host != server.host || parsed.scheme != server.scheme || parsed.port != server.port) {
                 throw ForeignAddress()
             }
-            url
+            parsed.toString()
         }
 
     suspend fun devices(account: HomeAccount): List<Device> = io { Device.list(get(account, devicesPath(account))) }
