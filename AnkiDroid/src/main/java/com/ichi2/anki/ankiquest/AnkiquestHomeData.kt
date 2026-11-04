@@ -132,6 +132,8 @@ internal data class HomeLocal(
     val selected: Long,
     val nextUpdateAt: Long? = null,
     val goal: AnkiquestDailyGoal.Status? = null,
+    /** The average answer time, for the time left toward [goal]. */
+    val secondsPerCard: Double = AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD,
 ) {
     val focus: HomeDeck? get() =
         decks.firstOrNull { it.id == selected && it.daily.status == DailyDeckStatus.REVIEW_NOW }
@@ -201,6 +203,8 @@ internal object AnkiquestHomeData {
             val cutoff = sched.dayCutoff * 1000L
             val next = (daily.values.mapNotNull { it.nextLearningAt } + cutoff).filter { it > now }.minOrNull()
             val goal = runCatching { AnkiquestDailyGoal.status(AnkiquestDailyGoal.load(this), AnkiDroidApp.sharedPrefs()) }.getOrNull()
-            HomeLocal(rows, decks.selected(), next, goal)
+            val secondsPerCard =
+                runCatching { AnkiquestGoalPlan.secondsPerCard(this, now) }.getOrDefault(AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD)
+            HomeLocal(rows, decks.selected(), next, goal, secondsPerCard)
         }
 }
