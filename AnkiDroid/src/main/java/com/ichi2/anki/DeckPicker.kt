@@ -1091,7 +1091,7 @@ open class DeckPicker :
             }
             DeckPickerContextMenuOption.CUSTOM_STUDY_REBUILD -> {
                 Timber.i("ContextMenu: Rebuild deck selected")
-                rebuildFiltered(deckId)
+                viewModel.rebuildFilteredDeck(deckId)
                 dismissAllDialogFragments()
             }
             DeckPickerContextMenuOption.CUSTOM_STUDY_EMPTY -> {
@@ -2436,15 +2436,6 @@ open class DeckPicker :
         launchCatchingTask {
             viewModel.deleteSelectedDeck().join()
         }
-
-    @NeedsTest("14285: regression test to ensure UI is updated after this call")
-    fun rebuildFiltered(did: DeckId) {
-        launchCatchingTask {
-            viewModel.rebuildFilteredDeck(did).join()
-            updateDeckList()
-            tryShowStudyOptionsPanel()
-        }
-    }
 
     private fun emptyFiltered(did: DeckId) {
         launchCatchingTask {
