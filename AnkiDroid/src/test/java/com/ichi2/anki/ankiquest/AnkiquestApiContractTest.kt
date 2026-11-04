@@ -185,6 +185,15 @@ class AnkiquestApiContractTest : RobolectricTest() {
             val announced = shadowOf(manager).allNotifications.single()
             assertEquals("👑 You took the crown", announced.title())
             assertTrue("You passed Cerro." in announced.text())
+            val change = JSONObject(example("rank")).getJSONObject("change")
+            assertEquals(
+                "👑 I took the crown" to "I passed Cerro.",
+                AnkiquestNotifier.shareText(change),
+                "friends read it in the first person",
+            )
+            change.remove("share_title")
+            change.remove("share_body")
+            assertEquals("👑 You took the crown" to "You passed Cerro.", AnkiquestNotifier.shareText(change), "older servers")
         }
 
     @Test

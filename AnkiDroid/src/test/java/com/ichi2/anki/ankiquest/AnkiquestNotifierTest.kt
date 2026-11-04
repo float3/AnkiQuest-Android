@@ -7,6 +7,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.RemoteInput
+import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import androidx.core.content.edit
@@ -536,6 +537,49 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals(3, bodies.size)
                 assertEquals(0, bodies[0].getJSONArray("previous").length(), "a new device has seen no order yet")
                 assertEquals(listOf("cerro", "hill"), bodies[1].getJSONArray("previous").let { (0 until it.length()).map(it::getString) })
+            } finally {
+                server.stop(0)
+            }
+        }
+
+    @Test
+    fun `a shared climb is told in the player's own words`() =
+        runBlocking {
+            val manager = targetContext.getSystemService<NotificationManager>()!!
+            var order = listOf("hill", "cerro")
+            var change: Any = JSONObject.NULL
+            val server = rankServer { JSONObject().put("order", JSONArray(order)).put("change", change) }
+            AnkiDroidApp.sharedPrefs().edit(commit = true) { putString(Ankiquest.PREF_TOKEN, "cerro-token") }
+
+            suspend fun climb(): Intent {
+                order = order.reversed()
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                val posted = shadowOf(manager).getNotification(5_130_001)
+                assertEquals("👑 You took the crown", posted.extras.getString(Notification.EXTRA_TITLE))
+                val share = shadowOf(posted.actions.single().actionIntent).savedIntent
+                assertEquals(1, share.getIntExtra(AnkiquestShare.EXTRA_PLACE, 0))
+                manager.cancelAll()
+                return share
+            }
+            try {
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                change =
+                    JSONObject()
+                        .put("title", "👑 You took the crown")
+                        .put("body", "You passed Hill.")
+                        .put("share_title", "👑 I took the crown")
+                        .put("share_body", "I passed Hill.")
+                val shared = climb()
+                assertEquals("👑 I took the crown", shared.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+                assertEquals("I passed Hill.", shared.getStringExtra(AnkiquestShare.EXTRA_BODY))
+
+                order = order.reversed()
+                change = JSONObject.NULL
+                AnkiquestNotifier.onLeaderboard(targetContext)
+                change = JSONObject().put("title", "👑 You took the crown").put("body", "You passed Hill.")
+                val older = climb()
+                assertEquals("👑 You took the crown", older.getStringExtra(AnkiquestShare.EXTRA_TITLE), "older servers send no share text")
+                assertEquals("You passed Hill.", older.getStringExtra(AnkiquestShare.EXTRA_BODY))
             } finally {
                 server.stop(0)
             }
