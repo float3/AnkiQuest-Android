@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat.Type.navigationBars
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.commit
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.BottomNavController.NavigationItem
@@ -25,12 +26,20 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.android.input.Shortcut
 import com.ichi2.anki.android.input.shortcut
+import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapFooter
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.widgets.DeckAdapter
 
 /** AnkiQuest behaviour of [DeckPicker], kept here so the upstream activity only carries one-line calls. */
 object AnkiquestDeckPickerHooks {
+    /** The deck list's adapter: [deckAdapter]'s rows, then the review heatmap. */
+    fun deckListAdapter(
+        activity: DeckPicker,
+        deckAdapter: DeckAdapter,
+    ): RecyclerView.Adapter<*> = ReviewHeatmapFooter.attach(activity, deckAdapter)
+
     /** Replaces the AnkiQuest menu entry with Browse when the bottom navigation already leads to AnkiQuest. */
     fun decorateMenu(
         activity: DeckPicker,

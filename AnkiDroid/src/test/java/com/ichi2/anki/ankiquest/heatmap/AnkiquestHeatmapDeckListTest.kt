@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-package com.ichi2.anki.ankiquest
+package com.ichi2.anki.ankiquest.heatmap
 
 import android.os.Parcelable
 import android.util.SparseArray
@@ -18,9 +18,6 @@ import com.ichi2.anki.deckPicker
 import com.ichi2.anki.deckpicker.DeckFilters
 import com.ichi2.anki.deckpicker.DisplayDeckNode
 import com.ichi2.anki.deckpicker.filterAndFlattenDisplay
-import com.ichi2.anki.deckpicker.heatmap.ReviewHeatmap
-import com.ichi2.anki.deckpicker.heatmap.ReviewHeatmapAdapter
-import com.ichi2.anki.deckpicker.heatmap.ReviewHeatmapViewModel
 import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.anki.withDeckPicker
 import org.junit.Test
@@ -180,16 +177,12 @@ class AnkiquestHeatmapDeckListTest : RobolectricTest() {
             RecyclerView(context).apply {
                 id = R.id.decks
                 layoutManager = this@HeatmapDeckListFixture.layoutManager
-                adapter = ConcatAdapter(deckAdapter, heatmapAdapter)
+                adapter = ReviewHeatmapFooter.concat(deckAdapter, heatmapAdapter)
             }
 
         fun submit(deckList: List<DisplayDeckNode>) {
-            var committed = false
-            deckAdapter.submit(deckList, hasSubDecks = false) {
-                heatmapAdapter.onDeckListCommitted(deckAdapter.itemCount > 0)
-                committed = true
-            }
-            advanceRobolectricLooperUntil { committed }
+            deckAdapter.submit(deckList, hasSubDecks = false)
+            advanceRobolectricLooperUntil { deckAdapter.currentList == deckList }
         }
 
         fun layout() {

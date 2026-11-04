@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-package com.ichi2.anki.deckpicker.heatmap
+package com.ichi2.anki.ankiquest.heatmap
 
 import android.content.Context
 import android.content.res.Configuration

@@ -102,13 +102,12 @@ class DeckAdapter(
     fun submit(
         data: List<DisplayDeckNode>,
         hasSubDecks: Boolean,
-        onListCommitted: (() -> Unit)? = null,
     ) {
         // force refresh when sub decks status changes as this info isn't encapsulated in the
         // adapter's items so there wouldn't be an ui refresh just from using submitList()
         val forceRefresh = this.hasSubdecks != hasSubDecks
         this.hasSubdecks = hasSubDecks
-        submitList(data) { onListCommitted?.invoke() }
+        submitList(data)
         if (forceRefresh) notifyDataSetChanged()
     }
 
