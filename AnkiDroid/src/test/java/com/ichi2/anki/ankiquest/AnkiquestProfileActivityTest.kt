@@ -9,6 +9,7 @@ import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -25,6 +26,7 @@ import org.robolectric.annotation.Config
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -73,6 +75,19 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a closing week still counting shows its XP until it closes`() {
+        val endsAt = TimeManager.time.intTimeMS() + 60 * 60 * 1000L
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns
+            own.copy(profile = profile.copy(closingWeek = AnkiquestBoards.ClosingWeek(1234, endsAt)))
+        val screen = launch()
+        val line = assertNotNull(AnkiquestBoards.closingLine(screen, AnkiquestBoards.ClosingWeek(1234, endsAt), endsAt - 1))
+        assertTrue(screen.hasText(line))
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own
+        val without = launch()
+        assertFalse(without.hasText(line))
+    }
+
+    @Test
     fun `another player's profile has no wins or settings`() {
         coEvery { AnkiquestBoards.player(identity, "cerro") } returns
             AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
@@ -82,6 +97,21 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         assertFalse(screen.hasText(screen.getString(R.string.aq_profile_wins)))
         screen.click(screen.getString(R.string.aq_profile_leaderboard))
         assertEquals(AnkiquestLeaderboardActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `personal bests lead to the records, and on the player's own profile to the study history`() {
+        val mine = launch()
+        mine.click(mine.getString(R.string.aq_records_title))
+        assertEquals(AnkiquestRecordsActivity::class.java.name, shadowOf(mine).nextStartedActivity.component?.className)
+        mine.click(mine.getString(R.string.aq_history_title))
+        assertEquals(AnkiquestHistoryActivity::class.java.name, shadowOf(mine).nextStartedActivity.component?.className)
+
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val theirs = launch("cerro")
+        assertTrue(theirs.hasText(theirs.getString(R.string.aq_records_title)))
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_history_title)), "another player's history is private")
     }
 
     @Test

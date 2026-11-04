@@ -31,6 +31,7 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import java.net.InetSocketAddress
+import java.util.TimeZone
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -277,6 +278,39 @@ class AnkiquestUploadTest : RobolectricTest() {
             Ankiquest.uploadPending()
 
             assertEquals(0, reviewUpload().getJSONArray("reviews").length())
+        }
+
+    @Test
+    fun `only reviews answered here carry the time zone they were made in`() =
+        runBlocking {
+            // The review from setUp stands in for one synced from another device through AnkiWeb.
+            val synced = col.db.queryLongScalar("select max(id) from revlog")
+            addBasicNote("second")
+            col.sched.answerCard(col.sched.card!!, Rating.GOOD)
+            val answered = col.db.queryLongScalar("select max(id) from revlog")
+            val prefs = AnkiDroidApp.sharedPrefs()
+            AnkiquestReviewOffsets.record(prefs, listOf(answered), TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
+
+            Ankiquest.uploadPending()
+
+            val reviews = reviewUpload().getJSONArray("reviews")
+            val byId = (0 until reviews.length()).associate { reviews.getJSONObject(it).getLong("id") to reviews.getJSONObject(it) }
+            assertEquals(180, byId.getValue(answered).getInt("offset_west_min"))
+            assertFalse(byId.getValue(synced).has("offset_west_min"), "a row this device did not answer is never stamped")
+            assertTrue(AnkiquestReviewOffsets.read(prefs).isEmpty(), "uploaded entries are dropped")
+        }
+
+    @Test
+    fun `answers are recorded from the reviewer only while they are fresh`() =
+        runBlocking {
+            val answered = col.db.queryLongScalar("select max(id) from revlog")
+            val prefs = AnkiDroidApp.sharedPrefs()
+
+            AnkiquestReviewOffsets.recordAnswers(prefs, answered + 2 * AnkiquestReviewOffsets.ANSWER_WINDOW_MS)
+            assertTrue(AnkiquestReviewOffsets.read(prefs).isEmpty(), "an old row is not the answer just made")
+
+            AnkiquestReviewOffsets.recordAnswers(prefs, answered + 1_000)
+            assertEquals(mapOf(answered to AnkiquestReviewOffsets.offsetAt(answered)), AnkiquestReviewOffsets.read(prefs))
         }
 
     @Test

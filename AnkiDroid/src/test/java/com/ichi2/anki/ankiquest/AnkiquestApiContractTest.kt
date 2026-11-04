@@ -377,6 +377,28 @@ class AnkiquestApiContractTest : RobolectricTest() {
             )
         }
 
+    @Test
+    fun `the record boards and the study calendar are read as the native screens show them`() =
+        runBlocking {
+            val boards = AnkiquestRecords.records(account)
+            assertEquals(AnkiquestRecords.Kind.entries, boards.map { it.kind }, "every board, in the website's order")
+            assertTrue(boards.all { board -> board.holders.isNotEmpty() && board.holders.all { it.display.isNotEmpty() && it.at > 0 } })
+            assertEquals(listOf("hill", "cerro"), boards.first { it.kind == AnkiquestRecords.Kind.DAY }.holders.map { it.user })
+            assertEquals(setOf("xp", "days"), boards.map { it.unit }.toSet())
+            assertTrue("GET /api/records" in requests)
+
+            val study = AnkiquestRecords.study(account)
+            assertEquals(2026, study.year)
+            assertTrue(study.year in study.years)
+            assertTrue(study.days.zipWithNext().all { (earlier, later) -> earlier.date < later.date })
+            assertTrue(study.reviews > 0 && study.studyDays > 0 && study.xp > 0)
+            assertTrue(study.days.any { it.reviews == 0 }, "days off are listed too")
+            assertNotNull(study.latest)
+            assertNotNull(study.lastReceivedAt)
+            assertEquals(study.reviews.toInt(), study.heatmap(study.days.last().date).totalReviews.toInt())
+            assertTrue("GET /api/study/hill" in requests)
+        }
+
     private fun Notification.title() = extras.getCharSequence(Notification.EXTRA_TITLE).toString()
 
     private fun Notification.text() = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -402,6 +424,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "browser" -> "sign_in_browser"
             path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
             path == "/api/accounts/hill" && method == "GET" -> "account"
+            path == "/api/records" -> "records"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
                 if (method ==
@@ -437,6 +460,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "decks" to "decks",
                 "companion" to "companion",
                 "streak-freezes" to "streak_freezes",
+                "study" to "study",
             )
 
         val CONSUMED =
@@ -456,6 +480,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "devices",
                     "devices_sign_out",
                     "account",
+                    "records",
                 )
 
         val UNUSED = setOf("capabilities", "mute")
