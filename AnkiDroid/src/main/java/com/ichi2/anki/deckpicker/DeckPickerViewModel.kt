@@ -313,7 +313,7 @@ class DeckPickerViewModel :
             progressManager.withProgress {
                 Timber.i("empty filtered deck %s", deckId)
                 withCol { decks.select(deckId) }
-                undoableOp { sched.emptyFilteredDeck(decks.selected()) }
+                undoableOp { sched.emptyFilteredDeck(deckId) }
                 flowOfDeckCountsChanged.emit(Unit)
             }
         }
@@ -321,7 +321,6 @@ class DeckPickerViewModel :
     /**
      * Rebuilds a filtered deck with its current filter settings
      */
-    @CheckResult
     fun rebuildFilteredDeck(deckId: DeckId): Job =
         viewModelScope.launch {
             progressManager.withProgress(message = DeckPickerProgress.REBUILDING_FILTERED_DECK) {
@@ -513,16 +512,17 @@ class DeckPickerViewModel :
 
     fun toggleDeckExpand(deckId: DeckId) =
         viewModelScope.launch {
-            // update stored state
-            dueTree?.find(deckId)?.run {
-                collapsed = !collapsed
-                // Anki uses scope as Reviewer in deck browser
-                withCol {
+            withCol {
+                // update stored state
+                dueTree?.find(deckId)?.run {
+                    val collapse = !collapsed
+                    // Anki uses scope as Reviewer in deck browser
                     decks.setCollapsed(
                         did,
-                        collapsed = collapsed,
+                        collapsed = collapse,
                         SetDeckCollapsedRequest.Scope.REVIEWER,
                     )
+                    collapsed = collapse
                 }
             }
             flowOfRefreshDeckList.emit(Unit)
