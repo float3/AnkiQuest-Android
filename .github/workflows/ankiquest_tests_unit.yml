@@ -19,11 +19,14 @@ on:
           - '["windows-latest"]'
           - '["macos-latest"]'
           - '["ubuntu-latest"]'
+  # Nightly run of the full three-OS matrix
   schedule:
-    - cron: "42 0 * * 2"
+    - cron: "42 0 * * *"
+  # PRs and the merge queue run ubuntu only, see osArray below
   pull_request:
   push:
     branches:
+      - main
       - ankiquest
   merge_group:
 
@@ -43,8 +46,6 @@ jobs:
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
   matrix_prep:
-    # Do not run the scheduled jobs on forks
-    if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.result }}
@@ -61,6 +62,12 @@ jobs:
             
             // by default, we will run one iteration on each selected system
             let iterationArray = [1]
+
+            // PRs and the merge queue run on ubuntu only: upstream code is already tested on all three
+            // systems upstream, and pushes to main/ankiquest plus the nightly run keep the full matrix here
+            if (context.eventName === "pull_request" || context.eventName === "merge_group") {
+              osArray = ["ubuntu-latest"]
+            }
             
             // workflow dispatch will be a drop-down of different options
             if (context.eventName === "workflow_dispatch") {
@@ -77,16 +84,6 @@ jobs:
                 iterationArray.push(i);
               }
               console.log('iterationArray is: ' + iterationArray)
-            }
-
-            // If we are running on a schedule it's our periodic passive scan for flakes
-            // Goal is to run enough iterations on all systems that we have confidence there are no flakes
-            if (context.eventName === "schedule") {
-              const iterationCount = 15
-              iterationArray = []
-              for (let i = 1; i <= iterationCount; i++) {
-                iterationArray.push(i);
-              }
             }
 
             let includeArray = [];
@@ -110,8 +107,6 @@ jobs:
   # it will run unit tests on whatever OS combinations are desired
   unit:
     name: JUnit Tests (${{ matrix.name }} run ${{ matrix.iteration }})
-    # Do not run the scheduled jobs on forks
-    if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     needs: matrix_prep
     # Windows can take 40m+ on tests
     timeout-minutes: 75
