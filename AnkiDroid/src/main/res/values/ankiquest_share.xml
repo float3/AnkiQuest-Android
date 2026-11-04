@@ -61,4 +61,21 @@ I study with AnkiQuest.</string>
         <item>Ask me</item>
         <item>Tell friends automatically</item>
     </string-array>
+    <string name="ankiquest_share_friends_target">AnkiQuest friends</string>
+    <string name="ankiquest_share_card_title">Share your conquered card</string>
+    <string name="ankiquest_share_card_explanation">Want to show what the card was? Friends and anyone with the link will see this text. Leave the box unticked to share without it.</string>
+    <string name="ankiquest_share_card_include">Show the card</string>
+    <string name="ankiquest_share_card_hint">What the card says</string>
+    <string name="ankiquest_share_next">Share…</string>
+    <string name="ankiquest_share_card_failed">Couldn’t save the card’s text, so nothing was shared. Check your connection and try again.</string>
+    <string name="ankiquest_deck_share_title">You finished %1$s for today. Tell friends?</string>
+    <string name="ankiquest_deck_share_send">Tell them</string>
+    <string name="ankiquest_deck_share_not_now">Not now</string>
+    <string name="ankiquest_deck_share_never">Don’t ask again</string>
+    <string name="ankiquest_deck_share_never_done">You won’t be asked again. Turn it back on in AnkiQuest settings under Friends &amp; sharing.</string>
+    <string name="ankiquest_deck_share_nobody">Nobody new heard it: they were told today already, or they turned off deck alerts.</string>
+    <string name="ankiquest_deck_share_unsupported">Your AnkiQuest server can’t share finished decks yet.</string>
+    <string name="ankiquest_deck_share_ask_title" maxLength="41">Ask to share finished decks</string>
+    <string name="ankiquest_deck_share_ask_summary">When you finish a deck for the day, ask which friends to tell</string>
+    <string name="ankiquest_deck_share_ask_key" translatable="false">ankiquestAskToShareDecks</string>
 </resources>

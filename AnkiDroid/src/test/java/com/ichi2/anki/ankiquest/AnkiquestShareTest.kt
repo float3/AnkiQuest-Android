@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.service.chooser.ChooserAction
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
@@ -40,6 +41,7 @@ class AnkiquestShareTest : RobolectricTest() {
     private lateinit var server: HttpServer
     private lateinit var base: String
     private val posted = CopyOnWriteArrayList<String>()
+    private val asked = CopyOnWriteArrayList<String>()
     private val imageAuthorizations = CopyOnWriteArrayList<String?>()
     private val card = "not really a png".toByteArray()
 
@@ -62,6 +64,25 @@ class AnkiquestShareTest : RobolectricTest() {
                     else -> JSONObject().put("recipients", 2)
                 }
             respond(exchange, 200, answer.toString().toByteArray())
+        }
+        server.createContext("/api/wins/hill") { exchange ->
+            asked.add("${exchange.requestMethod} ${exchange.requestURI}")
+            val wins = JSONObject().put("wins", org.json.JSONArray().put(JSONObject().put("id", 17).put("key", "conquered:1793183400000")))
+            respond(exchange, 200, wins.toString().toByteArray())
+        }
+        server.createContext("/api/conquests/hill/") { exchange ->
+            val body = exchange.requestBody.bufferedReader().use { it.readText() }
+            asked.add("${exchange.requestMethod} ${exchange.requestURI} $body".trim())
+            if (exchange.requestMethod == "GET") {
+                respond(exchange, 200, JSONObject().put("label", "der Hund").toString().toByteArray())
+            } else {
+                respond(exchange, 204, ByteArray(0))
+            }
+        }
+        server.createContext("/api/decks/hill/share") { exchange ->
+            val body = exchange.requestBody.bufferedReader().use { it.readText() }
+            asked.add("${exchange.requestMethod} ${exchange.requestURI} $body")
+            respond(exchange, 200, JSONObject().put("recipients", 2).toString().toByteArray())
         }
         server.createContext("/w/token.png") { exchange ->
             imageAuthorizations.add(exchange.requestHeaders.getFirst("Authorization"))
@@ -195,6 +216,80 @@ class AnkiquestShareTest : RobolectricTest() {
         assertNull(AnkiquestShare.action(targetContext, 1, "Level 54", "", 17, 42, null, "someone-else"))
         AnkiDroidApp.sharedPrefs().edit { remove(Ankiquest.PREF_TOKEN) }
         assertNull(AnkiquestShare.action(targetContext, 1, "Level 54", "", 17, 42, null, null))
+    }
+
+    @Test
+    fun `a conquered card's win, label and a finished deck go to the server`() =
+        runBlocking {
+            val account = AnkiquestHomeData.account()!!
+            assertEquals("conquered:1793183400000", AnkiquestSharing.winKey(account, 17))
+            assertNull(AnkiquestSharing.winKey(account, 16), "a page that starts with another win")
+            assertEquals("der Hund", AnkiquestSharing.conquestLabel(account, 1793183400000))
+            AnkiquestSharing.setConquestLabel(account, 1793183400000, "der Hund – the dog")
+            AnkiquestSharing.setConquestLabel(account, 1793183400000, null)
+            assertEquals(2, AnkiquestSharing.shareFinishedDeck(account, 7, "Japanese::Kanji", listOf("cerro", "ana")))
+            assertEquals(
+                listOf(
+                    "GET /api/wins/hill?limit=1&before=18",
+                    "GET /api/wins/hill?limit=1&before=17",
+                    "GET /api/conquests/hill/1793183400000",
+                    "DELETE /api/conquests/hill/1793183400000/label",
+                ),
+                asked.take(5).filterIndexed { index, _ -> index != 3 },
+            )
+            assertTrue(asked[3].startsWith("POST /api/conquests/hill/1793183400000/label "))
+            assertEquals("der Hund – the dog", JSONObject(asked[3].substringAfter("label ")).getString("label"))
+            val deck = JSONObject(asked[5].substringAfter("share "))
+            assertEquals("7", deck.getString("id"))
+            assertEquals("Japanese::Kanji", deck.getString("name"))
+            assertEquals(listOf("cerro", "ana"), deck.getJSONArray("recipients").strings())
+        }
+
+    @Test
+    fun `a card's text is offered as one plain line, and shared only when chosen`() {
+        assertEquals("der Hund the dog", AnkiquestShare.cardLabel("<b>der&nbsp;Hund</b>[sound:hund.mp3]<br>the  dog"))
+        assertEquals("a < b & c", AnkiquestShare.cardLabel("a &lt; b &amp; c"))
+        assertEquals(AnkiquestShare.MAX_LABEL, AnkiquestShare.cardLabel("x".repeat(500)).length)
+        assertNull(AnkiquestShare.chosenLabel(false, "der Hund"), "the box is unticked by default")
+        assertNull(AnkiquestShare.chosenLabel(true, " \n "))
+        assertEquals("der Hund", AnkiquestShare.chosenLabel(true, "  der\nHund "))
+        assertEquals(1793183400000, AnkiquestShare.conqueredAt("conquered:1793183400000"))
+        assertNull(AnkiquestShare.conqueredAt("level:5"))
+        assertNull(AnkiquestShare.conqueredAt(null))
+    }
+
+    @Test
+    fun `the share sheet offers AnkiQuest friends next to the other apps`() {
+        val share =
+            Intent(targetContext, AnkiquestShareActivity::class.java)
+                .putExtra(AnkiquestShare.EXTRA_WIN, 17L)
+                .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")
+        val friends = AnkiquestShare.friendsTarget(targetContext, share)
+        val target = shadowOf(friends).savedIntent
+        assertEquals(AnkiquestShare.DESTINATION_FRIENDS, target.getStringExtra(AnkiquestShare.EXTRA_DESTINATION))
+        assertEquals(17, target.getLongExtra(AnkiquestShare.EXTRA_WIN, 0))
+        assertEquals("Level 54", target.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+        assertTrue(AnkiquestShare.sheetOffersFriends())
+        val chooser = AnkiquestShare.textChooser(targetContext, "Level 54", "You reached level 54.", friends)
+        val actions = chooser.getParcelableArrayExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS, ChooserAction::class.java)
+        assertEquals(listOf("AnkiQuest friends"), actions?.map { it.label.toString() })
+        assertEquals(friends, actions?.single()?.action)
+        assertFalse(AnkiquestShare.textChooser(targetContext, "Level 54", "", null).hasExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS))
+    }
+
+    @Test
+    @Config(sdk = [33])
+    fun `before Android 14 the share sheet is for other apps and friends are asked about first`() {
+        assertFalse(AnkiquestShare.sheetOffersFriends())
+        val friends = AnkiquestShare.friendsTarget(targetContext, Intent(targetContext, AnkiquestShareActivity::class.java))
+        val chooser = AnkiquestShare.textChooser(targetContext, "Level 54", "", friends)
+        assertFalse(chooser.hasExtra(Intent.EXTRA_CHOOSER_CUSTOM_ACTIONS))
+    }
+
+    @Test
+    fun `a conquered card's share button says so`() {
+        val action = assertNotNull(AnkiquestShare.action(targetContext, 1, "Card conquered", "", 17, 42, null, null, "conquered"))
+        assertEquals("conquered", shadowOf(action.actionIntent).savedIntent.getStringExtra(AnkiquestShare.EXTRA_TOPIC))
     }
 
     @Test

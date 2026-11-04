@@ -40,4 +40,20 @@ Je révise avec AnkiQuest.</string>
         <item>Me demander</item>
         <item>Prévenir mes amis automatiquement</item>
     </string-array>
+    <string name="ankiquest_share_friends_target">Amis AnkiQuest</string>
+    <string name="ankiquest_share_card_title">Partager ta carte maîtrisée</string>
+    <string name="ankiquest_share_card_explanation">Tu veux montrer ce que disait la carte ? Tes amis et toute personne ayant le lien verront ce texte. Laisse la case décochée pour partager sans lui.</string>
+    <string name="ankiquest_share_card_include">Montrer la carte</string>
+    <string name="ankiquest_share_card_hint">Ce que dit la carte</string>
+    <string name="ankiquest_share_next">Partager…</string>
+    <string name="ankiquest_share_card_failed">Impossible d’enregistrer le texte de la carte, donc rien n’a été partagé. Vérifie ta connexion et réessaie.</string>
+    <string name="ankiquest_deck_share_title">Tu as terminé %1$s pour aujourd’hui. Prévenir tes amis ?</string>
+    <string name="ankiquest_deck_share_send">Les prévenir</string>
+    <string name="ankiquest_deck_share_not_now">Pas maintenant</string>
+    <string name="ankiquest_deck_share_never">Ne plus demander</string>
+    <string name="ankiquest_deck_share_never_done">On ne te le demandera plus. Tu peux le réactiver dans les réglages AnkiQuest, sous Amis et partage.</string>
+    <string name="ankiquest_deck_share_nobody">Personne de nouveau n’a été prévenu : ils l’ont déjà été aujourd’hui, ou ont coupé les alertes de paquets.</string>
+    <string name="ankiquest_deck_share_unsupported">Ton serveur AnkiQuest ne peut pas encore partager les paquets terminés.</string>
+    <string name="ankiquest_deck_share_ask_title">Proposer de partager les paquets finis</string>
+    <string name="ankiquest_deck_share_ask_summary">Quand tu termines un paquet pour aujourd’hui, demander quels amis prévenir</string>
 </resources>
