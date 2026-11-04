@@ -52,7 +52,7 @@ import java.util.Calendar
 /**
  * The activity feed, natively: friends' wins and deck completions to cheer, messages and replies to
  * answer, challenge news, and what this player sent. Notifications about any of these open here.
- * Challenges themselves are still the website's ([AnkiquestActivity]).
+ * Challenges themselves are [AnkiquestChallengesActivity].
  */
 class AnkiquestFeedActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
     private enum class Box { INBOX, SENT }
@@ -533,12 +533,12 @@ class AnkiquestFeedActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
         }
     }
 
-    /** Opens the goal a row is about, on the website until challenges are native, and marks the row read. */
+    /** Opens the goal a row is about and marks the row read. */
     private fun openGoal(
         item: AnkiquestFeed.Item,
         goal: Long,
     ) {
-        startActivity(AnkiquestActivity.intent(this, AnkiquestNavigation.challengePath(goal)))
+        startActivity(AnkiquestChallengesActivity.intent(this, goal))
         val current = account ?: return
         if (!item.unread || page?.legacy == true) return
         lifecycleScope.launch {

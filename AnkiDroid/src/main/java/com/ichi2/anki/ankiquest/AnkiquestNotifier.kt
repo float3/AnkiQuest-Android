@@ -322,6 +322,7 @@ object AnkiquestNotifier {
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
                 AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
+                is AnkiquestNavigation.Destination.Challenges -> AnkiquestChallengesActivity.intent(context, destination.id, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

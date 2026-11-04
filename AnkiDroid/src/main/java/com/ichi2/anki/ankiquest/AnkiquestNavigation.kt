@@ -24,6 +24,11 @@ object AnkiquestNavigation {
         /** The native activity feed, [AnkiquestFeedActivity]. */
         data object Activity : Destination
 
+        /** The native friend goals, [AnkiquestChallengesActivity], opened on goal [id] when there is one. */
+        data class Challenges(
+            val id: Long? = null,
+        ) : Destination
+
         data class Website(
             val path: String,
         ) : Destination
@@ -43,8 +48,8 @@ object AnkiquestNavigation {
         challenge: Long,
     ): Destination =
         when {
-            challenge > 0 -> Destination.Website(challengePath(challenge))
-            kind.startsWith("challenge_") -> Destination.Website(FRIENDS_PATH)
+            challenge > 0 -> Destination.Challenges(challenge)
+            kind.startsWith("challenge_") -> Destination.Challenges()
             kind in weekly -> Destination.Website(WEEK_PATH)
             kind in feed -> Destination.Activity
             kind == "reminder_freeze_refill" || topic?.substringBefore(':') == "quest" ->
@@ -62,7 +67,7 @@ object AnkiquestNavigation {
             intent.action == Intent.ACTION_MAIN &&
             intent.data == null
 
-    /** The website page for one friend goal. */
+    /** The website page for one friend goal, for servers without the native screen's endpoint. */
     fun challengePath(id: Long): String = "/community#challenge-$id"
 
     /** Where a bottom navigation item leads; null for Decks, the deck list itself. */
@@ -75,7 +80,7 @@ object AnkiquestNavigation {
                 AnkiquestHomeActivity
                     .intent(context)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            R.id.ankiquest_nav_friends -> AnkiquestActivity.intent(context, FRIENDS_PATH)
+            R.id.ankiquest_nav_friends -> AnkiquestChallengesActivity.intent(context)
             R.id.ankiquest_nav_progress -> AnkiquestActivity.intent(context, null)
             else -> null
         }

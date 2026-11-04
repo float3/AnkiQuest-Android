@@ -247,6 +247,55 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `friend goals list invitations, progress and results, and answer every change with the list`() =
+        runBlocking {
+            val overview = AnkiquestChallenges.overview(account)
+            val now = EXAMPLE_NOW
+            val invitation = overview.challenges.single { it.invites("hill", now) }
+            assertEquals("Fifty reviews each", invitation.title)
+            assertTrue(invitation.reviews)
+            assertEquals("friend", invitation.creator)
+            val days = overview.challenges.single { it.title == "Three study days together" }
+            assertEquals(listOf("accepted", "invited", "accepted"), days.members.map { it.status })
+            assertEquals(1, days.progressFor("hill"))
+            assertEquals(3, days.target)
+            assertTrue(days.started && !days.ended(now))
+            val together = overview.challenges.single { it.cooperative }
+            assertEquals("complete", together.status)
+            assertEquals(8, together.progressFor("hill"))
+            assertTrue(overview.challenges.single { it.status == "cancelled" }.ended(now))
+            assertEquals(listOf("cerro", "friend"), overview.recipients.map { it.user })
+            assertEquals("Cerro", overview.suggestion?.friend?.display)
+            assertTrue(overview.suggestion!!.weekStart > 0)
+
+            val created =
+                AnkiquestChallenges.create(
+                    account,
+                    AnkiquestChallenges.NewGoal("Three study days together", false, false, 3, 7, listOf("cerro", "friend"), false),
+                    "example-request-1",
+                )
+            assertEquals(listOf("Three study days together"), created.challenges.map { it.title })
+            val accepted = AnkiquestChallenges.act(account, invitation.id, "accept")
+            assertFalse(accepted.challenges.any { it.invites("hill", now) })
+            assertEquals(
+                "accepted",
+                accepted.challenges
+                    .single { it.id == invitation.id }
+                    .member("hill")
+                    ?.status,
+            )
+            assertTrue(
+                requests.containsAll(
+                    listOf(
+                        "GET /api/community/challenges/hill",
+                        "POST /api/community/challenges/hill",
+                        "POST /api/community/challenges/hill/${invitation.id}",
+                    ),
+                ),
+            )
+        }
+
+    @Test
     fun `account settings read sign-ins, devices and the account`() =
         runBlocking {
             val methods = AnkiquestAccountSettings.methods(account)
@@ -311,6 +360,15 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
             path == "/api/accounts/hill" && method == "GET" -> "account"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
+            parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
+                if (method ==
+                    "POST"
+                ) {
+                    "challenge_create"
+                } else {
+                    "challenges"
+                }
+            parts.size == 4 && parts[0] == "community" && parts[1] == "challenges" && method == "POST" -> "challenge_action"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
@@ -346,6 +404,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "leaderboard",
                     "share_to_link",
                     "deck_share",
+                    "challenges",
+                    "challenge_create",
+                    "challenge_action",
                     "sign_in_methods",
                     "password_change",
                     "sign_in_browser",
