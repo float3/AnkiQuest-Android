@@ -114,6 +114,7 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.ankiquest_deck_status_key,
             R.string.ankiquest_goal_key,
             R.string.ankiquest_deck_notifications_key,
+            R.string.ankiquest_deck_share_ask_key,
             R.string.ankiquest_moments_key,
             R.string.ankiquest_moments_status_key,
             R.string.ankiquest_share_cap_key,

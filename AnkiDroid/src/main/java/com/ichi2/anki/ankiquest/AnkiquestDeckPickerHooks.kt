@@ -61,7 +61,8 @@ object AnkiquestDeckPickerHooks {
     }
 
     /**
-     * Shows the study session summary after a review session.
+     * Shows the study session summary after a review session, then asks whether to tell friends
+     * about a deck finished for the day.
      *
      * @return true if AnkiQuest consumed the result, in which case the caller skips its own handling.
      */
@@ -70,26 +71,31 @@ object AnkiquestDeckPickerHooks {
         resultCode: Int,
         openReviewer: () -> Unit,
     ): Boolean {
-        if (!AnkiquestNavigation.enabled() ||
-            (resultCode != AbstractFlashcardViewer.RESULT_DEFAULT && resultCode != AbstractFlashcardViewer.RESULT_NO_MORE_CARDS)
-        ) {
+        val ended = resultCode == AbstractFlashcardViewer.RESULT_DEFAULT || resultCode == AbstractFlashcardViewer.RESULT_NO_MORE_CARDS
+        if (!AnkiquestNavigation.enabled() || !ended) {
+            if (ended) activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) }
             return false
         }
         activity.launchCatchingTask {
             val summary = AnkiquestStudySession.finish()
             if (summary != null && activity.sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
-                showSummary(activity, summary, openReviewer)
+                showSummary(activity, summary, openReviewer) { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } }
+            } else {
+                AnkiquestDeckShare.offer(activity)
             }
             activity.fragment?.refreshInterface()
         }
         return true
     }
 
+    /** [then] runs when the summary is closed without going on to study or to the progress page. */
     private fun showSummary(
         activity: DeckPicker,
         summary: AnkiquestStudySession.Summary,
         onContinue: () -> Unit,
+        then: () -> Unit,
     ) {
+        var elsewhere = false
         val neverAgain =
             AppCompatCheckBox(activity).apply {
                 setText(R.string.ankiquest_summary_dont_show_again)
@@ -129,15 +135,20 @@ object AnkiquestDeckPickerHooks {
                     ),
                 ).setNegativeButton(CommonString.multimedia_editor_field_editing_done, null)
                 .setNeutralButton(R.string.ankiquest_summary_progress) { _, _ ->
+                    elsewhere = true
                     activity.startActivity(AnkiquestActivity.intent(activity, null))
                 }
         if (summary.remaining > 0) {
-            builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ -> onContinue() }
+            builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ ->
+                elsewhere = true
+                onContinue()
+            }
         }
         builder.show().setOnDismissListener {
             if (neverAgain.isChecked) {
                 activity.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
             }
+            if (!elsewhere) then()
         }
     }
 
