@@ -30,6 +30,7 @@ import com.ichi2.anki.StoragePermissionSet
 import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.ankiquest.AnkiquestActivity
+import com.ichi2.anki.ankiquest.AnkiquestChallengesActivity
 import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
 import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
 import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
@@ -136,6 +137,7 @@ object ActivityList {
             get(AnkiquestActivity::class.java),
             get(AnkiquestHomeActivity::class.java),
             get(AnkiquestFeedActivity::class.java),
+            get(AnkiquestChallengesActivity::class.java),
             get(AnkiquestShareActivity::class.java) {
                 Intent(it, AnkiquestShareActivity::class.java)
                     .putExtra(AnkiquestShare.EXTRA_TITLE, "Level 54")
