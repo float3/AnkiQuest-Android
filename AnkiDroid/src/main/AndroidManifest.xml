@@ -537,6 +537,9 @@
         <receiver
             android:name="com.ichi2.anki.receiver.CopyToClipboardReceiver"
             android:exported="false" />
+        <receiver
+            android:name="com.ichi2.anki.receiver.ExportSharedReceiver"
+            android:exported="false" />
 
         <receiver
             android:name="com.ichi2.anki.ankiquest.AnkiquestReplyReceiver"
