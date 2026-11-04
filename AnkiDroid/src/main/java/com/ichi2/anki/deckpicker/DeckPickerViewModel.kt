@@ -462,14 +462,12 @@ class DeckPickerViewModel :
         val loadDeckCounts =
             viewModelScope.launch(Dispatchers.IO) {
                 Timber.d("Refreshing deck list")
-                val (deckDueTree, collectionHasNoCards) =
-                    withCol {
-                        Pair(sched.deckDueTree(), isEmpty)
-                    }
-                dailyDeckStates.value = AnkiquestDeckListStates.load(deckDueTree)
-                dueTree = deckDueTree
-
-                flowOfCollectionHasNoCards.value = collectionHasNoCards
+                withCol {
+                    val deckDueTree = sched.deckDueTree()
+                    dailyDeckStates.value = AnkiquestDeckListStates.load(this, deckDueTree)
+                    dueTree = deckDueTree
+                    flowOfCollectionHasNoCards.value = isEmpty
+                }
 
                 // TODO: This is in the wrong place
                 // Backend returns studiedToday() with newlines for HTML formatting,so we replace them with spaces.
