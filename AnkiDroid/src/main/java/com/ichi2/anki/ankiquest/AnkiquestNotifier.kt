@@ -12,6 +12,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -128,6 +129,7 @@ object AnkiquestNotifier {
                     },
                     kind == "nudge",
                     picture = card?.let { AnkiquestShare.picture(it) },
+                    art = AnkiquestArt.forNotice(kind, entry.optString("topic").ifEmpty { null }),
                 ) == Delivery.DISABLED
             ) {
                 return
@@ -163,6 +165,7 @@ object AnkiquestNotifier {
             body,
             AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
+            art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
     }
 
@@ -395,6 +398,7 @@ object AnkiquestNotifier {
         nudge: Boolean = false,
         silent: Boolean = false,
         picture: Bitmap? = null,
+        @DrawableRes art: Int = R.drawable.aki_face,
     ): Delivery {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -414,7 +418,7 @@ object AnkiquestNotifier {
             NotificationCompat
                 .Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_aki_notify)
-                .setLargeIcon(AnkiquestAki.notificationIcon(context))
+                .setLargeIcon(AnkiquestAki.notificationIcon(context, art))
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(style)

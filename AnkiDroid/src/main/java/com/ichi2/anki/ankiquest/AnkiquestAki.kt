@@ -86,13 +86,16 @@ internal object AnkiquestAki {
             )
         }
 
-    fun notificationIcon(context: Context): Bitmap? =
+    fun notificationIcon(
+        context: Context,
+        @DrawableRes art: Int = R.drawable.aki_face,
+    ): Bitmap? =
         if (!AnkiquestCompanion.visible()) {
             null
         } else {
             AnkiquestArt.bitmap(
                 context,
-                AnkiquestCompanion.resource(R.drawable.aki_face),
+                AnkiquestCompanion.resource(art),
                 context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width),
             )
         }

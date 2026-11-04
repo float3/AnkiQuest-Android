@@ -44,10 +44,15 @@ internal object AnkiquestCompanion {
                 R.drawable.aki_face, R.drawable.aki_icon_happy, R.drawable.aki_icon_worried,
                 R.drawable.aki_icon_frozen, R.drawable.aki_icon_sleepy,
                 -> R.drawable.ankilope_face
-                R.drawable.aki_welcome, R.drawable.aki_sleeping, R.drawable.aki_comeback -> R.drawable.ankilope_welcome
-                R.drawable.aki_celebrate, R.drawable.aki_winner -> R.drawable.ankilope_celebrate
+                R.drawable.aki_welcome, R.drawable.aki_sleeping, R.drawable.aki_comeback, R.drawable.aki_challenge,
+                -> R.drawable.ankilope_welcome
+                R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_achievement, R.drawable.aki_challenge_won,
+                R.drawable.aki_goal, R.drawable.aki_deck_conquered,
+                R.drawable.aki_place_1, R.drawable.aki_place_2, R.drawable.aki_place_3,
+                -> R.drawable.ankilope_celebrate
                 R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze, R.drawable.aki_freeze_used,
                 R.drawable.aki_streak_hot, R.drawable.aki_streak_blazing, R.drawable.aki_streak_legend, R.drawable.aki_at_risk,
+                R.drawable.aki_streak_milestone, R.drawable.aki_minimum,
                 -> R.drawable.ankilope_study
                 else -> aki
             }
