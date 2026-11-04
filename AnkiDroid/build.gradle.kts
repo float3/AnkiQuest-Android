@@ -411,6 +411,14 @@ android {
     }
 }
 
+// AnkiQuest: the quest build (-PcustomSuffix=quest) adds src/quest, with the launcher icon and the updater's install permission.
+if ((project.findProperty("customSuffix") ?: "").toString().trimStart('.') == "quest") {
+    androidComponents.onVariants { variant ->
+        variant.sources.res?.addStaticSourceDirectory("src/quest/res")
+        variant.sources.manifests.addStaticManifestFile("src/quest/AndroidManifest.xml")
+    }
+}
+
 // register release tasks using the finalized version configuration.
 androidComponents.finalizeDsl { androidDsl ->
     // output versionName etc... to `build/outputs/release-metadata.json` for use in CI
