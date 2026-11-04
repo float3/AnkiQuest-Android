@@ -359,6 +359,6 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "challenge_action",
                 )
 
-        val UNUSED = setOf("capabilities", "devices", "mute", "wins")
+        val UNUSED = setOf("capabilities", "devices", "mute", "records", "study", "wins")
     }
 }
