@@ -53,6 +53,18 @@ class AnkiquestNotifierTest : RobolectricTest() {
     }
 
     @Test
+    fun `the weekly recap shows every line of its report`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val report = "340 reviews in 95 minutes over 5 study days, 500 XP.\nYou finished 2nd of 6.\nYour streak is 12 days."
+        val recap = message(1, 30).put("kind", "reminder_weekly_recap").put("title", "Your week").put("body", report)
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, JSONArray().put(recap), account.scope)
+        val posted = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(Notification.BigTextStyle::class.java.name, posted.extras.getString(Notification.EXTRA_TEMPLATE))
+        assertEquals(report, posted.extras.getCharSequence(Notification.EXTRA_BIG_TEXT).toString())
+    }
+
+    @Test
     fun `a celebration can be shared and a friend's completion can be answered`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         val account = replyAccount()
