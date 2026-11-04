@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Which wins reach friends, and the daily goal, as kept by the server for every client of one player. */
@@ -63,6 +64,58 @@ internal object AnkiquestSharing {
             if (e.code != 409) throw e
             false
         }
+
+    /** The server's event key of [account]'s win [id], such as `conquered:1793183400000`, or null when the server has no such win. */
+    suspend fun winKey(
+        account: HomeAccount,
+        id: Long,
+    ): String? =
+        call(account, "GET", "api/wins/${account.encodedUser}?limit=1&before=${id + 1}")
+            .optJSONArray("wins")
+            ?.optJSONObject(0)
+            ?.takeIf { it.optLong("id") == id }
+            ?.optString("key")
+            ?.ifEmpty { null }
+
+    /** The label [account] gave the card they conquered at [at], shown with it wherever it is shared; null when there is none. */
+    suspend fun conquestLabel(
+        account: HomeAccount,
+        at: Long,
+    ): String? =
+        call(account, "GET", "api/conquests/${account.encodedUser}/$at")
+            .optString("label")
+            .ifBlank { null }
+
+    /** Shows [label] with the card conquered at [at] on its shared card, page and friends' messages, or stops showing one when null. */
+    suspend fun setConquestLabel(
+        account: HomeAccount,
+        at: Long,
+        label: String?,
+    ) {
+        val path = "api/conquests/${account.encodedUser}/$at/label"
+        if (label == null) {
+            call(account, "DELETE", path)
+        } else {
+            call(account, "POST", path, JSONObject().put("label", label))
+        }
+    }
+
+    /** Tells [recipients] that [account] finished the deck [name] today; answers how many heard it now. */
+    suspend fun shareFinishedDeck(
+        account: HomeAccount,
+        id: Long,
+        name: String,
+        recipients: List<String>,
+    ): Int =
+        call(
+            account,
+            "POST",
+            "api/decks/${account.encodedUser}/share",
+            JSONObject()
+                .put("id", id.toString())
+                .put("name", name)
+                .put("recipients", JSONArray(recipients)),
+        ).optInt("recipients")
 
     /** One request for the captured [account], which must still be the signed-in one when it is sent and when it answers. */
     private suspend fun call(

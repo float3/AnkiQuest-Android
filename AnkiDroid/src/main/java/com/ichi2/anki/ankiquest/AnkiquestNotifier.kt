@@ -110,7 +110,19 @@ object AnkiquestNotifier {
                             reply = answerable,
                         )
                     } else if (AnkiquestShare.shareable(kind)) {
-                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, win, id, null, scope))
+                        listOfNotNull(
+                            AnkiquestShare.action(
+                                context,
+                                tag,
+                                title,
+                                body,
+                                win,
+                                id,
+                                null,
+                                scope,
+                                if (entry.isNull("topic")) null else entry.optString("topic"),
+                            ),
+                        )
                     } else {
                         emptyList()
                     },
