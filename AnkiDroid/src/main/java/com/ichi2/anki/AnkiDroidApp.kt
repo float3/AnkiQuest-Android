@@ -653,6 +653,10 @@ open class AnkiDroidApp :
         @VisibleForTesting
         var sharedPreferencesTestingOverride: SharedPreferences? = null
 
+        /** Resource counterpart to [sharedPreferencesTestingOverride], scoped by JVM test rules. */
+        @VisibleForTesting
+        var resourcesTestingOverride: Resources? = null
+
         /**
          * A test-friendly accessor to Shared Preferences.
          *
@@ -718,7 +722,7 @@ open class AnkiDroidApp :
         }
 
         val appResources: Resources
-            get() = instance.resources
+            get() = resourcesTestingOverride ?: instance.resources
 
         fun getMarketIntent(context: Context): Intent {
             val uri =
