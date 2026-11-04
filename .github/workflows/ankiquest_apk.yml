@@ -3,7 +3,7 @@ name: ankiquest APK
 
 on:
   push:
-    branches: [ankiquest]
+    branches: [main]
     tags: ["quest-*"]
   workflow_dispatch:
 
@@ -123,7 +123,7 @@ jobs:
             --notes-file .github/ankiquest-release.md
 
       - name: Publish nightly
-        if: github.ref == 'refs/heads/ankiquest' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
+        if: github.ref == 'refs/heads/main' && steps.sign.outputs.signed == 'true' && steps.release.outputs.number != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE: ${{ steps.release.outputs.number }}
