@@ -32,6 +32,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -245,6 +246,50 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertFalse(Ankiquest.streakProtectionEnabled())
         }
 
+    @Test
+    fun `account settings read sign-ins, devices and the account`() =
+        runBlocking {
+            val methods = AnkiquestAccountSettings.methods(account)
+            assertTrue(methods.account)
+            assertTrue(methods.password)
+            assertEquals(
+                listOf(
+                    AnkiquestAccountSettings.Provider("google", "Google", linked = false),
+                    AnkiquestAccountSettings.Provider("github", "GitHub", linked = true),
+                ),
+                methods.providers,
+            )
+            assertEquals(methods, AnkiquestAccountSettings.setPassword(account, "old password", "new password!", signOutOthers = false))
+
+            val devices = AnkiquestAccountSettings.devices(account)
+            assertEquals(listOf(true, false), devices.map { it.current })
+            assertEquals(listOf("Pixel 9", "Pixel 8"), devices.map { it.name })
+            assertEquals(listOf(1_793_183_400_000L, null), devices.map { it.lastUsedAt })
+            assertEquals(listOf("example-device-1"), AnkiquestAccountSettings.signOutOthers(account).map { it.id })
+
+            val summary = AnkiquestAccountSettings.summary(account)
+            assertEquals(AnkiquestAccountSettings.Summary("ana", password = true, confirmedUntil = null), summary)
+
+            assertFailsWith<AnkiquestAccountSettings.ForeignAddress>("the example points at another server than this test's") {
+                AnkiquestAccountSettings.browser(account, "github", AnkiquestAccountSettings.Purpose.REAUTH)
+            }
+            assertEquals(
+                "https://anki.example.test/auth/oauth/github?ticket=example-ticket-1",
+                JSONObject(example("sign_in_browser")).getString("url"),
+            )
+            assertTrue(
+                requests.containsAll(
+                    listOf(
+                        "GET /api/sign-in/hill",
+                        "POST /api/sign-in/hill",
+                        "GET /api/devices/hill",
+                        "POST /api/devices/hill",
+                        "GET /api/accounts/hill",
+                    ),
+                ),
+            )
+        }
+
     private fun Notification.title() = extras.getCharSequence(Notification.EXTRA_TITLE).toString()
 
     private fun Notification.text() = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -260,6 +305,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
             path == "/api/leaderboard" -> "leaderboard"
+            path == "/api/sign-in/hill" && method == "GET" -> "sign_in_methods"
+            path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "password" -> "password_change"
+            path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "browser" -> "sign_in_browser"
+            path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
+            path == "/api/accounts/hill" && method == "GET" -> "account"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
@@ -288,8 +338,22 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "streak-freezes" to "streak_freezes",
             )
 
-        val CONSUMED = ROUTES.values.toSet() + setOf("sign_up", "sign_in", "leaderboard", "share_to_link", "deck_share")
+        val CONSUMED =
+            ROUTES.values.toSet() +
+                setOf(
+                    "sign_up",
+                    "sign_in",
+                    "leaderboard",
+                    "share_to_link",
+                    "deck_share",
+                    "sign_in_methods",
+                    "password_change",
+                    "sign_in_browser",
+                    "devices",
+                    "devices_sign_out",
+                    "account",
+                )
 
-        val UNUSED = setOf("capabilities", "devices", "mute", "wins")
+        val UNUSED = setOf("capabilities", "mute", "wins")
     }
 }

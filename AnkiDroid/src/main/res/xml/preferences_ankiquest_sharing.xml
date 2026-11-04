@@ -36,10 +36,6 @@
             android:summary="@string/ankiquest_deck_share_ask_summary"
             android:title="@string/ankiquest_deck_share_ask_title" />
         <Preference
-            android:key="@string/ankiquest_deck_notifications_key"
-            android:title="@string/ankiquest_deck_notifications_title"
-            android:summary="@string/ankiquest_deck_notifications_summary" />
-        <Preference
             android:key="@string/ankiquest_subscriptions_key"
             android:fragment="com.ichi2.anki.preferences.AnkiquestSubscriptionsFragment"
             android:persistent="false"

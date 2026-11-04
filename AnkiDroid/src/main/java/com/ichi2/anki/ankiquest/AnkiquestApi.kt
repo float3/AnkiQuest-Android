@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit
 internal class AnkiquestHttpException(
     val code: Int,
     val explanation: String? = null,
+    /** The server wants the player to sign in with their provider again first (`"reauth": true`). */
+    val reauth: Boolean = false,
 ) : IOException(explanation ?: "HTTP $code")
 
 /** The signed-in account is no longer the one a request was prepared for. */
@@ -112,7 +114,7 @@ internal object AnkiquestApi {
             if (!response.isSuccessful) {
                 val text = runCatching { response.peekBody(ERROR_BYTES).string() }.getOrNull()
                 check()
-                throw AnkiquestHttpException(response.code, text?.let(::explanation))
+                throw AnkiquestHttpException(response.code, text?.let(::explanation), text?.let(::reauth) == true)
             }
             read(response).also { check() }
         }
@@ -157,6 +159,14 @@ internal object AnkiquestApi {
             JSONObject(body).optString("error").trim().ifEmpty { null }
         } catch (_: JSONException) {
             null
+        }
+
+    /** Whether a refusal says `"reauth": true`. */
+    fun reauth(body: String): Boolean =
+        try {
+            JSONObject(body).optBoolean("reauth")
+        } catch (_: JSONException) {
+            false
         }
 
     private const val ERROR_BYTES = 16L * 1024

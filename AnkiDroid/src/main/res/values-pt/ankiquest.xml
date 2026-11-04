@@ -24,7 +24,6 @@
     <string name="ankiquest_avatar_remove">Remover imagem</string>
     <string name="ankiquest_avatar_remove_confirm">Remover a tua imagem de perfil e voltar a usar a tua inicial?</string>
     <string name="ankiquest_deck_notifications_title">Notificações de baralhos concluídos</string>
-    <string name="ankiquest_deck_notifications_summary">Escolhe quem será avisado quando terminares um baralho por hoje</string>
     <string name="ankiquest_deck_notifications_empty">Cria primeiro um baralho normal para configurares estas notificações.</string>
     <string name="ankiquest_deck_notifications_no_people">Ainda não existem outros jogadores neste servidor.</string>
     <string name="ankiquest_deck_notifications_choose_people">Escolhe pelo menos uma pessoa ou desativa a partilha.</string>
