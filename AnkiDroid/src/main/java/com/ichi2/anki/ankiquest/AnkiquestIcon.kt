@@ -15,7 +15,8 @@ import timber.log.Timber
  * Aki's mood on the app icon, like a pet waiting on the home screen. Opt-in: launchers redraw the
  * icon when it changes, and some briefly drop it from the home screen while they do.
  *
- * Each mood is a launcher alias of IntentHandler in the manifest; exactly one is enabled.
+ * Each mood is a launcher alias of IntentHandler; exactly one is enabled. The aliases are part of
+ * the AnkiQuest branding in src/quest, so other builds keep IntentHandler's own launcher entry.
  */
 internal object AnkiquestIcon {
     const val PREF_ENABLED = "ankiquestMoodIcon"
@@ -54,6 +55,15 @@ internal object AnkiquestIcon {
 
     fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, false)
 
+    /** Whether this build has the mood aliases; only the quest build does. */
+    fun available(context: Context): Boolean =
+        try {
+            context.packageManager.getActivityInfo(component(context, Mood.DEFAULT), PackageManager.MATCH_DISABLED_COMPONENTS)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
+
     /** Shows the mood for [profile], or the plain icon when the setting is off. */
     fun update(
         context: Context,
@@ -67,7 +77,7 @@ internal object AnkiquestIcon {
         mood: Mood,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
-        if (prefs.getString(PREF_CURRENT, Mood.DEFAULT.name) == mood.name) return
+        if (prefs.getString(PREF_CURRENT, Mood.DEFAULT.name) == mood.name || !available(context)) return
         val packageManager = context.packageManager
         try {
             // Enable the new icon before disabling the old one, so there is never no launcher entry.

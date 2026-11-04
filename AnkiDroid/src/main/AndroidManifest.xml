@@ -29,7 +29,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage"/>
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Necessary for recording audio in a WebView -->
@@ -97,8 +96,8 @@
         android:name="com.ichi2.anki.AnkiDroidApp"
         android:label="@string/app_name"
         android:allowBackup="true"
-        android:icon="@mipmap/ankiquest_launcher"
-        android:roundIcon="@mipmap/ankiquest_launcher"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:windowSoftInputMode="adjustResize"
         android:usesCleartextTraffic="true"
         android:largeHeap="true"
@@ -123,7 +122,11 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="true"
             >
-            <!-- The launcher entries are the AnkiquestIcon aliases below, so the icon can show Aki's mood. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
+            </intent-filter>
             <!-- *.apkg matcher. NOTE: when pathPattern is used, host and scheme must also be specified -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -294,71 +297,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity-alias
-            android:name="com.ichi2.anki.ankiquest.AnkiquestIconDefault"
-            android:enabled="true"
-            android:exported="true"
-            android:icon="@mipmap/ankiquest_launcher"
-            android:roundIcon="@mipmap/ankiquest_launcher"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name="com.ichi2.anki.ankiquest.AnkiquestIconHappy"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ankiquest_launcher_happy"
-            android:roundIcon="@mipmap/ankiquest_launcher_happy"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name="com.ichi2.anki.ankiquest.AnkiquestIconWorried"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ankiquest_launcher_worried"
-            android:roundIcon="@mipmap/ankiquest_launcher_worried"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name="com.ichi2.anki.ankiquest.AnkiquestIconFrozen"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ankiquest_launcher_frozen"
-            android:roundIcon="@mipmap/ankiquest_launcher_frozen"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name="com.ichi2.anki.ankiquest.AnkiquestIconSleepy"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ankiquest_launcher_sleepy"
-            android:roundIcon="@mipmap/ankiquest_launcher_sleepy"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
         <activity
             android:name="com.ichi2.anki.DeckPicker"
             android:theme="@style/Theme_Dark.Launcher"
@@ -598,6 +536,9 @@
         <!-- Copy Sync Error Message to Clipboard -->
         <receiver
             android:name="com.ichi2.anki.receiver.CopyToClipboardReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.ichi2.anki.receiver.ExportSharedReceiver"
             android:exported="false" />
 
         <receiver

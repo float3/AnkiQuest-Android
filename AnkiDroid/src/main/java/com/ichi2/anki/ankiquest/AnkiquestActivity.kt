@@ -110,7 +110,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         session = Ankiquest.webSession()
         account = AnkiquestNavigation.accountFingerprint()
         val dashboard = initialUrl()
-        if (dashboard == null) {
+        if (dashboard == null || session?.signedIn != true) {
             startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
             finish()
             return
@@ -166,8 +166,12 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                     view: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
-                    if (session?.allows(request.url.toString()) == true) return false
-                    openUrl(request.url)
+                    when (session?.link(request.url.toString())) {
+                        AnkiquestLink.SITE -> return false
+                        AnkiquestLink.SIGN_IN -> openSettings()
+                        AnkiquestLink.REFUSED -> {}
+                        AnkiquestLink.EXTERNAL, null -> openUrl(request.url)
+                    }
                     return true
                 }
 
@@ -280,16 +284,21 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId != R.id.ankiquest_settings) return super.onOptionsItemSelected(item)
+        openSettings()
+        return true
+    }
+
+    /** The app's own account screen, which also replaces the website's sign-in. */
+    private fun openSettings() {
         refreshAfterSettings = true
         startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
-        return true
     }
 
     override fun onResume() {
         super.onResume()
         if (!::webView.isInitialized) return
         val current = Ankiquest.webSession()
-        if (current == null) {
+        if (current == null || !current.signedIn) {
             prepareSession?.cancel()
             cancelPictureResult()
             session = null

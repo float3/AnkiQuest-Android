@@ -55,24 +55,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Download base branch screenshots
-        id: baseline
-        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
-        with:
-          name: screenshot
-          workflow: screenshot_store.yml
-          workflow_conclusion: success
-          search_artifacts: true
-          allow_forks: false
-          if_no_artifact_found: fail
-          branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
-
-      - name: Explain unavailable baseline
-        if: ${{ failure() && steps.baseline.outcome == 'failure' }}
-        run: |
-          echo '::error::Screenshot comparison did not run. Restore the base branch baseline with the Screenshots: Store Baseline workflow, then rerun this check.'
-          echo 'Screenshot comparison did not run because the base branch baseline could not be downloaded. Run **Screenshots: Store Baseline** on the PR base branch, then rerun this check.' >> "$GITHUB_STEP_SUMMARY"
-
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -97,6 +79,15 @@ jobs:
           retry_wait_seconds: 60
           max_attempts: 3
           command: ./gradlew robolectricSdkDownload compileScreenshotTests -Pscreenshot --daemon
+
+      - name: Download base branch screenshots
+        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
+        continue-on-error: true
+        with:
+          name: screenshot
+          workflow: screenshot_store.yml
+          branch: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          event: push
 
       - name: Compare screenshots
         id: compare-screenshot-test

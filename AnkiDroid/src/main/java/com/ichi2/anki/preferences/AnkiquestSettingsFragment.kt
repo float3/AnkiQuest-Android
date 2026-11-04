@@ -18,6 +18,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
+import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -37,6 +38,8 @@ import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestHosts
+import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
@@ -103,9 +106,17 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     protected fun bindAccount() {
-        requirePreference<VersatileTextPreference>(R.string.ankiquest_url_key).continuousValidator =
+        val url = requirePreference<VersatileTextPreference>(R.string.ankiquest_url_key)
+        url.continuousValidator =
             VersatileTextPreference.Validator { value ->
                 if (value.isNotEmpty()) value.toHttpUrl()
+            }
+        val plain = EditTextPreference.SimpleSummaryProvider.getInstance()
+        url.summaryProvider =
+            Preference.SummaryProvider<EditTextPreference> { preference ->
+                val summary = plain.provideSummary(preference)
+                val typed = preference.text.orEmpty()
+                if (AnkiquestHosts.insecure(typed)) "$summary\n${getString(R.string.ankiquest_check_insecure, typed.trim())}" else summary
             }
         bindCompanion()
         requirePreference<Preference>(R.string.ankiquest_sign_in_key).setOnPreferenceClickListener {
@@ -224,7 +235,9 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     protected fun bindStudy() {
         bindGoal()
-        requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_mood_icon_key).setOnPreferenceChangeListener { _, enabled ->
+        val moodIcon = requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_mood_icon_key)
+        moodIcon.isVisible = AnkiquestIcon.available(requireContext())
+        moodIcon.setOnPreferenceChangeListener { _, enabled ->
             if (enabled == true) {
                 AnkiquestPoll.refreshNow(requireContext())
             } else {
@@ -281,7 +294,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     /** What the server said when it turned a change down, or why it could not be asked. */
     private fun serverMessage(e: Exception): String =
-        (e as? AnkiquestSharing.Refusal)?.text ?: getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
+        (e as? AnkiquestHttpException)?.explanation ?: getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
 
     protected fun bindNotifications() {
         requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_notify_rank_key).setOnPreferenceChangeListener { _, enabled ->
@@ -642,7 +655,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             if (Ankiquest.dashboardUrl() == null) {
                 AlertDialog
                     .Builder(requireContext())
-                    .setMessage(R.string.ankiquest_check_unconfigured)
+                    .setMessage(Ankiquest.unconfigured(requireContext()))
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             } else {

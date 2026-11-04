@@ -10,12 +10,12 @@ import androidx.preference.SwitchPreferenceCompat
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
-import com.ichi2.anki.ankiquest.SubscriptionHttpException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -121,8 +121,8 @@ class AnkiquestSubscriptionsFragment : SettingsFragment() {
                     message =
                         getString(
                             when {
-                                e is SubscriptionHttpException && e.code in setOf(401, 403) -> R.string.ankiquest_subscriptions_auth
-                                e is SubscriptionHttpException && e.code == 404 -> R.string.ankiquest_subscriptions_unsupported
+                                e is AnkiquestHttpException && e.code in setOf(401, 403) -> R.string.ankiquest_subscriptions_auth
+                                e is AnkiquestHttpException && e.code == 404 -> R.string.ankiquest_subscriptions_unsupported
                                 e is HomeAccountChanged -> R.string.ankiquest_subscriptions_configure
                                 else -> R.string.ankiquest_subscriptions_error
                             },

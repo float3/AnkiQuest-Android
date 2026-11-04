@@ -8,14 +8,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 internal data class IncomingSender(
     val user: String,
@@ -53,49 +47,27 @@ internal data class IncomingSubscriptions(
     }
 }
 
-internal class HomeAccountChanged : IOException("The AnkiQuest account changed")
-
-internal class SubscriptionHttpException(
-    val code: Int,
-) : IOException("HTTP $code")
-
 /** Captures credentials once and keeps reads and writes ordered across recreated settings screens. */
 internal class SubscriptionRepository(
-    private val client: OkHttpClient =
-        AnkiquestHttp.client
-            .newBuilder()
-            .callTimeout(15, TimeUnit.SECONDS)
-            .followRedirects(false)
-            .followSslRedirects(false)
-            .build(),
     private val accountProvider: () -> HomeAccount?,
 ) {
     private val mutex = Mutex()
-    private val json = "application/json".toMediaType()
 
     private fun requireCurrent(account: HomeAccount) {
         if (accountProvider()?.scope != account.scope) throw HomeAccountChanged()
-        if (account.token.isEmpty()) throw SubscriptionHttpException(401)
+        if (account.token.isEmpty()) throw AnkiquestHttpException(401)
     }
 
     private fun request(
         account: HomeAccount,
         body: JSONObject? = null,
     ): IncomingSubscriptions {
-        requireCurrent(account)
         val request =
-            Request
-                .Builder()
-                .url(account.url("api/deck-subscriptions/${account.encodedUser}"))
-                .header("Authorization", "Bearer ${account.token}")
-                .apply { if (body != null) post(body.toString().toRequestBody(json)) }
+            AnkiquestApi
+                .request(account, "api/deck-subscriptions/${account.encodedUser}")
+                .apply { if (body != null) post(AnkiquestApi.body(body)) }
                 .build()
-        return client.newCall(request).execute().use { response ->
-            val text = response.body.string()
-            requireCurrent(account)
-            if (!response.isSuccessful) throw SubscriptionHttpException(response.code)
-            IncomingSubscriptions.parse(JSONObject(text))
-        }
+        return AnkiquestApi.call(request, check = { requireCurrent(account) }) { IncomingSubscriptions.parse(JSONObject(it.body.string())) }
     }
 
     suspend fun load(account: HomeAccount): IncomingSubscriptions =

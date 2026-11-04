@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.ComponentName
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -12,7 +13,10 @@ import com.ichi2.anki.common.preferences.sharedPrefs
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestIconTest : RobolectricTest() {
@@ -40,7 +44,28 @@ class AnkiquestIconTest : RobolectricTest() {
     }
 
     @Test
+    fun `builds without the quest aliases keep their launcher entry`() {
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
+        assertFalse(AnkiquestIcon.available(targetContext))
+        AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, state(Mood.HAPPY))
+    }
+
+    @Test
     fun `exactly one launcher icon is enabled`() {
+        // The aliases come from the quest build's manifest, which unit tests do not merge.
+        for (mood in Mood.entries) {
+            shadowOf(targetContext.packageManager).addOrUpdateActivity(
+                ActivityInfo().apply {
+                    packageName = targetContext.packageName
+                    name = component(mood).className
+                    targetActivity = "com.ichi2.anki.IntentHandler"
+                    enabled = mood == Mood.DEFAULT
+                },
+            )
+        }
+        assertTrue(AnkiquestIcon.available(targetContext))
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
         AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
@@ -52,12 +77,13 @@ class AnkiquestIconTest : RobolectricTest() {
         assertEquals(listOf(Mood.DEFAULT), enabled())
     }
 
+    private fun component(mood: Mood) = ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${mood.alias}")
+
+    private fun state(mood: Mood) = targetContext.packageManager.getComponentEnabledSetting(component(mood))
+
     private fun enabled(): List<Mood> =
         Mood.entries.filter { mood ->
-            val state =
-                targetContext.packageManager.getComponentEnabledSetting(
-                    ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${mood.alias}"),
-                )
+            val state = state(mood)
             state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
                 (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && mood == Mood.DEFAULT)
         }

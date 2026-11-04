@@ -19,6 +19,7 @@ import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
@@ -74,6 +75,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             refresh()
         }
     private var generation = 0
+    private var focus: String? = null
+    private var questsHeading: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
@@ -103,6 +106,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             insets
         }
         account = AnkiquestHomeData.account()
+        if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
         if (savedInstanceState == null) AnkiquestGoalDialog.offerSetup(this) { refresh() }
     }
@@ -196,7 +200,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                         null
                     } catch (e: CancellationException) {
                         throw e
-                    } catch (e: Ankiquest.HttpStatusException) {
+                    } catch (e: AnkiquestHttpException) {
                         if (e.code == 401 || e.code == 403) R.string.aq_home_auth else R.string.aq_home_server_error
                     } catch (_: IOException) {
                         R.string.aq_home_offline
@@ -244,10 +248,17 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
-        scroll.post { scroll.scrollTo(0, position) }
+        val target = questsHeading?.takeIf { focus == FOCUS_QUESTS }
+        if (target != null || profile != null) focus = null
+        if (target != null) {
+            target.doOnLayout { scroll.smoothScrollTo(0, it.top) }
+        } else {
+            scroll.post { scroll.scrollTo(0, position) }
+        }
     }
 
     private fun renderToday() {
+        questsHeading = null
         title(R.string.ankiquest_nav_today, R.string.aq_home_today_subtitle)
         content.addView(AnkiquestAki.encouragement(this, AnkiquestAki.mood(local, profile)))
         profile?.let {
@@ -296,7 +307,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         profile?.optJSONArray("quests")?.objects()?.let { quests ->
             if (quests.isNotEmpty()) {
                 if (quests.all { it.optBoolean("done") }) content.addView(AnkiquestAki.image(this, R.drawable.aki_winner, 56))
-                text(content, getString(R.string.aq_home_quests), heading = true)
+                questsHeading = text(content, getString(R.string.aq_home_quests), heading = true)
                 quests.forEach { quest ->
                     val panel = card()
                     text(panel, quest.optString("title"), heading = true)
@@ -315,34 +326,21 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun renderGoal(status: AnkiquestDailyGoal.Status) {
         val panel = card()
         text(panel, getString(R.string.aq_goal_today), heading = true)
-        when {
-            status.minimumDone && status.streakMinutes > 0 ->
-                text(panel, getString(R.string.aq_goal_minimum_minutes_done, status.streakMinutes), small = true)
-            status.minimumDone -> text(panel, getString(R.string.aq_goal_minimum_any_done), small = true)
-            status.streakMinutes > 0 -> {
-                text(panel, getString(R.string.aq_goal_minimum_minutes, status.streakMinutes), small = true)
-                meter(panel, status.minutes.toLong(), status.streakMinutes.toLong())
-            }
-            else -> text(panel, getString(R.string.aq_goal_minimum_any), small = true)
-        }
-        if (status.mode == AnkiquestDailyGoal.Mode.OFF) return
-        text(
-            panel,
-            if (status.goalDone) {
-                getString(R.string.aq_goal_done_title)
-            } else {
-                getString(R.string.aq_goal_daily, AnkiquestDailyGoal.progress(this, status))
-            },
-            small = true,
-        )
-        meter(panel, status.progress.toLong(), status.goal.target.toLong())
-        if (status.mode == AnkiquestDailyGoal.Mode.BACKLOG && status.goal.backlog > 0) {
-            text(
-                panel,
-                getString(R.string.aq_goal_backlog_explained, status.goal.extra, status.goal.backlog, status.goal.daysLeft),
-                small = true,
+        val secondsPerCard = local?.secondsPerCard ?: AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD
+        AnkiquestGoalBar.display(this, status, secondsPerCard)?.let { display ->
+            panel.addView(
+                AnkiquestGoalProgress(this).apply { show(display, SLOT_TODAY) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(6)
+                },
             )
         }
+        panel.addView(
+            AnkiquestStreakChip(this).apply { show(status) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(10)
+            },
+        )
     }
 
     private fun renderDeckCopies() {
@@ -659,6 +657,13 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     companion object {
         const val EXTRA_SKIP_HOME = "ankiquest.skip_home"
         const val EXTRA_STUDY_DECK = "ankiquest.study_deck"
+
+        /** A section to scroll to once it is shown, such as [FOCUS_QUESTS]. */
+        const val EXTRA_FOCUS = "ankiquest.focus"
+        const val FOCUS_QUESTS = "quests"
+
+        /** The goal bar memory of the Today screen, see [AnkiquestGoalBar.show]. */
+        const val SLOT_TODAY = "today"
 
         fun intent(context: Context): Intent = Intent(context, AnkiquestHomeActivity::class.java)
     }
