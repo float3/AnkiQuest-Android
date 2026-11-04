@@ -93,7 +93,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose("studied", 10))
         assertEquals(R.drawable.aki_freeze, AnkiquestStreakWidget.pose("protected", 10))
         assertEquals(R.drawable.aki_review, AnkiquestStreakWidget.pose("short", 10))
-        assertEquals(R.drawable.aki_welcome, AnkiquestStreakWidget.pose("pending", 0))
+        assertEquals(R.drawable.aki_sleeping, AnkiquestStreakWidget.pose("pending", 0))
         assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose("unknown", 10))
     }
 }

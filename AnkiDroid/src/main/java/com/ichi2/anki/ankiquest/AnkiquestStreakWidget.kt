@@ -79,7 +79,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 state == "unknown" -> R.drawable.aki_face
                 state == "protected" -> R.drawable.aki_freeze
                 state == "studied" -> R.drawable.aki_streak
-                streak == 0 -> R.drawable.aki_welcome
+                streak == 0 -> R.drawable.aki_sleeping
                 else -> R.drawable.aki_review
             }
 
