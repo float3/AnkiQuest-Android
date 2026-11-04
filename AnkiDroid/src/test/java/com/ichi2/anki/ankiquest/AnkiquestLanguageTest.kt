@@ -14,23 +14,17 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import java.util.Locale
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
 class AnkiquestLanguageTest : RobolectricTest() {
     @Test
-    fun `Anki language overrides the phone language for widgets and the web session`() {
+    fun `Anki language overrides the phone language for widgets and server requests`() {
         AnkiDroidApp.sharedPrefs().edit { putString("language", "es-ES") }
         assertEquals("es-ES", AnkiquestLanguage.tag())
         assertEquals("esta semana", AnkiquestLanguage.context(targetContext).getString(R.string.ankiquest_period_week))
-        val session = AnkiquestWebSession("https://quest.example/#cerro", "cerro", "secret", AnkiquestLanguage.tag())
-        val script = assertNotNull(session.script("https://quest.example/"))
-        assertTrue(script.contains("window.ankiquestLanguage = \"es-ES\""))
-        assertNull(session.script("https://elsewhere.example/"))
-        assertTrue(session != session.copy(language = "en"))
+        val account = HomeAccount("https://quest.example", "cerro", "secret", AnkiquestLanguage.tag())
+        assertEquals("es-ES", AnkiquestApi.request(account, "api/profile/cerro").build().header("Accept-Language"))
     }
 
     @Test

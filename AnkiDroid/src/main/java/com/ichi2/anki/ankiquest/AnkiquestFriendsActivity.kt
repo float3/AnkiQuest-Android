@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.text.InputFilter
 import android.text.InputType
@@ -163,15 +162,11 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                         if (code != null) readInvite(current, code, turn)
                     }
                 if (turn != generation) return@launch
-                if (missing) {
-                    openWebsite()
-                    return@launch
-                }
                 if (problem == ACCOUNT_CHANGED) {
                     reload()
                     return@launch
                 }
-                failure = problem
+                failure = if (missing) R.string.aq_server_outdated else problem
                 loading = false
                 render()
                 if (problem == null) loadPictures(current, turn)
@@ -215,13 +210,6 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             }
             if (turn == generation && account?.scope == current.scope && !loading) render()
         }
-    }
-
-    /** An older server has no social endpoint; its website still has the page. */
-    private fun openWebsite() {
-        val path = invite?.let { "/join/" + Uri.encode(it) } ?: WEB_PATH
-        startActivity(AnkiquestActivity.intent(this, path, account?.notificationAccount))
-        finish()
     }
 
     /** Runs [work] and answers the message for its failure, or null when it worked. */
@@ -621,10 +609,8 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         startActivity(Intent.createChooser(send, getString(R.string.aq_friends_share_link)))
     }
 
-    /** A friend's profile, on the website until profiles are native. */
     private fun openProfile(person: AnkiquestSocial.Person) = startActivity(AnkiquestProfileActivity.intent(this, person.user))
 
-    /** Friend goals, on the website until they are native. */
     private fun openFriendGoals() = startActivity(AnkiquestChallengesActivity.intent(this))
 
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
@@ -800,9 +786,6 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
 
         /** An invite code from a `/join/<code>` link, to confirm before joining. */
         const val EXTRA_INVITE = "ankiquest.invite"
-
-        /** The website's page for servers without `GET /api/social`. */
-        const val WEB_PATH = "/friends"
 
         private const val STATE_INVITE = "invite"
 

@@ -26,6 +26,7 @@ import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -146,13 +147,12 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `a server without the boards opens the records page on the website`() {
+    fun `a server without the boards says it needs updating`() {
         coEvery { AnkiquestRecords.records(identity, any()) } throws AnkiquestHttpException(404)
-        val records = startRegularActivity<AnkiquestRecordsActivity>(AnkiquestRecordsActivity.intent(targetContext))
-        advanceRobolectricLooperUntil { records.isFinishing }
-        val opened = assertNotNull(shadowOf(records).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(AnkiquestNavigation.RECORDS_PATH, opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        val records = launch()
+        assertTrue(records.hasText(records.getString(R.string.aq_server_outdated)))
+        assertNull(shadowOf(records).nextStartedActivity)
+        assertFalse(records.isFinishing)
     }
 
     private fun launch(): AnkiquestRecordsActivity =

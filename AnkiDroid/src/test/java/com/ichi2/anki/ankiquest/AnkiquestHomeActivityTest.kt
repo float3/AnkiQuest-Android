@@ -173,16 +173,6 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         }
     }
 
-    private fun assertWebsite(
-        home: AnkiquestHomeActivity,
-        path: String?,
-    ) {
-        val opened = assertNotNull(shadowOf(home).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(path, opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
-        assertNull(opened.getStringExtra(AnkiquestActivity.EXTRA_ACCOUNT))
-    }
-
     private fun launch(): AnkiquestHomeActivity =
         startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
             .also { home -> advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible } }

@@ -133,4 +133,5 @@
         <item quantity="one">%1$s finally learned “%2$s”, a card they had forgotten %3$d time. 🏆</item>
         <item quantity="other">%1$s finally learned “%2$s”, a card they had forgotten %3$d times. 🏆</item>
     </plurals>
+    <string name="aq_server_outdated">This needs a newer AnkiQuest server. Ask whoever runs yours to update it.</string>
 </resources>

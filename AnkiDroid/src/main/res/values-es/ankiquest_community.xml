@@ -132,4 +132,5 @@
         <item quantity="many">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d veces. 🏆</item>
         <item quantity="other">%1$s por fin aprendió «%2$s», una tarjeta que había olvidado %3$d veces. 🏆</item>
     </plurals>
+    <string name="aq_server_outdated">Esto necesita un servidor de AnkiQuest más reciente. Pide a quien gestiona el tuyo que lo actualice.</string>
 </resources>

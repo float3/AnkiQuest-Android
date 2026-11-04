@@ -121,4 +121,5 @@
         <item quantity="one">%1$s hat endlich „%2$s“ gelernt, eine Karte, die %3$d-mal vergessen wurde. 🏆</item>
         <item quantity="other">%1$s hat endlich „%2$s“ gelernt, eine Karte, die %3$d-mal vergessen wurde. 🏆</item>
     </plurals>
+    <string name="aq_server_outdated">Dafür braucht es einen neueren AnkiQuest-Server. Bitte die Person, die deinen betreibt, ihn zu aktualisieren.</string>
 </resources>

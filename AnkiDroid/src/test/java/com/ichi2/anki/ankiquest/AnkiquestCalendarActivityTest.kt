@@ -27,6 +27,7 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -108,13 +109,12 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `a server without the calendar's JSON opens its web page instead`() {
+    fun `a server without the calendar's JSON says it needs updating`() {
         coEvery { AnkiquestCommunity.calendar(identity, any(), any()) } throws AnkiquestHttpException(404)
         val calendar = launch()
-        val opened = assertNotNull(shadowOf(calendar).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, opened.component?.className)
-        assertEquals(AnkiquestCalendarActivity.WEB_PATH, opened.getStringExtra(AnkiquestActivity.EXTRA_PATH))
-        assertTrue(calendar.isFinishing)
+        assertTrue(calendar.hasText(calendar.getString(R.string.aq_server_outdated)))
+        assertNull(shadowOf(calendar).nextStartedActivity)
+        assertFalse(calendar.isFinishing)
     }
 
     @Test

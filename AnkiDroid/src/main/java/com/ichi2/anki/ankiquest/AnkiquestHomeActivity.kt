@@ -48,9 +48,9 @@ import java.io.File
 import java.io.IOException
 
 /**
- * The daily study surface is native and local. Activity is native too ([AnkiquestFeedActivity]), as
- * are study history ([AnkiquestHistoryActivity]) and records ([AnkiquestRecordsActivity]);
- * friends and progress are the website's community pages, opened in [AnkiquestActivity].
+ * The daily study surface is native and local, like every other AnkiQuest screen: activity
+ * ([AnkiquestFeedActivity]), friends, progress, study history ([AnkiquestHistoryActivity]) and
+ * records ([AnkiquestRecordsActivity]).
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private lateinit var content: LinearLayout

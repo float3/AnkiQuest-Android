@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 
@@ -12,13 +11,8 @@ import com.ichi2.anki.R
 object AnkiquestNavigation {
     const val PREF_OPEN_TODAY = "ankiquestOpenToday"
     const val PREF_SESSION_SUMMARY = "ankiquestSessionSummary"
-    const val FRIENDS_PATH = "/community#challenges"
-    const val ACTIVITY_PATH = "/community#activity"
-    const val WEEK_PATH = "/week"
-    const val RECORDS_PATH = "/records"
-    const val HISTORY_PATH = "/history"
 
-    /** Where an inbox notification leads: a native screen, or one known website route. */
+    /** Where an inbox notification leads: always a native screen. */
     sealed interface Destination {
         data class Today(
             val focus: String? = null,
@@ -33,10 +27,6 @@ object AnkiquestNavigation {
         /** The native friend goals, [AnkiquestChallengesActivity], opened on goal [id] when there is one. */
         data class Challenges(
             val id: Long? = null,
-        ) : Destination
-
-        data class Website(
-            val path: String,
         ) : Destination
 
         /** The native leaderboard, [AnkiquestLeaderboardActivity], showing [period]. */
@@ -78,33 +68,6 @@ object AnkiquestNavigation {
             !intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK) &&
             intent.action == Intent.ACTION_MAIN &&
             intent.data == null
-
-    /**
-     * The native screen for a website page at [path], relative to the server, or null for one the
-     * app still shows on the website. The screens open the page themselves on a server without
-     * their JSON.
-     */
-    fun nativeScreen(
-        context: Context,
-        path: String,
-    ): Intent? =
-        when (val page = path.substringBefore('#').substringBefore('?').trimEnd('/')) {
-            RECORDS_PATH -> AnkiquestRecordsActivity.intent(context)
-            HISTORY_PATH -> AnkiquestHistoryActivity.intent(context)
-            else -> conquest(page)?.let { (user, at) -> AnkiquestConquestActivity.intent(context, user, at) }
-        }
-
-    /** The player and answer a conquered card's page `/conquered/{user}/{at}` names, or null for any other page. */
-    internal fun conquest(path: String): Pair<String, Long>? {
-        val parts = path.removePrefix("/").split('/')
-        if (parts.size != 3 || parts[0] != "conquered") return null
-        val user = Uri.decode(parts[1]).ifEmpty { return null }
-        val at = parts[2].toLongOrNull()?.takeIf { it > 0 } ?: return null
-        return user to at
-    }
-
-    /** The website page for one friend goal, for servers without the native screen's endpoint. */
-    fun challengePath(id: Long): String = "/community#challenge-$id"
 
     /** Where a bottom navigation item leads; null for Decks, the deck list itself. */
     fun destination(

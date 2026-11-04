@@ -3,7 +3,6 @@
 package com.ichi2.anki
 
 import androidx.activity.ComponentActivity
-import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.instantnoteeditor.InstantNoteEditorActivity
 import com.ichi2.testutils.ActivityList
@@ -61,7 +60,6 @@ class ActivitySavedStateTest(
                 // TODO: Re-enable once the instant editor delivers its LiveData note type before opening the dialog.
                 .filterNot { it.activity == InstantNoteEditorActivity::class.java }
                 // Finishes on the way up without an account, see AllActivitiesRecreationTest.finishesDuringStartup.
-                .filterNot { it.activity == AnkiquestActivity::class.java }
                 .filterNot { it.activity == AnkiquestShareActivity::class.java }
                 .map { arrayOf(it.simpleName, it) }
     }

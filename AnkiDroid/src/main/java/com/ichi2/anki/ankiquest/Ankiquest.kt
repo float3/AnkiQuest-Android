@@ -34,15 +34,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import okhttp3.Cookie
-import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
-import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.UnknownHostException
 import java.util.TimeZone
@@ -676,46 +672,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     private fun anonymousRequest(url: String): Request.Builder = AnkiquestApi.request(url.toHttpUrl(), "", AnkiquestLanguage.tag())
 
-    /**
-     * Exchange the configured token for an HttpOnly browser cookie without exposing it to the page.
-     * Older public servers have no session endpoint and answer null.
-     */
-    internal suspend fun dashboardSession(dashboard: String): String? =
-        withContext(Dispatchers.IO) {
-            val account = HomeAccount.current() ?: return@withContext null
-            if (dashboard != dashboardOf(account)) return@withContext null
-            if (account.token.isEmpty()) return@withContext null
-            val request =
-                AnkiquestApi
-                    .request(account, "auth/session")
-                    .post(ByteArray(0).toRequestBody())
-                    .build()
-            try {
-                AnkiquestApi.call(account, request) { response ->
-                    sessionCookie(request.url, response.headers.values("Set-Cookie"))
-                        ?: throw IOException("The ankiquest server did not return a valid session cookie")
-                }
-            } catch (e: AnkiquestHttpException) {
-                if (e.code == 404) null else throw e
-            }
-        }
-
-    /**
-     * The `Set-Cookie` value among [values] that installs the browser session for [url]: HttpOnly, for
-     * that host and every path, and Secure exactly when [url] is https, since a WebView never sends a
-     * Secure cookie over http.
-     */
-    @VisibleForTesting
-    internal fun sessionCookie(
-        url: HttpUrl,
-        values: List<String>,
-    ): String? =
-        values.firstOrNull { value ->
-            val cookie = Cookie.parse(url, value)
-            cookie != null && cookie.name == "ankiquest_session" && cookie.hostOnly &&
-                cookie.path == "/" && cookie.httpOnly && cookie.secure == url.isHttps
-        }
-
     private fun dashboardOf(account: HomeAccount): String = "${account.server}/#${account.encodedUser}"
 
     /**
@@ -853,9 +809,6 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     /** The configured server's privacy notice, `/privacy`, an HTML page with the operator's details; null without a server. */
     fun privacyUrl(): String? = HomeAccount.current()?.let { "${it.server}/privacy" }
-
-    internal fun webSession(): AnkiquestWebSession? =
-        HomeAccount.current()?.let { account -> AnkiquestWebSession(dashboardOf(account), account.user, account.token, account.language) }
 
     override fun onActivityResumed(activity: Activity) {
         this.activity = WeakReference(activity)

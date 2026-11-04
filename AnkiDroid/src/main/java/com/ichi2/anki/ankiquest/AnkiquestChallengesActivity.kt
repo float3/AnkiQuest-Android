@@ -50,7 +50,7 @@ import java.util.UUID
 /**
  * Friend goals, natively: invitations to accept or decline, goals in progress with everyone's
  * progress, finished ones with their result, the weekly suggested friend and starting a new goal.
- * [EXTRA_CHALLENGE] opens one goal. A server without the endpoint gets the website instead.
+ * [EXTRA_CHALLENGE] opens one goal. A server without the endpoint says it needs updating.
  */
 class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
     private lateinit var content: LinearLayout
@@ -178,25 +178,14 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
                         }
                     }
                 if (turn != generation) return@launch
-                if (missing) {
-                    openWebsite()
-                    return@launch
-                }
                 if (problem == ACCOUNT_CHANGED) {
                     reload()
                     return@launch
                 }
-                failure = problem
+                failure = if (missing) R.string.aq_server_outdated else problem
                 loading = false
                 render()
             }
-    }
-
-    /** An older server has no friend goal endpoint; its website still has the page. */
-    private fun openWebsite() {
-        val path = selected?.let(AnkiquestNavigation::challengePath) ?: AnkiquestNavigation.FRIENDS_PATH
-        startActivity(AnkiquestActivity.intent(this, path, account?.notificationAccount))
-        finish()
     }
 
     /** Runs [work] and answers the message for its failure, or null when it worked. */

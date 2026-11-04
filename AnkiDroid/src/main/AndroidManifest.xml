@@ -412,11 +412,6 @@
             android:exported="false"
             />
         <activity
-            android:name="com.ichi2.anki.ankiquest.AnkiquestActivity"
-            android:label="@string/ankiquest_screen_title"
-            android:exported="false"
-            />
-        <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestHomeActivity"
             android:label="@string/ankiquest_screen_title"
             android:exported="false"

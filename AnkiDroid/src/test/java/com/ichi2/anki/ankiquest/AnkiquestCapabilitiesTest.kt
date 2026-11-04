@@ -74,7 +74,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
         runBlocking {
             assertEquals(setOf("activity", "cookie_session", "wins"), AnkiquestCapabilities.refresh(account))
             assertEquals(listOf("/api/capabilities" to null), requests.toList())
-            assertTrue(AnkiquestCapabilities.has(account, AnkiquestCapabilities.COOKIE_SESSION))
+            assertTrue(AnkiquestCapabilities.has(account, "cookie_session"))
             assertFalse(AnkiquestCapabilities.has(account, "devices"))
         }
 
@@ -85,7 +85,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
             status = 404
             body = """{"error":"not found"}"""
             assertEquals(emptySet(), AnkiquestCapabilities.refresh(account))
-            assertFalse(AnkiquestCapabilities.has(account, AnkiquestCapabilities.COOKIE_SESSION))
+            assertFalse(AnkiquestCapabilities.has(account, "cookie_session"))
         }
 
     @Test
@@ -124,7 +124,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
         runBlocking {
             AnkiquestCapabilities.current(account)
             AnkiquestCapabilities.forgetMemory()
-            assertTrue(AnkiquestCapabilities.has(account, AnkiquestCapabilities.COOKIE_SESSION))
+            assertTrue(AnkiquestCapabilities.has(account, "cookie_session"))
             assertEquals(setOf("activity", "cookie_session", "wins"), AnkiquestCapabilities.current(account))
             assertEquals(1, requests.size)
         }

@@ -29,7 +29,7 @@ import java.time.format.FormatStyle
 /**
  * The player's study history, natively, as the website's `/history` shows it: a year of uploaded
  * study days on the review heatmap, the year's totals, and what happened on the day picked. A
- * server without the calendar's JSON shows its page in [AnkiquestActivity].
+ * server without the calendar's JSON says it needs updating.
  */
 class AnkiquestHistoryActivity : AnkiActivity(R.layout.activity_ankiquest_records) {
     private lateinit var views: AnkiquestRecordViews
@@ -117,17 +117,11 @@ class AnkiquestHistoryActivity : AnkiActivity(R.layout.activity_ankiquest_record
                         }
                     }
                 if (turn != generation) return@launch
-                if (gone) {
-                    // A server without the calendar's JSON still has its page.
-                    startActivity(AnkiquestActivity.intent(this@AnkiquestHistoryActivity, AnkiquestNavigation.HISTORY_PATH))
-                    finish()
-                    return@launch
-                }
                 if (problem == R.string.aq_feed_account_changed) {
                     reload()
                     return@launch
                 }
-                failure = problem
+                failure = if (gone) R.string.aq_server_outdated else problem
                 loading = false
                 render()
             }
