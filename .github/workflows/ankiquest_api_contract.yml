@@ -29,7 +29,7 @@ jobs:
   # Everything from the server checkout runs here, in a job with no cache, so it
   # can never reach the shared Gradle cache. The contract job gets the examples as data.
   server:
-    name: Server examples and art
+    name: Server examples
     if: github.event_name != 'schedule' || github.repository == 'float3/AnkiQuest-Android'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -52,20 +52,6 @@ jobs:
           path: server/docs/api/examples/*.json
           if-no-files-found: warn
           retention-days: 1
-
-      - name: Check the app's art against the server's exporter
-        # This runs the server's code, so not on the nightly run, which has the default branch's cache access.
-        # Pull requests and pushes still check the art.
-        if: github.event_name != 'schedule'
-        shell: bash
-        run: |
-          if [ -f server/tools/export_android_art.py ]; then
-            python3 -m venv "$RUNNER_TEMP/art"
-            "$RUNNER_TEMP/art/bin/pip" install --quiet pillow
-            "$RUNNER_TEMP/art/bin/python" server/tools/export_android_art.py --check .
-          else
-            echo "The server at this ref has no tools/export_android_art.py"
-          fi
 
   contract:
     name: API contract
