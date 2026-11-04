@@ -26,6 +26,7 @@ object AnkiquestNavigation {
 
         /** The native friends and groups, [AnkiquestFriendsActivity]. */
         data object Friends : Destination
+
         /** The native friend goals, [AnkiquestChallengesActivity], opened on goal [id] when there is one. */
         data class Challenges(
             val id: Long? = null,

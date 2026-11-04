@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.IntentCompat
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -180,7 +181,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         friends.click(friends.getString(R.string.aq_friends_share_link))
         val shared = assertNotNull(shadowOf(friends).nextStartedActivity)
         assertEquals(Intent.ACTION_CHOOSER, shared.action)
-        val text = shared.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.getStringExtra(Intent.EXTRA_TEXT)
+        val text = IntentCompat.getParcelableExtra(shared, Intent.EXTRA_INTENT, Intent::class.java)?.getStringExtra(Intent.EXTRA_TEXT)
         assertEquals(
             friends.getString(R.string.aq_friends_invite_share_text, "Spanish club", "https://anki.example.test/join/example-invite-1"),
             text,
