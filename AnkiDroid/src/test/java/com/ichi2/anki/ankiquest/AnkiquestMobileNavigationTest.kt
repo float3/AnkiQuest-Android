@@ -140,7 +140,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     fun `each notification kind opens what it is about`() {
         val today = AnkiquestNavigation.Destination.Today()
         val quests = AnkiquestNavigation.Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
-        val week = AnkiquestNavigation.Destination.Website(AnkiquestNavigation.WEEK_PATH)
+        val week = AnkiquestNavigation.Destination.Leaderboard("week")
         val feed = AnkiquestNavigation.Destination.Activity
         val challenges = AnkiquestNavigation.Destination.Challenges()
         val goal = AnkiquestNavigation.Destination.Challenges(42)
@@ -203,9 +203,10 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
 
         val recapEntry = JSONObject().put("id", 75).put("kind", "reminder_weekly_recap")
         val recap = AnkiquestNotifier.notificationIntent(targetContext, recapEntry, owner)
-        assertEquals(ComponentName(targetContext, AnkiquestActivity::class.java), recap.component)
-        assertEquals(AnkiquestNavigation.WEEK_PATH, recap.getStringExtra(AnkiquestActivity.EXTRA_PATH))
-        assertEquals(owner, recap.getStringExtra(AnkiquestActivity.EXTRA_ACCOUNT))
+        assertEquals(ComponentName(targetContext, AnkiquestLeaderboardActivity::class.java), recap.component)
+        assertEquals("week", recap.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
+        assertEquals(owner, recap.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT))
+        assertTrue((recap.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
     }
 
     @Test
@@ -243,8 +244,8 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         assertFalse(friends.hasExtra(AnkiquestChallengesActivity.EXTRA_CHALLENGE))
         assertFalse(friends.hasExtra(AnkiquestChallengesActivity.EXTRA_ACCOUNT))
         val progress = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_progress)!!
-        assertEquals(ComponentName(targetContext, AnkiquestActivity::class.java), progress.component)
-        assertEquals(null, progress.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        assertEquals(ComponentName(targetContext, AnkiquestProfileActivity::class.java), progress.component)
+        assertEquals(null, progress.getStringExtra(AnkiquestProfileActivity.EXTRA_USER), "the player's own profile")
         assertEquals(null, AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_decks))
     }
 }

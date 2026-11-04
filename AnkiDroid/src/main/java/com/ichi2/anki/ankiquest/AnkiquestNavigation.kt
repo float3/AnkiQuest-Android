@@ -32,6 +32,11 @@ object AnkiquestNavigation {
         data class Website(
             val path: String,
         ) : Destination
+
+        /** The native leaderboard, [AnkiquestLeaderboardActivity], showing [period]. */
+        data class Leaderboard(
+            val period: String,
+        ) : Destination
     }
 
     private val weekly = setOf("reminder_weekly_recap", "reminder_weekly_closing")
@@ -50,7 +55,7 @@ object AnkiquestNavigation {
         when {
             challenge > 0 -> Destination.Challenges(challenge)
             kind.startsWith("challenge_") -> Destination.Challenges()
-            kind in weekly -> Destination.Website(WEEK_PATH)
+            kind in weekly -> Destination.Leaderboard(AnkiquestBoards.Period.WEEK.query)
             kind in feed -> Destination.Activity
             kind == "reminder_freeze_refill" || topic?.substringBefore(':') == "quest" ->
                 Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
@@ -81,7 +86,7 @@ object AnkiquestNavigation {
                     .intent(context)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             R.id.ankiquest_nav_friends -> AnkiquestChallengesActivity.intent(context)
-            R.id.ankiquest_nav_progress -> AnkiquestActivity.intent(context, null)
+            R.id.ankiquest_nav_progress -> AnkiquestProfileActivity.intent(context)
             else -> null
         }
 
