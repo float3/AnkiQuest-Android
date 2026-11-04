@@ -127,9 +127,7 @@ internal object AnkiquestGoalPlan {
      * date as an Anki day number, so this is one indexed count. New cards and daily limits are left
      * out, like Anki's own forecast graph.
      *
-     * `secondsPerCard` is the average answer time in the review log over the last [ANSWER_TIME_DAYS]
-     * days (`revlog.time` is in milliseconds), leaving out manual reschedules, or
-     * [DEFAULT_SECONDS_PER_CARD] without any history.
+     * `secondsPerCard` is [secondsPerCard].
      */
     fun forecast(
         col: Collection,
@@ -144,19 +142,27 @@ internal object AnkiquestGoalPlan {
                 today + 1,
                 today + FORECAST_DAYS,
             )
-        val seconds =
-            col.db
-                .query(
-                    "select avg(time) from revlog where id >= ? and time > 0 and type < 4",
-                    now - ANSWER_TIME_DAYS * DAY_MS,
-                ).use { cursor ->
-                    if (!cursor.moveToFirst() || cursor.isNull(0)) null else cursor.getDouble(0) / 1000.0
-                }
         return Forecast(
             due = load.dueToday,
             backlog = load.backlog,
             dailyDue = upcoming.toDouble() / FORECAST_DAYS,
-            secondsPerCard = seconds?.takeIf { it > 0 } ?: DEFAULT_SECONDS_PER_CARD,
+            secondsPerCard = secondsPerCard(col, now),
         )
     }
+
+    /**
+     * The average answer time in the review log over the last [ANSWER_TIME_DAYS] days (`revlog.time`
+     * is in milliseconds), leaving out manual reschedules, or [DEFAULT_SECONDS_PER_CARD] without any history.
+     */
+    fun secondsPerCard(
+        col: Collection,
+        now: Long = TimeManager.time.intTimeMS(),
+    ): Double =
+        col.db
+            .query(
+                "select avg(time) from revlog where id >= ? and time > 0 and type < 4",
+                now - ANSWER_TIME_DAYS * DAY_MS,
+            ).use { cursor ->
+                if (!cursor.moveToFirst() || cursor.isNull(0)) null else cursor.getDouble(0) / 1000.0
+            }?.takeIf { it > 0 } ?: DEFAULT_SECONDS_PER_CARD
 }
