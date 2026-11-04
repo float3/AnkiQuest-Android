@@ -42,7 +42,7 @@ internal object AnkiquestCompanion {
         } else {
             when (aki) {
                 R.drawable.aki_face -> R.drawable.ankilope_face
-                R.drawable.aki_welcome -> R.drawable.ankilope_welcome
+                R.drawable.aki_welcome, R.drawable.aki_sleeping -> R.drawable.ankilope_welcome
                 R.drawable.aki_celebrate, R.drawable.aki_winner -> R.drawable.ankilope_celebrate
                 R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze -> R.drawable.ankilope_study
                 else -> aki
