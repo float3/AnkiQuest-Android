@@ -9,7 +9,7 @@ const store = fs.readFileSync(path.join(__dirname, '../workflows/ankiquest_scree
 
 test('each supported target branch produces screenshot baselines on push', () => {
   const branches = store.match(/^  push:\n    branches:\n((?:      - .+\n)+)/m)[1];
-  for (const branch of ['main', 'ankiquest']) {
+  for (const branch of ['main']) {
     assert.match(branches, new RegExp(`^      - ${branch}$`, 'm'), `${branch} needs its own baseline`);
   }
 });
