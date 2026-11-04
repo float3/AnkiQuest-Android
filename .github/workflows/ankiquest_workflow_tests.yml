@@ -9,7 +9,9 @@ on:
       - '.github/workflows/ankiquest_screenshot_*.yml'
       - '.github/tests/screenshots.test.cjs'
       - '.github/tests/screenshot-storage.test.cjs'
+  # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
+    branches: [main]
     paths:
       - '.github/workflows/ankiquest_workflow_tests.yml'
       - '.github/workflows/ankiquest_screenshot_*.yml'

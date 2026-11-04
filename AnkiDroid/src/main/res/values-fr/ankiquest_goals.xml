@@ -11,6 +11,10 @@
     <string name="aq_goal_daily">Objectif du jour : %1$s</string>
     <string name="aq_goal_backlog_explained">Les cartes du jour plus %1$d de tes %2$d cartes en retard. Jours restants dans ton plan : %3$d.</string>
     <string name="aq_goal_done_title">Objectif du jour atteint ! 🎉</string>
+    <string name="aq_goal_time_left">Encore ~%1$d min</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_safe">Série assurée</string>
+    <string name="aq_goal_streak_any">Une révision et ta série est sauvée</string>
     <string name="ankiquest_streak_short">%1$d minutes sur %2$d aujourd’hui</string>
     <string name="ankiquest_goal_cards_title">Cartes par jour</string>
     <string name="ankiquest_goal_minutes_title">Minutes par jour</string>
@@ -59,4 +63,12 @@
         <item quantity="one">%d minute par jour</item>
         <item quantity="other">%d minutes par jour</item>
     </plurals>
+    <string name="ankiquest_streak_widget_label">Série AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Ta série en grand avec ton compagnon</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">jour de série</item>
+        <item quantity="other">jours de série</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">L’humeur d’Aki sur l’icône</string>
+    <string name="ankiquest_mood_icon_summary">L’icône sourit quand la journée compte, s’inquiète tard le soir et montre une protection quand elle te couvre. Certains lanceurs masquent brièvement l’icône pendant le changement.</string>
 </resources>

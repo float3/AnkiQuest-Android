@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.awaitInitialDeckHolder
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.deckpicker.DeckFilters
 import com.ichi2.anki.deckpicker.filterAndFlattenDisplay
@@ -113,9 +112,8 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
                 .deckDueTree()
                 .filterAndFlattenDisplay(DeckFilters.create(""), 1)
                 .map { it.withDailyState(states[it.did]) }
-        var committed = false
-        adapter.submit(nodes, hasSubDecks = false) { committed = true }
-        advanceRobolectricLooperUntil { committed }
+        adapter.submit(nodes, hasSubDecks = false)
+        advanceRobolectricLooperUntil { adapter.currentList == nodes }
         list.measure(
             View.MeasureSpec.makeMeasureSpec(480, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(2000, View.MeasureSpec.EXACTLY),

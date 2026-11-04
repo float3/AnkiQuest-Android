@@ -25,7 +25,7 @@ internal object AnkiquestAki {
         REVIEW(R.drawable.aki_review, R.string.aki_review),
         CELEBRATE(R.drawable.aki_celebrate, R.string.aki_complete),
         STREAK(R.drawable.aki_streak, R.string.aki_streak),
-        FREEZE(R.drawable.aki_freeze, R.string.aki_protected),
+        FREEZE(R.drawable.aki_freeze_used, R.string.aki_protected),
     }
 
     /** Aki's mood for today; the collection, not the server, says whether cards are still due. */
@@ -86,13 +86,16 @@ internal object AnkiquestAki {
             )
         }
 
-    fun notificationIcon(context: Context): Bitmap? =
+    fun notificationIcon(
+        context: Context,
+        @DrawableRes art: Int = R.drawable.aki_face,
+    ): Bitmap? =
         if (!AnkiquestCompanion.visible()) {
             null
         } else {
             AnkiquestArt.bitmap(
                 context,
-                AnkiquestCompanion.resource(R.drawable.aki_face),
+                AnkiquestCompanion.resource(art),
                 context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width),
             )
         }

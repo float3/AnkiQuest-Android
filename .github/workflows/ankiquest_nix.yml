@@ -15,7 +15,7 @@ on:
       - '.github/workflows/ankiquest_nix.yml'
   push:
     branches:
-      - ankiquest
+      - main
     paths:
       - 'flake.*'
       - 'gradle/**'

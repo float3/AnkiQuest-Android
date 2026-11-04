@@ -30,6 +30,11 @@
     </PreferenceCategory>
     <PreferenceCategory
         android:title="@string/ankiquest_nav_decks">
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="@string/ankiquest_deck_share_ask_key"
+            android:summary="@string/ankiquest_deck_share_ask_summary"
+            android:title="@string/ankiquest_deck_share_ask_title" />
         <Preference
             android:key="@string/ankiquest_deck_notifications_key"
             android:title="@string/ankiquest_deck_notifications_title"

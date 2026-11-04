@@ -14,7 +14,7 @@ on:
   pull_request:
   push:
     branches:
-      - ankiquest
+      - main
   merge_group:
 
 permissions:
@@ -31,8 +31,6 @@ jobs:
   # We want to generate our matrix dynamically
   # Initial job generates the matrix as a JSON, and following job will use deserialize and use the result
   matrix_prep:
-    # Do not run the scheduled jobs on forks
-    if: (github.event_name == 'schedule' && github.repository == 'ankidroid/Anki-Android') || (github.event_name != 'schedule')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.result }}
@@ -158,7 +156,7 @@ jobs:
           # Only write to the cache for builds on the 'main' branches, stops branches evicting main cache
           # Builds on other branches will only read from main branch cache writes
           # Comment this and the with: above out for performance testing on a branch
-          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/ankiquest' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
         # Cache only the per-change emulator: the 16 KB snapshot costs about 2.5 GiB.
       - name: AVD cache
@@ -319,7 +317,7 @@ jobs:
           script: |
             bash .github/disable_art_metrics.sh
             bash .github/adb_retry.sh shell settings put global hide_error_dialogs 1
-            TEST_RELEASE_BUILD=false bash .github/with_emulator_cleanup.sh ./gradlew :baselineprofile:connectedBenchmarkBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.ichi2.anki.baselineprofile.ReleaseSmokeTest -Pandroid.testInstrumentationRunnerArguments.releaseSmokeTest=true --daemon --stacktrace
+            TEST_RELEASE_BUILD=false bash .github/with_emulator_cleanup.sh python3 .github/run_release_smoke_test.py
 
       - name: Configure NDK tools PATH for alignment checking
         run: |

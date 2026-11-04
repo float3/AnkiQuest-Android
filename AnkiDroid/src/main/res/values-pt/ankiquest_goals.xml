@@ -11,6 +11,10 @@
     <string name="aq_goal_daily">Meta diária: %1$s</string>
     <string name="aq_goal_backlog_explained">Os cartões de hoje mais %1$d dos teus %2$d cartões atrasados. Dias que faltam no plano: %3$d.</string>
     <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
+    <string name="aq_goal_time_left">Faltam ~%1$d min</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_safe">Sequência garantida</string>
+    <string name="aq_goal_streak_any">Revise uma vez para manter sua sequência</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
     <string name="ankiquest_goal_cards_title">Cartões por dia</string>
     <string name="ankiquest_goal_minutes_title">Minutos por dia</string>
@@ -59,4 +63,12 @@
         <item quantity="one">%d minuto por dia</item>
         <item quantity="other">%d minutos por dia</item>
     </plurals>
+    <string name="ankiquest_streak_widget_label">Sequência AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Sua sequência em destaque com seu companheiro</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">dia de sequência</item>
+        <item quantity="other">dias de sequência</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">O humor da Aki no ícone</string>
+    <string name="ankiquest_mood_icon_summary">O ícone sorri quando hoje já conta, se preocupa no fim do dia e mostra um protetor quando ele te cobre. Alguns launchers escondem o ícone por um instante ao trocar.</string>
 </resources>

@@ -11,6 +11,10 @@
     <string name="aq_goal_daily">Daily goal: %1$s</string>
     <string name="aq_goal_backlog_explained">Today’s due cards plus %1$d of your %2$d overdue cards. Days left in your plan: %3$d.</string>
     <string name="aq_goal_done_title">Daily goal reached! 🎉</string>
+    <string name="aq_goal_time_left">~%1$d min left</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_safe">Streak safe</string>
+    <string name="aq_goal_streak_any">Review once to keep your streak</string>
     <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
     <string name="ankiquest_goal_cards_title" maxLength="41">Cards per day</string>
     <string name="ankiquest_goal_minutes_title" maxLength="41">Minutes per day</string>
@@ -60,4 +64,13 @@
         <item quantity="one">%d minute a day</item>
         <item quantity="other">%d minutes a day</item>
     </plurals>
+    <string name="ankiquest_streak_widget_label">AnkiQuest streak</string>
+    <string name="ankiquest_streak_widget_description">Your streak as a big number with your companion</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">day streak</item>
+        <item quantity="other">day streak</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_key" translatable="false">ankiquestMoodIcon</string>
+    <string name="ankiquest_mood_icon_title" maxLength="41">Aki’s mood on the app icon</string>
+    <string name="ankiquest_mood_icon_summary">The icon smiles once today counts, worries late in the day, and shows a freeze when one protects you. Some launchers briefly drop the icon while it changes.</string>
 </resources>

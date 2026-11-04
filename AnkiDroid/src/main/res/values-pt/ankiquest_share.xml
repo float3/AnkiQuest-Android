@@ -40,4 +40,20 @@ Estudo com o AnkiQuest.</string>
         <item>Perguntar-me</item>
         <item>Avisar os amigos automaticamente</item>
     </string-array>
+    <string name="ankiquest_share_friends_target">Amigos do AnkiQuest</string>
+    <string name="ankiquest_share_card_title">Partilhar o cartão conquistado</string>
+    <string name="ankiquest_share_card_explanation">Queres mostrar o que dizia o cartão? Os teus amigos e quem tiver a ligação verão este texto. Deixa a caixa por marcar para partilhar sem ele.</string>
+    <string name="ankiquest_share_card_include">Mostrar o cartão</string>
+    <string name="ankiquest_share_card_hint">O que diz o cartão</string>
+    <string name="ankiquest_share_next">Partilhar…</string>
+    <string name="ankiquest_share_card_failed">Não foi possível guardar o texto do cartão, por isso nada foi partilhado. Verifica a ligação e tenta outra vez.</string>
+    <string name="ankiquest_deck_share_title">Terminaste %1$s por hoje. Avisar os amigos?</string>
+    <string name="ankiquest_deck_share_send">Avisar</string>
+    <string name="ankiquest_deck_share_not_now">Agora não</string>
+    <string name="ankiquest_deck_share_never">Não perguntar mais</string>
+    <string name="ankiquest_deck_share_never_done">Não voltarás a ser questionado. Podes reativar nas definições do AnkiQuest, em Amigos e partilha.</string>
+    <string name="ankiquest_deck_share_nobody">Ninguém novo soube: já foram avisados hoje ou desligaram os alertas de baralhos.</string>
+    <string name="ankiquest_deck_share_unsupported">O teu servidor AnkiQuest ainda não consegue partilhar baralhos terminados.</string>
+    <string name="ankiquest_deck_share_ask_title">Propor partilhar baralhos terminados</string>
+    <string name="ankiquest_deck_share_ask_summary">Quando terminas um baralho por hoje, perguntar que amigos avisar</string>
 </resources>

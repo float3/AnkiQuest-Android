@@ -11,6 +11,10 @@
     <string name="aq_goal_daily">Tagesziel: %1$s</string>
     <string name="aq_goal_backlog_explained">Die heute fälligen Karten plus %1$d deiner %2$d überfälligen Karten. Verbleibende Tage im Plan: %3$d.</string>
     <string name="aq_goal_done_title">Tagesziel erreicht! 🎉</string>
+    <string name="aq_goal_time_left">Noch ~%1$d Min.</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d Min.</string>
+    <string name="aq_goal_streak_safe">Lernserie sicher</string>
+    <string name="aq_goal_streak_any">Einmal wiederholen rettet deine Serie</string>
     <string name="ankiquest_streak_short">Heute %1$d von %2$d Minuten</string>
     <string name="ankiquest_goal_cards_title">Karten pro Tag</string>
     <string name="ankiquest_goal_minutes_title">Minuten pro Tag</string>
@@ -59,4 +63,12 @@
         <item quantity="one">%d Minute pro Tag</item>
         <item quantity="other">%d Minuten pro Tag</item>
     </plurals>
+    <string name="ankiquest_streak_widget_label">AnkiQuest-Lernserie</string>
+    <string name="ankiquest_streak_widget_description">Deine Lernserie als große Zahl mit deinem Begleiter</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">Tag Lernserie</item>
+        <item quantity="other">Tage Lernserie</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">Akis Laune im App-Symbol</string>
+    <string name="ankiquest_mood_icon_summary">Das Symbol lächelt, sobald heute zählt, sorgt sich spät am Tag und zeigt einen Schutz, wenn einer dich schützt. Manche Launcher blenden das Symbol beim Wechsel kurz aus.</string>
 </resources>

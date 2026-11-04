@@ -48,8 +48,8 @@ import java.io.File
 import java.io.IOException
 
 /**
- * The daily study surface is native and local. Friends, activity and progress are the
- * website's community pages, opened in [AnkiquestActivity].
+ * The daily study surface is native and local. Activity is native too ([AnkiquestFeedActivity]);
+ * friends and progress are the website's community pages, opened in [AnkiquestActivity].
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private lateinit var content: LinearLayout
@@ -85,7 +85,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         scroll = findViewById(R.id.aq_home_scroll)
         findViewById<MaterialButton>(R.id.aq_home_activity).apply {
             setTextColor(getColor(R.color.aq_home_text))
-            setOnClickListener { web(AnkiquestNavigation.ACTIVITY_PATH) }
+            setOnClickListener { startActivity(AnkiquestFeedActivity.intent(this@AnkiquestHomeActivity)) }
         }
         findViewById<BottomNavigationView>(R.id.aq_home_navigation).apply {
             selectedItemId = R.id.ankiquest_nav_today
@@ -326,38 +326,27 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun renderGoal(status: AnkiquestDailyGoal.Status) {
         val panel = card()
         text(panel, getString(R.string.aq_goal_today), heading = true)
-        when {
-            status.minimumDone && status.streakMinutes > 0 ->
-                text(panel, getString(R.string.aq_goal_minimum_minutes_done, status.streakMinutes), small = true)
-            status.minimumDone -> text(panel, getString(R.string.aq_goal_minimum_any_done), small = true)
-            status.streakMinutes > 0 -> {
-                text(panel, getString(R.string.aq_goal_minimum_minutes, status.streakMinutes), small = true)
-                meter(panel, status.minutes.toLong(), status.streakMinutes.toLong())
-            }
-            else -> text(panel, getString(R.string.aq_goal_minimum_any), small = true)
-        }
-        if (status.mode == AnkiquestDailyGoal.Mode.OFF) return
-        text(
-            panel,
-            if (status.goalDone) {
-                getString(R.string.aq_goal_done_title)
-            } else {
-                getString(R.string.aq_goal_daily, AnkiquestDailyGoal.progress(this, status))
-            },
-            small = true,
-        )
-        meter(panel, status.progress.toLong(), status.goal.target.toLong())
-        if (status.mode == AnkiquestDailyGoal.Mode.BACKLOG && status.goal.backlog > 0) {
-            text(
-                panel,
-                getString(R.string.aq_goal_backlog_explained, status.goal.extra, status.goal.backlog, status.goal.daysLeft),
-                small = true,
+        val secondsPerCard = local?.secondsPerCard ?: AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD
+        AnkiquestGoalBar.display(this, status, secondsPerCard)?.let { display ->
+            panel.addView(
+                AnkiquestGoalProgress(this).apply { show(display, SLOT_TODAY) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(6)
+                },
             )
         }
+        panel.addView(
+            AnkiquestStreakChip(this).apply { show(status) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(10)
+            },
+        )
     }
 
     private fun renderDeckCopies() {
         val panel = card()
+        // Both companions: sharing is something friends do together.
+        if (AnkiquestCompanion.visible()) panel.addView(AnkiquestAki.image(this, R.drawable.duo_friends, 72))
         text(panel, getString(R.string.aq_copies_title), heading = true)
         text(panel, getString(R.string.aq_copies_description), small = true)
         copyStatus?.let { text(panel, it, small = true) }
@@ -545,8 +534,6 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
 
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
 
-    private fun web(path: String) = startActivity(AnkiquestActivity.intent(this, path))
-
     private fun connectionCard() {
         val panel = card()
         text(panel, getString(R.string.aq_home_connected))
@@ -672,6 +659,9 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         /** A section to scroll to once it is shown, such as [FOCUS_QUESTS]. */
         const val EXTRA_FOCUS = "ankiquest.focus"
         const val FOCUS_QUESTS = "quests"
+
+        /** The goal bar memory of the Today screen, see [AnkiquestGoalBar.show]. */
+        const val SLOT_TODAY = "today"
 
         fun intent(context: Context): Intent = Intent(context, AnkiquestHomeActivity::class.java)
     }

@@ -40,4 +40,20 @@ Estudio con AnkiQuest.</string>
         <item>Preguntarme</item>
         <item>Avisar a mis amigos automáticamente</item>
     </string-array>
+    <string name="ankiquest_share_friends_target">Amigos de AnkiQuest</string>
+    <string name="ankiquest_share_card_title">Comparte tu tarjeta conquistada</string>
+    <string name="ankiquest_share_card_explanation">¿Quieres mostrar qué decía la tarjeta? Tus amigos y cualquiera con el enlace verán este texto. Deja la casilla sin marcar para compartir sin él.</string>
+    <string name="ankiquest_share_card_include">Mostrar la tarjeta</string>
+    <string name="ankiquest_share_card_hint">Lo que dice la tarjeta</string>
+    <string name="ankiquest_share_next">Compartir…</string>
+    <string name="ankiquest_share_card_failed">No se pudo guardar el texto de la tarjeta, así que no se compartió nada. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="ankiquest_deck_share_title">Terminaste %1$s por hoy. ¿Avisar a tus amigos?</string>
+    <string name="ankiquest_deck_share_send">Avisar</string>
+    <string name="ankiquest_deck_share_not_now">Ahora no</string>
+    <string name="ankiquest_deck_share_never">No volver a preguntar</string>
+    <string name="ankiquest_deck_share_never_done">No se te volverá a preguntar. Puedes activarlo de nuevo en los ajustes de AnkiQuest, en Amigos y contenido compartido.</string>
+    <string name="ankiquest_deck_share_nobody">Nadie nuevo se enteró: ya se les avisó hoy o desactivaron los avisos de mazos.</string>
+    <string name="ankiquest_deck_share_unsupported">Tu servidor de AnkiQuest todavía no puede compartir mazos terminados.</string>
+    <string name="ankiquest_deck_share_ask_title">Ofrecer compartir mazos terminados</string>
+    <string name="ankiquest_deck_share_ask_summary">Al terminar un mazo por hoy, preguntar a qué amigos avisar</string>
 </resources>

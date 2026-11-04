@@ -12,6 +12,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -110,12 +111,25 @@ object AnkiquestNotifier {
                             reply = answerable,
                         )
                     } else if (AnkiquestShare.shareable(kind)) {
-                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, win, id, null, scope))
+                        listOfNotNull(
+                            AnkiquestShare.action(
+                                context,
+                                tag,
+                                title,
+                                body,
+                                win,
+                                id,
+                                null,
+                                scope,
+                                if (entry.isNull("topic")) null else entry.optString("topic"),
+                            ),
+                        )
                     } else {
                         emptyList()
                     },
                     kind == "nudge",
                     picture = card?.let { AnkiquestShare.picture(it) },
+                    art = AnkiquestArt.forNotice(kind, entry.optString("topic").ifEmpty { null }),
                 ) == Delivery.DISABLED
             ) {
                 return
@@ -151,6 +165,7 @@ object AnkiquestNotifier {
             body,
             AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, title, body, null, null, it, scope) }),
+            art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
     }
 
@@ -172,6 +187,7 @@ object AnkiquestNotifier {
     ) {
         val prefs = AnkiDroidApp.sharedPrefs()
         AnkiquestDailyGoal.remember(profile, prefs)
+        AnkiquestIcon.update(context, profile, TimeManager.time.intTimeMS(), prefs)
         val hours = prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
         val warning = profile.optJSONObject("streak_warning")
         if (hours <= 0 || warning == null) return
@@ -270,8 +286,8 @@ object AnkiquestNotifier {
         context: Context,
         data: Data,
     ): Intent =
-        AnkiquestActivity
-            .intent(context, AnkiquestNavigation.ACTIVITY_PATH, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        AnkiquestFeedActivity
+            .intent(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** IDs and kinds become known screens; server-supplied URLs never become arbitrary app destinations. */
@@ -292,6 +308,7 @@ object AnkiquestNotifier {
                     AnkiquestHomeActivity
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
+                AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -381,6 +398,7 @@ object AnkiquestNotifier {
         nudge: Boolean = false,
         silent: Boolean = false,
         picture: Bitmap? = null,
+        @DrawableRes art: Int = R.drawable.aki_face,
     ): Delivery {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -400,7 +418,7 @@ object AnkiquestNotifier {
             NotificationCompat
                 .Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_aki_notify)
-                .setLargeIcon(AnkiquestAki.notificationIcon(context))
+                .setLargeIcon(AnkiquestAki.notificationIcon(context, art))
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(style)

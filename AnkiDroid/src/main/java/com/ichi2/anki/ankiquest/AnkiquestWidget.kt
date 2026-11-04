@@ -55,7 +55,6 @@ open class AnkiquestWidget : AppWidgetProvider() {
 
         /** The companion's size in the widget layouts. */
         private const val COMPANION_DP = 28
-        private val medals = arrayOf("👑", "🥈", "🥉")
 
         /** The leaderboard periods a widget can show, as served by the ankiquest API. */
         class Period(
@@ -186,6 +185,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             fetchedAt: Long,
             offline: Boolean,
         ) {
+            AnkiquestStreakWidget.render(context, board)
             val manager = getAppWidgetManager(context) ?: return
             for (style in styles) {
                 val ids = widgetIds(context, style)
@@ -298,7 +298,16 @@ open class AnkiquestWidget : AppWidgetProvider() {
                     "setBackgroundResource",
                     if (entry.getString("user") == me) style.ownRow else 0,
                 )
-                views.setTextViewText(R.id.ankiquest_widget_rank, medals.getOrNull(i) ?: "${i + 1}")
+                val medal = AnkiquestArt.medal(i + 1)
+                views.setTextViewText(R.id.ankiquest_widget_rank, if (medal == null) "${i + 1}" else "")
+                views.setViewVisibility(R.id.ankiquest_widget_medal, if (medal == null) View.GONE else View.VISIBLE)
+                if (medal != null) {
+                    views.setImageViewResource(R.id.ankiquest_widget_medal, medal)
+                    views.setContentDescription(
+                        R.id.ankiquest_widget_medal,
+                        languageContext.getString(R.string.ankiquest_widget_place, i + 1),
+                    )
+                }
                 views.setTextViewText(R.id.ankiquest_widget_name, entry.getString("display"))
                 val photo = AnkiquestAvatars.bitmap(entry.getString("user"))
                 val display = entry.getString("display").trim().ifEmpty { entry.getString("user") }
@@ -314,19 +323,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                         "protected" -> R.drawable.ankiquest_streak_protected
                         else -> R.drawable.ankiquest_streak_pending
                     }
-                val label =
-                    when (state) {
-                        "studied" -> languageContext.getString(R.string.ankiquest_streak_studied)
-                        "protected" -> languageContext.getString(R.string.ankiquest_streak_protected)
-                        "short" ->
-                            languageContext.getString(
-                                R.string.ankiquest_streak_short,
-                                entry.optLong("today_minutes"),
-                                entry.optLong("streak_minutes"),
-                            )
-                        "pending" -> languageContext.getString(R.string.ankiquest_streak_pending)
-                        else -> languageContext.getString(R.string.ankiquest_streak_unknown)
-                    }
+                val label = streakLabel(languageContext, entry, state)
                 views.setTextViewText(R.id.ankiquest_widget_streak, if (streak > 0) numbers.format(streak) else "")
                 views.setTextViewCompoundDrawables(R.id.ankiquest_widget_streak, if (streak > 0) icon else 0, 0, 0, 0)
                 views.setContentDescription(
@@ -353,8 +350,30 @@ open class AnkiquestWidget : AppWidgetProvider() {
             return items.build()
         }
 
-        /** Servers with a streak minimum say how far today is; older ones count any review. */
-        private fun streakState(entry: JSONObject): String {
+        /** How today stands for [entry]'s streak, in words, for a [state] from [streakState]. */
+        internal fun streakLabel(
+            languageContext: Context,
+            entry: JSONObject,
+            state: String,
+        ): String =
+            when (state) {
+                "studied" -> languageContext.getString(R.string.ankiquest_streak_studied)
+                "protected" -> languageContext.getString(R.string.ankiquest_streak_protected)
+                "short" ->
+                    languageContext.getString(
+                        R.string.ankiquest_streak_short,
+                        entry.optLong("today_minutes"),
+                        entry.optLong("streak_minutes"),
+                    )
+                "pending" -> languageContext.getString(R.string.ankiquest_streak_pending)
+                else -> languageContext.getString(R.string.ankiquest_streak_unknown)
+            }
+
+        /**
+         * studied, protected, short (under the minimum), pending, or unknown when the data is stale or missing.
+         * Servers with a streak minimum say how far today is; older ones count any review.
+         */
+        internal fun streakState(entry: JSONObject): String {
             val dayEndsAt = entry.optLong("day_ends_at")
             if (dayEndsAt > 0 && dayEndsAt <= TimeManager.time.intTimeMS()) return "unknown"
             if (!entry.has("today_reviews") || entry.isNull("today_reviews")) return "unknown"

@@ -7,17 +7,22 @@ import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatCheckBox
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type.navigationBars
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.AbstractFlashcardViewer
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BottomNavController.NavigationItem
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
@@ -25,12 +30,23 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.android.input.Shortcut
 import com.ichi2.anki.android.input.shortcut
+import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapFooter
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.widgets.DeckAdapter
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /** AnkiQuest behaviour of [DeckPicker], kept here so the upstream activity only carries one-line calls. */
 object AnkiquestDeckPickerHooks {
+    /** The deck list's adapter: [deckAdapter]'s rows, then the review heatmap. */
+    fun deckListAdapter(
+        activity: DeckPicker,
+        deckAdapter: DeckAdapter,
+    ): RecyclerView.Adapter<*> = ReviewHeatmapFooter.attach(activity, deckAdapter)
+
     /** Replaces the AnkiQuest menu entry with Browse when the bottom navigation already leads to AnkiQuest. */
     fun decorateMenu(
         activity: DeckPicker,
@@ -61,7 +77,8 @@ object AnkiquestDeckPickerHooks {
     }
 
     /**
-     * Shows the study session summary after a review session.
+     * Shows the study session summary after a review session, then asks whether to tell friends
+     * about a deck finished for the day.
      *
      * @return true if AnkiQuest consumed the result, in which case the caller skips its own handling.
      */
@@ -70,26 +87,31 @@ object AnkiquestDeckPickerHooks {
         resultCode: Int,
         openReviewer: () -> Unit,
     ): Boolean {
-        if (!AnkiquestNavigation.enabled() ||
-            (resultCode != AbstractFlashcardViewer.RESULT_DEFAULT && resultCode != AbstractFlashcardViewer.RESULT_NO_MORE_CARDS)
-        ) {
+        val ended = resultCode == AbstractFlashcardViewer.RESULT_DEFAULT || resultCode == AbstractFlashcardViewer.RESULT_NO_MORE_CARDS
+        if (!AnkiquestNavigation.enabled() || !ended) {
+            if (ended) activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) }
             return false
         }
         activity.launchCatchingTask {
             val summary = AnkiquestStudySession.finish()
             if (summary != null && activity.sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
-                showSummary(activity, summary, openReviewer)
+                showSummary(activity, summary, openReviewer) { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } }
+            } else {
+                AnkiquestDeckShare.offer(activity)
             }
             activity.fragment?.refreshInterface()
         }
         return true
     }
 
+    /** [then] runs when the summary is closed without going on to study or to the progress page. */
     private fun showSummary(
         activity: DeckPicker,
         summary: AnkiquestStudySession.Summary,
         onContinue: () -> Unit,
+        then: () -> Unit,
     ) {
+        var elsewhere = false
         val neverAgain =
             AppCompatCheckBox(activity).apply {
                 setText(R.string.ankiquest_summary_dont_show_again)
@@ -129,16 +151,79 @@ object AnkiquestDeckPickerHooks {
                     ),
                 ).setNegativeButton(CommonString.multimedia_editor_field_editing_done, null)
                 .setNeutralButton(R.string.ankiquest_summary_progress) { _, _ ->
+                    elsewhere = true
                     activity.startActivity(AnkiquestActivity.intent(activity, null))
                 }
         if (summary.remaining > 0) {
-            builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ -> onContinue() }
+            builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ ->
+                elsewhere = true
+                onContinue()
+            }
         }
         builder.show().setOnDismissListener {
             if (neverAgain.isChecked) {
                 activity.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
             }
+            if (!elsewhere) then()
         }
+    }
+
+    /**
+     * Shows today's goal in one tappable line above the deck list, which opens Today, or hides it
+     * when no account is set, the goal is off or the collection cannot be read.
+     */
+    fun refreshGoal(activity: DeckPicker) {
+        val parent = activity.binding.deckPickerPane.deckpickerView
+        if (AnkiquestHomeData.account() == null) {
+            showGoal(parent, null)
+            return
+        }
+        activity.lifecycleScope.launch {
+            val loaded =
+                try {
+                    withCol {
+                        AnkiquestDailyGoal.status(AnkiquestDailyGoal.load(this), AnkiDroidApp.sharedPrefs()) to
+                            AnkiquestGoalPlan.secondsPerCard(this)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "AnkiQuest goal could not be loaded for the deck list")
+                    null
+                }
+            showGoal(parent, loaded?.first, loaded?.second ?: AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD) {
+                activity.startActivity(AnkiquestHomeActivity.intent(activity))
+            }
+        }
+    }
+
+    /** Puts the one-line goal for [status] at the top of [parent], or hides it without a goal; returns the line shown. */
+    internal fun showGoal(
+        parent: LinearLayout,
+        status: AnkiquestDailyGoal.Status?,
+        secondsPerCard: Double = AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD,
+        open: () -> Unit = {},
+    ): AnkiquestCompactGoal? {
+        val existing = parent.children.filterIsInstance<AnkiquestCompactGoal>().firstOrNull()
+        val display = status?.let { AnkiquestGoalBar.display(parent.context, it, secondsPerCard) }
+        if (status == null || display == null) {
+            existing?.isVisible = false
+            return null
+        }
+        val line =
+            existing ?: AnkiquestCompactGoal(parent.context).also {
+                val margin = (12 * parent.resources.displayMetrics.density).toInt()
+                parent.addView(
+                    it,
+                    0,
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(margin, margin / 2, margin, margin / 3)
+                    },
+                )
+            }
+        line.isVisible = true
+        line.show(display, status, open)
+        return line
     }
 
     /** Recreates [activity] when AnkiQuest navigation was switched on or off while it was in the background. */

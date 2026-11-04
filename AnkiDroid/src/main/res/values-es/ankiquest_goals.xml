@@ -11,6 +11,10 @@
     <string name="aq_goal_daily">Objetivo diario: %1$s</string>
     <string name="aq_goal_backlog_explained">Las tarjetas de hoy más %1$d de tus %2$d tarjetas atrasadas. Días que quedan en tu plan: %3$d.</string>
     <string name="aq_goal_done_title">¡Objetivo diario logrado! 🎉</string>
+    <string name="aq_goal_time_left">Te quedan ~%1$d min</string>
+    <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_safe">Racha a salvo</string>
+    <string name="aq_goal_streak_any">Repasa una vez y salvas tu racha</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoy</string>
     <string name="ankiquest_goal_cards_title">Tarjetas por día</string>
     <string name="ankiquest_goal_minutes_title">Minutos por día</string>
@@ -59,4 +63,12 @@
         <item quantity="one">%d minuto al día</item>
         <item quantity="other">%d minutos al día</item>
     </plurals>
+    <string name="ankiquest_streak_widget_label">Racha de AnkiQuest</string>
+    <string name="ankiquest_streak_widget_description">Tu racha en grande con tu compañero</string>
+    <plurals name="ankiquest_streak_widget_days">
+        <item quantity="one">día de racha</item>
+        <item quantity="other">días de racha</item>
+    </plurals>
+    <string name="ankiquest_mood_icon_title">El ánimo de Aki en el icono</string>
+    <string name="ankiquest_mood_icon_summary">El icono sonríe cuando hoy ya cuenta, se preocupa al final del día y muestra un protector cuando te cubre. Algunos lanzadores ocultan el icono un momento al cambiar.</string>
 </resources>
