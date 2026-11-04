@@ -258,12 +258,11 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `friend goals and a friend's profile open on the website`() {
+    fun `friend goals open natively and a friend's profile on the website`() {
         val friends = launch()
         friends.click(friends.getString(R.string.aq_friends_goals_open))
         val goals = assertNotNull(shadowOf(friends).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, goals.component?.className)
-        assertEquals(AnkiquestNavigation.FRIENDS_PATH, goals.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        assertEquals(AnkiquestChallengesActivity::class.java.name, goals.component?.className)
 
         friends.click(friends.getString(R.string.aq_friends_profile))
         val profile = assertNotNull(shadowOf(friends).nextStartedActivity)

@@ -204,13 +204,24 @@ class AnkiquestApiContractTest : RobolectricTest() {
             val celebration = shadowOf(manager).getNotification(5_140_001)
             assertEquals("Daily goal reached!", celebration.title())
             assertEquals(listOf("Share"), celebration.actions.map { it.title.toString() })
+            val sharesGoal = shadowOf(celebration.actions.single().actionIntent).savedIntent
+            assertEquals("Daily goal reached!", sharesGoal.getStringExtra(AnkiquestShare.EXTRA_TITLE), "it reads the same for anyone")
+            val level = shadowOf(manager).getNotification(5_140_009)
+            assertEquals("You reached level 3 with 400 XP.", level.text(), "the player is told about it")
+            val sharesLevel = shadowOf(level.actions.single().actionIntent).savedIntent
+            assertEquals("Level 3", sharesLevel.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+            assertEquals(
+                "I reached level 3 with 400 XP.",
+                sharesLevel.getStringExtra(AnkiquestShare.EXTRA_BODY),
+                "friends hear it from the player",
+            )
             val share = shadowOf(manager).getNotification(5_140_006)
             assertEquals("🎉 Cerro shared a win", share.title())
             assertEquals(listOf("Reply"), share.actions.map { it.title.toString() }, "the example was already cheered")
             verify { AnkiquestShare.picture("https://anki.example.test/w/example-link-2.png") }
             val reaction = shadowOf(manager).getNotification(5_140_008)
             assertEquals("🎉 Cerro cheered", reaction.title())
-            assertEquals(8L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:${inbox.account}", 0))
+            assertEquals(9L, AnkiDroidApp.sharedPrefs().getLong("ankiquestCompletionCursor:${inbox.account}", 0))
         }
 
     @Test
@@ -264,6 +275,55 @@ class AnkiquestApiContractTest : RobolectricTest() {
             )
         }
 
+    @Test
+    fun `friend goals list invitations, progress and results, and answer every change with the list`() =
+        runBlocking {
+            val overview = AnkiquestChallenges.overview(account)
+            val now = EXAMPLE_NOW
+            val invitation = overview.challenges.single { it.invites("hill", now) }
+            assertEquals("Fifty reviews each", invitation.title)
+            assertTrue(invitation.reviews)
+            assertEquals("friend", invitation.creator)
+            val days = overview.challenges.single { it.title == "Three study days together" }
+            assertEquals(listOf("accepted", "invited", "accepted"), days.members.map { it.status })
+            assertEquals(1, days.progressFor("hill"))
+            assertEquals(3, days.target)
+            assertTrue(days.started && !days.ended(now))
+            val together = overview.challenges.single { it.cooperative }
+            assertEquals("complete", together.status)
+            assertEquals(8, together.progressFor("hill"))
+            assertTrue(overview.challenges.single { it.status == "cancelled" }.ended(now))
+            assertEquals(listOf("cerro", "friend"), overview.recipients.map { it.user })
+            assertEquals("Cerro", overview.suggestion?.friend?.display)
+            assertTrue(overview.suggestion!!.weekStart > 0)
+
+            val created =
+                AnkiquestChallenges.create(
+                    account,
+                    AnkiquestChallenges.NewGoal("Three study days together", false, false, 3, 7, listOf("cerro", "friend"), false),
+                    "example-request-1",
+                )
+            assertEquals(listOf("Three study days together"), created.challenges.map { it.title })
+            val accepted = AnkiquestChallenges.act(account, invitation.id, "accept")
+            assertFalse(accepted.challenges.any { it.invites("hill", now) })
+            assertEquals(
+                "accepted",
+                accepted.challenges
+                    .single { it.id == invitation.id }
+                    .member("hill")
+                    ?.status,
+            )
+            assertTrue(
+                requests.containsAll(
+                    listOf(
+                        "GET /api/community/challenges/hill",
+                        "POST /api/community/challenges/hill",
+                        "POST /api/community/challenges/hill/${invitation.id}",
+                    ),
+                ),
+            )
+        }
+
     private fun Notification.title() = extras.getCharSequence(Notification.EXTRA_TITLE).toString()
 
     private fun Notification.text() = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
@@ -282,6 +342,15 @@ class AnkiquestApiContractTest : RobolectricTest() {
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
             parts.size == 2 && parts[0] == "invites" -> "invite"
+            parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
+                if (method ==
+                    "POST"
+                ) {
+                    "challenge_create"
+                } else {
+                    "challenges"
+                }
+            parts.size == 4 && parts[0] == "community" && parts[1] == "challenges" && method == "POST" -> "challenge_action"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
@@ -330,6 +399,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "invite",
                     "social_change",
                     "mute",
+                    "challenges",
+                    "challenge_create",
+                    "challenge_action",
                 )
 
         val UNUSED = setOf("capabilities", "devices", "wins")

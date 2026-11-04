@@ -26,6 +26,10 @@ object AnkiquestNavigation {
 
         /** The native friends and groups, [AnkiquestFriendsActivity]. */
         data object Friends : Destination
+        /** The native friend goals, [AnkiquestChallengesActivity], opened on goal [id] when there is one. */
+        data class Challenges(
+            val id: Long? = null,
+        ) : Destination
 
         data class Website(
             val path: String,
@@ -46,8 +50,8 @@ object AnkiquestNavigation {
         challenge: Long,
     ): Destination =
         when {
-            challenge > 0 -> Destination.Website(challengePath(challenge))
-            kind.startsWith("challenge_") -> Destination.Website(FRIENDS_PATH)
+            challenge > 0 -> Destination.Challenges(challenge)
+            kind.startsWith("challenge_") -> Destination.Challenges()
             kind in weekly -> Destination.Website(WEEK_PATH)
             kind in feed -> Destination.Activity
             kind.startsWith("friend_") || kind.startsWith("group_") -> Destination.Friends
@@ -66,7 +70,7 @@ object AnkiquestNavigation {
             intent.action == Intent.ACTION_MAIN &&
             intent.data == null
 
-    /** The website page for one friend goal. */
+    /** The website page for one friend goal, for servers without the native screen's endpoint. */
     fun challengePath(id: Long): String = "/community#challenge-$id"
 
     /** Where a bottom navigation item leads; null for Decks, the deck list itself. */

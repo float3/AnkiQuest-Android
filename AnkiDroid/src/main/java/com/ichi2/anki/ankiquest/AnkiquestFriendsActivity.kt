@@ -626,7 +626,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         startActivity(AnkiquestActivity.intent(this, "/#" + Uri.encode(person.user), account?.notificationAccount))
 
     /** Friend goals, on the website until they are native. */
-    private fun openFriendGoals() = startActivity(AnkiquestActivity.intent(this, AnkiquestNavigation.FRIENDS_PATH))
+    private fun openFriendGoals() = startActivity(AnkiquestChallengesActivity.intent(this))
 
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
 
