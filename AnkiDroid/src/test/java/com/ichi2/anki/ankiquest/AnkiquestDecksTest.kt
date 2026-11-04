@@ -89,6 +89,8 @@ class AnkiquestDecksTest : RobolectricTest() {
 
     @Test
     fun `learning after rollover is excluded`() {
+        // Same as above: a card due just after rollover would count as due now near rollover.
+        col.config.set("collapseTime", 0)
         val card = addBasicNote().firstCard()
         card.queue = QueueType.Lrn
         card.type = CardType.Lrn
