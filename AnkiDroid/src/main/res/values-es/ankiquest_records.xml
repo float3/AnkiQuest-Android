@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_records_title">Récords</string>
+    <string name="aq_records_refresh">Actualizar récords</string>
+    <string name="aq_records_loading">Cargando récords…</string>
+    <string name="aq_records_lead">Récords que vale la pena perseguir.</string>
+    <string name="aq_records_intro">Las mejores marcas personales se convierten en hitos compartidos. Celebra las sesiones, rachas y días de estudio que subieron el listón.</string>
+    <string name="aq_records_connect">Conecta AnkiQuest para ver los récords que tú y tus amigos habéis conseguido.</string>
+    <string name="aq_records_scope_circle">Amigos y grupos</string>
+    <string name="aq_records_scope_global">Todos</string>
+    <string name="aq_records_best_hour">Mejor hora</string>
+    <string name="aq_records_best_day">Mejores 24 horas</string>
+    <string name="aq_records_best_week">Mejores 7 días</string>
+    <string name="aq_records_best_month">Mejores 30 días</string>
+    <string name="aq_records_best_year">Mejores 365 días</string>
+    <string name="aq_records_ended">Terminó el %1$s</string>
+    <string name="aq_records_since">Desde el %1$s</string>
+    <string name="aq_records_xp">%1$s XP</string>
+    <plurals name="aq_records_days">
+        <item quantity="one">%1$s día</item>
+        <item quantity="other">%1$s días</item>
+    </plurals>
+    <plurals name="aq_records_reviews">
+        <item quantity="one">%1$s repaso</item>
+        <item quantity="other">%1$s repasos</item>
+    </plurals>
+    <string name="aq_records_you">%1$s (tú)</string>
+    <string name="aq_records_holder">Récord: %1$s, %2$s</string>
+    <string name="aq_records_chaser">Puesto %1$d: %2$s, %3$s, a %4$s</string>
+    <string name="aq_records_empty">Nadie ha ganado XP todavía.</string>
+    <string name="aq_records_empty_hint">Un nuevo récord empieza con una sesión.</string>
+    <string name="aq_records_offline">No se pudo conectar. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="aq_records_server_error">No se pudieron cargar los récords. Prueba a actualizar.</string>
+
+    <string name="aq_history_title">Historial de estudio</string>
+    <string name="aq_history_refresh">Actualizar historial de estudio</string>
+    <string name="aq_history_loading">Cargando tu historial de estudio…</string>
+    <string name="aq_history_intro">Cada día que estudiaste suma a tu historia.</string>
+    <string name="aq_history_connect">Conecta AnkiQuest para ver tu calendario de estudio.</string>
+    <string name="aq_history_year">Año de estudio</string>
+    <string name="aq_history_updated">Datos de estudio actualizados: %1$s</string>
+    <string name="aq_history_latest_review">Último repaso subido: %1$s</string>
+    <string name="aq_history_no_reviews">Aún no se han subido repasos.</string>
+    <string name="aq_history_year_reviews">Repasos en %1$d</string>
+    <string name="aq_history_year_days">Días de estudio en %1$d</string>
+    <string name="aq_history_year_xp">XP ganada en %1$d</string>
+    <string name="aq_history_calendar">%1$d, día a día</string>
+    <string name="aq_history_choose">Elige un día</string>
+    <string name="aq_history_choose_hint">Selecciona un cuadro para ver qué pasó ese día.</string>
+    <string name="aq_history_frozen">Racha protegida</string>
+    <string name="aq_history_reviews">repasos</string>
+    <string name="aq_history_minutes">minutos de estudio</string>
+    <string name="aq_history_xp">XP ganada</string>
+    <string name="aq_history_new_cards">tarjetas nuevas</string>
+    <string name="aq_history_streak">días de racha</string>
+    <string name="aq_history_day_hint">Estos totales reflejan los repasos subidos a AnkiQuest.</string>
+    <string name="aq_history_day_empty">No hay repasos registrados para este día.</string>
+    <string name="aq_history_empty">Todavía no hay días de estudio este año.</string>
+    <string name="aq_history_empty_hint">Tu calendario se irá llenando a medida que se suban repasos.</string>
+    <string name="aq_history_cutoff">Un día sigue tu hora de cambio de día en Anki. Son repasos subidos, así que otro dispositivo puede tener actividad más reciente hasta que sincronice.</string>
+    <string name="aq_history_server_error">No se pudo cargar tu historial de estudio. Prueba a actualizar.</string>
+</resources>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_records_title">Rekorde</string>
+    <string name="aq_records_refresh">Rekorde aktualisieren</string>
+    <string name="aq_records_loading">Rekorde werden geladen…</string>
+    <string name="aq_records_lead">Rekorde, die sich lohnen.</string>
+    <string name="aq_records_intro">Persönliche Bestleistungen werden zu gemeinsamen Meilensteinen. Feiere die Sitzungen, Serien und Lerntage, die die Messlatte höher gelegt haben.</string>
+    <string name="aq_records_connect">Verbinde AnkiQuest, um die Rekorde von dir und deinen Freunden zu sehen.</string>
+    <string name="aq_records_scope_circle">Freunde und Gruppen</string>
+    <string name="aq_records_scope_global">Alle</string>
+    <string name="aq_records_best_hour">Beste Stunde</string>
+    <string name="aq_records_best_day">Beste 24 Stunden</string>
+    <string name="aq_records_best_week">Beste 7 Tage</string>
+    <string name="aq_records_best_month">Beste 30 Tage</string>
+    <string name="aq_records_best_year">Beste 365 Tage</string>
+    <string name="aq_records_ended">Endete am %1$s</string>
+    <string name="aq_records_since">Seit %1$s</string>
+    <string name="aq_records_xp">%1$s XP</string>
+    <plurals name="aq_records_days">
+        <item quantity="one">%1$s Tag</item>
+        <item quantity="other">%1$s Tage</item>
+    </plurals>
+    <plurals name="aq_records_reviews">
+        <item quantity="one">%1$s Wiederholung</item>
+        <item quantity="other">%1$s Wiederholungen</item>
+    </plurals>
+    <string name="aq_records_you">%1$s (du)</string>
+    <string name="aq_records_holder">Rekord: %1$s, %2$s</string>
+    <string name="aq_records_chaser">Platz %1$d: %2$s, %3$s, %4$s dahinter</string>
+    <string name="aq_records_empty">Noch hat niemand XP gesammelt.</string>
+    <string name="aq_records_empty_hint">Ein neuer Rekord beginnt mit einer Sitzung.</string>
+    <string name="aq_records_offline">Keine Verbindung. Prüfe deine Verbindung und versuche es erneut.</string>
+    <string name="aq_records_server_error">Die Rekorde konnten nicht geladen werden. Versuche es mit Aktualisieren.</string>
+
+    <string name="aq_history_title">Lernverlauf</string>
+    <string name="aq_history_refresh">Lernverlauf aktualisieren</string>
+    <string name="aq_history_loading">Dein Lernverlauf wird geladen…</string>
+    <string name="aq_history_intro">Jeder Tag, an dem du gelernt hast, schreibt deine Geschichte weiter.</string>
+    <string name="aq_history_connect">Verbinde AnkiQuest, um deinen Lernkalender zu sehen.</string>
+    <string name="aq_history_year">Lernjahr</string>
+    <string name="aq_history_updated">Lerndaten aktualisiert: %1$s</string>
+    <string name="aq_history_latest_review">Neueste hochgeladene Wiederholung: %1$s</string>
+    <string name="aq_history_no_reviews">Noch keine Wiederholungen hochgeladen.</string>
+    <string name="aq_history_year_reviews">Wiederholungen %1$d</string>
+    <string name="aq_history_year_days">Lerntage %1$d</string>
+    <string name="aq_history_year_xp">XP %1$d</string>
+    <string name="aq_history_calendar">%1$d, Tag für Tag</string>
+    <string name="aq_history_choose">Wähle einen Tag</string>
+    <string name="aq_history_choose_hint">Wähle ein Feld, um zu sehen, was an diesem Tag passiert ist.</string>
+    <string name="aq_history_frozen">Serie geschützt</string>
+    <string name="aq_history_reviews">Wiederholungen</string>
+    <string name="aq_history_minutes">Minuten gelernt</string>
+    <string name="aq_history_xp">XP verdient</string>
+    <string name="aq_history_new_cards">neue Karten</string>
+    <string name="aq_history_streak">Tage Serie</string>
+    <string name="aq_history_day_hint">Diese Summen zeigen die zu AnkiQuest hochgeladenen Wiederholungen.</string>
+    <string name="aq_history_day_empty">Für diesen Tag sind keine Wiederholungen erfasst.</string>
+    <string name="aq_history_empty">In diesem Jahr gibt es noch keine Lerntage.</string>
+    <string name="aq_history_empty_hint">Dein Kalender füllt sich, sobald Wiederholungen hochgeladen werden.</string>
+    <string name="aq_history_cutoff">Ein Tag richtet sich nach deinem Anki-Tageswechsel. Es sind hochgeladene Wiederholungen, ein anderes Gerät kann also neuere Aktivität haben, bis es synchronisiert.</string>
+    <string name="aq_history_server_error">Dein Lernverlauf konnte nicht geladen werden. Versuche es mit Aktualisieren.</string>
+</resources>

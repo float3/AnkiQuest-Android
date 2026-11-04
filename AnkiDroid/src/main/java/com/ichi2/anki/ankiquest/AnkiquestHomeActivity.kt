@@ -48,7 +48,8 @@ import java.io.File
 import java.io.IOException
 
 /**
- * The daily study surface is native and local. Activity is native too ([AnkiquestFeedActivity]);
+ * The daily study surface is native and local. Activity is native too ([AnkiquestFeedActivity]), as
+ * are study history ([AnkiquestHistoryActivity]) and records ([AnkiquestRecordsActivity]);
  * friends and progress are the website's community pages, opened in [AnkiquestActivity].
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
@@ -315,6 +316,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     if (quest.optBoolean("done")) text(panel, getString(R.string.aq_home_quest_done, quest.optLong("reward")), small = true)
                 }
             }
+        }
+        if (account != null) {
+            button(content, R.string.aq_history_title) { startActivity(AnkiquestHistoryActivity.intent(this)) }
+            button(content, R.string.aq_records_title) { startActivity(AnkiquestRecordsActivity.intent(this)) }
         }
         profileFailure?.let { failure ->
             text(content, getString(failure), small = true)

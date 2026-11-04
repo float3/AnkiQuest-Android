@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_records_title">Records</string>
+    <string name="aq_records_refresh">Actualiser les records</string>
+    <string name="aq_records_loading">Chargement des records…</string>
+    <string name="aq_records_lead">Des records à battre.</string>
+    <string name="aq_records_intro">Les records personnels deviennent des étapes partagées. Célébrez les sessions, séries et jours d’étude qui ont placé la barre plus haut.</string>
+    <string name="aq_records_connect">Connectez AnkiQuest pour voir les records établis par vous et vos amis.</string>
+    <string name="aq_records_scope_circle">Amis et groupes</string>
+    <string name="aq_records_scope_global">Tout le monde</string>
+    <string name="aq_records_best_hour">Meilleure heure</string>
+    <string name="aq_records_best_day">Meilleures 24 heures</string>
+    <string name="aq_records_best_week">Meilleurs 7 jours</string>
+    <string name="aq_records_best_month">Meilleurs 30 jours</string>
+    <string name="aq_records_best_year">Meilleurs 365 jours</string>
+    <string name="aq_records_ended">Terminée le %1$s</string>
+    <string name="aq_records_since">Depuis le %1$s</string>
+    <string name="aq_records_xp">%1$s XP</string>
+    <plurals name="aq_records_days">
+        <item quantity="one">%1$s jour</item>
+        <item quantity="other">%1$s jours</item>
+    </plurals>
+    <plurals name="aq_records_reviews">
+        <item quantity="one">%1$s révision</item>
+        <item quantity="other">%1$s révisions</item>
+    </plurals>
+    <string name="aq_records_you">%1$s (vous)</string>
+    <string name="aq_records_holder">Record : %1$s, %2$s</string>
+    <string name="aq_records_chaser">Place %1$d : %2$s, %3$s, %4$s derrière</string>
+    <string name="aq_records_empty">Personne n’a encore gagné d’XP.</string>
+    <string name="aq_records_empty_hint">Un nouveau record commence par une session.</string>
+    <string name="aq_records_offline">Connexion impossible. Vérifiez votre connexion et réessayez.</string>
+    <string name="aq_records_server_error">Les records n’ont pas pu être chargés. Essayez d’actualiser.</string>
+
+    <string name="aq_history_title">Historique d’étude</string>
+    <string name="aq_history_refresh">Actualiser l’historique d’étude</string>
+    <string name="aq_history_loading">Chargement de votre historique d’étude…</string>
+    <string name="aq_history_intro">Chaque jour où vous avez étudié enrichit votre histoire.</string>
+    <string name="aq_history_connect">Connectez AnkiQuest pour voir votre calendrier d’étude.</string>
+    <string name="aq_history_year">Année d’étude</string>
+    <string name="aq_history_updated">Données d’étude mises à jour : %1$s</string>
+    <string name="aq_history_latest_review">Dernière révision envoyée : %1$s</string>
+    <string name="aq_history_no_reviews">Aucune révision envoyée pour l’instant.</string>
+    <string name="aq_history_year_reviews">Révisions en %1$d</string>
+    <string name="aq_history_year_days">Jours d’étude en %1$d</string>
+    <string name="aq_history_year_xp">XP gagnés en %1$d</string>
+    <string name="aq_history_calendar">%1$d, jour après jour</string>
+    <string name="aq_history_choose">Choisissez un jour</string>
+    <string name="aq_history_choose_hint">Sélectionnez une case pour voir ce qui s’est passé ce jour-là.</string>
+    <string name="aq_history_frozen">Série protégée</string>
+    <string name="aq_history_reviews">révisions</string>
+    <string name="aq_history_minutes">minutes d’étude</string>
+    <string name="aq_history_xp">XP gagnés</string>
+    <string name="aq_history_new_cards">nouvelles cartes</string>
+    <string name="aq_history_streak">jours de série</string>
+    <string name="aq_history_day_hint">Ces totaux reflètent les révisions envoyées à AnkiQuest.</string>
+    <string name="aq_history_day_empty">Aucune révision enregistrée pour ce jour.</string>
+    <string name="aq_history_empty">Pas encore de jour d’étude cette année.</string>
+    <string name="aq_history_empty_hint">Votre calendrier se remplit à mesure que les révisions sont envoyées.</string>
+    <string name="aq_history_cutoff">Un jour suit votre heure de changement de jour dans Anki. Ce sont les révisions envoyées : un autre appareil peut avoir une activité plus récente jusqu’à sa synchronisation.</string>
+    <string name="aq_history_server_error">Votre historique d’étude n’a pas pu être chargé. Essayez d’actualiser.</string>
+</resources>
