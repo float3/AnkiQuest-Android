@@ -2,10 +2,13 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.service.chooser.ChooserAction
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
@@ -259,6 +262,7 @@ class AnkiquestShareTest : RobolectricTest() {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun `the share sheet offers AnkiQuest friends next to the other apps`() {
         val share =
             Intent(targetContext, AnkiquestShareActivity::class.java)
@@ -279,6 +283,8 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Test
     @Config(sdk = [33])
+    // The extra name is a compile-time string, so checking it is absent on Android 13 is safe.
+    @SuppressLint("InlinedApi")
     fun `before Android 14 the share sheet is for other apps and friends are asked about first`() {
         assertFalse(AnkiquestShare.sheetOffersFriends())
         val friends = AnkiquestShare.friendsTarget(targetContext, Intent(targetContext, AnkiquestShareActivity::class.java))
