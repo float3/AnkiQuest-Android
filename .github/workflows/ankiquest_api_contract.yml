@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: ankiquest API contract
+
+on:
+  pull_request:
+  push:
+    branches: [ankiquest]
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      server_ref:
+        description: "float3/ankiquest branch, tag or commit whose API examples to check against"
+        required: true
+        default: master
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+
+jobs:
+  contract:
+    name: API contract
+    if: github.event_name != 'schedule' || github.repository == 'float3/AnkiQuest-Android'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: float3/ankiquest
+          ref: ${{ inputs.server_ref || 'master' }}
+          path: server
+          persist-credentials: false
+
+      - name: Use the server's current examples
+        shell: bash
+        run: |
+          examples=server/docs/api/examples
+          resources=AnkiDroid/src/test/resources/ankiquest-api
+          if [ -d "$examples" ]; then
+            find "$resources" -name '*.json' -delete
+            cp "$examples"/*.json "$resources"/
+            git status --short -- "$resources"
+          else
+            echo "The server at this ref has no $examples; checking the committed snapshot"
+          fi
+
+      - name: Configure JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: "jetbrains"
+          java-version: "21"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        timeout-minutes: 10
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ github.ref != 'refs/heads/ankiquest' }}
+
+      - name: Gradle Dependency Download
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 10
+          retry_wait_seconds: 60
+          max_attempts: 3
+          command: ./gradlew robolectricSdkDownload --daemon
+
+      - name: Run the contract test
+        run: ./gradlew :AnkiDroid:testFullDebugUnitTest --tests 'com.ichi2.anki.ankiquest.AnkiquestApiContractTest' --daemon
+
+      - name: Report Unit Test Results
+        if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''
+        run: python3 .github/report_test_failures.py . --pattern "build/test-results/**/TEST-*.xml" --title "API contract failures"
+
+      - name: Check the app's art against the server's exporter
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          if [ -f server/tools/export_android_art.py ]; then
+            python3 -m venv "$RUNNER_TEMP/art"
+            "$RUNNER_TEMP/art/bin/pip" install --quiet pillow
+            "$RUNNER_TEMP/art/bin/python" server/tools/export_android_art.py --check .
+          else
+            echo "The server at this ref has no tools/export_android_art.py"
+          fi
