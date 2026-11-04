@@ -26,13 +26,17 @@ env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
 
 jobs:
-  contract:
-    name: API contract
+  # Everything from the server checkout runs here, in a job with no cache, so it
+  # can never reach the shared Gradle cache. The contract job gets the examples as data.
+  server:
+    name: Server examples and art
     if: github.event_name != 'schedule' || github.repository == 'float3/AnkiQuest-Android'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,17 +45,51 @@ jobs:
           path: server
           persist-credentials: false
 
+      - name: Keep the server's current examples
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: server-api-examples
+          path: server/docs/api/examples/*.json
+          if-no-files-found: warn
+          retention-days: 1
+
+      - name: Check the app's art against the server's exporter
+        shell: bash
+        run: |
+          if [ -f server/tools/export_android_art.py ]; then
+            python3 -m venv "$RUNNER_TEMP/art"
+            "$RUNNER_TEMP/art/bin/pip" install --quiet pillow
+            "$RUNNER_TEMP/art/bin/python" server/tools/export_android_art.py --check .
+          else
+            echo "The server at this ref has no tools/export_android_art.py"
+          fi
+
+  contract:
+    name: API contract
+    needs: server
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download the server's current examples
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: server-api-examples
+          path: ${{ runner.temp }}/server-api-examples
+
       - name: Use the server's current examples
         shell: bash
         run: |
-          examples=server/docs/api/examples
+          examples="$RUNNER_TEMP/server-api-examples"
           resources=AnkiDroid/src/test/resources/ankiquest-api
-          if [ -d "$examples" ]; then
+          if compgen -G "$examples/*.json" > /dev/null; then
             find "$resources" -name '*.json' -delete
             cp "$examples"/*.json "$resources"/
             git status --short -- "$resources"
           else
-            echo "The server at this ref has no $examples; checking the committed snapshot"
+            echo "The server at this ref has no docs/api/examples; checking the committed snapshot"
           fi
 
       - name: Configure JDK
@@ -67,8 +105,7 @@ jobs:
         timeout-minutes: 10
         with:
           cache-provider: basic
-          # Never save: this job runs code from the server checkout, which must not reach the shared cache.
-          cache-read-only: true
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Gradle Dependency Download
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
@@ -84,15 +121,3 @@ jobs:
       - name: Report Unit Test Results
         if: always() && hashFiles('**/build/test-results/**/TEST-*.xml') != ''
         run: python3 .github/report_test_failures.py . --pattern "build/test-results/**/TEST-*.xml" --title "API contract failures"
-
-      - name: Check the app's art against the server's exporter
-        if: ${{ !cancelled() }}
-        shell: bash
-        run: |
-          if [ -f server/tools/export_android_art.py ]; then
-            python3 -m venv "$RUNNER_TEMP/art"
-            "$RUNNER_TEMP/art/bin/pip" install --quiet pillow
-            "$RUNNER_TEMP/art/bin/python" server/tools/export_android_art.py --check .
-          else
-            echo "The server at this ref has no tools/export_android_art.py"
-          fi
