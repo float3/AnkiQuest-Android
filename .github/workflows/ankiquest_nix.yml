@@ -1,4 +1,4 @@
-name: Nix
+name: ankiquest Nix
 
 # Builds and tests through the flake's dev shell inside the nixos/nix image.
 # That image has no /lib64 loader or /usr/lib, like NixOS, so anything Gradle
@@ -12,18 +12,17 @@ on:
       - 'gradle.properties'
       - '**/*.gradle.kts'
       - 'buildSrc/**'
-      - '.github/workflows/nix.yml'
+      - '.github/workflows/ankiquest_nix.yml'
   push:
     branches:
       - ankiquest
-      - main
     paths:
       - 'flake.*'
       - 'gradle/**'
       - 'gradle.properties'
       - '**/*.gradle.kts'
       - 'buildSrc/**'
-      - '.github/workflows/nix.yml'
+      - '.github/workflows/ankiquest_nix.yml'
 
 permissions:
   contents: read

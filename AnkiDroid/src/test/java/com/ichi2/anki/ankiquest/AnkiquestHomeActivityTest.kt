@@ -113,7 +113,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @Test
     fun `rejected credentials point to settings`() {
-        coEvery { AnkiquestHomeData.profile(identity) } throws Ankiquest.HttpStatusException(401)
+        coEvery { AnkiquestHomeData.profile(identity) } throws AnkiquestHttpException(401)
         val home = launch()
         assertTrue(home.hasText(home.getString(R.string.aq_home_auth)))
         assertTrue(home.hasText(home.getString(R.string.aq_home_settings)))
