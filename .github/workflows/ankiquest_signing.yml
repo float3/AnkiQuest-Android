@@ -8,7 +8,7 @@ on:
       - tools/ankiquest-signing-lineage.bin
       - .github/workflows/ankiquest_signing.yml
   push:
-    branches: [ankiquest]
+    branches: [main]
     paths:
       - tools/ankiquest-signing-lineage.bin
       - .github/workflows/ankiquest_signing.yml

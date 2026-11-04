@@ -30,6 +30,8 @@ androidxActivity = "1.12.4"
 androidxAnnotation = "1.11.0"
 # https://developer.android.com/jetpack/androidx/releases/appcompat
 androidxAppCompat = "1.8.0"
+# https://developer.android.com/jetpack/androidx/releases/arch-core
+androidxArchCore = "2.2.0"
 # https://developer.android.com/jetpack/androidx/releases/benchmark
 androidxBenchmark = "1.5.0"
 # https://developer.android.com/jetpack/androidx/releases/browser
@@ -74,7 +76,7 @@ androidxWebkit = "1.16.0"
 # https://developer.android.com/jetpack/androidx/releases/work
 androidxWork = "2.12.0"
 # https://github.com/ankidroid/Anki-Android-Backend/
-ankiBackend = '0.1.75-anki26.09.3' # Also update expectedPolicy in PageWebViewClientAssetTest
+ankiBackend = '0.1.76-anki26.09.3' # Also update expectedPolicy in PageWebViewClientAssetTest
 autoService = "1.1.1"
 autoServiceAnnotations = "1.1.1"
 # https://github.com/skydoves/ColorPickerView/releases
@@ -114,7 +116,6 @@ material = "1.14.0"
 mockitoInline = "5.2.0"
 mockitoKotlin = "6.4.0"
 mockk = "1.14.11"
-nanohttpd = "2.3.1"
 okhttp = "5.5.0"
 # https://github.com/JakeWharton/ProcessPhoenix/releases
 processPhoenix = "3.0.0"
@@ -149,6 +150,7 @@ androidx-fragment-ktx = { module = "androidx.fragment:fragment-ktx", version.ref
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "androidxExifinterface" }
 androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 androidx-core-remoteviews = { module = "androidx.core:core-remoteviews", version.ref = "androidxCoreRemoteViews" }
+androidx-arch-core-testing = { module = "androidx.arch.core:core-testing", version.ref = "androidxArchCore" }
 androidx-concurrent-futures-ktx = { module = "androidx.concurrent:concurrent-futures-ktx", version.ref = "androidxConcurrent" }
 androidx-draganddrop = { module = "androidx.draganddrop:draganddrop", version.ref = "androidxDragAndDrop" }
 androidx-browser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
@@ -192,6 +194,7 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 desugar-jdk-libs-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugar-jdk-libs-nio" }
 drakeet-drawer = { module = "com.drakeet.drawer:drawer", version.ref = "drawer" }
 ankiBackend-backend = { module = "io.github.david-allison:anki-backend-android", version.ref = "ankiBackend" }
+ankiBackend-core = { module = "io.github.david-allison:anki-backend-core", version.ref = "ankiBackend" }
 ankiBackend-testing = { module = "io.github.david-allison:anki-android-backend-testing", version.ref = "ankiBackend" }
 java-semver = { module = "com.github.zafarkhaja:java-semver", version.ref = "javaSemver" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
@@ -200,7 +203,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanaryAndroid" }
 google-material = { module = "com.google.android.material:material", version.ref = "material" }
-nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanohttpd" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 android-lint-api = { module = "com.android.tools.lint:lint-api", version.ref = "lint" }
 android-lint = { module = "com.android.tools.lint:lint", version.ref = "lint" }

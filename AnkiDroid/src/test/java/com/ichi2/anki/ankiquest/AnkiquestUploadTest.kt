@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Data
 import anki.scheduler.CardAnswer.Rating
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.CollectionOperation
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -261,6 +263,35 @@ class AnkiquestUploadTest : RobolectricTest() {
             assertFalse(reviewUpload().has("decks"))
             assertEquals(0, reviewUpload().getJSONArray("reviews").length())
             assertTrue(reviewUpload().getBoolean("silent"))
+        }
+
+    @Test
+    fun `reviews answered offline are uploaded by the background poll once`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+
+            assertEquals(1, reviewUpload().getJSONArray("reviews").length())
+            assertEquals("Bearer first-token", requests.single { it.path == "/api/reviews/cerro" }.authorization)
+            requests.clear()
+
+            Ankiquest.uploadPending()
+
+            assertEquals(0, reviewUpload().getJSONArray("reviews").length())
+        }
+
+    @Test
+    fun `the background poll uploads nothing without a token or while a sync holds the collection`() =
+        runBlocking {
+            configureAccount("cerro", "")
+            Ankiquest.uploadPending()
+            assertTrue(requests.isEmpty(), "a public preview stores nothing, so the poll has nothing to send")
+
+            configureAccount("cerro", "first-token")
+            CollectionManager.withLeaseForTest(CollectionOperation.SYNC) { Ankiquest.uploadPending() }
+            assertTrue(requests.isEmpty())
+
+            Ankiquest.uploadPending()
+            assertEquals(1, reviewUpload().getJSONArray("reviews").length())
         }
 
     @Test

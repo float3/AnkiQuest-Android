@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const workflow = name => fs.readFileSync(path.join(__dirname, `../workflows/${name}.yml`), 'utf8');
-const compare = workflow('screenshot_compare');
+const compare = workflow('ankiquest_screenshot_compare');
 
 function step(source, name) {
   const start = source.indexOf(`      - name: ${name}\n`);
@@ -31,14 +31,12 @@ test('comparison selects the PR base branch or the pushed branch', () => {
   const expression = download.match(/branch: \$\{\{ (.+) \}\}/)[1];
   const selectBranch = new Function('github', `return ${expression};`);
   for (const [event, ref, base, expected] of [
-    ['pull_request', '42/merge', 'ankiquest', 'ankiquest'],
     ['pull_request', '42/merge', 'main', 'main'],
     ['push', 'main', undefined, 'main'],
-    ['push', 'ankiquest', undefined, 'ankiquest'],
   ]) {
     assert.equal(selectBranch({
       event_name: event, ref_name: ref,
-      event: { pull_request: { base: { ref: base } }, repository: { default_branch: 'ankiquest' } },
+      event: { pull_request: { base: { ref: base } }, repository: { default_branch: 'main' } },
     }), expected);
   }
 });

@@ -54,6 +54,9 @@ class AnkiquestPollTest : RobolectricTest() {
     private var avatarStatus = 200
 
     @Volatile
+    private var reviewStatus = 200
+
+    @Volatile
     private var switchAccountDuringAvatars = false
 
     @Volatile
@@ -97,6 +100,7 @@ class AnkiquestPollTest : RobolectricTest() {
                     inbox -> inboxStatus
                     path == "/api/leaderboard" -> leaderboardStatus
                     path == "/api/avatars" -> avatarStatus
+                    path.startsWith("/api/reviews/") -> reviewStatus
                     else -> 200
                 }
             val response =
@@ -135,6 +139,27 @@ class AnkiquestPollTest : RobolectricTest() {
 
             assertEquals(Result.success(), worker().doWork())
 
+            verify(exactly = 1) { AnkiquestNotifier.onDeckCompletions(any(), "$url/cerro", any(), any()) }
+        }
+
+    @Test
+    fun `pending reviews are uploaded before scores are fetched`() =
+        runBlocking {
+            assertEquals(Result.success(), worker().doWork())
+
+            val upload = requests.indexOf("/api/reviews/cerro")
+            assertTrue(upload >= 0)
+            assertTrue(upload < requests.indexOf("/api/leaderboard"))
+        }
+
+    @Test
+    fun `a failed upload does not stop polling`() =
+        runBlocking {
+            reviewStatus = 503
+
+            assertEquals(Result.success(), worker().doWork())
+
+            assertTrue(requests.contains("/api/reviews/cerro"))
             verify(exactly = 1) { AnkiquestNotifier.onDeckCompletions(any(), "$url/cerro", any(), any()) }
         }
 
@@ -242,7 +267,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
             assertEquals(Result.success(), worker().doWork())
 
-            assertTrue(requests.none { it.startsWith("/api/notifications/") })
+            assertTrue(requests.none { it.startsWith("/api/notifications/") || it.startsWith("/api/reviews/") })
             verify(exactly = 0) { AnkiquestNotifier.onDeckCompletions(any(), any(), any(), any()) }
         }
 
