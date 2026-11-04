@@ -412,10 +412,21 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
         /**
          * Examples the server already keeps for app screens still in review (records and history,
-         * friends and groups), counted only once the server has them. Each screen's pull request
-         * moves its names into [CONSUMED].
+         * friends and groups, account settings), counted only once the server has them. Each screen's
+         * pull request moves its names into [CONSUMED].
          */
         val NOT_YET =
-            setOf("records", "study", "social", "group_create", "invite", "social_change") - CONSUMED - UNUSED
+            setOf(
+                "records",
+                "study",
+                "social",
+                "group_create",
+                "invite",
+                "social_change",
+                "account",
+                "password_change",
+                "devices_sign_out",
+                "sign_in_methods",
+            ) - CONSUMED - UNUSED
     }
 }
