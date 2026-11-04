@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_refresh">Atualizar a classificação</string>
+    <string name="aq_board_loading">A carregar a classificação…</string>
+    <string name="aq_board_connect">Liga o AnkiQuest para veres a classificação e o progresso dos teus amigos.</string>
+    <string name="aq_board_hour">Hora</string>
+    <string name="aq_board_week">Semana</string>
+    <string name="aq_board_month">Mês</string>
+    <string name="aq_board_year">Ano</string>
+    <string name="aq_board_all">No total</string>
+    <string name="aq_board_xp_in">XP %1$s</string>
+    <string name="aq_board_resets">Recomeça %1$s</string>
+    <string name="aq_board_empty">Ainda ninguém enviou revisões.</string>
+    <string name="aq_board_no_xp">Ainda não há XP neste período.</string>
+    <string name="aq_board_you">%1$s (tu)</string>
+    <string name="aq_board_your_place">Estás no lugar %1$d de %2$d.</string>
+    <string name="aq_board_xp">%1$s XP</string>
+    <string name="aq_board_today_reviews">%1$s hoje</string>
+    <string name="aq_board_row_description">Lugar %1$d: %2$s, nível %3$d, %4$s XP</string>
+    <string name="aq_board_my_profile">O teu perfil</string>
+    <string name="aq_board_offline">Não foi possível ligar. Verifica a ligação e atualiza.</string>
+    <string name="aq_board_server_error">Não foi possível carregar. Tenta atualizar.</string>
+    <string name="aq_board_account_changed">Esta notificação é de outra conta. Em vez disso, mostra-se a classificação desta conta.</string>
+    <string name="aq_profile_title">Perfil</string>
+    <string name="aq_profile_refresh">Atualizar o perfil</string>
+    <string name="aq_profile_loading">A carregar o perfil…</string>
+    <string name="aq_profile_hidden">Este perfil é privado ou a pessoa não está neste servidor.</string>
+    <string name="aq_profile_level">Nível %1$d</string>
+    <string name="aq_profile_level_progress">%1$s / %2$s XP até ao nível %3$d · %4$s XP no total</string>
+    <string name="aq_profile_at_risk">A tua sequência de %1$d dias espera pelas revisões de hoje.</string>
+    <string name="aq_profile_at_risk_minutes">A tua sequência de %1$d dias espera: %2$d de %3$d minutos hoje.</string>
+    <string name="aq_profile_streak">Dias seguidos</string>
+    <string name="aq_profile_freezes">Proteções de sequência</string>
+    <string name="aq_profile_freezes_count">%1$d/3</string>
+    <string name="aq_profile_freezes_ready">Prontas para proteger a sequência</string>
+    <string name="aq_profile_freezes_paused">Proteção em pausa</string>
+    <string name="aq_profile_reviews_today">Revisões hoje</string>
+    <string name="aq_profile_xp_today">XP hoje</string>
+    <string name="aq_profile_periods">XP por período</string>
+    <string name="aq_profile_quest_done">✓ %1$s</string>
+    <string name="aq_profile_quest_progress">%1$s / %2$s · +%3$d XP</string>
+    <string name="aq_profile_wins">Conquistas recentes</string>
+    <string name="aq_profile_conquests">Cartões conquistados</string>
+    <string name="aq_profile_leech">Sanguessuga domada</string>
+    <string name="aq_profile_conquest">Cartão conquistado</string>
+    <string name="aq_profile_bests">Melhores marcas</string>
+    <string name="aq_profile_best_hour">Melhor hora</string>
+    <string name="aq_profile_best_day">Melhores 24 horas</string>
+    <string name="aq_profile_best_week">Melhores 7 dias</string>
+    <string name="aq_profile_best_month">Melhores 30 dias</string>
+    <string name="aq_profile_best_year">Melhores 365 dias</string>
+    <string name="aq_profile_best_value">%1$s XP · %2$s revisões</string>
+    <string name="aq_profile_lifetime">Uma vida a aprender</string>
+    <string name="aq_profile_reviews">Revisões</string>
+    <string name="aq_profile_hours">Horas</string>
+    <string name="aq_profile_best_streak">Melhor sequência</string>
+    <string name="aq_profile_best_combo">Melhor combo</string>
+    <string name="aq_profile_achievements">Conquistas</string>
+    <string name="aq_profile_unlocked">%1$d de %2$d desbloqueadas</string>
+    <string name="aq_profile_achievement_unlocked">%1$s · +%2$d XP</string>
+    <string name="aq_profile_show_all">Ver todas as conquistas</string>
+    <string name="aq_profile_show_fewer">Ver menos conquistas</string>
+    <string name="aq_profile_leaderboard">Ver a classificação</string>
+    <plurals name="aq_profile_conquered">
+        <item quantity="one">%1$d cartão que teimava em fugir está finalmente aprendido.</item>
+        <item quantity="many">%1$d cartões que teimavam em fugir estão finalmente aprendidos.</item>
+        <item quantity="other">%1$d cartões que teimavam em fugir estão finalmente aprendidos.</item>
+    </plurals>
+    <plurals name="aq_profile_lapses">
+        <item quantity="one">Esquecido %1$d vez</item>
+        <item quantity="many">Esquecido %1$d vezes</item>
+        <item quantity="other">Esquecido %1$d vezes</item>
+    </plurals>
+    <plurals name="aq_profile_days">
+        <item quantity="one">%1$s dia</item>
+        <item quantity="many">%1$s dias</item>
+        <item quantity="other">%1$s dias</item>
+    </plurals>
+</resources>

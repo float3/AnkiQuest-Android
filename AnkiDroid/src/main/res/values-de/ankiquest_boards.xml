@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_refresh">Bestenliste aktualisieren</string>
+    <string name="aq_board_loading">Bestenliste wird geladen…</string>
+    <string name="aq_board_connect">Verbinde AnkiQuest, um die Bestenliste und den Fortschritt deiner Freunde zu sehen.</string>
+    <string name="aq_board_hour">Stunde</string>
+    <string name="aq_board_week">Woche</string>
+    <string name="aq_board_month">Monat</string>
+    <string name="aq_board_year">Jahr</string>
+    <string name="aq_board_all">Insgesamt</string>
+    <string name="aq_board_xp_in">XP %1$s</string>
+    <string name="aq_board_resets">Neustart %1$s</string>
+    <string name="aq_board_empty">Noch hat niemand Wiederholungen hochgeladen.</string>
+    <string name="aq_board_no_xp">In diesem Zeitraum gibt es noch keine XP.</string>
+    <string name="aq_board_you">%1$s (du)</string>
+    <string name="aq_board_your_place">Du bist auf Platz %1$d von %2$d.</string>
+    <string name="aq_board_xp">%1$s XP</string>
+    <string name="aq_board_today_reviews">%1$s heute</string>
+    <string name="aq_board_row_description">Platz %1$d: %2$s, Level %3$d, %4$s XP</string>
+    <string name="aq_board_my_profile">Dein Profil</string>
+    <string name="aq_board_offline">Keine Verbindung. Prüfe deine Verbindung und aktualisiere.</string>
+    <string name="aq_board_server_error">Das konnte nicht geladen werden. Versuche es erneut.</string>
+    <string name="aq_board_account_changed">Diese Benachrichtigung gehört zu einem anderen Konto. Stattdessen wird die Bestenliste dieses Kontos angezeigt.</string>
+    <string name="aq_profile_title">Profil</string>
+    <string name="aq_profile_refresh">Profil aktualisieren</string>
+    <string name="aq_profile_loading">Profil wird geladen…</string>
+    <string name="aq_profile_hidden">Das Profil ist privat, oder es gibt diese Person auf diesem Server nicht.</string>
+    <string name="aq_profile_level">Level %1$d</string>
+    <string name="aq_profile_level_progress">%1$s / %2$s XP bis Level %3$d · %4$s XP insgesamt</string>
+    <string name="aq_profile_at_risk">Deine Serie von %1$d Tagen wartet auf die heutigen Wiederholungen.</string>
+    <string name="aq_profile_at_risk_minutes">Deine Serie von %1$d Tagen wartet: %2$d von %3$d Minuten heute.</string>
+    <string name="aq_profile_streak">Tage in Folge</string>
+    <string name="aq_profile_freezes">Serienschutz</string>
+    <string name="aq_profile_freezes_count">%1$d/3</string>
+    <string name="aq_profile_freezes_ready">Bereit, die Serie zu schützen</string>
+    <string name="aq_profile_freezes_paused">Schutz pausiert</string>
+    <string name="aq_profile_reviews_today">Wiederholungen heute</string>
+    <string name="aq_profile_xp_today">XP heute</string>
+    <string name="aq_profile_periods">XP nach Zeitraum</string>
+    <string name="aq_profile_quest_done">✓ %1$s</string>
+    <string name="aq_profile_quest_progress">%1$s / %2$s · +%3$d XP</string>
+    <string name="aq_profile_wins">Letzte Erfolge</string>
+    <string name="aq_profile_conquests">Hart erkämpfte Karten</string>
+    <string name="aq_profile_leech">Lernbremse gezähmt</string>
+    <string name="aq_profile_conquest">Karte gemeistert</string>
+    <string name="aq_profile_bests">Persönliche Bestwerte</string>
+    <string name="aq_profile_best_hour">Beste Stunde</string>
+    <string name="aq_profile_best_day">Beste 24 Stunden</string>
+    <string name="aq_profile_best_week">Beste 7 Tage</string>
+    <string name="aq_profile_best_month">Beste 30 Tage</string>
+    <string name="aq_profile_best_year">Beste 365 Tage</string>
+    <string name="aq_profile_best_value">%1$s XP · %2$s Wiederholungen</string>
+    <string name="aq_profile_lifetime">Ein Leben lang lernen</string>
+    <string name="aq_profile_reviews">Wiederholungen</string>
+    <string name="aq_profile_hours">Stunden</string>
+    <string name="aq_profile_best_streak">Beste Serie</string>
+    <string name="aq_profile_best_combo">Bester Combo</string>
+    <string name="aq_profile_achievements">Erfolge</string>
+    <string name="aq_profile_unlocked">%1$d von %2$d freigeschaltet</string>
+    <string name="aq_profile_achievement_unlocked">%1$s · +%2$d XP</string>
+    <string name="aq_profile_show_all">Alle Erfolge zeigen</string>
+    <string name="aq_profile_show_fewer">Weniger Erfolge zeigen</string>
+    <string name="aq_profile_leaderboard">Zur Bestenliste</string>
+    <plurals name="aq_profile_conquered">
+        <item quantity="one">Eine Karte, die immer wieder entglitt, sitzt endlich.</item>
+        <item quantity="other">%1$d Karten, die immer wieder entglitten, sitzen endlich.</item>
+    </plurals>
+    <plurals name="aq_profile_lapses">
+        <item quantity="one">Einmal vergessen</item>
+        <item quantity="other">%1$d-mal vergessen</item>
+    </plurals>
+    <plurals name="aq_profile_days">
+        <item quantity="one">%1$s Tag</item>
+        <item quantity="other">%1$s Tage</item>
+    </plurals>
+</resources>

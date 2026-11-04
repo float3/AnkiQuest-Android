@@ -32,6 +32,8 @@ import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
 import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
+import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
+import com.ichi2.anki.ankiquest.AnkiquestProfileActivity
 import com.ichi2.anki.ankiquest.AnkiquestShare
 import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
@@ -140,6 +142,8 @@ object ActivityList {
                     .putExtra(AnkiquestShare.EXTRA_PLACE, 1)
             },
             get(AnkiquestWidgetConfig::class.java) { intentForWidgetConfig() },
+            get(AnkiquestLeaderboardActivity::class.java),
+            get(AnkiquestProfileActivity::class.java),
         )
 
     private fun intentForCardTemplateBrowserAppearanceEditor(): Intent {

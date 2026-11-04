@@ -521,8 +521,8 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals("▲ You're now #1", posted.extras.getString(Notification.EXTRA_TITLE))
                 assertEquals("You passed Hill.", posted.extras.getString(Notification.EXTRA_TEXT))
                 val open = shadowOf(posted.contentIntent).savedIntent
-                assertEquals(AnkiquestActivity::class.java.name, open.component?.className)
-                assertEquals("/week", open.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+                assertEquals(AnkiquestLeaderboardActivity::class.java.name, open.component?.className)
+                assertEquals("week", open.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
                 manager.cancelAll()
 
                 change = JSONObject.NULL

@@ -62,7 +62,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             val path = exchange.requestURI.path
             requests += "${exchange.requestMethod} $path"
             val sent = exchange.requestBody.bufferedReader().use { it.readText() }
-            val body = route(exchange.requestMethod, path, sent)?.let(::example)?.toByteArray(Charsets.UTF_8)
+            val body = route(exchange.requestMethod, path, sent, exchange.requestURI.query)?.let(::example)?.toByteArray(Charsets.UTF_8)
             exchange.responseHeaders.set("Content-Type", "application/json")
             if (body == null) {
                 exchange.sendResponseHeaders(404, -1)
@@ -97,8 +97,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
     fun `every example is either read by the app or known to be unused`() {
         val directory = File(assertNotNull(javaClass.classLoader?.getResource(EXAMPLES)).toURI())
         val examples = assertNotNull(directory.list()).filter { it.endsWith(".json") }.map { it.removeSuffix(".json") }.toSet()
-        assertEquals(CONSUMED + UNUSED, examples, "a new or removed example needs a check here")
+        assertEquals(CONSUMED + UNUSED + BOARDS + CHALLENGES, examples, "a new or removed example needs a check here")
         assertTrue((CONSUMED intersect UNUSED).isEmpty())
+        assertTrue(((CONSUMED + UNUSED) intersect BOARDS).isEmpty())
     }
 
     @Test
@@ -179,6 +180,39 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `the native leaderboard reads each period, the week and both kinds of profile`() =
+        runBlocking {
+            val week = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK)
+            assertEquals(listOf("hill", "cerro"), week.map { it.user })
+            assertEquals(listOf("Hill", "Cerro"), week.map { it.display })
+            assertEquals(listOf(101L, 31L), week.map { it.xp })
+            assertEquals(listOf("studied", "studied"), week.map { it.state })
+            assertEquals(listOf(5L, 3L), week.map { it.todayReviews })
+            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY)
+            assertEquals(listOf(101L, 31L), day.map { it.xp })
+            assertEquals(1_793_592_000_000L, AnkiquestBoards.weekEnds(account))
+
+            val own = AnkiquestBoards.player(account, "hill")
+            assertTrue(own.own)
+            assertEquals(2, own.profile.level)
+            assertEquals(101L, own.profile.xpTotal)
+            assertEquals(280L, own.profile.xpForNext)
+            assertEquals(3, own.profile.quests.size)
+            assertEquals(101L, own.profile.periods[AnkiquestBoards.Period.WEEK])
+            assertEquals(51L, own.profile.records[AnkiquestBoards.Period.HOUR]?.xp)
+            assertTrue(own.profile.achievements.isNotEmpty() && own.profile.achievements.all { it.title.isNotEmpty() })
+            assertTrue("Daily goal reached!" in own.wins.map { it.title })
+            assertTrue(own.wins.size <= AnkiquestBoards.WINS && own.wins.all { it.title.isNotEmpty() })
+
+            val other = AnkiquestBoards.player(account, "cerro")
+            assertFalse(other.own)
+            assertEquals("Cerro", other.profile.display)
+            assertEquals(1, other.profile.level)
+            assertTrue(other.wins.isEmpty())
+            assertEquals(1, requests.count { it == "GET /api/wins/hill" }, "only the player's own profile asks for wins")
+        }
+
+    @Test
     fun `a rank change is announced`() =
         runBlocking {
             AnkiquestNotifier.onLeaderboard(targetContext)
@@ -242,9 +276,14 @@ class AnkiquestApiContractTest : RobolectricTest() {
         method: String,
         path: String,
         sent: String,
+        query: String? = null,
     ): String? {
         val parts = path.removePrefix("/api/").split('/')
         return when {
+            path == "/api/leaderboard" && query.orEmpty().split('&').contains("period=day") -> "leaderboard_day"
+            path == "/api/week" -> "week"
+            path == "/api/profile/cerro" -> "player_profile"
+            parts.size == 2 && parts[0] == "wins" -> "wins"
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).optString("to") == "link" -> "share_to_link"
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
@@ -279,6 +318,12 @@ class AnkiquestApiContractTest : RobolectricTest() {
 
         val CONSUMED = ROUTES.values.toSet() + setOf("sign_up", "sign_in", "leaderboard", "share_to_link", "deck_share")
 
-        val UNUSED = setOf("capabilities", "devices", "mute", "wins")
+        val UNUSED = setOf("capabilities", "devices", "mute")
+
+        /** What the native leaderboard and profiles read. */
+        val BOARDS = setOf("leaderboard_day", "week", "player_profile", "wins")
+
+        /** The friend goals' examples, read by the native challenges screen; none once it has landed and lists them in [CONSUMED]. */
+        val CHALLENGES = setOf("challenges", "challenge_create", "challenge_action") - CONSUMED
     }
 }

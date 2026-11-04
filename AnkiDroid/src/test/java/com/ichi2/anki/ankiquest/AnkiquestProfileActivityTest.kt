@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+package com.ichi2.anki.ankiquest
+
+import android.view.View
+import android.widget.TextView
+import androidx.core.view.allViews
+import androidx.core.view.isVisible
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.preferences.PreferencesActivity
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import java.io.IOException
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [33], qualifiers = "w320dp-h640dp")
+class AnkiquestProfileActivityTest : RobolectricTest() {
+    private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
+    private val profile = AnkiquestBoards.parseProfile(JSONObject(AnkiquestBoardsTest.PROFILE))
+    private val own =
+        AnkiquestBoards.PlayerPage(
+            profile,
+            own = true,
+            wins = listOf(AnkiquestBoards.Win("Daily goal reached!", "5 cards today in 0 minutes.", 1793183400)),
+        )
+
+    @Before
+    fun prepareProfile() {
+        mockkObject(AnkiquestHomeData, AnkiquestBoards)
+        every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own
+    }
+
+    @After
+    fun clearProfileMocks() {
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards)
+    }
+
+    @Test
+    fun `the player's own profile shows level, streak, freezes, quests, wins and achievements`() {
+        val screen = launch()
+        coVerify { AnkiquestBoards.player(identity, "hill") }
+        assertEquals("Hill", screen.findViewById<TextView>(R.id.aq_board_title).text.toString())
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_level, 2)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_level_progress, "1", "280", 3, "101")))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_count, 2)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_ready)))
+        assertTrue(screen.hasText(screen.getString(R.string.ankiquest_streak_studied)))
+        assertTrue(screen.hasText("Review 15 cards"))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_wins)))
+        assertTrue(screen.hasText("Daily goal reached!"))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_leech)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_best_hour)))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_unlocked, 1, 3)))
+        assertTrue(screen.hasText("Done"))
+        screen.click(screen.getString(R.string.aq_home_settings))
+        assertEquals(PreferencesActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `another player's profile has no wins or settings`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val screen = launch("cerro")
+        assertEquals("Cerro", screen.findViewById<TextView>(R.id.aq_board_title).text.toString())
+        assertFalse(screen.hasText(screen.getString(R.string.aq_home_settings)))
+        assertFalse(screen.hasText(screen.getString(R.string.aq_profile_wins)))
+        screen.click(screen.getString(R.string.aq_profile_leaderboard))
+        assertEquals(AnkiquestLeaderboardActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+    }
+
+    @Test
+    fun `many achievements show the closest first until all are asked for`() {
+        val many =
+            (1..10).map {
+                AnkiquestBoards.Achievement("Goal $it", "", 10, it.toLong(), 100, null)
+            }
+        coEvery { AnkiquestBoards.player(identity, "hill") } returns own.copy(profile = profile.copy(achievements = many))
+        val screen = launch()
+        assertTrue(screen.hasText("Goal 10"))
+        assertFalse(screen.hasText("Goal 1"))
+        screen.click(screen.getString(R.string.aq_profile_show_all))
+        assertTrue(screen.hasText("Goal 1"))
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_show_fewer)))
+    }
+
+    @Test
+    fun `a hidden player and a failure say so`() {
+        coEvery { AnkiquestBoards.player(identity, "ghost") } throws AnkiquestBoards.NotVisible()
+        val hidden = launch("ghost")
+        assertTrue(hidden.hasText(hidden.getString(R.string.aq_profile_hidden)))
+
+        coEvery { AnkiquestBoards.player(identity, "hill") } throws IOException("offline")
+        val offline = launch()
+        assertTrue(offline.hasText(offline.getString(R.string.aq_board_offline)))
+    }
+
+    @Test
+    fun `without an account the profile asks to connect`() {
+        every { AnkiquestHomeData.account(any()) } returns null
+        val screen = launch()
+        assertTrue(screen.hasText(screen.getString(R.string.aq_board_connect)))
+        coVerify(exactly = 0) { AnkiquestBoards.player(any(), any()) }
+    }
+
+    private fun launch(user: String? = null): AnkiquestProfileActivity =
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, user))
+            .also { screen -> advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible } }
+
+    private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =
+        findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
+
+    private fun AnkiquestProfileActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+
+    private fun AnkiquestProfileActivity.click(label: String) {
+        val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
+        control.performClick()
+        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooper()
+    }
+}

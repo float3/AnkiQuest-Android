@@ -2,8 +2,10 @@
     "features": [
         "activity",
         "cookie_session",
+        "deck_share",
         "devices",
         "goal_backlog_days",
+        "mute",
         "reactions",
         "share_cards",
         "wins"
