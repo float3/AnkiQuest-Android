@@ -306,21 +306,21 @@ class AnkiquestServerGoalTest : RobolectricTest() {
             reachedStatus = 200
             assertTrue(AnkiquestSharing.goalReached(account(), 20391))
             reachedStatus = 500
-            assertFailsWith<AnkiquestSharing.Refusal> { AnkiquestSharing.goalReached(account(), 20391) }
+            assertFailsWith<AnkiquestHttpException> { AnkiquestSharing.goalReached(account(), 20391) }
         }
 
     @Test
     fun `a refused goal carries the server's explanation`(): Unit =
         runBlocking {
             val refusal =
-                assertFailsWith<AnkiquestSharing.Refusal> {
+                assertFailsWith<AnkiquestHttpException> {
                     AnkiquestSharing.saveGoal(
                         account(),
                         JSONObject().put("mode", "cards").put("value", 9000),
                     )
                 }
             assertEquals(400, refusal.code)
-            assertEquals("Pick 1 to 5000 cards.", refusal.text)
+            assertEquals("Pick 1 to 5000 cards.", refusal.explanation)
             assertFailsWith<IllegalArgumentException> { AnkiquestDailyGoal.save(account(), Choice(Mode.CARDS, 9000)) }
         }
 

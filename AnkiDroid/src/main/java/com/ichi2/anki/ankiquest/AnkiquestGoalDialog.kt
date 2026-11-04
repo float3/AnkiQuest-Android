@@ -195,7 +195,7 @@ internal object AnkiquestGoalDialog {
                     throw e
                 } catch (e: Exception) {
                     status.text =
-                        (e as? AnkiquestSharing.Refusal)?.text
+                        (e as? AnkiquestHttpException)?.explanation
                             ?: activity.getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
                 } finally {
                     saving = false

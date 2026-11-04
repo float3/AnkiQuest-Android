@@ -18,7 +18,7 @@ jobs:
           script: |
 
             const variables = {
-              _url: context.payload.pull_request.html_url
+              _url: "https://github.com/ankidroid/${{ github.event.repository.name }}/pull/${{ github.event.pull_request.number }}"
             };
 
             const query = `query($_url:URI!) {
@@ -27,9 +27,6 @@ jobs:
                   closingIssuesReferences(first:10) {
                     nodes {
                       number
-                      repository {
-                        nameWithOwner
-                      }
                     }
                   }
                 }
@@ -60,9 +57,7 @@ jobs:
               });
               console.log("Removed Assignees in this pr#",context.issue.number);
 
-              const repository = `${context.repo.owner}/${context.repo.repo}`.toLowerCase();
-              for (const issue of refIssues) {
-                if (issue.repository.nameWithOwner.toLowerCase() !== repository) continue;
+              for (issue of refIssues) {
                 await github.rest.issues.removeAssignees({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -72,3 +67,4 @@ jobs:
                   console.log("Removed Assignees in issue#",issue.number);
               }
             }
+

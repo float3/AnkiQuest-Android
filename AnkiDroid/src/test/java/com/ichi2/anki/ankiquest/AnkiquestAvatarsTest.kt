@@ -210,20 +210,25 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     }
 
     @Test
-    fun `fallback player is captured from the same preference snapshot`() {
+    fun `fallback player comes from reads that agree`() {
         val preferences = targetContext.sharedPrefs()
         preferences.edit {
             remove(Ankiquest.PREF_USER)
             putString("username", "original-fallback")
         }
+        var changed = false
         val changingPreferences = mockk<SharedPreferences>()
-        every { changingPreferences.all } answers {
-            val snapshot = preferences.all
-            preferences.edit { putString("username", "different-fallback") }
-            snapshot
+        every { changingPreferences.getString(any(), any()) } answers {
+            val key = firstArg<String>()
+            val value = preferences.getString(key, secondArg())
+            if (key == "username" && !changed) {
+                changed = true
+                preferences.edit { putString("username", "different-fallback") }
+            }
+            value
         }
         AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
-        assertEquals("original-fallback", assertNotNull(AnkiquestAvatars.account()).user)
+        assertEquals("different-fallback", assertNotNull(AnkiquestAvatars.account()).user)
     }
 
     @Test
@@ -255,7 +260,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "invalid-token") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
             protectedManifest = true
-            assertFailsWith<Ankiquest.HttpStatusException> { AnkiquestAvatars.refresh(listOf("cerro")) }
+            assertFailsWith<AnkiquestHttpException> { AnkiquestAvatars.refresh(listOf("cerro")) }
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "test-token") }
             assertNull(AnkiquestAvatars.bitmap("cerro"))
         }

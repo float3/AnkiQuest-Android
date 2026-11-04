@@ -23,13 +23,11 @@
 name: "🛠️ Screenshots: Store Baseline"
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-      - ankiquest
       - dependency-updates
-  # On PRs, verify structural changes without publishing the PR as a branch baseline.
+  # On PRs, only run this when structural changes occur, to be sure 'main' can still store baselines
   pull_request:
     paths:
       - '.github/workflows/screenshot_*.yml'
@@ -49,7 +47,8 @@ env:
 
 jobs:
   store-screenshot-test:
-    name: ${{ github.event_name == 'pull_request' && 'test' || 'store' }}
+    # On PRs, this verifies the workflow runs on `main`, it's not a store
+    name: ${{ github.event_name == 'push' && 'store' || 'test' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -107,13 +106,12 @@ jobs:
 
       - name: Upload screenshot baseline
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ always() }}
         with:
           name: screenshot  # downloaded by screenshot_compare.yml
           path: |
             **/build/outputs/roborazzi
           retention-days: 30
-          if-no-files-found: error
 
       - name: Upload screenshot reports
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -82,10 +82,10 @@ class AnkiquestAccountTest : RobolectricTest() {
     @Test
     fun `refusals explain themselves`() =
         runBlocking {
-            val wrong = assertFailsWith<Ankiquest.HttpStatusException> { AnkiquestAccount.submit(credentials(password = "wrong")) }
+            val wrong = assertFailsWith<AnkiquestHttpException> { AnkiquestAccount.submit(credentials(password = "wrong")) }
             assertEquals(targetContext.getString(R.string.ankiquest_sign_in_wrong), AnkiquestAccount.message(targetContext, wrong, url))
             val taken =
-                assertFailsWith<Ankiquest.HttpStatusException> {
+                assertFailsWith<AnkiquestHttpException> {
                     AnkiquestAccount.submit(credentials(user = "taken", create = true))
                 }
             assertEquals(targetContext.getString(R.string.ankiquest_sign_in_taken), AnkiquestAccount.message(targetContext, taken, url))

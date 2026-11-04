@@ -141,7 +141,7 @@ internal object AnkiquestShare {
     fun image(url: String): ByteArray {
         val address = url.toHttpUrlOrNull() ?: throw IOException("Not a card address")
         return imageClient.newCall(Request.Builder().url(address).build()).execute().use { response ->
-            if (!response.isSuccessful) throw Ankiquest.HttpStatusException(response.code)
+            if (!response.isSuccessful) throw AnkiquestHttpException(response.code)
             if (response.body.contentLength() > MAX_IMAGE_BYTES) throw IOException("The card image is too large")
             val source = response.body.source()
             if (source.request(MAX_IMAGE_BYTES + 1)) throw IOException("The card image is too large")

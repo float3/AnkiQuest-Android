@@ -4,32 +4,11 @@ package com.ichi2.anki.ankiquest
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONException
 import org.json.JSONObject
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /** Which wins reach friends, and the daily goal, as kept by the server for every client of one player. */
 internal object AnkiquestSharing {
     val DAILY_CAP = 1..10
-
-    private val client =
-        AnkiquestHttp.client
-            .newBuilder()
-            .callTimeout(15, TimeUnit.SECONDS)
-            .followRedirects(false)
-            .followSslRedirects(false)
-            .build()
-    private val json = "application/json".toMediaType()
-
-    /** A request the server turned down; [text] is its own explanation, in the player's language, when it gave one. */
-    class Refusal(
-        val code: Int,
-        val text: String?,
-    ) : IOException(text ?: "HTTP $code")
 
     /** A sharing policy, `private`, `ask` or `auto`, for each kind of win, and how many automatic wins each friend gets a day. */
     data class Settings(
@@ -80,7 +59,7 @@ internal object AnkiquestSharing {
         try {
             call(account, "POST", "api/goal/${account.encodedUser}/reached", JSONObject().put("day", day))
             true
-        } catch (e: Refusal) {
+        } catch (e: AnkiquestHttpException) {
             if (e.code != 409) throw e
             false
         }
@@ -93,33 +72,16 @@ internal object AnkiquestSharing {
         body: JSONObject? = null,
     ): JSONObject =
         withContext(Dispatchers.IO) {
-            requireCurrent(account)
             val request =
-                Request
-                    .Builder()
-                    .url(account.url(path))
-                    .header("Authorization", "Bearer ${account.token}")
-                    .header("Accept-Language", account.language)
-                    .method(method, body?.toString()?.toRequestBody(json))
+                AnkiquestApi
+                    .request(account, path)
+                    .method(method, body?.let(AnkiquestApi::body))
                     .build()
-            client.newCall(request).execute().use { response ->
-                val text = response.body.string()
-                requireCurrent(account)
-                if (!response.isSuccessful) throw Refusal(response.code, explanation(text))
-                if (text.isBlank()) JSONObject() else JSONObject(text)
-            }
+            AnkiquestApi.call(request, check = { requireCurrent(account) }) { AnkiquestApi.jsonObject(it) }
         }
 
     private fun requireCurrent(account: HomeAccount) {
-        if (AnkiquestHomeData.account()?.scope != account.scope) throw HomeAccountChanged()
-        if (account.token.isEmpty()) throw Refusal(401, null)
+        AnkiquestApi.requireCurrent(account)
+        if (account.token.isEmpty()) throw AnkiquestHttpException(401)
     }
-
-    /** The server explains refusals as `{"error": "..."}`. */
-    internal fun explanation(body: String): String? =
-        try {
-            JSONObject(body).optString("error").trim().ifEmpty { null }
-        } catch (_: JSONException) {
-            null
-        }
 }

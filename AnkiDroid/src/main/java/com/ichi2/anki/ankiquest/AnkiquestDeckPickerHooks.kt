@@ -7,17 +7,21 @@ import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatCheckBox
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type.navigationBars
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.AbstractFlashcardViewer
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BottomNavController.NavigationItem
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
@@ -28,6 +32,9 @@ import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.snackbar.showSnackbar
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /** AnkiQuest behaviour of [DeckPicker], kept here so the upstream activity only carries one-line calls. */
 object AnkiquestDeckPickerHooks {
@@ -139,6 +146,64 @@ object AnkiquestDeckPickerHooks {
                 activity.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
             }
         }
+    }
+
+    /**
+     * Shows today's goal in one tappable line above the deck list, which opens Today, or hides it
+     * when no account is set, the goal is off or the collection cannot be read.
+     */
+    fun refreshGoal(activity: DeckPicker) {
+        val parent = activity.binding.deckPickerPane.deckpickerView
+        if (AnkiquestHomeData.account() == null) {
+            showGoal(parent, null)
+            return
+        }
+        activity.lifecycleScope.launch {
+            val loaded =
+                try {
+                    withCol {
+                        AnkiquestDailyGoal.status(AnkiquestDailyGoal.load(this), AnkiDroidApp.sharedPrefs()) to
+                            AnkiquestGoalPlan.secondsPerCard(this)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "AnkiQuest goal could not be loaded for the deck list")
+                    null
+                }
+            showGoal(parent, loaded?.first, loaded?.second ?: AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD) {
+                activity.startActivity(AnkiquestHomeActivity.intent(activity))
+            }
+        }
+    }
+
+    /** Puts the one-line goal for [status] at the top of [parent], or hides it without a goal; returns the line shown. */
+    internal fun showGoal(
+        parent: LinearLayout,
+        status: AnkiquestDailyGoal.Status?,
+        secondsPerCard: Double = AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD,
+        open: () -> Unit = {},
+    ): AnkiquestCompactGoal? {
+        val existing = parent.children.filterIsInstance<AnkiquestCompactGoal>().firstOrNull()
+        val display = status?.let { AnkiquestGoalBar.display(parent.context, it, secondsPerCard) }
+        if (status == null || display == null) {
+            existing?.isVisible = false
+            return null
+        }
+        val line =
+            existing ?: AnkiquestCompactGoal(parent.context).also {
+                val margin = (12 * parent.resources.displayMetrics.density).toInt()
+                parent.addView(
+                    it,
+                    0,
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        setMargins(margin, margin / 2, margin, margin / 3)
+                    },
+                )
+            }
+        line.isVisible = true
+        line.show(display, status, open)
+        return line
     }
 
     /** Recreates [activity] when AnkiQuest navigation was switched on or off while it was in the background. */

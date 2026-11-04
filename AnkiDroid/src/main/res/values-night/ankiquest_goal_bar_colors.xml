@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <color name="aq_goal_bar_track">#2C3A47</color>
+    <color name="aq_goal_bar_tick">#4A5D70</color>
+    <color name="aq_goal_bar_start">#6DB8FF</color>
+    <color name="aq_goal_bar_end">#4A7FE6</color>
+    <color name="aq_goal_gold_start">#FFD54A</color>
+    <color name="aq_goal_gold_end">#F29A00</color>
+    <color name="aq_goal_streak">#FF9A3D</color>
+    <color name="aq_goal_chip_background">#3D2B1C</color>
+    <color name="aq_goal_chip_text">#FFC690</color>
+</resources>

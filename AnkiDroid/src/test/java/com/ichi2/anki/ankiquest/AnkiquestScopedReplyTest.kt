@@ -110,7 +110,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
             )) {
                 AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
                 assertEquals(AnkiquestReply.Outcome.FAILED, AnkiquestReply.run(targetContext, replyData(), 0))
-                assertFailsWith<Ankiquest.Rejected> { Ankiquest.reply(7, "Well done", captured.notificationAccount, captured.scope) }
+                assertFailsWith<HomeAccountChanged> { Ankiquest.reply(7, "Well done", captured.notificationAccount, captured.scope) }
                 AnkiDroidApp.sharedPrefs().edit { putString(key, original[key] as String) }
             }
             assertTrue(requests.isEmpty())
@@ -139,7 +139,7 @@ class AnkiquestScopedReplyTest : RobolectricTest() {
     fun `a reply redirect cannot forward the message to a new destination`() =
         runBlocking {
             redirect = true
-            assertFailsWith<Ankiquest.HttpStatusException> { Ankiquest.reply(7, "Well done", captured.notificationAccount, captured.scope) }
+            assertFailsWith<AnkiquestHttpException> { Ankiquest.reply(7, "Well done", captured.notificationAccount, captured.scope) }
             assertEquals(1, requests.size)
             assertEquals("/api/reply/alice", requests.single().first)
         }
