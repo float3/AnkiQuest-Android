@@ -9,14 +9,8 @@
     <string name="aq_records_connect">Verbinde AnkiQuest, um die Rekorde von dir und deinen Freunden zu sehen.</string>
     <string name="aq_records_scope_circle">Freunde und Gruppen</string>
     <string name="aq_records_scope_global">Alle</string>
-    <string name="aq_records_best_hour">Beste Stunde</string>
-    <string name="aq_records_best_day">Beste 24 Stunden</string>
-    <string name="aq_records_best_week">Beste 7 Tage</string>
-    <string name="aq_records_best_month">Beste 30 Tage</string>
-    <string name="aq_records_best_year">Beste 365 Tage</string>
     <string name="aq_records_ended">Endete am %1$s</string>
     <string name="aq_records_since">Seit %1$s</string>
-    <string name="aq_records_xp">%1$s XP</string>
     <plurals name="aq_records_days">
         <item quantity="one">%1$s Tag</item>
         <item quantity="other">%1$s Tage</item>
@@ -25,12 +19,10 @@
         <item quantity="one">%1$s Wiederholung</item>
         <item quantity="other">%1$s Wiederholungen</item>
     </plurals>
-    <string name="aq_records_you">%1$s (du)</string>
     <string name="aq_records_holder">Rekord: %1$s, %2$s</string>
     <string name="aq_records_chaser">Platz %1$d: %2$s, %3$s, %4$s dahinter</string>
     <string name="aq_records_empty">Noch hat niemand XP gesammelt.</string>
     <string name="aq_records_empty_hint">Ein neuer Rekord beginnt mit einer Sitzung.</string>
-    <string name="aq_records_offline">Keine Verbindung. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="aq_records_server_error">Die Rekorde konnten nicht geladen werden. Versuche es mit Aktualisieren.</string>
 
     <string name="aq_history_title">Lernverlauf</string>
@@ -49,11 +41,9 @@
     <string name="aq_history_choose">Wähle einen Tag</string>
     <string name="aq_history_choose_hint">Wähle ein Feld, um zu sehen, was an diesem Tag passiert ist.</string>
     <string name="aq_history_frozen">Serie geschützt</string>
-    <string name="aq_history_reviews">Wiederholungen</string>
     <string name="aq_history_minutes">Minuten gelernt</string>
     <string name="aq_history_xp">XP verdient</string>
-    <string name="aq_history_new_cards">neue Karten</string>
-    <string name="aq_history_streak">Tage Serie</string>
+    <string name="aq_history_new_cards">Neue Karten</string>
     <string name="aq_history_day_hint">Diese Summen zeigen die zu AnkiQuest hochgeladenen Wiederholungen.</string>
     <string name="aq_history_day_empty">Für diesen Tag sind keine Wiederholungen erfasst.</string>
     <string name="aq_history_empty">In diesem Jahr gibt es noch keine Lerntage.</string>

@@ -54,7 +54,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         for (kind in AnkiquestRecords.Kind.entries) {
             assertTrue(records.hasText(records.getString(AnkiquestRecordsActivity.label(kind))), kind.name)
         }
-        assertTrue(records.hasText(records.getString(R.string.aq_records_you, "Hill")), "the player's own name says so")
+        assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "Hill")), "the player's own name says so")
         assertTrue(records.hasText("Cerro"))
         assertTrue(records.hasText("101 XP"))
         assertTrue(records.hasText("−70"), "how far behind the record a chaser is")
@@ -70,11 +70,24 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a record holder opens their profile`() {
+        val records = launch()
+        val row =
+            records.views<View>().first {
+                it.contentDescription == records.getString(R.string.aq_records_chaser, 2, "Cerro", "31 XP", "70 XP")
+            }
+        assertTrue(row.performClick())
+        val opened = assertNotNull(shadowOf(records).nextStartedActivity)
+        assertEquals(AnkiquestProfileActivity::class.java.name, opened.component?.className)
+        assertEquals("cerro", opened.getStringExtra(AnkiquestProfileActivity.EXTRA_USER))
+    }
+
+    @Test
     fun `boards nobody has a record on yet say so`() {
         coEvery { AnkiquestRecords.records(identity, any()) } returns boards.map { it.copy(holders = emptyList()) }
         val records = launch()
         assertTrue(records.hasText(records.getString(R.string.aq_records_empty)))
-        assertFalse(records.hasText(records.getString(R.string.aq_records_best_hour)))
+        assertFalse(records.hasText(records.getString(R.string.aq_profile_best_hour)))
     }
 
     @Test
@@ -99,7 +112,7 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         val records = launch()
         records.click("Spanish club")
         assertFalse(records.hasText(records.getString(R.string.aq_home_auth)))
-        assertTrue(records.hasText(records.getString(R.string.aq_records_you, "Hill")))
+        assertTrue(records.hasText(records.getString(R.string.aq_challenges_you, "Hill")))
         coVerify { AnkiquestRecords.records(identity, null) }
     }
 
@@ -108,14 +121,14 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         coEvery { AnkiquestRecords.scopes(identity) } throws IOException("offline")
         val records = launch()
         assertTrue(records.hasText("Cerro"))
-        assertFalse(records.hasText(records.getString(R.string.aq_records_offline)))
+        assertFalse(records.hasText(records.getString(R.string.aq_challenges_offline)))
     }
 
     @Test
     fun `offline and refused boards say what to do`() {
         coEvery { AnkiquestRecords.records(identity, any()) } throws IOException("offline")
         val offline = launch()
-        assertTrue(offline.hasText(offline.getString(R.string.aq_records_offline)))
+        assertTrue(offline.hasText(offline.getString(R.string.aq_challenges_offline)))
 
         coEvery { AnkiquestRecords.records(identity, any()) } throws AnkiquestHttpException(401)
         val refused = launch()

@@ -6,9 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.format.DateUtils
+import android.util.TypedValue
 import android.view.View
 import android.widget.LinearLayout
 import androidx.annotation.StringRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
@@ -23,7 +25,8 @@ import kotlinx.coroutines.launch
 /**
  * The record boards, natively, as the website's `/records` shows them: the best rolling hour, 24
  * hours, 7, 30 and 365 days, the longest streak and the most days studied among the player's
- * friends and groups, everyone, or one group, each with whoever came closest. A server without the
+ * friends and groups, everyone, or one group, each with whoever came closest; a name opens that
+ * player's profile ([AnkiquestProfileActivity]). A server without the
  * boards' JSON shows its page in [AnkiquestActivity].
  */
 class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_records) {
@@ -94,7 +97,7 @@ class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_record
             lifecycleScope.launch {
                 var gone = false
                 val problem =
-                    AnkiquestRecordViews.attempt(R.string.aq_records_offline, R.string.aq_records_server_error) {
+                    AnkiquestRecordViews.attempt(R.string.aq_challenges_offline, R.string.aq_records_server_error) {
                         val choices = scopes ?: optionalScopes(current)
                         val asked = choices.firstOrNull { it.value == scope }
                         try {
@@ -201,7 +204,7 @@ class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_record
         views.text(panel, whenSet(board.kind, best), small = true)
         board.holders.forEachIndexed { index, holder ->
             val lead = index == 0
-            val name = if (holder.user == me) getString(R.string.aq_records_you, holder.display) else holder.display
+            val name = if (holder.user == me) getString(R.string.aq_challenges_you, holder.display) else holder.display
             val amount = amount(board, holder.value)
             val line = views.row(panel)
             views.cell(line, if (lead) "🏆" else views.number(index + 1L), 0f, bold = true)
@@ -217,6 +220,10 @@ class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_record
                 }
             for (i in 0 until line.childCount) line.getChildAt(i).importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             line.isFocusable = true
+            line.minimumHeight = views.dp(48)
+            val ripple = TypedValue().also { theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }
+            line.foreground = AppCompatResources.getDrawable(this, ripple.resourceId)
+            line.setOnClickListener { startActivity(AnkiquestProfileActivity.intent(this, holder.user)) }
             if (lead && holder.detail > 0) {
                 views.text(
                     panel,
@@ -235,7 +242,7 @@ class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_record
         if (board.unit == "days") {
             resources.getQuantityString(R.plurals.aq_records_days, value.toInt(), views.number(value))
         } else {
-            getString(R.string.aq_records_xp, views.number(value))
+            getString(R.string.aq_board_xp, views.number(value))
         }
 
     /** When the record was set: a window's span, when a streak ended, or since when days were counted. */
@@ -272,11 +279,11 @@ class AnkiquestRecordsActivity : AnkiActivity(R.layout.activity_ankiquest_record
         @StringRes
         internal fun label(kind: AnkiquestRecords.Kind): Int =
             when (kind) {
-                AnkiquestRecords.Kind.HOUR -> R.string.aq_records_best_hour
-                AnkiquestRecords.Kind.DAY -> R.string.aq_records_best_day
-                AnkiquestRecords.Kind.WEEK -> R.string.aq_records_best_week
-                AnkiquestRecords.Kind.MONTH -> R.string.aq_records_best_month
-                AnkiquestRecords.Kind.YEAR -> R.string.aq_records_best_year
+                AnkiquestRecords.Kind.HOUR -> R.string.aq_profile_best_hour
+                AnkiquestRecords.Kind.DAY -> R.string.aq_profile_best_day
+                AnkiquestRecords.Kind.WEEK -> R.string.aq_profile_best_week
+                AnkiquestRecords.Kind.MONTH -> R.string.aq_profile_best_month
+                AnkiquestRecords.Kind.YEAR -> R.string.aq_profile_best_year
                 AnkiquestRecords.Kind.STREAK -> R.string.review_heatmap_longest_streak
                 AnkiquestRecords.Kind.DAYS -> R.string.review_heatmap_days_studied
             }

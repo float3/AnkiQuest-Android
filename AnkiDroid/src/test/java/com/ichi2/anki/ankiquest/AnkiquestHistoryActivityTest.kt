@@ -76,7 +76,7 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
         grid.onTouchEvent(up)
         assertTrue(history.hasText(date(day)))
         assertTrue(history.hasTile("62", history.getString(R.string.aq_history_xp)))
-        assertTrue(history.hasTile("2", history.getString(R.string.aq_history_streak)))
+        assertTrue(history.hasTile("2", history.getString(R.string.aq_profile_streak)))
 
         val rest = LocalDate.of(2026, 10, 27)
         val restCell = grid.cellBounds(rest.dayOfYear - 1)
@@ -135,7 +135,7 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
     @Test
     fun `offline, refused and missing accounts say what to do`() {
         coEvery { AnkiquestRecords.study(identity, any()) } throws IOException("offline")
-        assertTrue(launch().let { it.hasText(it.getString(R.string.aq_records_offline)) })
+        assertTrue(launch().let { it.hasText(it.getString(R.string.aq_challenges_offline)) })
         coEvery { AnkiquestRecords.study(identity, any()) } throws AnkiquestHttpException(403)
         assertTrue(launch().let { it.hasText(it.getString(R.string.aq_home_auth)) })
         every { AnkiquestHomeData.account(any()) } returns null

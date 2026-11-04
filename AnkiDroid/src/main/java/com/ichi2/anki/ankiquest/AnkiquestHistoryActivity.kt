@@ -103,7 +103,7 @@ class AnkiquestHistoryActivity : AnkiActivity(R.layout.activity_ankiquest_record
             lifecycleScope.launch {
                 var gone = false
                 val problem =
-                    AnkiquestRecordViews.attempt(R.string.aq_records_offline, R.string.aq_history_server_error) {
+                    AnkiquestRecordViews.attempt(R.string.aq_challenges_offline, R.string.aq_history_server_error) {
                         try {
                             val history = AnkiquestRecords.study(current, asked)
                             if (turn == generation) {
@@ -259,11 +259,11 @@ class AnkiquestHistoryActivity : AnkiActivity(R.layout.activity_ankiquest_record
         views.tiles(
             panel,
             listOf(
-                views.number(day.reviews.toLong()) to getString(R.string.aq_history_reviews),
+                views.number(day.reviews.toLong()) to getString(R.string.aq_challenges_kind_reviews),
                 views.number(day.minutes) to getString(R.string.aq_history_minutes),
                 views.number(day.xp) to getString(R.string.aq_history_xp),
                 views.number(day.newCards.toLong()) to getString(R.string.aq_history_new_cards),
-                views.number(day.streak.toLong()) to getString(R.string.aq_history_streak),
+                views.number(day.streak.toLong()) to getString(R.string.aq_profile_streak),
             ),
         )
         views.text(panel, getString(if (day.reviews > 0) R.string.aq_history_day_hint else R.string.aq_history_day_empty), small = true)

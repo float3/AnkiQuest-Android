@@ -9,14 +9,8 @@
     <string name="aq_records_connect">Connect AnkiQuest to see the records you and your friends have set.</string>
     <string name="aq_records_scope_circle">Friends and groups</string>
     <string name="aq_records_scope_global">Everyone</string>
-    <string name="aq_records_best_hour">Best hour</string>
-    <string name="aq_records_best_day">Best 24 hours</string>
-    <string name="aq_records_best_week">Best 7 days</string>
-    <string name="aq_records_best_month">Best 30 days</string>
-    <string name="aq_records_best_year">Best 365 days</string>
     <string name="aq_records_ended">Ended %1$s</string>
     <string name="aq_records_since">Since %1$s</string>
-    <string name="aq_records_xp">%1$s XP</string>
     <plurals name="aq_records_days">
         <item quantity="one">%1$s day</item>
         <item quantity="other">%1$s days</item>
@@ -25,12 +19,10 @@
         <item quantity="one">%1$s review</item>
         <item quantity="other">%1$s reviews</item>
     </plurals>
-    <string name="aq_records_you">%1$s (you)</string>
     <string name="aq_records_holder">Record: %1$s, %2$s</string>
     <string name="aq_records_chaser">Place %1$d: %2$s, %3$s, %4$s behind</string>
     <string name="aq_records_empty">Nobody has earned any XP yet.</string>
     <string name="aq_records_empty_hint">A new record starts with one session.</string>
-    <string name="aq_records_offline">Could not connect. Check your connection and try again.</string>
     <string name="aq_records_server_error">Records could not be loaded. Try refreshing.</string>
 
     <string name="aq_history_title">Study history</string>
@@ -49,11 +41,9 @@
     <string name="aq_history_choose">Choose a day</string>
     <string name="aq_history_choose_hint">Select a square to see what happened that day.</string>
     <string name="aq_history_frozen">Streak protected</string>
-    <string name="aq_history_reviews">reviews</string>
-    <string name="aq_history_minutes">minutes studied</string>
+    <string name="aq_history_minutes">Minutes studied</string>
     <string name="aq_history_xp">XP earned</string>
-    <string name="aq_history_new_cards">new cards</string>
-    <string name="aq_history_streak">day streak</string>
+    <string name="aq_history_new_cards">New cards</string>
     <string name="aq_history_day_hint">These totals reflect reviews uploaded to AnkiQuest.</string>
     <string name="aq_history_day_empty">No reviews recorded for this day.</string>
     <string name="aq_history_empty">No study days this year yet.</string>
