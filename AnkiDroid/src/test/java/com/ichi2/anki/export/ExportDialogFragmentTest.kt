@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.testing.FragmentScenario
 import androidx.fragment.app.testing.launchFragment
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -287,7 +288,11 @@ class ExportDialogFragmentTest : RobolectricTest() {
 
             (export.requireDialog() as AlertDialog).negativeButton.performClick()
             advanceRobolectricLooper()
-            val adapter = deckPicker.deckPickerBinding.decks.adapter as DeckAdapter
+            // The deck list may be wrapped in a ConcatAdapter together with other sections.
+            val adapter =
+                deckPicker.deckPickerBinding.decks.adapter.let {
+                    it as? DeckAdapter ?: (it as ConcatAdapter).adapters.filterIsInstance<DeckAdapter>().single()
+                }
             advanceRobolectricLooperUntil(
                 lazyMessage = { "Deck created through export was saved but never appeared in the deck list" },
             ) {
