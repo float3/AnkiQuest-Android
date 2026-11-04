@@ -12,6 +12,7 @@ import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -90,7 +91,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         assertFalse(friends.hasText(friends.getString(R.string.aq_friends_requests)), "nothing waits now")
 
         val again = launch()
-        again.click(again.getString(R.string.aq_friends_decline))
+        again.click(again.getString(R.string.aq_challenges_decline))
         coVerify { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unfriend("ana")) }
         assertTrue(again.hasText(again.getString(R.string.aq_friends_declined)))
     }
@@ -145,7 +146,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         assertTrue(friends.views<TextView>().any { it.text.toString() == friends.getString(R.string.aq_friends_accept) && it.isEnabled })
 
         coEvery { AnkiquestSocial.change(identity, any()) } throws IOException("offline")
-        friends.click(friends.getString(R.string.aq_friends_decline))
+        friends.click(friends.getString(R.string.aq_challenges_decline))
         assertTrue(
             friends.hasText(
                 friends.getString(
@@ -180,7 +181,7 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         friends.click(friends.getString(R.string.aq_friends_share_link))
         val shared = assertNotNull(shadowOf(friends).nextStartedActivity)
         assertEquals(Intent.ACTION_CHOOSER, shared.action)
-        val text = shared.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.getStringExtra(Intent.EXTRA_TEXT)
+        val text = shared.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT)?.getStringExtra(Intent.EXTRA_TEXT)
         assertEquals(
             friends.getString(R.string.aq_friends_invite_share_text, "Spanish club", "https://anki.example.test/join/example-invite-1"),
             text,
@@ -258,16 +259,16 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `friend goals open natively and a friend's profile on the website`() {
+    fun `friend goals and a friend's profile open natively`() {
         val friends = launch()
         friends.click(friends.getString(R.string.aq_friends_goals_open))
         val goals = assertNotNull(shadowOf(friends).nextStartedActivity)
         assertEquals(AnkiquestChallengesActivity::class.java.name, goals.component?.className)
 
-        friends.click(friends.getString(R.string.aq_friends_profile))
+        friends.click(friends.getString(R.string.aq_profile_title))
         val profile = assertNotNull(shadowOf(friends).nextStartedActivity)
-        assertEquals(AnkiquestActivity::class.java.name, profile.component?.className)
-        assertEquals("/#friend", profile.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+        assertEquals(AnkiquestProfileActivity::class.java.name, profile.component?.className)
+        assertEquals("friend", profile.getStringExtra(AnkiquestProfileActivity.EXTRA_USER))
     }
 
     @Test

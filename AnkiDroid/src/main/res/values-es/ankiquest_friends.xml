@@ -8,15 +8,12 @@
     <string name="aq_friends_offline">No se pudo conectar con AnkiQuest. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="aq_friends_server_error">AnkiQuest no pudo cargar tus amigos ahora. Inténtalo más tarde.</string>
     <string name="aq_friends_change_failed">No se pudo guardar</string>
-
-    <string name="aq_friends_goals">Metas con amigos</string>
     <string name="aq_friends_goals_hint">Empieza una pequeña meta juntos o responde a una invitación.</string>
     <string name="aq_friends_goals_open">Abrir metas con amigos</string>
 
     <string name="aq_friends_requests">Solicitudes de amistad</string>
     <string name="aq_friends_requests_hint">Verán tu progreso cuando aceptes.</string>
     <string name="aq_friends_accept">Aceptar</string>
-    <string name="aq_friends_decline">Rechazar</string>
     <string name="aq_friends_accepted">Ahora %s y tú son amigos.</string>
     <string name="aq_friends_declined">Solicitud rechazada.</string>
 
@@ -29,7 +26,6 @@
     <string name="aq_friends_request_sent">Solicitud de amistad enviada a %s.</string>
     <string name="aq_friends_empty">Aún no tienes amigos</string>
     <string name="aq_friends_empty_hint">Envía una solicitud con su nombre de usuario o únete a un grupo con un enlace de invitación.</string>
-    <string name="aq_friends_profile">Perfil</string>
     <string name="aq_friends_remove">Quitar</string>
     <string name="aq_friends_remove_confirm">¿Quitar a %s de tus amigos?</string>
     <string name="aq_friends_removed">%s ya no es tu amigo.</string>
@@ -83,8 +79,6 @@
     <string name="aq_friends_joined">Te uniste a %s.</string>
     <string name="aq_friends_invite_gone">Este enlace de invitación ya no es válido.</string>
     <string name="aq_friends_invite_gone_hint">Pide un enlace nuevo a quien te lo envió.</string>
-
-    <string name="aq_friends_visibility">Tu perfil</string>
     <string name="aq_friends_visibility_public">Cualquiera puede ver tu perfil y tus posiciones en la clasificación global.</string>
     <string name="aq_friends_visibility_private">Solo tus amigos y grupos pueden ver tu perfil.</string>
     <string name="aq_friends_public">Perfil público</string>

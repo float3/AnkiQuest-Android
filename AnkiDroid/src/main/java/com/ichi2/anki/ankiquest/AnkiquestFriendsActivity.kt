@@ -316,7 +316,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         }
         renderInvite()
         val goals = card(content)
-        text(goals, getString(R.string.aq_friends_goals), heading = true)
+        text(goals, getString(R.string.aq_challenges_title), heading = true)
         text(goals, getString(R.string.aq_friends_goals_hint), small = true)
         button(goals, getString(R.string.aq_friends_goals_open)) { openFriendGoals() }
         renderFriends(shown)
@@ -362,7 +362,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
                 chip(actions, getString(R.string.aq_friends_accept), primary = true, enabled = !busy) {
                     change(AnkiquestSocial.Change.Befriend(person.user), { getString(R.string.aq_friends_accepted, person.display) })
                 }
-                chip(actions, getString(R.string.aq_friends_decline), enabled = !busy) {
+                chip(actions, getString(R.string.aq_challenges_decline), enabled = !busy) {
                     change(AnkiquestSocial.Change.Unfriend(person.user), { getString(R.string.aq_friends_declined) })
                 }
             }
@@ -377,7 +377,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         for (person in shown.friends) {
             val row = person(content, person)
             val actions = actions(row)
-            chip(actions, getString(R.string.aq_friends_profile)) { openProfile(person) }
+            chip(actions, getString(R.string.aq_profile_title)) { openProfile(person) }
             muteChip(actions, shown, person)
             chip(actions, getString(R.string.aq_friends_remove), enabled = !busy) {
                 confirm(getString(R.string.aq_friends_remove_confirm, person.display), R.string.aq_friends_remove) {
@@ -453,7 +453,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
 
     private fun renderVisibility(shown: AnkiquestSocial.Overview) {
         val panel = card(content)
-        text(panel, getString(R.string.aq_friends_visibility), heading = true)
+        text(panel, getString(R.string.aq_board_my_profile), heading = true)
         text(
             panel,
             getString(if (shown.public) R.string.aq_friends_visibility_public else R.string.aq_friends_visibility_private),
@@ -622,8 +622,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     }
 
     /** A friend's profile, on the website until profiles are native. */
-    private fun openProfile(person: AnkiquestSocial.Person) =
-        startActivity(AnkiquestActivity.intent(this, "/#" + Uri.encode(person.user), account?.notificationAccount))
+    private fun openProfile(person: AnkiquestSocial.Person) = startActivity(AnkiquestProfileActivity.intent(this, person.user))
 
     /** Friend goals, on the website until they are native. */
     private fun openFriendGoals() = startActivity(AnkiquestChallengesActivity.intent(this))

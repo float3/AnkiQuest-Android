@@ -8,15 +8,12 @@
     <string name="aq_friends_offline">AnkiQuest ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="aq_friends_server_error">AnkiQuest konnte deine Freunde gerade nicht laden. Versuche es später erneut.</string>
     <string name="aq_friends_change_failed">Das konnte nicht gespeichert werden</string>
-
-    <string name="aq_friends_goals">Freundesziele</string>
     <string name="aq_friends_goals_hint">Starte gemeinsam ein kleines Ziel oder beantworte eine Einladung.</string>
     <string name="aq_friends_goals_open">Freundesziele öffnen</string>
 
     <string name="aq_friends_requests">Freundschaftsanfragen</string>
     <string name="aq_friends_requests_hint">Sobald du annimmst, sehen sie deinen Fortschritt.</string>
     <string name="aq_friends_accept">Annehmen</string>
-    <string name="aq_friends_decline">Ablehnen</string>
     <string name="aq_friends_accepted">Du und %s seid jetzt befreundet.</string>
     <string name="aq_friends_declined">Anfrage abgelehnt.</string>
 
@@ -29,7 +26,6 @@
     <string name="aq_friends_request_sent">Freundschaftsanfrage an %s gesendet.</string>
     <string name="aq_friends_empty">Noch keine Freunde</string>
     <string name="aq_friends_empty_hint">Sende eine Anfrage per Benutzername oder tritt einer Gruppe über einen Einladungslink bei.</string>
-    <string name="aq_friends_profile">Profil</string>
     <string name="aq_friends_remove">Entfernen</string>
     <string name="aq_friends_remove_confirm">%s aus deinen Freunden entfernen?</string>
     <string name="aq_friends_removed">%s ist nicht mehr dein Freund.</string>
@@ -83,8 +79,6 @@
     <string name="aq_friends_joined">Du bist %s beigetreten.</string>
     <string name="aq_friends_invite_gone">Dieser Einladungslink ist nicht mehr gültig.</string>
     <string name="aq_friends_invite_gone_hint">Bitte die Person, die ihn geschickt hat, um einen neuen Link.</string>
-
-    <string name="aq_friends_visibility">Dein Profil</string>
     <string name="aq_friends_visibility_public">Alle können dein Profil und deine Platzierungen in der globalen Bestenliste sehen.</string>
     <string name="aq_friends_visibility_private">Nur deine Freunde und Gruppen können dein Profil sehen.</string>
     <string name="aq_friends_public">Öffentliches Profil</string>
