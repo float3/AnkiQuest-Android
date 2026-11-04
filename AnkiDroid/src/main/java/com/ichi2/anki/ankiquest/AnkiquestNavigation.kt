@@ -24,6 +24,9 @@ object AnkiquestNavigation {
         /** The native activity feed, [AnkiquestFeedActivity]. */
         data object Activity : Destination
 
+        /** The native friends and groups, [AnkiquestFriendsActivity]. */
+        data object Friends : Destination
+
         data class Website(
             val path: String,
         ) : Destination
@@ -47,6 +50,7 @@ object AnkiquestNavigation {
             kind.startsWith("challenge_") -> Destination.Website(FRIENDS_PATH)
             kind in weekly -> Destination.Website(WEEK_PATH)
             kind in feed -> Destination.Activity
+            kind.startsWith("friend_") || kind.startsWith("group_") -> Destination.Friends
             kind == "reminder_freeze_refill" || topic?.substringBefore(':') == "quest" ->
                 Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
             else -> Destination.Today()
@@ -75,7 +79,7 @@ object AnkiquestNavigation {
                 AnkiquestHomeActivity
                     .intent(context)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            R.id.ankiquest_nav_friends -> AnkiquestActivity.intent(context, FRIENDS_PATH)
+            R.id.ankiquest_nav_friends -> AnkiquestFriendsActivity.intent(context)
             R.id.ankiquest_nav_progress -> AnkiquestActivity.intent(context, null)
             else -> null
         }

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_friends_refresh">Refresh friends</string>
+    <string name="aq_friends_loading">Loading your friends…</string>
+    <string name="aq_friends_connect">Connect AnkiQuest to add friends and join groups.</string>
+    <string name="aq_friends_account_route_changed">This notification belongs to a different account. Showing this account’s friends instead.</string>
+    <string name="aq_friends_offline">Can’t reach AnkiQuest. Check your connection and try again.</string>
+    <string name="aq_friends_server_error">AnkiQuest couldn’t load your friends right now. Try again later.</string>
+    <string name="aq_friends_change_failed">That couldn’t be saved</string>
+
+    <string name="aq_friends_goals">Friend goals</string>
+    <string name="aq_friends_goals_hint">Start a small goal together, or answer an invitation.</string>
+    <string name="aq_friends_goals_open">Open friend goals</string>
+
+    <string name="aq_friends_requests">Friend requests</string>
+    <string name="aq_friends_requests_hint">They’ll see your progress once you accept.</string>
+    <string name="aq_friends_accept">Accept</string>
+    <string name="aq_friends_decline">Decline</string>
+    <string name="aq_friends_accepted">You and %s are friends now.</string>
+    <string name="aq_friends_declined">Request declined.</string>
+
+    <string name="aq_friends_friends">Your friends</string>
+    <string name="aq_friends_friends_hint">Friends see each other’s progress and can share decks, goals and nudges.</string>
+    <string name="aq_friends_add">Add a friend</string>
+    <string name="aq_friends_add_hint">Their username</string>
+    <string name="aq_friends_add_send">Send request</string>
+    <string name="aq_friends_add_empty">Type their username.</string>
+    <string name="aq_friends_request_sent">Friend request sent to %s.</string>
+    <string name="aq_friends_empty">No friends yet</string>
+    <string name="aq_friends_empty_hint">Send a request with their username, or join a group with an invite link.</string>
+    <string name="aq_friends_profile">Profile</string>
+    <string name="aq_friends_remove">Remove</string>
+    <string name="aq_friends_remove_confirm">Remove %s from your friends?</string>
+    <string name="aq_friends_removed">%s is no longer your friend.</string>
+    <string name="aq_friends_waiting">Waiting for an answer</string>
+    <string name="aq_friends_cancel_request">Cancel request</string>
+    <string name="aq_friends_request_cancelled">Request cancelled.</string>
+
+    <string name="aq_friends_mute">Mute</string>
+    <string name="aq_friends_unmute">Unmute</string>
+    <string name="aq_friends_mute_confirm">Mute %s? You won’t hear from them. They are not told.</string>
+    <string name="aq_friends_muted_done">%s is muted.</string>
+    <string name="aq_friends_unmuted">%s is no longer muted.</string>
+    <string name="aq_friends_muted">Muted</string>
+    <string name="aq_friends_muted_hint">No goal invitations, nudges, conquered cards, deck news, shares or cheers from these people. They are not told.</string>
+
+    <string name="aq_friends_groups">Groups</string>
+    <string name="aq_friends_groups_hint">Everyone in a group sees each other on the group’s leaderboard.</string>
+    <string name="aq_friends_groups_empty">You’re not in a group yet.</string>
+    <string name="aq_friends_group_create">Create a group</string>
+    <string name="aq_friends_group_create_send">Create</string>
+    <string name="aq_friends_group_name">Group name</string>
+    <string name="aq_friends_group_name_bad">Group names are 1 to 40 characters.</string>
+    <string name="aq_friends_group_created">%s is ready. Share its invite link to add people.</string>
+    <string name="aq_friends_group_join">Join with an invite link</string>
+    <string name="aq_friends_group_join_hint">Invite link or code</string>
+    <string name="aq_friends_group_join_next">Continue</string>
+    <string name="aq_friends_group_join_bad">Paste an invite link from this AnkiQuest server, or its code.</string>
+    <string name="aq_friends_invite_link">Invite link</string>
+    <string name="aq_friends_invite_link_hint">Anyone with this link can join. Share it only with people you want in the group.</string>
+    <string name="aq_friends_share_link">Share link</string>
+    <string name="aq_friends_invite_share_text">Join my study group %1$s on AnkiQuest: %2$s</string>
+    <string name="aq_friends_new_link">New link</string>
+    <string name="aq_friends_new_link_confirm">The old link will stop working. Make a new one?</string>
+    <string name="aq_friends_new_link_done">New invite link made. The old one no longer works.</string>
+    <string name="aq_friends_rename">Rename</string>
+    <string name="aq_friends_renamed">The group is now called %s.</string>
+    <string name="aq_friends_you">%s (you)</string>
+    <string name="aq_friends_member_remove_confirm">Remove %1$s from %2$s?</string>
+    <string name="aq_friends_member_removed">%1$s is no longer in %2$s.</string>
+    <string name="aq_friends_leave">Leave group</string>
+    <string name="aq_friends_leave_confirm">Leave %s?</string>
+    <string name="aq_friends_left">You left %s.</string>
+    <plurals name="aq_friends_members">
+        <item quantity="one">%d member</item>
+        <item quantity="other">%d members</item>
+    </plurals>
+
+    <string name="aq_friends_invite">Group invitation</string>
+    <string name="aq_friends_invite_hint">Members see each other’s progress on the group’s leaderboard and can share decks, goals and nudges.</string>
+    <string name="aq_friends_join">Join group</string>
+    <string name="aq_friends_joined">You joined %s.</string>
+    <string name="aq_friends_invite_gone">This invite link is not valid any more.</string>
+    <string name="aq_friends_invite_gone_hint">Ask whoever sent it for a new link.</string>
+
+    <string name="aq_friends_visibility">Your profile</string>
+    <string name="aq_friends_visibility_public">Anyone can see your profile and standings on the global leaderboard.</string>
+    <string name="aq_friends_visibility_private">Only your friends and groups can see your profile.</string>
+    <string name="aq_friends_public">Public profile</string>
+</resources>

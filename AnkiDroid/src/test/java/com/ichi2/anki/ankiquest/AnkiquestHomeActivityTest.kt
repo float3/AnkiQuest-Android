@@ -126,7 +126,8 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertEquals(4, nav.menu.size)
 
         nav.selectedItemId = R.id.ankiquest_nav_friends
-        assertWebsite(home, AnkiquestNavigation.FRIENDS_PATH)
+        val friends = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, friends.component?.className)
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
 
         nav.selectedItemId = R.id.ankiquest_nav_progress

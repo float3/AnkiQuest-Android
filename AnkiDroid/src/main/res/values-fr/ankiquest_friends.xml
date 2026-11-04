@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_friends_refresh">Actualiser les amis</string>
+    <string name="aq_friends_loading">Chargement de tes amis…</string>
+    <string name="aq_friends_connect">Connecte AnkiQuest pour ajouter des amis et rejoindre des groupes.</string>
+    <string name="aq_friends_account_route_changed">Cette notification concerne un autre compte. Les amis de ce compte sont affichés à la place.</string>
+    <string name="aq_friends_offline">Impossible de joindre AnkiQuest. Vérifie ta connexion et réessaie.</string>
+    <string name="aq_friends_server_error">AnkiQuest n’a pas pu charger tes amis pour le moment. Réessaie plus tard.</string>
+    <string name="aq_friends_change_failed">Impossible d’enregistrer</string>
+
+    <string name="aq_friends_goals">Objectifs entre amis</string>
+    <string name="aq_friends_goals_hint">Lance un petit objectif ensemble, ou réponds à une invitation.</string>
+    <string name="aq_friends_goals_open">Ouvrir les objectifs entre amis</string>
+
+    <string name="aq_friends_requests">Demandes d’ami</string>
+    <string name="aq_friends_requests_hint">Ils verront ta progression dès que tu accepteras.</string>
+    <string name="aq_friends_accept">Accepter</string>
+    <string name="aq_friends_decline">Refuser</string>
+    <string name="aq_friends_accepted">%s et toi êtes maintenant amis.</string>
+    <string name="aq_friends_declined">Demande refusée.</string>
+
+    <string name="aq_friends_friends">Tes amis</string>
+    <string name="aq_friends_friends_hint">Les amis voient la progression des uns et des autres et peuvent partager des paquets, des objectifs et des petits rappels.</string>
+    <string name="aq_friends_add">Ajouter un ami</string>
+    <string name="aq_friends_add_hint">Son nom d’utilisateur</string>
+    <string name="aq_friends_add_send">Envoyer la demande</string>
+    <string name="aq_friends_add_empty">Saisis son nom d’utilisateur.</string>
+    <string name="aq_friends_request_sent">Demande d’ami envoyée à %s.</string>
+    <string name="aq_friends_empty">Pas encore d’amis</string>
+    <string name="aq_friends_empty_hint">Envoie une demande avec son nom d’utilisateur, ou rejoins un groupe avec un lien d’invitation.</string>
+    <string name="aq_friends_profile">Profil</string>
+    <string name="aq_friends_remove">Retirer</string>
+    <string name="aq_friends_remove_confirm">Retirer %s de tes amis ?</string>
+    <string name="aq_friends_removed">%s ne fait plus partie de tes amis.</string>
+    <string name="aq_friends_waiting">En attente de réponse</string>
+    <string name="aq_friends_cancel_request">Annuler la demande</string>
+    <string name="aq_friends_request_cancelled">Demande annulée.</string>
+
+    <string name="aq_friends_mute">Masquer</string>
+    <string name="aq_friends_unmute">Réafficher</string>
+    <string name="aq_friends_mute_confirm">Masquer %s ? Tu ne recevras plus rien de cette personne. Elle n’en sera pas informée.</string>
+    <string name="aq_friends_muted_done">%s est masqué.</string>
+    <string name="aq_friends_unmuted">%s n’est plus masqué.</string>
+    <string name="aq_friends_muted">Masqués</string>
+    <string name="aq_friends_muted_hint">Aucune invitation à un objectif, aucun petit rappel, carte maîtrisée, nouvelle de paquet, partage ou encouragement de ces personnes. Elles n’en sont pas informées.</string>
+
+    <string name="aq_friends_groups">Groupes</string>
+    <string name="aq_friends_groups_hint">Tous les membres d’un groupe se voient dans le classement du groupe.</string>
+    <string name="aq_friends_groups_empty">Tu ne fais encore partie d’aucun groupe.</string>
+    <string name="aq_friends_group_create">Créer un groupe</string>
+    <string name="aq_friends_group_create_send">Créer</string>
+    <string name="aq_friends_group_name">Nom du groupe</string>
+    <string name="aq_friends_group_name_bad">Les noms de groupe font de 1 à 40 caractères.</string>
+    <string name="aq_friends_group_created">%s est prêt. Partage son lien d’invitation pour ajouter des personnes.</string>
+    <string name="aq_friends_group_join">Rejoindre avec un lien d’invitation</string>
+    <string name="aq_friends_group_join_hint">Lien d’invitation ou code</string>
+    <string name="aq_friends_group_join_next">Continuer</string>
+    <string name="aq_friends_group_join_bad">Colle un lien d’invitation de ce serveur AnkiQuest, ou son code.</string>
+    <string name="aq_friends_invite_link">Lien d’invitation</string>
+    <string name="aq_friends_invite_link_hint">Toute personne ayant ce lien peut rejoindre le groupe. Partage-le seulement avec les personnes que tu veux y voir.</string>
+    <string name="aq_friends_share_link">Partager le lien</string>
+    <string name="aq_friends_invite_share_text">Rejoins mon groupe d’étude %1$s sur AnkiQuest : %2$s</string>
+    <string name="aq_friends_new_link">Nouveau lien</string>
+    <string name="aq_friends_new_link_confirm">L’ancien lien ne fonctionnera plus. En créer un nouveau ?</string>
+    <string name="aq_friends_new_link_done">Nouveau lien d’invitation créé. L’ancien ne fonctionne plus.</string>
+    <string name="aq_friends_rename">Renommer</string>
+    <string name="aq_friends_renamed">Le groupe s’appelle maintenant %s.</string>
+    <string name="aq_friends_you">%s (toi)</string>
+    <string name="aq_friends_member_remove_confirm">Retirer %1$s de %2$s ?</string>
+    <string name="aq_friends_member_removed">%1$s ne fait plus partie de %2$s.</string>
+    <string name="aq_friends_leave">Quitter le groupe</string>
+    <string name="aq_friends_leave_confirm">Quitter %s ?</string>
+    <string name="aq_friends_left">Tu as quitté %s.</string>
+    <plurals name="aq_friends_members">
+        <item quantity="one">%d membre</item>
+        <item quantity="other">%d membres</item>
+    </plurals>
+
+    <string name="aq_friends_invite">Invitation à un groupe</string>
+    <string name="aq_friends_invite_hint">Les membres voient la progression des uns et des autres dans le classement du groupe et peuvent partager des paquets, des objectifs et des petits rappels.</string>
+    <string name="aq_friends_join">Rejoindre le groupe</string>
+    <string name="aq_friends_joined">Tu as rejoint %s.</string>
+    <string name="aq_friends_invite_gone">Ce lien d’invitation n’est plus valide.</string>
+    <string name="aq_friends_invite_gone_hint">Demande un nouveau lien à la personne qui te l’a envoyé.</string>
+
+    <string name="aq_friends_visibility">Ton profil</string>
+    <string name="aq_friends_visibility_public">Tout le monde peut voir ton profil et tes positions dans le classement mondial.</string>
+    <string name="aq_friends_visibility_private">Seuls tes amis et tes groupes peuvent voir ton profil.</string>
+    <string name="aq_friends_public">Profil public</string>
+</resources>

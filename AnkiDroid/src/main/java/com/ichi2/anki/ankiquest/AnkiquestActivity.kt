@@ -173,6 +173,11 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                     view: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
+                    session?.invite(request.url.toString())?.let { code ->
+                        // A group invite link is answered natively.
+                        startActivity(AnkiquestFriendsActivity.intent(this@AnkiquestActivity, invite = code))
+                        return true
+                    }
                     when (session?.link(request.url.toString())) {
                         AnkiquestLink.SITE -> return false
                         AnkiquestLink.SIGN_IN -> openSettings()
@@ -377,6 +382,7 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         private const val STATE_DASHBOARD = "ankiquestDashboard"
         private const val STATE_DESTINATION = "ankiquestDestination"
         private val sessionBridge = AnkiquestBrowserSessionBridge()
+        private val joinRoute = Regex("/join/[^/]+")
 
         /**
          * Opens the website at [path], one of the routes [destinationUrl] accepts, or the player's
@@ -418,8 +424,8 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
         ): String {
             val base = dashboard.toHttpUrlOrNull() ?: return dashboard
             val route = path.orEmpty().substringBefore('#')
-            val allowed = setOf("/", "/community", "/records", "/hour", "/day", "/week", "/month", "/year", "/all")
-            if (path == null || route !in allowed) {
+            val allowed = setOf("/", "/community", "/records", "/hour", "/day", "/week", "/month", "/year", "/all", "/friends")
+            if (path == null || (route !in allowed && !joinRoute.matches(route))) {
                 return base
                     .newBuilder()
                     .setQueryParameter("embed", "1")
