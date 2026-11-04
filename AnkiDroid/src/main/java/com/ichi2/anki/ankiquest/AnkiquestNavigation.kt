@@ -14,6 +14,8 @@ object AnkiquestNavigation {
     const val FRIENDS_PATH = "/community#challenges"
     const val ACTIVITY_PATH = "/community#activity"
     const val WEEK_PATH = "/week"
+    const val RECORDS_PATH = "/records"
+    const val HISTORY_PATH = "/history"
 
     /** Where an inbox notification leads: a native screen, or one known website route. */
     sealed interface Destination {
@@ -71,6 +73,21 @@ object AnkiquestNavigation {
             !intent.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK) &&
             intent.action == Intent.ACTION_MAIN &&
             intent.data == null
+
+    /**
+     * The native screen for a website page at [path], relative to the server, or null for one the
+     * app still shows on the website. The screens open the page themselves on a server without
+     * their JSON.
+     */
+    fun nativeScreen(
+        context: Context,
+        path: String,
+    ): Intent? =
+        when (path.substringBefore('#').substringBefore('?').trimEnd('/')) {
+            RECORDS_PATH -> AnkiquestRecordsActivity.intent(context)
+            HISTORY_PATH -> AnkiquestHistoryActivity.intent(context)
+            else -> null
+        }
 
     /** The website page for one friend goal, for servers without the native screen's endpoint. */
     fun challengePath(id: Long): String = "/community#challenge-$id"

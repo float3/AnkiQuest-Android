@@ -432,6 +432,16 @@
             android:exported="false"
             />
         <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestRecordsActivity"
+            android:label="@string/aq_records_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestHistoryActivity"
+            android:label="@string/aq_history_title"
+            android:exported="false"
+            />
+        <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestShareActivity"
             android:label="@string/ankiquest_share_title"
             android:excludeFromRecents="true"

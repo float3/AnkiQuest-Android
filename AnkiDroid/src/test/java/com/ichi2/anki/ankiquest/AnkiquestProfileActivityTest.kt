@@ -85,6 +85,21 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `personal bests lead to the records, and on the player's own profile to the study history`() {
+        val mine = launch()
+        mine.click(mine.getString(R.string.aq_records_title))
+        assertEquals(AnkiquestRecordsActivity::class.java.name, shadowOf(mine).nextStartedActivity.component?.className)
+        mine.click(mine.getString(R.string.aq_history_title))
+        assertEquals(AnkiquestHistoryActivity::class.java.name, shadowOf(mine).nextStartedActivity.component?.className)
+
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val theirs = launch("cerro")
+        assertTrue(theirs.hasText(theirs.getString(R.string.aq_records_title)))
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_history_title)), "another player's history is private")
+    }
+
+    @Test
     fun `many achievements show the closest first until all are asked for`() {
         val many =
             (1..10).map {
