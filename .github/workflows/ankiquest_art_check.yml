@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: ankiquest art check
+
+# Runs the server's art exporter against the app's drawables. It runs the server's code, so it
+# only runs for pull requests and pushes, never on a schedule or by hand.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  art:
+    name: App art matches the server's exporter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: float3/ankiquest
+          ref: master
+          path: server
+          persist-credentials: false
+
+      - name: Check the app's art against the server's exporter
+        shell: bash
+        run: |
+          if [ -f server/tools/export_android_art.py ]; then
+            python3 -m venv "$RUNNER_TEMP/art"
+            "$RUNNER_TEMP/art/bin/pip" install --quiet pillow
+            "$RUNNER_TEMP/art/bin/python" server/tools/export_android_art.py --check .
+          else
+            echo "The server has no tools/export_android_art.py"
+          fi

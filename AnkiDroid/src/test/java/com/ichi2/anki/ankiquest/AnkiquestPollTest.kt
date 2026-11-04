@@ -32,6 +32,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -150,6 +151,19 @@ class AnkiquestPollTest : RobolectricTest() {
             val upload = requests.indexOf("/api/reviews/cerro")
             assertTrue(upload >= 0)
             assertTrue(upload < requests.indexOf("/api/leaderboard"))
+        }
+
+    @Test
+    fun `polling keeps the server capabilities current after the inbox`() =
+        runBlocking {
+            assertEquals(Result.success(), worker().doWork())
+
+            val capabilities = requests.indexOf("/api/capabilities")
+            assertTrue(capabilities > requests.indexOfFirst { it.startsWith("/api/notifications/") })
+            assertFalse(AnkiquestCapabilities.has(assertNotNull(AnkiquestHomeData.account()), AnkiquestCapabilities.COOKIE_SESSION))
+            requests.clear()
+            assertEquals(Result.success(), worker().doWork())
+            assertTrue(requests.none { it == "/api/capabilities" }, "fresh capabilities are not asked again")
         }
 
     @Test
