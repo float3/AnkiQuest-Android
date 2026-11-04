@@ -49,6 +49,7 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
@@ -240,6 +241,8 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         moodIcon.isVisible = AnkiquestIcon.available(requireContext())
         moodIcon.setOnPreferenceChangeListener { _, enabled ->
             if (enabled == true) {
+                // The last known day shows at once; the poll then brings it up to date.
+                AnkiquestIcon.showLastKnown(requireContext(), TimeManager.time.intTimeMS())
                 AnkiquestPoll.refreshNow(requireContext())
             } else {
                 AnkiquestIcon.show(requireContext(), AnkiquestIcon.Mood.DEFAULT)

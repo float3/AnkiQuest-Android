@@ -10,12 +10,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -53,18 +55,54 @@ class AnkiquestIconTest : RobolectricTest() {
     }
 
     @Test
+    fun `the mood icon is on unless turned off`() {
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit { remove(AnkiquestIcon.PREF_ENABLED) }
+        assertTrue(AnkiquestIcon.enabled(prefs))
+        prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, false) }
+        assertFalse(AnkiquestIcon.enabled(prefs))
+    }
+
+    @Test
+    fun `builds without the quest aliases ignore the default at start`() {
+        val prefs = targetContext.sharedPrefs()
+        AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
+        AnkiquestIcon.onAppStart(targetContext, prefs)
+        AnkiquestIcon.showLastKnown(targetContext, now, prefs)
+        for (mood in Mood.entries) assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, state(mood), mood.name)
+    }
+
+    @Test
+    fun `turning the icon on shows the last known day at once`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, false) }
+        AnkiquestIcon.update(targetContext, profile("studied", 12, 10), now, prefs)
+        assertEquals(listOf(Mood.DEFAULT), enabled(), "off shows the plain icon")
+        prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
+        AnkiquestIcon.showLastKnown(targetContext, now, prefs)
+        assertEquals(listOf(Mood.HAPPY), enabled(), "the profile seen while off is used without another poll")
+    }
+
+    @Test
+    fun `the app start catches up with the last known day`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit { remove(AnkiquestIcon.PREF_ENABLED) }
+        assertNull(AnkiquestIcon.lastKnown(prefs))
+        AnkiquestIcon.onAppStart(targetContext, prefs)
+        assertEquals(listOf(Mood.DEFAULT), enabled(), "nothing known yet keeps the plain icon")
+        val clock = TimeManager.time.intTimeMS()
+        val protected = JSONObject().put("streak_state", "protected").put("streak", 12).put("day_ends_at", clock + 10 * hour)
+        AnkiquestIcon.update(targetContext, protected, clock, prefs)
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        AnkiquestIcon.onAppStart(targetContext, prefs)
+        assertEquals(listOf(Mood.FROZEN), enabled())
+    }
+
+    @Test
     fun `exactly one launcher icon is enabled`() {
-        // The aliases come from the quest build's manifest, which unit tests do not merge.
-        for (mood in Mood.entries) {
-            shadowOf(targetContext.packageManager).addOrUpdateActivity(
-                ActivityInfo().apply {
-                    packageName = targetContext.packageName
-                    name = component(mood).className
-                    targetActivity = "com.ichi2.anki.IntentHandler"
-                    enabled = mood == Mood.DEFAULT
-                },
-            )
-        }
+        registerAliases()
         assertTrue(AnkiquestIcon.available(targetContext))
         val prefs = targetContext.sharedPrefs()
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
@@ -75,6 +113,20 @@ class AnkiquestIconTest : RobolectricTest() {
         prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, false) }
         AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
         assertEquals(listOf(Mood.DEFAULT), enabled())
+    }
+
+    /** The aliases come from the quest build's manifest, which unit tests do not merge. */
+    private fun registerAliases() {
+        for (mood in Mood.entries) {
+            shadowOf(targetContext.packageManager).addOrUpdateActivity(
+                ActivityInfo().apply {
+                    packageName = targetContext.packageName
+                    name = component(mood).className
+                    targetActivity = "com.ichi2.anki.IntentHandler"
+                    enabled = mood == Mood.DEFAULT
+                },
+            )
+        }
     }
 
     private fun component(mood: Mood) = ComponentName(targetContext.packageName, "com.ichi2.anki.ankiquest.${mood.alias}")

@@ -86,6 +86,13 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         assertEquals(AnkiquestStreakWidget.Size.MEDIUM, AnkiquestStreakWidget.Size.fitting(130f, 110f))
         assertEquals(AnkiquestStreakWidget.Size.MEDIUM, AnkiquestStreakWidget.Size.fitting(320f, 110f), "a wide strip keeps the card")
         assertEquals(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.fitting(250f, 260f))
+        assertEquals(
+            AnkiquestStreakWidget.Size.LARGE,
+            AnkiquestStreakWidget.Size.fitting(250f, 600f),
+            "a narrow column keeps the large card",
+        )
+        assertEquals(AnkiquestStreakWidget.Size.HUGE, AnkiquestStreakWidget.Size.fitting(320f, 400f))
+        assertEquals(AnkiquestStreakWidget.Size.HUGE, AnkiquestStreakWidget.Size.fitting(800f, 800f))
     }
 
     @Test

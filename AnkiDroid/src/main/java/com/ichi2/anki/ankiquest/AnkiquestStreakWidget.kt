@@ -45,10 +45,13 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: Bundle,
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) AnkiquestPoll.refreshNow(context)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) AnkiquestWidget.redrawStreaks(context)
     }
 
-    /** Like Duolingo's: a tiny face and number at 1x1, the usual card at 2x2, a big companion from 3x3 up. */
+    /**
+     * Like Duolingo's: a tiny face and number at 1x1, the usual card at 2x2, a big companion from 3x3
+     * up, and from about 4x5 a giant number under a companion that fills the card.
+     */
     enum class Size(
         @LayoutRes val layout: Int,
         val minWidthDp: Float,
@@ -57,6 +60,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         SMALL(R.layout.widget_ankiquest_streak_small, 0f, 0f),
         MEDIUM(R.layout.widget_ankiquest_streak, 100f, 90f),
         LARGE(R.layout.widget_ankiquest_streak_large, 200f, 220f),
+        HUGE(R.layout.widget_ankiquest_streak_huge, 300f, 380f),
         ;
 
         companion object {

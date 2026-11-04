@@ -8,12 +8,14 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Aki's mood on the app icon, like a pet waiting on the home screen. Opt-in: launchers redraw the
- * icon when it changes, and some briefly drop it from the home screen while they do.
+ * Aki's mood on the app icon, like a pet waiting on the home screen. On by default where the build
+ * has the moods; launchers redraw the icon when it changes, and some briefly drop it from the home
+ * screen while they do.
  *
  * Each mood is a launcher alias of IntentHandler; exactly one is enabled. The aliases are part of
  * the AnkiQuest branding in src/quest, so other builds keep IntentHandler's own launcher entry.
@@ -21,6 +23,7 @@ import timber.log.Timber
 internal object AnkiquestIcon {
     const val PREF_ENABLED = "ankiquestMoodIcon"
     private const val PREF_CURRENT = "ankiquestMoodIconCurrent"
+    private const val PREF_LAST_PROFILE = "ankiquestMoodIconProfile"
     private const val WORRY_HOURS = 6
 
     enum class Mood(
@@ -53,7 +56,7 @@ internal object AnkiquestIcon {
         }
     }
 
-    fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, false)
+    fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, true)
 
     /** Whether this build has the mood aliases; only the quest build does. */
     fun available(context: Context): Boolean =
@@ -64,13 +67,61 @@ internal object AnkiquestIcon {
             false
         }
 
-    /** Shows the mood for [profile], or the plain icon when the setting is off. */
+    /** Shows the mood for [profile], or the plain icon when the setting is off, and remembers [profile] for [showLastKnown]. */
     fun update(
         context: Context,
         profile: JSONObject?,
         now: Long,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ) = show(context, if (enabled(prefs)) mood(profile, now) else Mood.DEFAULT, prefs)
+    ) {
+        if (profile != null) remember(profile, prefs)
+        show(context, if (enabled(prefs)) mood(profile, now) else Mood.DEFAULT, prefs)
+    }
+
+    /**
+     * Shows the mood for the last profile the poll saw, without waiting for the next poll, as when the
+     * setting is turned on. Until a poll has seen a profile that is the plain icon.
+     */
+    fun showLastKnown(
+        context: Context,
+        now: Long,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) = show(context, mood(lastKnown(prefs), now), prefs)
+
+    /**
+     * At app start the icon catches up with the last known day. Opening the app then refreshes the
+     * profile, which brings in today, also for whoever an update just turned the setting on for.
+     */
+    fun onAppStart(
+        context: Context,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) {
+        try {
+            if (enabled(prefs) && available(context)) showLastKnown(context, TimeManager.time.intTimeMS(), prefs)
+        } catch (e: Exception) {
+            Timber.w(e, "AnkiQuest icon could not catch up")
+        }
+    }
+
+    /** The parts of the configured account's last profile that the mood reads; another account's are never used. */
+    internal fun lastKnown(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): JSONObject? =
+        prefs.getString(lastProfileKey(prefs), null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+
+    private fun remember(
+        profile: JSONObject,
+        prefs: SharedPreferences,
+    ) {
+        val kept =
+            JSONObject()
+                .put("streak", profile.optLong("streak"))
+                .put("streak_state", profile.optString("streak_state"))
+                .put("day_ends_at", profile.optLong("day_ends_at"))
+                .toString()
+        val key = lastProfileKey(prefs)
+        if (prefs.getString(key, null) != kept) prefs.edit { putString(key, kept) }
+    }
+
+    private fun lastProfileKey(prefs: SharedPreferences) = scopedKey(PREF_LAST_PROFILE, AnkiquestHomeData.account(prefs)?.scope)
 
     fun show(
         context: Context,
