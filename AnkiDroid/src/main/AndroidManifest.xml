@@ -422,6 +422,11 @@
             android:exported="false"
             />
         <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestFriendsActivity"
+            android:label="@string/ankiquest_nav_friends"
+            android:exported="false"
+            />
+        <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestFeedActivity"
             android:label="@string/aq_home_activity"
             android:exported="false"

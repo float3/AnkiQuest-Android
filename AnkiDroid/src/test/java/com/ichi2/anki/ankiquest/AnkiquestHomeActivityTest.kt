@@ -139,8 +139,8 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertEquals(4, nav.menu.size)
 
         nav.selectedItemId = R.id.ankiquest_nav_friends
-        val goals = assertNotNull(shadowOf(home).nextStartedActivity)
-        assertEquals(AnkiquestChallengesActivity::class.java.name, goals.component?.className)
+        val friends = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, friends.component?.className)
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
 
         nav.selectedItemId = R.id.ankiquest_nav_progress

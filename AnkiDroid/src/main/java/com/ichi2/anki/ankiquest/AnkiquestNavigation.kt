@@ -26,6 +26,9 @@ object AnkiquestNavigation {
         /** The native activity feed, [AnkiquestFeedActivity]. */
         data object Activity : Destination
 
+        /** The native friends and groups, [AnkiquestFriendsActivity]. */
+        data object Friends : Destination
+
         /** The native friend goals, [AnkiquestChallengesActivity], opened on goal [id] when there is one. */
         data class Challenges(
             val id: Long? = null,
@@ -59,6 +62,7 @@ object AnkiquestNavigation {
             kind.startsWith("challenge_") -> Destination.Challenges()
             kind in weekly -> Destination.Leaderboard(AnkiquestBoards.Period.WEEK.query)
             kind in feed -> Destination.Activity
+            kind.startsWith("friend_") || kind.startsWith("group_") -> Destination.Friends
             kind == "reminder_freeze_refill" || topic?.substringBefore(':') == "quest" ->
                 Destination.Today(AnkiquestHomeActivity.FOCUS_QUESTS)
             else -> Destination.Today()
@@ -102,7 +106,7 @@ object AnkiquestNavigation {
                 AnkiquestHomeActivity
                     .intent(context)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            R.id.ankiquest_nav_friends -> AnkiquestChallengesActivity.intent(context)
+            R.id.ankiquest_nav_friends -> AnkiquestFriendsActivity.intent(context)
             R.id.ankiquest_nav_progress -> AnkiquestProfileActivity.intent(context)
             else -> null
         }

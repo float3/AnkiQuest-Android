@@ -32,6 +32,7 @@ import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.ankiquest.AnkiquestActivity
 import com.ichi2.anki.ankiquest.AnkiquestChallengesActivity
 import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
+import com.ichi2.anki.ankiquest.AnkiquestFriendsActivity
 import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
 import com.ichi2.anki.ankiquest.AnkiquestHomeActivity
 import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
@@ -139,6 +140,7 @@ object ActivityList {
             get(AnkiquestActivity::class.java),
             get(AnkiquestHomeActivity::class.java),
             get(AnkiquestFeedActivity::class.java),
+            get(AnkiquestFriendsActivity::class.java),
             get(AnkiquestChallengesActivity::class.java),
             get(AnkiquestRecordsActivity::class.java),
             get(AnkiquestHistoryActivity::class.java),

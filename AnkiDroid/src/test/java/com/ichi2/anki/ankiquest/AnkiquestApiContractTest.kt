@@ -284,6 +284,36 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `friends and groups list requests, friends, muted players and groups, and every change answers the list`() =
+        runBlocking {
+            val overview = AnkiquestSocial.overview(account)
+            assertEquals(listOf("friend"), overview.friends.map { it.user })
+            assertEquals(listOf("ana"), overview.incoming.map { it.user })
+            assertEquals(listOf("cerro"), overview.outgoing.map { it.user })
+            assertTrue(overview.isMuted("cerro"))
+            val owned = overview.groups.single { it.owner }
+            val code = assertNotNull(owned.invite)
+            assertTrue(owned.members.any { it.user == "hill" })
+            assertTrue(overview.groups.filterNot { it.owner }.all { it.invite == null })
+            assertTrue(overview.groups.all { group -> group.members.all { it.display.isNotEmpty() } })
+
+            val invite = AnkiquestSocial.invite(account, code)
+            assertEquals(owned.name, invite.name)
+            assertEquals(owned.members.size, invite.members)
+
+            val created = AnkiquestSocial.change(account, AnkiquestSocial.Change.CreateGroup("Spanish club"))
+            assertNotNull(created.groups.single { it.name == "Spanish club" }.invite)
+            val friends = AnkiquestSocial.change(account, AnkiquestSocial.Change.Befriend("ana"))
+            assertTrue(friends.friends.any { it.user == "ana" })
+            assertTrue(friends.incoming.isEmpty())
+            val muted = AnkiquestSocial.change(account, AnkiquestSocial.Change.Mute("cerro"))
+            assertEquals(listOf("cerro"), muted.muted.map { it.user })
+            assertTrue(
+                requests.containsAll(listOf("GET /api/social/hill", "POST /api/social/hill", "GET /api/invites/$code")),
+            )
+        }
+
+    @Test
     fun `friend goals list invitations, progress and results, and answer every change with the list`() =
         runBlocking {
             val overview = AnkiquestChallenges.overview(account)
@@ -376,6 +406,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/leaderboard" -> "leaderboard"
             path == "/api/records" -> "records"
             parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
+            parts.size == 2 && parts[0] == "social" -> if (method == "POST") socialChange(sent) else "social"
+            parts.size == 2 && parts[0] == "invites" -> "invite"
             parts.size == 3 && parts[0] == "community" && parts[1] == "challenges" ->
                 if (method ==
                     "POST"
@@ -389,6 +421,14 @@ class AnkiquestApiContractTest : RobolectricTest() {
             else -> null
         }
     }
+
+    /** The recorded answer for one `POST /api/social` action; every action answers the same overview. */
+    private fun socialChange(sent: String): String =
+        when (JSONObject(sent).optString("action")) {
+            "create_group" -> "group_create"
+            "mute" -> "mute"
+            else -> "social_change"
+        }
 
     private fun example(name: String): String =
         assertNotNull(javaClass.classLoader?.getResource("$EXAMPLES/$name.json"), "$name.json").readText(Charsets.UTF_8)
@@ -421,13 +461,18 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "leaderboard",
                     "share_to_link",
                     "deck_share",
+                    "social",
+                    "group_create",
+                    "invite",
+                    "social_change",
+                    "mute",
                     "challenges",
                     "challenge_create",
                     "challenge_action",
                     "records",
                 )
 
-        val UNUSED = setOf("capabilities", "devices", "mute")
+        val UNUSED = setOf("capabilities", "devices")
 
         /** What the native leaderboard and profiles read. */
         val BOARDS = setOf("leaderboard_day", "week", "player_profile", "wins")
