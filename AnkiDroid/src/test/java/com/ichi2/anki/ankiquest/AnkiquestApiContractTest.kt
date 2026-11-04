@@ -456,9 +456,11 @@ class AnkiquestApiContractTest : RobolectricTest() {
         val CHALLENGES = setOf("challenges", "challenge_create", "challenge_action") - CONSUMED
 
         /**
-         * Examples the server already keeps for app screens still in review (records and history),
-         * counted only once the server has them. Each screen's pull request moves its names into [CONSUMED].
+         * Examples the server already keeps for app screens still in review (records and history,
+         * friends and groups), counted only once the server has them. Each screen's pull request
+         * moves its names into [CONSUMED].
          */
-        val NOT_YET = setOf("records", "study") - CONSUMED - UNUSED
+        val NOT_YET =
+            setOf("records", "study", "social", "group_create", "invite", "social_change") - CONSUMED - UNUSED
     }
 }
