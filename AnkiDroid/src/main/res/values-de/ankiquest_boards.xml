@@ -13,7 +13,6 @@
     <string name="aq_board_resets">Neustart %1$s</string>
     <string name="aq_board_empty">Noch hat niemand Wiederholungen hochgeladen.</string>
     <string name="aq_board_no_xp">In diesem Zeitraum gibt es noch keine XP.</string>
-    <string name="aq_board_you">%1$s (du)</string>
     <string name="aq_board_your_place">Du bist auf Platz %1$d von %2$d.</string>
     <string name="aq_board_xp">%1$s XP</string>
     <string name="aq_board_today_reviews">%1$s heute</string>
@@ -52,7 +51,6 @@
     <string name="aq_profile_best_year">Beste 365 Tage</string>
     <string name="aq_profile_best_value">%1$s XP · %2$s Wiederholungen</string>
     <string name="aq_profile_lifetime">Ein Leben lang lernen</string>
-    <string name="aq_profile_reviews">Wiederholungen</string>
     <string name="aq_profile_hours">Stunden</string>
     <string name="aq_profile_best_streak">Beste Serie</string>
     <string name="aq_profile_best_combo">Bester Combo</string>

@@ -271,7 +271,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         views.section(content, getString(R.string.aq_profile_lifetime))
         tiles(
             listOf(
-                Triple(getString(R.string.aq_profile_reviews), views.number(p.lifetimeReviews), null),
+                Triple(getString(R.string.aq_challenges_kind_reviews), views.number(p.lifetimeReviews), null),
                 Triple(getString(R.string.aq_profile_hours), views.number(p.lifetimeHours), null),
                 Triple(getString(R.string.aq_profile_best_streak), views.number(p.bestStreak), null),
                 Triple(getString(R.string.aq_profile_best_combo), views.number(p.bestCombo), null),

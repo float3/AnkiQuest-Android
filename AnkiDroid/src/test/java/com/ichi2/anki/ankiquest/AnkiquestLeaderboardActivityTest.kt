@@ -62,7 +62,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     fun `the week shows each player's rank, XP, streak and today, with the player marked`() {
         val board = launch()
         assertTrue(board.hasText("Ana"))
-        assertTrue(board.hasText(board.getString(R.string.aq_board_you, "Bo")), "the player's own row says so")
+        assertTrue(board.hasText(board.getString(R.string.aq_challenges_you, "Bo")), "the player's own row says so")
         assertTrue(board.hasText(board.getString(R.string.aq_board_xp, "90")))
         assertTrue(board.hasText(board.getString(R.string.aq_board_today_reviews, "4")))
         assertTrue(board.hasText("4"), "places after the podium are numbered")
@@ -77,7 +77,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         val own =
             board.views<View>().first {
                 it.contentDescription?.startsWith(
-                    board.getString(R.string.aq_board_row_description, 2, board.getString(R.string.aq_board_you, "Bo"), 1, "40"),
+                    board.getString(R.string.aq_board_row_description, 2, board.getString(R.string.aq_challenges_you, "Bo"), 1, "40"),
                 ) ==
                     true
             }

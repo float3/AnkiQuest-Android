@@ -13,7 +13,6 @@
     <string name="aq_board_resets">Resets %1$s</string>
     <string name="aq_board_empty">Nobody has uploaded reviews yet.</string>
     <string name="aq_board_no_xp">No XP in this period yet.</string>
-    <string name="aq_board_you">%1$s (you)</string>
     <string name="aq_board_your_place">You are in place %1$d of %2$d.</string>
     <string name="aq_board_xp">%1$s XP</string>
     <string name="aq_board_today_reviews">%1$s today</string>
@@ -52,7 +51,6 @@
     <string name="aq_profile_best_year">Best 365 days</string>
     <string name="aq_profile_best_value">%1$s XP · %2$s reviews</string>
     <string name="aq_profile_lifetime">A lifetime of learning</string>
-    <string name="aq_profile_reviews">Reviews</string>
     <string name="aq_profile_hours">Hours</string>
     <string name="aq_profile_best_streak">Best streak</string>
     <string name="aq_profile_best_combo">Best combo</string>

@@ -13,7 +13,6 @@
     <string name="aq_board_resets">Remise à zéro %1$s</string>
     <string name="aq_board_empty">Personne n’a encore envoyé de révisions.</string>
     <string name="aq_board_no_xp">Pas encore d’XP sur cette période.</string>
-    <string name="aq_board_you">%1$s (toi)</string>
     <string name="aq_board_your_place">Tu es à la place %1$d sur %2$d.</string>
     <string name="aq_board_xp">%1$s XP</string>
     <string name="aq_board_today_reviews">%1$s aujourd’hui</string>
@@ -52,7 +51,6 @@
     <string name="aq_profile_best_year">Meilleurs 365 jours</string>
     <string name="aq_profile_best_value">%1$s XP · %2$s révisions</string>
     <string name="aq_profile_lifetime">Une vie d’apprentissage</string>
-    <string name="aq_profile_reviews">Révisions</string>
     <string name="aq_profile_hours">Heures</string>
     <string name="aq_profile_best_streak">Meilleure série</string>
     <string name="aq_profile_best_combo">Meilleur combo</string>

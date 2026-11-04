@@ -13,7 +13,6 @@
     <string name="aq_board_resets">Se reinicia %1$s</string>
     <string name="aq_board_empty">Nadie ha subido repasos todavía.</string>
     <string name="aq_board_no_xp">Todavía no hay XP en este periodo.</string>
-    <string name="aq_board_you">%1$s (tú)</string>
     <string name="aq_board_your_place">Estás en el puesto %1$d de %2$d.</string>
     <string name="aq_board_xp">%1$s XP</string>
     <string name="aq_board_today_reviews">%1$s hoy</string>
@@ -52,7 +51,6 @@
     <string name="aq_profile_best_year">Mejores 365 días</string>
     <string name="aq_profile_best_value">%1$s XP · %2$s repasos</string>
     <string name="aq_profile_lifetime">Toda una vida aprendiendo</string>
-    <string name="aq_profile_reviews">Repasos</string>
     <string name="aq_profile_hours">Horas</string>
     <string name="aq_profile_best_streak">Mejor racha</string>
     <string name="aq_profile_best_combo">Mejor combo</string>

@@ -284,7 +284,7 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
         }
         views.avatar(panel, row.user, row.display, 40)
         val details = views.column(panel)
-        val name = if (mine) getString(R.string.aq_board_you, row.display) else row.display
+        val name = if (mine) getString(R.string.aq_challenges_you, row.display) else row.display
         views.text(details, name, heading = true).apply {
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
