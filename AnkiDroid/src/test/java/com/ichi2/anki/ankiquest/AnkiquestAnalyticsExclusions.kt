@@ -28,6 +28,7 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_update_channel_key,
             R.string.ankiquest_deck_status_key,
             R.string.ankiquest_goal_key,
+            R.string.ankiquest_mood_icon_key,
             R.string.ankiquest_deck_notifications_key,
             R.string.ankiquest_deck_share_ask_key,
             R.string.ankiquest_moments_key,
