@@ -74,6 +74,18 @@ internal data class AnkiquestWebSession(
         return if (signIn) AnkiquestLink.SIGN_IN else AnkiquestLink.SITE
     }
 
+    /** The invite code when [url] is this server's `/join/<code>` page, which the app shows natively. */
+    fun invite(url: String?): String? {
+        val expected = usableBase() ?: return null
+        val actual = url?.toHttpUrlOrNull() ?: return null
+        if (!sameSite(expected, actual)) return null
+        val page = relativePath(expected, actual) ?: return null
+        if (!joinPattern.matches(page)) return null
+        return actual.pathSegments.last()
+    }
+
+    private val joinPattern = Regex("join/[^/]+")
+
     private fun usableBase(): HttpUrl? = base?.takeIf { it.username.isEmpty() && it.password.isEmpty() && it.encodedQuery == null }
 
     private fun sameSite(

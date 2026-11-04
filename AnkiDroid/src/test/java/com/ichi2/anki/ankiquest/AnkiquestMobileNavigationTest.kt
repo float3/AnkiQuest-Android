@@ -172,6 +172,8 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
                 Triple("conquest", null, 0L) to feed,
                 Triple("message", null, 0L) to feed,
                 Triple("reply", null, 0L) to feed,
+                Triple("friend_request", null, 0L) to AnkiquestNavigation.Destination.Friends,
+                Triple("group_joined", null, 0L) to AnkiquestNavigation.Destination.Friends,
                 Triple("something_new", null, 0L) to today,
                 Triple("", null, 0L) to today,
             )
@@ -255,6 +257,8 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
             AnkiquestNavigation.FRIENDS_PATH,
             AnkiquestNavigation.ACTIVITY_PATH,
             AnkiquestNavigation.challengePath(42),
+            AnkiquestFriendsActivity.WEB_PATH,
+            "/join/0123456789abcdef01234567",
             null,
         )) {
             val url = AnkiquestActivity.destinationUrl(session.dashboard, path)
@@ -263,16 +267,39 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
     }
 
     @Test
-    fun `deck list navigation opens Today and friend goals natively and other community pages on the website`() {
+    fun `deck list navigation opens Today and Friends natively and progress on the website`() {
         val today = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_today)!!
         assertEquals(ComponentName(targetContext, AnkiquestHomeActivity::class.java), today.component)
         val friends = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_friends)!!
-        assertEquals(ComponentName(targetContext, AnkiquestChallengesActivity::class.java), friends.component)
-        assertFalse(friends.hasExtra(AnkiquestChallengesActivity.EXTRA_CHALLENGE))
-        assertFalse(friends.hasExtra(AnkiquestChallengesActivity.EXTRA_ACCOUNT))
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), friends.component)
         val progress = AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_progress)!!
         assertEquals(ComponentName(targetContext, AnkiquestProfileActivity::class.java), progress.component)
         assertEquals(null, progress.getStringExtra(AnkiquestProfileActivity.EXTRA_USER), "the player's own profile")
         assertEquals(null, AnkiquestNavigation.destination(targetContext, R.id.ankiquest_nav_decks))
+    }
+
+    @Test
+    fun `friend and group notifications open the native friends for their account`() {
+        val owner = "https://anki.example.test/member%20name"
+        val entry = JSONObject().put("id", 76).put("kind", "friend_request")
+        val opened = AnkiquestNotifier.notificationIntent(targetContext, entry, owner)
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), opened.component)
+        assertEquals(owner, opened.getStringExtra(AnkiquestFriendsActivity.EXTRA_ACCOUNT))
+        assertTrue((opened.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
+    }
+
+    @Test
+    fun `a group invite link in the web view is recognised only on this server`() {
+        val session = AnkiquestWebSession("https://anki.example.test/prefix/#member", "member", "member-token")
+        assertEquals("abc123", session.invite("https://anki.example.test/prefix/join/abc123"))
+        assertEquals("abc123", session.invite("https://anki.example.test/prefix/join/abc123?embed=1"))
+        assertEquals(null, session.invite("https://other.test/prefix/join/abc123"))
+        assertEquals(null, session.invite("https://anki.example.test/join/abc123"))
+        assertEquals(null, session.invite("https://anki.example.test/prefix/join/abc123/more"))
+        assertEquals(null, session.invite("https://anki.example.test/prefix/friends"))
+        assertEquals(
+            "https://anki.example.test/prefix/join/abc123?embed=1",
+            AnkiquestActivity.destinationUrl(session.dashboard, "/join/abc123"),
+        )
     }
 }
