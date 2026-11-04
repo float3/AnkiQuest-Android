@@ -2,6 +2,8 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.Context
+import android.text.format.DateFormat
 import androidx.annotation.StringRes
 import com.ichi2.anki.R
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +52,27 @@ internal object AnkiquestBoards {
         val todayReviews: Long,
         val todayMinutes: Long,
         val streakMinutes: Long,
-    )
+        /** XP still counting toward the week that just reset, while this player's day began before it; see [ClosingWeek]. */
+        val closingXp: Long? = null,
+        /** When this row's day ends (Unix ms), and with it [closingXp]; 0 when the server does not say. */
+        val dayEndsAt: Long = 0,
+    ) {
+        /** [closingXp] while it still counts at [now]. */
+        fun closingXp(now: Long): Long? = closingXp?.takeIf { dayEndsAt > now }
+    }
+
+    /**
+     * The week the board has already reset but that still counts the player's current day: an Anki
+     * day counts toward the week its start falls in, so after the shared reset a player further
+     * west keeps adding to the closing week until their day ends at [endsAt] (Unix ms).
+     * The server sends it as `closing_week` only while that lasts; older servers never do.
+     */
+    data class ClosingWeek(
+        val xp: Long,
+        val endsAt: Long,
+    ) {
+        fun counting(now: Long): Boolean = endsAt > now
+    }
 
     data class Quest(
         val title: String,
@@ -120,6 +142,7 @@ internal object AnkiquestBoards {
         val achievements: List<Achievement>,
         val conquests: List<Conquest>,
         val records: Map<Period, Best>,
+        val closingWeek: ClosingWeek? = null,
     ) {
         val unlocked: Int get() = achievements.count { it.unlocked != null }
     }
@@ -233,8 +256,34 @@ internal object AnkiquestBoards {
                     todayReviews = row.optLong("today_reviews"),
                     todayMinutes = row.optLong("today_minutes"),
                     streakMinutes = row.optLong("streak_minutes"),
+                    closingXp = row.takeIf { it.has("closing_xp") && !it.isNull("closing_xp") }?.optLong("closing_xp"),
+                    dayEndsAt = row.optLong("day_ends_at"),
                 )
             }.sortedWith(compareByDescending<Standing> { it.xp }.thenByDescending { it.xpTotal }.thenBy { it.user })
+
+    /** A profile's `closing_week`, or null when it has none or is malformed. */
+    fun parseClosingWeek(json: JSONObject?): ClosingWeek? {
+        val closing = json?.optJSONObject("closing_week") ?: return null
+        val endsAt = closing.optLong("ends_at").takeIf { it > 0 } ?: return null
+        return ClosingWeek(xp = closing.optLong("xp").coerceAtLeast(0), endsAt = endsAt)
+    }
+
+    /** "Last week still counting: 1,234 XP · closes at 04:00", or null once [closing] has closed at [now]. */
+    fun closingLine(
+        context: Context,
+        closing: ClosingWeek?,
+        now: Long,
+    ): String? {
+        if (closing == null || !closing.counting(now)) return null
+        val at = DateFormat.getTimeFormat(context).format(java.util.Date(closing.endsAt))
+        return context.getString(
+            R.string.aq_closing_week,
+            java.text.NumberFormat
+                .getIntegerInstance(AnkiquestLanguage.locale())
+                .format(closing.xp),
+            at,
+        )
+    }
 
     fun parseWeekEnds(json: JSONObject): Long? = json.optLong("ends_at").takeIf { it > 0 }
 
@@ -303,6 +352,7 @@ internal object AnkiquestBoards {
                     .mapNotNull { period ->
                         records?.optJSONObject(period.query)?.let { period to Best(it.optLong("xp"), it.optLong("reviews")) }
                     }.toMap(),
+            closingWeek = parseClosingWeek(json),
         )
     }
 

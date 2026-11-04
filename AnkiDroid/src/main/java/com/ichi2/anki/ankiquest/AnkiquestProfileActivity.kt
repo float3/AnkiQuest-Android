@@ -20,6 +20,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.Job
@@ -190,6 +191,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                     getString(R.string.aq_profile_at_risk, p.streak)
                 }
             views.text(notice, line)
+        }
+        AnkiquestBoards.closingLine(this, p.closingWeek, TimeManager.time.intTimeMS())?.let { line ->
+            views.text(views.card(content, tinted = true), line)
         }
         tiles(
             listOf(
