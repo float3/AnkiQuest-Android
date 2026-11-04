@@ -161,6 +161,13 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `telling friends about a finished deck reads how many were told`() =
+        runBlocking {
+            assertEquals(1, AnkiquestSharing.shareFinishedDeck(account, 1L, "Spanish", listOf("cerro")))
+            assertTrue(requests.contains("POST /api/decks/hill/share"))
+        }
+
+    @Test
     fun `the leaderboard orders the widget rows`() =
         runBlocking {
             val board = Ankiquest.leaderboard()
@@ -233,6 +240,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
             path == "/api/leaderboard" -> "leaderboard"
+            parts.size == 3 && parts[0] == "decks" && parts[2] == "share" && method == "POST" -> "deck_share"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
@@ -260,8 +268,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "streak-freezes" to "streak_freezes",
             )
 
-        val CONSUMED = ROUTES.values.toSet() + setOf("sign_up", "sign_in", "leaderboard", "share_to_link")
+        val CONSUMED = ROUTES.values.toSet() + setOf("sign_up", "sign_in", "leaderboard", "share_to_link", "deck_share")
 
-        val UNUSED = setOf("capabilities", "devices", "wins")
+        val UNUSED = setOf("capabilities", "devices", "mute", "wins")
     }
 }
