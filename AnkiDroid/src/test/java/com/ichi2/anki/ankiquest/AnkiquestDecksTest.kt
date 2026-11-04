@@ -66,6 +66,9 @@ class AnkiquestDecksTest : RobolectricTest() {
 
     @Test
     fun `learning later today keeps deck and parent unfinished`() {
+        // Anki shows learning cards up to 20 minutes early as due now, so close to rollover
+        // the card below would be due now instead of later. Turn learn-ahead off.
+        col.config.set("collapseTime", 0)
         val parent = col.decks.id("Spanish")
         val child = col.decks.id("Spanish::Vocabulary")
         val card = addBasicNote().firstCard()
@@ -86,6 +89,8 @@ class AnkiquestDecksTest : RobolectricTest() {
 
     @Test
     fun `learning after rollover is excluded`() {
+        // Same as above: a card due just after rollover would count as due now near rollover.
+        col.config.set("collapseTime", 0)
         val card = addBasicNote().firstCard()
         card.queue = QueueType.Lrn
         card.type = CardType.Lrn
