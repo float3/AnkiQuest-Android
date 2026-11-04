@@ -270,8 +270,8 @@ object AnkiquestNotifier {
         context: Context,
         data: Data,
     ): Intent =
-        AnkiquestActivity
-            .intent(context, AnkiquestNavigation.ACTIVITY_PATH, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        AnkiquestFeedActivity
+            .intent(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** IDs and kinds become known screens; server-supplied URLs never become arbitrary app destinations. */
@@ -292,6 +292,7 @@ object AnkiquestNotifier {
                     AnkiquestHomeActivity
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
+                AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

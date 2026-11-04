@@ -48,8 +48,8 @@ import java.io.File
 import java.io.IOException
 
 /**
- * The daily study surface is native and local. Friends, activity and progress are the
- * website's community pages, opened in [AnkiquestActivity].
+ * The daily study surface is native and local. Activity is native too ([AnkiquestFeedActivity]);
+ * friends and progress are the website's community pages, opened in [AnkiquestActivity].
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private lateinit var content: LinearLayout
@@ -85,7 +85,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         scroll = findViewById(R.id.aq_home_scroll)
         findViewById<MaterialButton>(R.id.aq_home_activity).apply {
             setTextColor(getColor(R.color.aq_home_text))
-            setOnClickListener { web(AnkiquestNavigation.ACTIVITY_PATH) }
+            setOnClickListener { startActivity(AnkiquestFeedActivity.intent(this@AnkiquestHomeActivity)) }
         }
         findViewById<BottomNavigationView>(R.id.aq_home_navigation).apply {
             selectedItemId = R.id.ankiquest_nav_today
@@ -531,8 +531,6 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     }
 
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))
-
-    private fun web(path: String) = startActivity(AnkiquestActivity.intent(this, path))
 
     private fun connectionCard() {
         val panel = card()
