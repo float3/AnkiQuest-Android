@@ -111,12 +111,13 @@ object AnkiquestNotifier {
                             reply = answerable,
                         )
                     } else if (AnkiquestShare.shareable(kind)) {
+                        val (shareTitle, shareBody) = shareText(entry)
                         listOfNotNull(
                             AnkiquestShare.action(
                                 context,
                                 tag,
-                                title,
-                                body,
+                                shareTitle,
+                                shareBody,
                                 win,
                                 id,
                                 null,
@@ -164,20 +165,23 @@ object AnkiquestNotifier {
             RANK_ID,
             title,
             body,
-            AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            AnkiquestLeaderboardActivity
+                .intent(context, account = AnkiquestHomeData.account(prefs)?.notificationAccount)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
     }
 
     /**
-     * What sharing a rank [change] tells others: the server's first-person `share_title` and
-     * `share_body` ("👑 I took the crown"), or for older servers the notice itself.
+     * What sharing a rank change or one of the player's own [notice]s tells others: the server's
+     * first-person `share_title` and `share_body` ("👑 I took the crown", "I reached level 4 …"),
+     * or, when the server sends none, the notice itself.
      */
-    internal fun shareText(change: JSONObject): Pair<String, String> {
-        val title = change.getString("title")
-        val body = change.getString("body")
-        return change.optString("share_title").ifEmpty { title } to change.optString("share_body").ifEmpty { body }
+    internal fun shareText(notice: JSONObject): Pair<String, String> {
+        val title = notice.getString("title")
+        val body = notice.getString("body")
+        return notice.optString("share_title").ifEmpty { title } to notice.optString("share_body").ifEmpty { body }
     }
 
     /** The 1-based place [me] climbed to between two leaderboard orders, or null when they did not climb. */
@@ -320,7 +324,9 @@ object AnkiquestNotifier {
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
                 AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
+                is AnkiquestNavigation.Destination.Challenges -> AnkiquestChallengesActivity.intent(context, destination.id, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
+                is AnkiquestNavigation.Destination.Leaderboard -> AnkiquestLeaderboardActivity.intent(context, destination.period, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

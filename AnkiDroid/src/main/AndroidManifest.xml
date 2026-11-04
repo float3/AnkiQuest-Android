@@ -427,9 +427,25 @@
             android:exported="false"
             />
         <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestChallengesActivity"
+            android:label="@string/aq_challenges_title"
+            android:exported="false"
+            />
+        <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestShareActivity"
             android:label="@string/ankiquest_share_title"
             android:excludeFromRecents="true"
+            android:exported="false"
+            />
+
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity"
+            android:label="@string/ankiquest_dashboard_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestProfileActivity"
+            android:label="@string/aq_profile_title"
             android:exported="false"
             />
 

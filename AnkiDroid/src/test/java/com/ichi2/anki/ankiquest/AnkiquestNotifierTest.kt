@@ -68,16 +68,48 @@ class AnkiquestNotifierTest : RobolectricTest() {
     fun `a celebration can be shared and a friend's completion can be answered`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         val account = replyAccount()
-        val level = message(1, 30).put("kind", "celebration").put("title", "Level 54").put("body", "You reached level 54.")
+        val level =
+            message(1, 30)
+                .put("kind", "celebration")
+                .put("title", "Level 54")
+                .put("body", "You reached level 54 with 90000 XP.")
+                .put("share_title", "Level 54")
+                .put("share_body", "I reached level 54 with 90000 XP.")
         val completion = message(2, 30).put("sender", "cerro").put("kind", "completion")
+        val secured =
+            message(
+                3,
+                30,
+            ).put("kind", "celebration").put("title", "Streak secured!").put("body", "Today counts toward your 5-day streak.")
         AnkiquestNotifier.onDeckCompletions(
             targetContext,
             account.notificationAccount,
-            JSONArray().put(level).put(completion),
+            JSONArray().put(level).put(completion).put(secured),
             account.scope,
         )
         val celebration = shadowOf(manager).getNotification(5_140_001)
         assertEquals(listOf("Share"), celebration.actions.map { it.title.toString() })
+        assertEquals("You reached level 54 with 90000 XP.", celebration.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        val shared = shadowOf(celebration.actions.single().actionIntent).savedIntent
+        assertEquals("Level 54", shared.getStringExtra(AnkiquestShare.EXTRA_TITLE))
+        assertEquals(
+            "I reached level 54 with 90000 XP.",
+            shared.getStringExtra(AnkiquestShare.EXTRA_BODY),
+            "others hear it from the player",
+        )
+        val older =
+            shadowOf(
+                shadowOf(manager)
+                    .getNotification(5_140_003)
+                    .actions
+                    .single()
+                    .actionIntent,
+            ).savedIntent
+        assertEquals(
+            "Today counts toward your 5-day streak.",
+            older.getStringExtra(AnkiquestShare.EXTRA_BODY),
+            "servers without share words",
+        )
         val reply = shadowOf(manager).getNotification(5_140_002)
         assertFalse(reply.actions.any { it.title.toString() == "Share" })
     }
@@ -533,8 +565,8 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals("▲ You're now #1", posted.extras.getString(Notification.EXTRA_TITLE))
                 assertEquals("You passed Hill.", posted.extras.getString(Notification.EXTRA_TEXT))
                 val open = shadowOf(posted.contentIntent).savedIntent
-                assertEquals(AnkiquestActivity::class.java.name, open.component?.className)
-                assertEquals("/week", open.getStringExtra(AnkiquestActivity.EXTRA_PATH))
+                assertEquals(AnkiquestLeaderboardActivity::class.java.name, open.component?.className)
+                assertEquals("week", open.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
                 manager.cancelAll()
 
                 change = JSONObject.NULL
