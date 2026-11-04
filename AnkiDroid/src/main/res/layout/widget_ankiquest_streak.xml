@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ankiquest_streak_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/ankiquest_widget_background"
+    android:gravity="center"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <ImageView
+        android:id="@+id/ankiquest_streak_companion"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:layout_marginEnd="8dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter"
+        android:src="@drawable/aki_streak" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/ankiquest_streak_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-black"
+            android:includeFontPadding="false"
+            android:textColor="@color/ankiquest_widget_text"
+            android:textSize="44sp" />
+
+        <TextView
+            android:id="@+id/ankiquest_streak_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/ankiquest_streak_widget_label"
+            android:textColor="@color/ankiquest_widget_text"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/ankiquest_streak_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="@color/ankiquest_widget_text_dim"
+            android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>

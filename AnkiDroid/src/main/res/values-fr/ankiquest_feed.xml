@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_feed_back">Retour</string>
+    <string name="aq_feed_refresh">Actualiser l’activité</string>
+    <string name="aq_feed_loading">Chargement de ton activité…</string>
+    <string name="aq_feed_connect">Connecte AnkiQuest pour voir les réussites, encouragements et messages de tes amis.</string>
+    <string name="aq_feed_inbox">Reçus</string>
+    <string name="aq_feed_sent">Envoyés</string>
+    <string name="aq_feed_all">Tout</string>
+    <string name="aq_feed_needs_action">Réponse attendue</string>
+    <string name="aq_feed_needs_action_count">Réponse attendue · %1$d</string>
+    <string name="aq_feed_messages">Messages</string>
+    <string name="aq_feed_challenges">Défis</string>
+    <string name="aq_feed_deck_completions">Paquets terminés</string>
+    <string name="aq_feed_study_updates">Nouvelles d’étude</string>
+    <string name="aq_feed_unread_only">Non lues seulement</string>
+    <string name="aq_feed_mark_all_read">Tout marquer comme lu</string>
+    <string name="aq_feed_mark_read">Marquer comme lu</string>
+    <string name="aq_feed_all_read">Tout est marqué comme lu.</string>
+    <string name="aq_feed_needs_action_hint">Les invitations restent ici jusqu’à ta réponse, même après les avoir lues.</string>
+    <string name="aq_feed_view_invitation">Voir l’invitation</string>
+    <string name="aq_feed_open_goal">Ouvrir l’objectif</string>
+    <string name="aq_feed_all_invitations">Voir toutes les invitations</string>
+    <string name="aq_feed_legacy">Ce serveur affiche les 7 derniers jours. Mets le serveur à jour pour enregistrer l’état de lecture et garder un historique plus long.</string>
+    <string name="aq_feed_yesterday">Hier</string>
+    <string name="aq_feed_time_unread">%1$s · Non lu</string>
+    <string name="aq_feed_card">Carte : %1$s</string>
+    <string name="aq_feed_cheered">🎉 Encouragé</string>
+    <string name="aq_feed_cheer_sent">Ton encouragement a été envoyé.</string>
+    <string name="aq_feed_cheer_failed">Ton encouragement n’a pas été envoyé.</string>
+    <string name="aq_feed_reply">Répondre…</string>
+    <string name="aq_feed_reply_to">Répondre à %1$s</string>
+    <string name="aq_feed_send">Envoyer</string>
+    <string name="aq_feed_reply_done">Ta réponse a été envoyée.</string>
+    <string name="aq_feed_reply_failed">Ta réponse n’a pas été envoyée.</string>
+    <string name="aq_feed_reply_sent">Réponse envoyée</string>
+    <string name="aq_feed_read_failed">L’état de lecture n’a pas été enregistré.</string>
+    <string name="aq_feed_failed_because">%1$s %2$s</string>
+    <string name="aq_feed_in_reply_to">En réponse à</string>
+    <string name="aq_feed_empty">Tu es à jour.</string>
+    <string name="aq_feed_empty_rest">Tout le reste est à jour.</string>
+    <string name="aq_feed_empty_unread">Aucune notification non lue ici.</string>
+    <string name="aq_feed_empty_invitations">Aucune invitation n’attend de réponse.</string>
+    <string name="aq_feed_empty_category">Rien dans cette catégorie pour l’instant.</string>
+    <string name="aq_feed_empty_hint">Les nouvelles activités apparaîtront ici.</string>
+    <string name="aq_feed_more">Charger l’activité précédente</string>
+    <string name="aq_feed_more_sent">Charger les messages précédents</string>
+    <string name="aq_feed_sent_to">À %1$s</string>
+    <string name="aq_feed_seen">Vu %1$s</string>
+    <string name="aq_feed_not_seen">Pas encore vu</string>
+    <string name="aq_feed_sent_empty">Rien envoyé pour l’instant.</string>
+    <string name="aq_feed_sent_empty_hint">Les réponses et petits rappels que tu envoies apparaissent ici, avec le moment où ils ont été lus.</string>
+    <string name="aq_feed_offline">Connexion impossible. Vérifie ta connexion ; rien n’a été marqué comme lu.</string>
+    <string name="aq_feed_server_error">L’activité n’a pas pu être chargée. Réessaie.</string>
+    <string name="aq_feed_account_changed">Ton compte AnkiQuest a changé.</string>
+</resources>

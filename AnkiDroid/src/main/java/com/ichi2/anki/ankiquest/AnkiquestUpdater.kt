@@ -17,6 +17,8 @@ import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.compat.PackageInfoFlagsCompat
+import com.ichi2.anki.compat.getPackageArchiveInfoCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -356,13 +358,14 @@ object AnkiquestUpdater {
         if (downloaded == null || downloaded <= installedCode) file.delete()
     }
 
-    @Suppress("DEPRECATION")
     private fun archiveVersionCode(
         context: Context,
         file: File,
     ): Long? =
         runCatching {
-            context.packageManager.getPackageArchiveInfo(file.path, 0)?.let { PackageInfoCompat.getLongVersionCode(it) }
+            context.packageManager
+                .getPackageArchiveInfoCompat(file.path, PackageInfoFlagsCompat.EMPTY)
+                ?.let { PackageInfoCompat.getLongVersionCode(it) }
         }.getOrNull()
 
     private suspend fun fetch(

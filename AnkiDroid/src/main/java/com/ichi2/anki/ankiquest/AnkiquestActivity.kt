@@ -30,7 +30,6 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
-import com.ichi2.anki.snackbar.showSnackbar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -107,6 +106,12 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
             return
         }
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null && !ownedByCurrentAccount()) {
+            // A page for another account, such as its challenge, never opens; this account's own activity does, natively.
+            startActivity(AnkiquestFeedActivity.intent(this, intent.getStringExtra(EXTRA_ACCOUNT)))
+            finish()
+            return
+        }
         session = Ankiquest.webSession()
         account = AnkiquestNavigation.accountFingerprint()
         val dashboard = initialUrl()
@@ -210,9 +215,6 @@ class AnkiquestActivity : AnkiActivity(R.layout.activity_ankiquest) {
                 }
             }
         loadSession(dashboard, savedInstanceState)
-        if (savedInstanceState == null && !ownedByCurrentAccount()) {
-            findViewById<View>(R.id.content).showSnackbar(R.string.aq_home_account_route_changed)
-        }
     }
 
     /**

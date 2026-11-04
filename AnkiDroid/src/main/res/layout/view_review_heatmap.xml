@@ -184,7 +184,7 @@
                     android:layout_marginTop="8dp"
                     android:layoutDirection="ltr"
                     android:orientation="horizontal">
-                    <com.ichi2.anki.deckpicker.heatmap.ReviewHeatmapWeekdays
+                    <com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapWeekdays
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
                     <HorizontalScrollView
@@ -194,7 +194,7 @@
                         android:layout_weight="1"
                         android:fillViewport="false"
                         android:scrollbars="horizontal">
-                        <com.ichi2.anki.deckpicker.heatmap.ReviewHeatmapGrid
+                        <com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapGrid
                             android:id="@+id/review_heatmap_grid"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />

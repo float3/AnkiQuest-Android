@@ -111,7 +111,19 @@ object AnkiquestNotifier {
                             reply = answerable,
                         )
                     } else if (AnkiquestShare.shareable(kind)) {
-                        listOfNotNull(AnkiquestShare.action(context, tag, title, body, win, id, null, scope))
+                        listOfNotNull(
+                            AnkiquestShare.action(
+                                context,
+                                tag,
+                                title,
+                                body,
+                                win,
+                                id,
+                                null,
+                                scope,
+                                if (entry.isNull("topic")) null else entry.optString("topic"),
+                            ),
+                        )
                     } else {
                         emptyList()
                     },
@@ -175,6 +187,7 @@ object AnkiquestNotifier {
     ) {
         val prefs = AnkiDroidApp.sharedPrefs()
         AnkiquestDailyGoal.remember(profile, prefs)
+        AnkiquestIcon.update(context, profile, TimeManager.time.intTimeMS(), prefs)
         val hours = prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS)?.toIntOrNull() ?: 0
         val warning = profile.optJSONObject("streak_warning")
         if (hours <= 0 || warning == null) return
@@ -273,8 +286,8 @@ object AnkiquestNotifier {
         context: Context,
         data: Data,
     ): Intent =
-        AnkiquestActivity
-            .intent(context, AnkiquestNavigation.ACTIVITY_PATH, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
+        AnkiquestFeedActivity
+            .intent(context, data.getString(AnkiquestReply.EXTRA_REPLY_ACCOUNT))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** IDs and kinds become known screens; server-supplied URLs never become arbitrary app destinations. */
@@ -295,6 +308,7 @@ object AnkiquestNotifier {
                     AnkiquestHomeActivity
                         .intent(context)
                         .apply { destination.focus?.let { putExtra(AnkiquestHomeActivity.EXTRA_FOCUS, it) } }
+                AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
