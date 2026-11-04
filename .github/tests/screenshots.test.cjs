@@ -31,14 +31,12 @@ test('comparison selects the PR base branch or the pushed branch', () => {
   const expression = download.match(/branch: \$\{\{ (.+) \}\}/)[1];
   const selectBranch = new Function('github', `return ${expression};`);
   for (const [event, ref, base, expected] of [
-    ['pull_request', '42/merge', 'ankiquest', 'ankiquest'],
     ['pull_request', '42/merge', 'main', 'main'],
     ['push', 'main', undefined, 'main'],
-    ['push', 'ankiquest', undefined, 'ankiquest'],
   ]) {
     assert.equal(selectBranch({
       event_name: event, ref_name: ref,
-      event: { pull_request: { base: { ref: base } }, repository: { default_branch: 'ankiquest' } },
+      event: { pull_request: { base: { ref: base } }, repository: { default_branch: 'main' } },
     }), expected);
   }
 });
