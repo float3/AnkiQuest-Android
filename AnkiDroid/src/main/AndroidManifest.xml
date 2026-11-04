@@ -438,6 +438,17 @@
             android:exported="false"
             />
 
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity"
+            android:label="@string/ankiquest_dashboard_title"
+            android:exported="false"
+            />
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestProfileActivity"
+            android:label="@string/aq_profile_title"
+            android:exported="false"
+            />
+
         <activity-alias
             android:name="com.ichi2.anki.AnkiCardContextMenuAction"
             android:label="@string/context_menu_anki_card_label"

@@ -165,7 +165,9 @@ object AnkiquestNotifier {
             RANK_ID,
             title,
             body,
-            AnkiquestActivity.intent(context, AnkiquestNavigation.WEEK_PATH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            AnkiquestLeaderboardActivity
+                .intent(context, account = AnkiquestHomeData.account(prefs)?.notificationAccount)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
@@ -324,6 +326,7 @@ object AnkiquestNotifier {
                 AnkiquestNavigation.Destination.Activity -> AnkiquestFeedActivity.intent(context, account)
                 is AnkiquestNavigation.Destination.Challenges -> AnkiquestChallengesActivity.intent(context, destination.id, account)
                 is AnkiquestNavigation.Destination.Website -> AnkiquestActivity.intent(context, destination.path, account)
+                is AnkiquestNavigation.Destination.Leaderboard -> AnkiquestLeaderboardActivity.intent(context, destination.period, account)
             }
         return open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }

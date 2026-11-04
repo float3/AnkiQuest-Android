@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_refresh">Refresh the leaderboard</string>
+    <string name="aq_board_loading">Loading the leaderboard…</string>
+    <string name="aq_board_connect">Connect AnkiQuest to see the leaderboard and your friends’ progress.</string>
+    <string name="aq_board_hour">Hour</string>
+    <string name="aq_board_week">Week</string>
+    <string name="aq_board_month">Month</string>
+    <string name="aq_board_year">Year</string>
+    <string name="aq_board_all">Overall</string>
+    <string name="aq_board_xp_in">XP %1$s</string>
+    <string name="aq_board_resets">Resets %1$s</string>
+    <string name="aq_board_empty">Nobody has uploaded reviews yet.</string>
+    <string name="aq_board_no_xp">No XP in this period yet.</string>
+    <string name="aq_board_your_place">You are in place %1$d of %2$d.</string>
+    <string name="aq_board_xp">%1$s XP</string>
+    <string name="aq_board_today_reviews">%1$s today</string>
+    <string name="aq_board_row_description">Place %1$d: %2$s, level %3$d, %4$s XP</string>
+    <string name="aq_board_my_profile">Your profile</string>
+    <string name="aq_board_offline">Could not connect. Check your connection and refresh.</string>
+    <string name="aq_board_server_error">This could not be loaded. Try refreshing.</string>
+    <string name="aq_board_account_changed">This notification belongs to a different account. Showing this account’s leaderboard instead.</string>
+    <string name="aq_profile_title">Profile</string>
+    <string name="aq_profile_refresh">Refresh the profile</string>
+    <string name="aq_profile_loading">Loading the profile…</string>
+    <string name="aq_profile_hidden">This player’s profile is private, or they are not on this server.</string>
+    <string name="aq_profile_level">Level %1$d</string>
+    <string name="aq_profile_level_progress">%1$s / %2$s XP to level %3$d · %4$s XP in total</string>
+    <string name="aq_profile_at_risk">Your %1$d day streak is waiting for today’s reviews.</string>
+    <string name="aq_profile_at_risk_minutes">Your %1$d day streak is waiting: %2$d of %3$d minutes today.</string>
+    <string name="aq_profile_streak">Day streak</string>
+    <string name="aq_profile_freezes">Streak freezes</string>
+    <string name="aq_profile_freezes_count">%1$d/3</string>
+    <string name="aq_profile_freezes_ready">Ready to protect the streak</string>
+    <string name="aq_profile_freezes_paused">Protection paused</string>
+    <string name="aq_profile_reviews_today">Reviews today</string>
+    <string name="aq_profile_xp_today">XP today</string>
+    <string name="aq_profile_periods">XP by period</string>
+    <string name="aq_profile_quest_done">✓ %1$s</string>
+    <string name="aq_profile_quest_progress">%1$s / %2$s · +%3$d XP</string>
+    <string name="aq_profile_wins">Recent wins</string>
+    <string name="aq_profile_conquests">Hard-won cards</string>
+    <string name="aq_profile_leech">Leech tamed</string>
+    <string name="aq_profile_conquest">Card conquered</string>
+    <string name="aq_profile_bests">Personal bests</string>
+    <string name="aq_profile_best_hour">Best hour</string>
+    <string name="aq_profile_best_day">Best 24 hours</string>
+    <string name="aq_profile_best_week">Best 7 days</string>
+    <string name="aq_profile_best_month">Best 30 days</string>
+    <string name="aq_profile_best_year">Best 365 days</string>
+    <string name="aq_profile_best_value">%1$s XP · %2$s reviews</string>
+    <string name="aq_profile_lifetime">A lifetime of learning</string>
+    <string name="aq_profile_hours">Hours</string>
+    <string name="aq_profile_best_streak">Best streak</string>
+    <string name="aq_profile_best_combo">Best combo</string>
+    <string name="aq_profile_achievements">Achievements</string>
+    <string name="aq_profile_unlocked">%1$d of %2$d unlocked</string>
+    <string name="aq_profile_achievement_unlocked">%1$s · +%2$d XP</string>
+    <string name="aq_profile_show_all">Show all achievements</string>
+    <string name="aq_profile_show_fewer">Show fewer achievements</string>
+    <string name="aq_profile_leaderboard">See the leaderboard</string>
+    <plurals name="aq_profile_conquered">
+        <item quantity="one">One card that kept slipping away is learned at last.</item>
+        <item quantity="other">%1$d cards that kept slipping away are learned at last.</item>
+    </plurals>
+    <plurals name="aq_profile_lapses">
+        <item quantity="one">Forgotten once</item>
+        <item quantity="other">Forgotten %1$d times</item>
+    </plurals>
+    <plurals name="aq_profile_days">
+        <item quantity="one">%1$s day</item>
+        <item quantity="other">%1$s days</item>
+    </plurals>
+</resources>

@@ -152,7 +152,7 @@ object AnkiquestDeckPickerHooks {
                 ).setNegativeButton(CommonString.multimedia_editor_field_editing_done, null)
                 .setNeutralButton(R.string.ankiquest_summary_progress) { _, _ ->
                     elsewhere = true
-                    activity.startActivity(AnkiquestActivity.intent(activity, null))
+                    activity.startActivity(AnkiquestProfileActivity.intent(activity))
                 }
         if (summary.remaining > 0) {
             builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ ->
