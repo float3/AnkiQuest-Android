@@ -8,10 +8,14 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Bundle
 import android.text.format.DateUtils
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.DrawableRes
+import androidx.annotation.IdRes
 import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
 import androidx.core.app.PendingIntentCompat
@@ -47,6 +51,46 @@ open class AnkiquestWidget : AppWidgetProvider() {
         appWidgetIds: IntArray,
     ) {
         AnkiDroidApp.sharedPrefs().edit { appWidgetIds.forEach { remove("$PERIOD_KEY:$it") } }
+    }
+
+    /** A resized widget is drawn again for its new size straight away, from the standings it already shows. */
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        redraw(context, appWidgetManager, styles.first { it.provider == javaClass }, appWidgetId)
+    }
+
+    /**
+     * The list holds every player and scrolls, so a taller widget shows more of them at once. A widget
+     * that is also wide draws everything larger, so the extra width is not left empty.
+     */
+    enum class Size(
+        val minWidthDp: Float,
+        val minHeightDp: Float,
+        val scale: Float,
+    ) {
+        REGULAR(0f, 0f, 1f),
+        LARGE(340f, 220f, 1.25f),
+        HUGE(480f, 380f, 1.6f),
+        ;
+
+        companion object {
+            /** The largest size that fits a widget of [widthDp] x [heightDp]. */
+            fun fitting(
+                widthDp: Float,
+                heightDp: Float,
+            ): Size = entries.last { widthDp >= it.minWidthDp && heightDp >= it.minHeightDp }
+
+            /** The size of a placed widget, from its options: the width and height it has in portrait. */
+            fun of(options: Bundle?): Size =
+                fitting(
+                    (options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0) ?: 0).toFloat(),
+                    (options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0) ?: 0).toFloat(),
+                )
+        }
     }
 
     companion object {
@@ -125,6 +169,16 @@ open class AnkiquestWidget : AppWidgetProvider() {
         @Volatile
         private var requestedAt = 0L
 
+        /** What the widgets show now, so a resized one is drawn again without asking the server. */
+        private class Drawn(
+            val board: JSONArray?,
+            val fetchedAt: Long,
+            val offline: Boolean,
+        )
+
+        @Volatile
+        private var drawn: Drawn? = null
+
         /** Refreshes the leaderboard soon, at most every [MIN_REFRESH_MS]. */
         fun requestUpdate(context: Context) {
             val now = TimeManager.time.intTimeMS()
@@ -185,20 +239,75 @@ open class AnkiquestWidget : AppWidgetProvider() {
             fetchedAt: Long,
             offline: Boolean,
         ) {
+            val shown = Drawn(board, fetchedAt, offline)
+            drawn = shown
             AnkiquestStreakWidget.render(context, board)
             val manager = getAppWidgetManager(context) ?: return
             for (style in styles) {
-                val ids = widgetIds(context, style)
-                if (ids.isEmpty()) continue
-                for (id in ids) {
-                    val period = periodOf(id)
-                    val ranked = board?.let { forPeriod(it, period) }
-                    val items = collection(context, ranked ?: JSONArray(), style)
-                    val views = layout(context, ranked, fetchedAt, offline, style, period)
-                    RemoteViewsCompat.setRemoteAdapter(context, views, id, R.id.ankiquest_widget_list, items)
-                    manager.updateAppWidget(id, views)
-                }
+                for (id in widgetIds(context, style)) draw(context, manager, style, id, shown)
             }
+        }
+
+        /** Draws widget [id] again for its current size; before anything was drawn in this process, it fetches instead. */
+        internal fun redraw(
+            context: Context,
+            manager: AppWidgetManager,
+            style: Style,
+            id: Int,
+        ) {
+            val shown = drawn ?: return AnkiquestPoll.refreshNow(context)
+            draw(context, manager, style, id, shown)
+        }
+
+        /** Draws the streak widgets again from the standings already shown, like [redraw]. */
+        internal fun redrawStreaks(context: Context) {
+            val shown = drawn ?: return AnkiquestPoll.refreshNow(context)
+            AnkiquestStreakWidget.render(context, shown.board)
+        }
+
+        private fun draw(
+            context: Context,
+            manager: AppWidgetManager,
+            style: Style,
+            id: Int,
+            shown: Drawn,
+        ) {
+            val period = periodOf(id)
+            val size = Size.of(manager.getAppWidgetOptions(id))
+            val ranked = shown.board?.let { forPeriod(it, period) }
+            val items = collection(context, ranked ?: JSONArray(), style, size)
+            val views = layout(context, ranked, shown.fetchedAt, shown.offline, style, period, size)
+            RemoteViewsCompat.setRemoteAdapter(context, views, id, R.id.ankiquest_widget_list, items)
+            manager.updateAppWidget(id, views)
+        }
+
+        /** Whether views of a fixed size can grow; launchers before Android 12 keep the layout's sizes. */
+        private val boxesGrow get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+        /**
+         * Scales the text of [id] from its size in the layout, [sp], by [size]. Text inside a box of
+         * fixed size ([boxed]) only grows along with its box.
+         */
+        private fun RemoteViews.scaleText(
+            @IdRes id: Int,
+            sp: Float,
+            size: Size,
+            boxed: Boolean = false,
+        ) {
+            if (size == Size.REGULAR || (boxed && !boxesGrow)) return
+            setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * size.scale)
+        }
+
+        /** Scales the box [id] of [widthDp] x [heightDp] in the layout by [size]; a null height keeps wrapping its content. */
+        private fun RemoteViews.scaleBox(
+            @IdRes id: Int,
+            widthDp: Float,
+            heightDp: Float?,
+            size: Size,
+        ) {
+            if (size == Size.REGULAR || !boxesGrow) return
+            setViewLayoutWidth(id, widthDp * size.scale, TypedValue.COMPLEX_UNIT_DIP)
+            if (heightDp != null) setViewLayoutHeight(id, heightDp * size.scale, TypedValue.COMPLEX_UNIT_DIP)
         }
 
         internal fun layout(
@@ -208,14 +317,21 @@ open class AnkiquestWidget : AppWidgetProvider() {
             offline: Boolean,
             style: Style = styles.first(),
             period: String = "week",
+            size: Size = Size.REGULAR,
         ): RemoteViews {
             val language = AnkiquestLanguage.context(context)
             val views = RemoteViews(context.packageName, style.layout)
+            views.scaleText(R.id.ankiquest_widget_title, 15f, size)
+            views.scaleText(R.id.ankiquest_widget_period, 12f, size)
+            views.scaleText(R.id.ankiquest_widget_updated, 11f, size)
+            views.scaleText(R.id.ankiquest_widget_status, 13f, size)
+            views.scaleBox(R.id.ankiquest_widget_companion, COMPANION_DP.toFloat(), COMPANION_DP.toFloat(), size)
+            views.scaleBox(R.id.ankiquest_widget_refresh, 32f, 32f, size)
             views.setViewVisibility(R.id.ankiquest_widget_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
             if (AnkiquestCompanion.visible()) {
                 val art = AnkiquestCompanion.resource(R.drawable.aki_face)
-                val size = (COMPANION_DP * context.resources.displayMetrics.density).toInt()
-                val bitmap = AnkiquestArt.bitmap(context, art, size)
+                val pixels = (COMPANION_DP * size.scale * context.resources.displayMetrics.density).toInt()
+                val bitmap = AnkiquestArt.bitmap(context, art, pixels)
                 if (bitmap != null) {
                     views.setImageViewBitmap(R.id.ankiquest_widget_companion, bitmap)
                 } else {
@@ -281,6 +397,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             context: Context,
             board: JSONArray,
             style: Style = styles.first(),
+            size: Size = Size.REGULAR,
         ): RemoteCollectionItems {
             val items = RemoteCollectionItems.Builder().setViewTypeCount(1)
             val me = Ankiquest.player()
@@ -293,6 +410,15 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 val xp = xpOf(entry)
                 val streak = entry.optInt("streak")
                 val views = RemoteViews(context.packageName, style.rowLayout)
+                views.scaleText(R.id.ankiquest_widget_rank, 16f, size, boxed = true)
+                views.scaleText(R.id.ankiquest_widget_initial, 16f, size, boxed = true)
+                views.scaleText(R.id.ankiquest_widget_name, 14f, size)
+                views.scaleText(R.id.ankiquest_widget_streak, 12f, size)
+                views.scaleText(R.id.ankiquest_widget_level, 12f, size)
+                views.scaleText(R.id.ankiquest_widget_xp, 14f, size)
+                views.scaleBox(R.id.ankiquest_widget_place, 30f, null, size)
+                views.scaleBox(R.id.ankiquest_widget_medal, 22f, 22f, size)
+                views.scaleBox(R.id.ankiquest_widget_portrait, 32f, 32f, size)
                 views.setInt(
                     R.id.ankiquest_widget_row,
                     "setBackgroundResource",

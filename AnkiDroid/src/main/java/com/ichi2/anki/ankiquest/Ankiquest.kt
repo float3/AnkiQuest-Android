@@ -95,6 +95,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
         AnkiquestPoll.schedule(app)
+        AnkiquestIcon.onAppStart(app)
     }
 
     /** The player's profile, as served by `/api/profile/<user>`. */

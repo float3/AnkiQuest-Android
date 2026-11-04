@@ -5,8 +5,10 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.app.Application
 import android.appwidget.AppWidgetHostView
+import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Bundle
 import android.os.Looper
 import android.view.View
 import android.view.View.MeasureSpec
@@ -23,6 +25,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.ankiquest.AnkiquestWidget.Size
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -308,6 +311,78 @@ class AnkiquestWidgetTest : RobolectricTest() {
     }
 
     @Test
+    fun `a wide and tall leaderboard draws larger`() {
+        assertEquals(Size.REGULAR, Size.fitting(250f, 110f))
+        assertEquals(Size.REGULAR, Size.fitting(500f, 110f), "a wide strip keeps its rows")
+        assertEquals(Size.REGULAR, Size.fitting(250f, 600f), "a narrow column only shows more rows")
+        assertEquals(Size.LARGE, Size.fitting(360f, 260f))
+        assertEquals(Size.HUGE, Size.fitting(520f, 420f))
+        assertEquals(Size.HUGE, Size.fitting(800f, 800f))
+        assertEquals(Size.REGULAR, Size.of(Bundle()))
+        assertEquals(Size.LARGE, Size.of(options(400, 300)))
+    }
+
+    @Test
+    fun `larger sizes scale the header and the rows`() {
+        for (style in AnkiquestWidget.styles) {
+            val sizes =
+                Size.entries.map { size ->
+                    val header =
+                        AnkiquestWidget
+                            .layout(
+                                targetContext,
+                                leaderboard(),
+                                0,
+                                false,
+                                style,
+                                size = size,
+                            ).apply(targetContext, FrameLayout(targetContext))
+                    val row =
+                        AnkiquestWidget
+                            .collection(targetContext, leaderboard(), style, size)
+                            .getItemView(3)
+                            .apply(targetContext, FrameLayout(targetContext))
+                    assertEquals("Player 4", row.text(R.id.ankiquest_widget_name), size.name)
+                    Triple(
+                        header.findViewById<TextView>(R.id.ankiquest_widget_title).textSize,
+                        row.findViewById<TextView>(R.id.ankiquest_widget_name).textSize,
+                        row.findViewById<View>(R.id.ankiquest_widget_portrait).layoutParams.width,
+                    )
+                }
+            for ((smaller, larger) in sizes.zipWithNext()) {
+                assertTrue(larger.first > smaller.first, "title grows")
+                assertTrue(larger.second > smaller.second, "names grow")
+                assertTrue(larger.third > smaller.third, "pictures grow")
+            }
+        }
+    }
+
+    @Test
+    fun `a taller leaderboard shows more players at once`() {
+        val root = populatedWidget(leaderboard(10))
+        val list = root.findViewById<ListView>(R.id.ankiquest_widget_list)
+        measureWidget(root, heightDp = 150)
+        val short = list.childCount
+        measureWidget(root, heightDp = 600)
+        assertTrue(list.childCount > short, "$short rows at 150dp, ${list.childCount} at 600dp")
+    }
+
+    @Test
+    fun `resizing redraws the widget for its new size`() {
+        val manager = AppWidgetManager.getInstance(targetContext)
+        val id = shadowOf(manager).createWidget(AnkiquestWidget::class.java, R.layout.widget_ankiquest)
+        manager.updateAppWidgetOptions(id, options(250, 110))
+        AnkiquestWidget.render(targetContext, leaderboard(), TimeManager.time.intTimeMS(), offline = false)
+        val title = { shadowOf(manager).getViewFor(id).findViewById<TextView>(R.id.ankiquest_widget_title).textSize }
+        val regular = title()
+
+        val bigger = options(520, 420)
+        manager.updateAppWidgetOptions(id, bigger)
+        AnkiquestWidget().onAppWidgetOptionsChanged(targetContext, manager, id, bigger)
+        assertTrue(title() > regular, "the title grows without waiting for the next poll")
+    }
+
+    @Test
     fun `refresh button targets the unexported receiver instead of the exported widget`() {
         val intent = shadowOf(AnkiquestWidget.refreshIntent(targetContext))
         assertTrue(intent.isBroadcast)
@@ -366,24 +441,35 @@ class AnkiquestWidgetTest : RobolectricTest() {
         assertEquals(deckLaunchFlags, intent.flags and deckLaunchFlags)
     }
 
-    private fun measureWidget(root: View) {
+    private fun options(
+        widthDp: Int,
+        heightDp: Int,
+    ) = Bundle().apply {
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+    }
+
+    private fun measureWidget(
+        root: View,
+        heightDp: Int = 150,
+    ) {
         val density = targetContext.resources.displayMetrics.density
         val width = (300 * density).toInt()
-        val height = (150 * density).toInt()
+        val height = (heightDp * density).toInt()
         root.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY))
         root.layout(0, 0, width, height)
     }
 
     private fun View.text(id: Int): String = findViewById<TextView>(id).text.toString()
 
-    private fun leaderboard(): JSONArray =
+    private fun leaderboard(players: Int = 8): JSONArray =
         JSONArray().apply {
-            repeat(8) { position ->
+            repeat(players) { position ->
                 put(
                     JSONObject()
                         .put("user", "player${position + 1}")
                         .put("display", "Player ${position + 1}")
-                        .put("week_xp", 800 - position * 100)
+                        .put("week_xp", (players - position) * 100)
                         .put("level", position + 1)
                         .put("streak", position),
                 )

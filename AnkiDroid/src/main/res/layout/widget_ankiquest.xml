@@ -27,6 +27,7 @@
             android:importantForAccessibility="no"
             android:src="@drawable/aki_face" />
         <TextView
+            android:id="@+id/ankiquest_widget_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"

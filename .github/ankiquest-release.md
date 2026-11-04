@@ -4,7 +4,7 @@ AnkiDroid with [AnkiQuest](https://github.com/float3/ankiquest): study, shared g
 
 **Today and goals.** Today shows your streak minimum and a daily goal: by default the cards due today plus a share of any overdue backlog (10% a day, adjustable), so a backlog shrinks steadily instead of all at once. You can set a fixed number of cards or minutes instead under Settings → AnkiQuest → Study. An animated bar shows your progress, and a celebration appears when today counts for your streak and again when you reach your goal. Right after the weekly reset, Today and your profile show last week's XP as "still counting" until your own day ends.
 
-**Aki.** A home-screen streak widget shows your streak next to Aki or Ankilope. An optional setting changes the app icon with your streak's mood. New celebration art marks achievements, streak milestones, finished decks and the top three.
+**Aki.** A home-screen streak widget shows your streak next to Aki or Ankilope, and the streak and leaderboard widgets can now be made much bigger: the streak widget gets a giant number with a big Aki, and the leaderboard shows more players in larger rows. Aki's mood now shows on the app icon by default and changes as soon as it's on; you can turn it off under Settings → AnkiQuest → Study. New celebration art marks achievements, streak milestones, finished decks and the top three.
 
 **Sharing.** Share a win with your AnkiQuest friends or any other app. Shared wins and rank climbs are worded in your own voice ("I passed Mago Rojo"). A conquered card can carry a label of what it was, only if you add one. When you finish a deck, the app asks who to tell.
 
