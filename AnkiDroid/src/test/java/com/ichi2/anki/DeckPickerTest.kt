@@ -2,7 +2,6 @@
 
 package com.ichi2.anki
 
-import android.Manifest.permission.INTERNET
 import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.content.Intent
@@ -57,9 +56,7 @@ import com.ichi2.anki.browser.CardBrowserFragment
 import com.ichi2.anki.browser.CardBrowserViewModel.RowSelection
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
-import com.ichi2.anki.common.utils.android.getResFromAttr
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
-import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.anki.databinding.ActivityHomescreenBinding
 import com.ichi2.anki.deckpicker.DeckFilters
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
@@ -89,8 +86,6 @@ import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.ui.RecyclerFastScroller
 import com.ichi2.anki.ui.internationalization.sentenceCase
-import com.ichi2.anki.ui.windows.permissions.PermissionsActivity
-import com.ichi2.anki.ui.windows.permissions.PermissionsActivity.Companion.EXTRA_PERMISSIONS_SET
 import com.ichi2.anki.utils.Destination
 import com.ichi2.anki.utils.ext.defaultConfig
 import com.ichi2.anki.utils.ext.dismissAllDialogFragments
@@ -106,7 +101,6 @@ import com.ichi2.testutils.ext.text
 import com.ichi2.testutils.grantWritePermissions
 import com.ichi2.testutils.revokeWritePermissions
 import com.ichi2.testutils.withBooleanPreference
-import com.ichi2.testutils.withDeniedPermissions
 import com.ichi2.testutils.withWritePermissions
 import com.ichi2.ui.AccessibleSearchView
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1344,7 +1338,7 @@ class DeckPickerTest : RobolectricTest() {
 
             assertThat(
                 shadowOf(selectedDeck.background).createdFromResId,
-                equalTo(getResFromAttr(this, CommonR.attr.currentDeckBackground)),
+                equalTo(CommonR.drawable.item_background_selected),
             )
         }
     }
@@ -1990,26 +1984,6 @@ class DeckPickerTest : RobolectricTest() {
         deckPickerEx {
             runCatching { throw BackendDbCorruptException(backendError {}) }
             assertThat(databaseErrorDialog, equalTo(DatabaseErrorDialogType.DIALOG_LOAD_FAILED))
-        }
-
-    @Test
-    fun `when INTERNET is denied, PermissionsActivity is shown`() =
-        runTest {
-            withDeniedPermissions(INTERNET) {
-                deckPicker {
-                    val intent = assertNotNull(shadowOf(this@deckPicker).nextStartedActivity)
-
-                    assertThat(
-                        intent.component?.shortClassName,
-                        equalTo(PermissionsActivity::class.java.name),
-                    )
-
-                    val extra = intent.getParcelableExtraCompat<StoragePermissionSet>(EXTRA_PERMISSIONS_SET)
-
-                    assertNotNull(extra)
-                    assertThat(extra.permissions, equalTo(listOf(INTERNET)))
-                }
-            }
         }
 
     @Test

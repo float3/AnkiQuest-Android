@@ -2,14 +2,14 @@
 
 package com.ichi2.anki.tags
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.ichi2.anki.CollectionManager
-import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.dialogs.utils.AnKingTags
 import com.ichi2.anki.exception.CollectionLockedException
 import com.ichi2.anki.observability.ensureOpsExecuted
-import com.ichi2.testutils.NeedsRobolectric
+import com.ichi2.testutils.JvmTest
+import com.ichi2.testutils.rules.IcuCaseFoldingRule
+import com.ichi2.testutils.withViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,8 +25,8 @@ import org.hamcrest.Matchers.instanceOf
 import org.hamcrest.Matchers.not
 import org.hamcrest.Matchers.nullValue
 import org.hamcrest.Matchers.sameInstance
+import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -39,11 +39,10 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /** Integration tests for [ManageTagsViewModel] with a real collection */
-@RunWith(AndroidJUnit4::class)
-@NeedsRobolectric(
-    "Preserve RobolectricTest's scoped CollectionManager dispatcher when switching to JvmTest; tag operations must finish before assertions and teardown.",
-)
-class ManageTagsViewModelTest : RobolectricTest() {
+class ManageTagsViewModelTest : JvmTest() {
+    @get:Rule
+    val caseFolding = IcuCaseFoldingRule()
+
     @Test
     fun `row equality preserves parent spelling while tag identity ignores case`() {
         val original = tagListItem("parent::child", "child", 1, hasChildren = false, collapsed = false)
@@ -318,20 +317,21 @@ class ManageTagsViewModelTest : RobolectricTest() {
     fun `initial load failure allows search input and retry`() =
         runTest {
             addTags("science", "history")
-            val viewModel = withLockedCollection { ManageTagsViewModel() }
-            val failure = viewModel.state.value
-            assertThat(failure, instanceOf(ManageTagsState.Error::class.java))
-            assertThat((failure as ManageTagsState.Error).error, instanceOf(CollectionLockedException::class.java))
+            withViewModel(withLockedCollection { ManageTagsViewModel() }) {
+                val failure = state.value
+                assertThat(failure, instanceOf(ManageTagsState.Error::class.java))
+                assertThat((failure as ManageTagsState.Error).error, instanceOf(CollectionLockedException::class.java))
 
-            viewModel.filter("hist")
-            assertThat(viewModel.searchQuery.value, equalTo("hist"))
+                filter("hist")
+                assertThat(searchQuery.value, equalTo("hist"))
 
-            withQueuedCollectionAccess {
-                val retry = viewModel.refreshTags()
-                assertThat(viewModel.state.value, equalTo(ManageTagsState.Loading))
-                retry.join()
+                withQueuedCollectionAccess {
+                    val retry = refreshTags()
+                    assertThat(state.value, equalTo(ManageTagsState.Loading))
+                    retry.join()
+                }
+                assertThat(loadedState.visibleTagNames, equalTo(listOf("history")))
             }
-            assertThat(viewModel.loadedState.visibleTagNames, equalTo(listOf("history")))
         }
 
     @Test
@@ -1087,7 +1087,7 @@ class ManageTagsViewModelTest : RobolectricTest() {
     fun `merge updates descendants and deduplicates tags on notes`() =
         runTest {
             val note = addBasicNote().update { listOf("source", "source::child", "target", "target::child", "unrelated").forEach(::addTag) }
-            with(ManageTagsViewModel()) {
+            withViewModel {
                 renameTag("source", "target").join()
 
                 assertThat(col.getNote(note.id).tags, containsInAnyOrder("target", "target::child", "unrelated"))
@@ -1344,7 +1344,7 @@ class ManageTagsViewModelTest : RobolectricTest() {
         }
     }
 
-    private suspend fun withViewModel(block: suspend ManageTagsViewModel.() -> Unit) = ManageTagsViewModel().block()
+    private suspend fun withViewModel(block: suspend ManageTagsViewModel.() -> Unit) = withViewModel(ManageTagsViewModel(), block)
 
     /** Helper abstracting [com.ichi2.anki.libanki.Tags.all] */
     private fun checkCollectionTags(block: (List<String>) -> Unit) = block(col.tags.all())

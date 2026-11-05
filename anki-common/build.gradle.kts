@@ -13,7 +13,8 @@ configure<LibraryExtension> {
     // code should live inside com.ichi2.anki
     // namespace must be unique for resources generation.
     namespace = "com.ichi2.anki.ankicommon"
-    buildFeatures.buildConfig = false
+    buildFeatures.buildConfig = true
+    buildFeatures.viewBinding = true
     testFixtures.enable = true
 }
 
