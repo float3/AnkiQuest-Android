@@ -438,6 +438,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             try {
                 val account = HomeAccount.current() ?: return@withLock
                 val profile = if (account.token.isEmpty()) preview(account.server, account.encodedUser) else upload(account, again)
+                onOwnProfile(account, profile)
                 if (!background || feedback) present(profile, feedback)
                 if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
                 if (account.token.isNotEmpty()) queueConquests(account, profile)
@@ -446,6 +447,31 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest refresh failed")
             }
+        }
+    }
+
+    /**
+     * Brings the app icon and the widgets up to date with [profile], the player's own as an upload or
+     * preview just answered, as the poll does with the profile it fetches. Uploads follow every answer
+     * and the app opening, while the poll may wait hours for the phone, so the icon turns happy as soon
+     * as today counts. [account] must still be the one signed in.
+     */
+    private fun onOwnProfile(
+        account: HomeAccount,
+        profile: JSONObject,
+    ) {
+        val context = app ?: return
+        if (HomeAccount.current()?.scope != account.scope) return
+        try {
+            val prefs = AnkiDroidApp.sharedPrefs()
+            val now = TimeManager.time.intTimeMS()
+            AnkiquestDailyGoal.remember(profile, prefs)
+            AnkiquestIcon.update(context, profile, now, prefs)
+            AnkiquestWidget.onOwnProfile(context, account, profile, now)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest icon and widgets could not follow the upload")
         }
     }
 
@@ -910,6 +936,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         if (now - resumeUploadAt > RESUME_UPLOAD_INTERVAL_MS) {
             resumeUploadAt = now
             launchRefresh(showFeedback = false, resync = true)
+        } else {
+            // Without an upload, the icon still catches up with the clock, as when the last hours of the day begin.
+            val context = activity.applicationContext
+            scope.launch { AnkiquestIcon.onAppStart(context) }
         }
         if (AnkiquestMoments.resting(activity)) {
             AnkiquestMoments.present(activity, AnkiDroidApp.sharedPrefs())
