@@ -78,4 +78,11 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_deck_share_ask_title" maxLength="41">Ask to share finished decks</string>
     <string name="ankiquest_deck_share_ask_summary">When you finish a deck for the day, ask which friends to tell</string>
     <string name="ankiquest_deck_share_ask_key" translatable="false">ankiquestAskToShareDecks</string>
+    <!-- Below a moment card when several moments wait: the others are a swipe away. -->
+    <plurals name="aq_moment_more">
+        <item quantity="one">And %d more: swipe to see it</item>
+        <item quantity="other">And %d more: swipe to see them</item>
+    </plurals>
+    <!-- Below a moment card while swiping through several: "2 of 3". -->
+    <string name="aq_moment_position">%1$d of %2$d</string>
 </resources>

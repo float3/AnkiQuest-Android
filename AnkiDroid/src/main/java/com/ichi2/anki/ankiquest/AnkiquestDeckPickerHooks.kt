@@ -170,6 +170,7 @@ object AnkiquestDeckPickerHooks {
      * when no account is set, the goal is off or the collection cannot be read.
      */
     fun refreshGoal(activity: DeckPicker) {
+        AnkiquestMoments.showBadge(activity.binding.bottomNavigation, AnkiDroidApp.sharedPrefs())
         val parent = activity.binding.deckPickerPane.deckpickerView
         if (AnkiquestHomeData.account() == null) {
             showGoal(parent, null)

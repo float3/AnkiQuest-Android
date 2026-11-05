@@ -10,6 +10,8 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -30,6 +32,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -68,12 +71,17 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private const val BANNER_MS = 1800L
     private const val BANNER_LONG_MS = 3500L
     private const val BANNER_TAG = "ankiquest_banner"
+    private const val MOMENTS_SETTLE_MS = 25 * 1000L
+    private const val MOMENTS_CHECK_INTERVAL_MS = 60 * 1000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
 
     private var app: Application? = null
     private var activity = WeakReference<Activity>(null)
+    private var started = 0
+    private var lastAnswerAt = 0L
+    private var momentsCheckedAt = 0L
     private var syncedLastId = 0L
     private var baselineAt = 0L
     private var baselineAccount: String? = null
@@ -367,6 +375,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val reviewing = handler is Reviewer || handler is ReviewerViewModel || isReviewing(activity.get())
         if (!reviewing && handler != null) return
         if (reviewing && HomeAccount.current() != null) {
+            lastAnswerAt = TimeManager.time.intTimeMS()
             scope.launch {
                 recordAnswers()
                 launchRefresh(showFeedback = true)
@@ -431,7 +440,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 val profile = if (account.token.isEmpty()) preview(account.server, account.encodedUser) else upload(account, again)
                 if (!background || feedback) present(profile, feedback)
                 if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
-                if (account.token.isNotEmpty()) announceConquest(account, profile)
+                if (account.token.isNotEmpty()) queueConquests(account, profile)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -441,24 +450,85 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     }
 
     /**
-     * Pops up a card the upload's answer says was just conquered, over the screen in front. With no
-     * screen in front, as for the background poll, it waits for the next upload made in the app.
+     * Queues the cards the upload's answer says were just conquered, to show once studying stops. With
+     * no screen in front, as for the background poll, it waits for the next upload made in the app.
      */
-    private suspend fun announceConquest(
+    private suspend fun queueConquests(
         account: HomeAccount,
         profile: JSONObject,
     ) {
-        val host = activity.get()?.takeIf { !it.isFinishing && !it.isDestroyed } ?: return
-        val card =
-            AnkiquestConquestPopup.take(
-                AnkiDroidApp.sharedPrefs(),
+        if (!inForeground()) return
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val fresh =
+            AnkiquestMoments.freshConquests(
+                prefs,
                 account.notificationAccount,
                 profile.optJSONArray("conquests"),
                 TimeManager.time.intTimeMS(),
-            ) ?: return
-        val text = AnkiquestShare.conqueredCardText(card.at)
-        val deck = AnkiquestShare.conqueredCardDeck(card.at)
-        withContext(Dispatchers.Main) { AnkiquestConquestPopup.show(activity.get() ?: host, account, card, text, deck) }
+            )
+        if (fresh.isEmpty()) return
+        val language = AnkiquestLanguage.context(app ?: return)
+        val moments =
+            fresh.map { conquest ->
+                val at = conquest.getLong("at")
+                val lapses = conquest.optInt("lapses")
+                val text = AnkiquestShare.conqueredCardText(at)
+                val deck = AnkiquestShare.conqueredCardDeck(at)
+                val detail =
+                    listOfNotNull(
+                        text?.let { language.getString(R.string.aq_conquest_popup_card, it) },
+                        language.resources.getQuantityString(R.plurals.aq_conquest_lapses, lapses, lapses.toString()),
+                        deck?.let { language.getString(R.string.aq_conquest_deck, it) },
+                    ).joinToString(" · ")
+                val title =
+                    language.getString(
+                        if (conquest.optBoolean("leech")) R.string.aq_profile_leech else R.string.aq_profile_conquest,
+                    )
+                AnkiquestMoments.conquest(conquest, title, detail, deck)
+            }
+        AnkiquestMoments.offer(prefs, account.notificationAccount, moments)
+        presentMoments()
+    }
+
+    /** Whether any AnkiQuest screen is visible, so moments can wait for the app instead of notifying. */
+    fun inForeground(): Boolean = started > 0
+
+    /** Shows waiting moments over the screen in front, if studying has stopped there. */
+    internal suspend fun presentMoments() =
+        withContext(Dispatchers.Main) {
+            activity.get()?.let { AnkiquestMoments.present(it, AnkiDroidApp.sharedPrefs()) }
+        }
+
+    /** [presentMoments] from any thread, without waiting for it. */
+    fun presentMomentsSoon() {
+        Handler(Looper.getMainLooper()).post {
+            activity.get()?.let { AnkiquestMoments.present(it, AnkiDroidApp.sharedPrefs()) }
+        }
+    }
+
+    /**
+     * After a session ends, asks the inbox for moments the server found in it (a level, a streak
+     * milestone, an achievement, the daily goal), which reach the inbox a little after the upload.
+     */
+    private fun checkMoments(host: Activity) {
+        val now = TimeManager.time.intTimeMS()
+        val wait = (lastAnswerAt + MOMENTS_SETTLE_MS - now).coerceAtLeast(0)
+        if (wait == 0L && now - momentsCheckedAt < MOMENTS_CHECK_INTERVAL_MS) return
+        momentsCheckedAt = now + wait
+        val context = host.applicationContext
+        scope.launch {
+            delay(wait)
+            try {
+                completionNotifications()?.let { (account, notifications, owner) ->
+                    AnkiquestNotifier.onDeckCompletions(context, account, notifications, owner)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.d(e, "ankiquest moments check failed")
+            }
+            presentMoments()
+        }
     }
 
     internal suspend fun preview(
@@ -841,6 +911,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             resumeUploadAt = now
             launchRefresh(showFeedback = false, resync = true)
         }
+        if (AnkiquestMoments.resting(activity)) {
+            AnkiquestMoments.present(activity, AnkiDroidApp.sharedPrefs())
+            if (HomeAccount.current()?.token?.isNotEmpty() == true) checkMoments(activity)
+        }
     }
 
     override fun onActivityPaused(activity: Activity) {
@@ -852,9 +926,13 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         savedInstanceState: Bundle?,
     ) {}
 
-    override fun onActivityStarted(activity: Activity) {}
+    override fun onActivityStarted(activity: Activity) {
+        started++
+    }
 
-    override fun onActivityStopped(activity: Activity) {}
+    override fun onActivityStopped(activity: Activity) {
+        started = (started - 1).coerceAtLeast(0)
+    }
 
     override fun onActivitySaveInstanceState(
         activity: Activity,

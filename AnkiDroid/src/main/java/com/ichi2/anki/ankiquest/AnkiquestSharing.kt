@@ -69,13 +69,17 @@ internal object AnkiquestSharing {
     suspend fun winKey(
         account: HomeAccount,
         id: Long,
-    ): String? =
+    ): String? = win(account, id)?.optString("key")?.ifEmpty { null }
+
+    /** [account]'s win [id] as `/api/wins` lists it (with its `link` and `shared_with_friends`), or null when the server has no such win. */
+    suspend fun win(
+        account: HomeAccount,
+        id: Long,
+    ): JSONObject? =
         call(account, "GET", "api/wins/${account.encodedUser}?limit=1&before=${id + 1}")
             .optJSONArray("wins")
             ?.optJSONObject(0)
             ?.takeIf { it.optLong("id") == id }
-            ?.optString("key")
-            ?.ifEmpty { null }
 
     /** The label [account] gave the card they conquered at [at], shown with it wherever it is shared; null when there is none. */
     suspend fun conquestLabel(
