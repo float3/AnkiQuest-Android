@@ -254,6 +254,8 @@ internal object AnkiquestCommunity {
         val label: String?,
         val told: Boolean?,
         val friends: Int?,
+        /** The owner's win for it, whose card they can share; null until the server keeps one, and for anyone else. */
+        val win: Long? = null,
     ) {
         val mine: Boolean get() = told != null
 
@@ -291,6 +293,7 @@ internal object AnkiquestCommunity {
             label = json.text("label").trim().ifEmpty { null },
             told = if (json.has("told")) json.optBoolean("told") else null,
             friends = if (json.has("friends")) json.optInt("friends") else null,
+            win = json.optLong("win").takeIf { it > 0 },
         )
     }
 

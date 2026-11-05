@@ -27,8 +27,11 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -45,6 +48,9 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
     private var user = ""
     private var at = 0L
     private var conquest: AnkiquestCommunity.Conquest? = null
+
+    /** The card's deck in this phone's collection, for its owner only; it is never sent to the server. */
+    private var deck: String? = null
     private var loading = false
     private var busy = false
 
@@ -94,6 +100,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         if (current?.scope != account?.scope) {
             account = current
             conquest = null
+            deck = null
             status = null
         }
         job?.cancel()
@@ -120,6 +127,8 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                 }
                 answer?.let { conquest = it }
                 if (problem == R.string.aq_conquest_missing) conquest = null
+                if (deck == null && answer?.let { owns(current, it) } == true) deck = AnkiquestShare.conqueredCardDeck(at)
+                if (turn != generation) return@launch
                 failure = problem
                 loading = false
                 render()
@@ -211,6 +220,9 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             gravity = Gravity.CENTER
         }
         views.text(hero, "${card.display} · ${DateUtils.formatDateTime(this, card.at, DATE)}", small = true).gravity = Gravity.CENTER
+        deck?.takeIf { owns(current, card) }?.let { name ->
+            views.text(hero, getString(R.string.aq_conquest_deck, name), small = true).gravity = Gravity.CENTER
+        }
         card.label?.let { label ->
             val panel = views.card(content)
             views.text(panel, label, heading = true).apply {
@@ -353,13 +365,19 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             .show()
     }
 
-    /** The share sheet, with words for the card and its page on the server for people without the app. */
+    /**
+     * The share sheet, with words for the card and its page on the server for people without the app.
+     * Its owner also shares the card's deck and the server's picture of the card, which needs the
+     * win the server keeps for it; without one, or when the picture cannot be fetched, the words and
+     * link go alone.
+     */
     private fun share(
         current: HomeAccount,
         card: AnkiquestCommunity.Conquest,
     ) {
+        if (busy) return
         val mine = card.user == current.user
-        val text =
+        val words =
             when {
                 card.label != null && mine ->
                     resources.getQuantityString(
@@ -373,17 +391,54 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                 mine -> resources.getQuantityString(R.plurals.aq_conquest_share_mine, card.lapses, card.lapses)
                 else -> resources.getQuantityString(R.plurals.aq_conquest_share, card.lapses, card.display, card.lapses)
             }
-        val link = AnkiquestCommunity.conquestLink(current.server, card.user, card.at)
-        val send =
-            Intent(Intent.ACTION_SEND)
-                .setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, "$text $link")
+        val from = deck?.takeIf { owns(current, card) }?.let { " " + getString(R.string.aq_conquest_share_deck, it) }.orEmpty()
+        val text = "$words$from ${AnkiquestCommunity.conquestLink(current.server, card.user, card.at)}"
+        if (!owns(current, card)) {
+            openChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text))
+            return
+        }
+        busy = true
+        render()
+        val turn = generation
+        lifecycleScope.launch {
+            val image = winImage(current, card)
+            val chooser = withContext(Dispatchers.IO) { AnkiquestShare.cardChooser(applicationContext, text, image) }
+            if (turn != generation) return@launch
+            busy = false
+            render()
+            openChooser(chooser)
+        }
+    }
+
+    /** The address of the picture of [card]'s win, asking the server again when it had no win yet; null without one. */
+    private suspend fun winImage(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ): String? =
         try {
-            startActivity(Intent.createChooser(send, getString(R.string.ankiquest_share)))
+            val win = card.win ?: AnkiquestCommunity.conquest(current, card.user, card.at).win
+            win?.let { Ankiquest.shareWinLink(it, current.scope).image }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "AnkiQuest conquest: no card picture; sharing the words and link")
+            null
+        }
+
+    private fun openChooser(send: Intent) {
+        val chooser = if (send.action == Intent.ACTION_CHOOSER) send else Intent.createChooser(send, getString(R.string.ankiquest_share))
+        try {
+            startActivity(chooser)
         } catch (e: ActivityNotFoundException) {
             Timber.w(e, "AnkiQuest conquest: nothing to share with")
         }
     }
+
+    /** Whether [card] is the signed-in player's own, so its deck and win may be used. */
+    private fun owns(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ) = card.mine && card.user == current.user
 
     /** [boardAttempt], with a card that cannot be found said as such. */
     private suspend fun attempt(work: suspend () -> Unit): Int? =

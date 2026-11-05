@@ -107,22 +107,39 @@ internal object AnkiquestShare {
         context: Context,
         link: Link,
         friends: PendingIntent? = null,
+    ): Intent = cardChooser(context, link.text, link.image, friends)
+
+    /**
+     * The share sheet for [text] with the server's card at [image] attached, or the text alone when
+     * there is no card or it cannot be fetched. It downloads, so call it away from the main thread.
+     */
+    fun cardChooser(
+        context: Context,
+        text: String,
+        image: String?,
+        friends: PendingIntent? = null,
     ): Intent {
-        val send = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, link.text)
+        val send = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, text)
         val card =
-            try {
-                val directory = File(context.cacheDir, "ankiquest-share").apply { mkdirs() }
-                File(directory, "win.png").apply { writeBytes(image(link.image)) }
-            } catch (e: IOException) {
-                Timber.w(e, "ankiquest card image unavailable; sharing the link only")
-                null
+            image?.let {
+                try {
+                    val directory = File(context.cacheDir, "ankiquest-share").apply { mkdirs() }
+                    val file = File(directory, "win.png").apply { writeBytes(image(it)) }
+                    FileProvider.getUriForFile(context, "${context.packageName}.apkgfileprovider", file)
+                } catch (e: IOException) {
+                    Timber.w(e, "ankiquest card image unavailable; sharing the link only")
+                    null
+                } catch (e: IllegalArgumentException) {
+                    Timber.w(e, "ankiquest card image cannot be shared; sharing the link only")
+                    null
+                }
             }
         if (card == null) {
             send.setType("text/plain")
         } else {
             send
                 .setType("image/png")
-                .putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(context, "${context.packageName}.apkgfileprovider", card))
+                .putExtra(Intent.EXTRA_STREAM, card)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         return chooser(context, send, friends)
@@ -234,6 +251,24 @@ internal object AnkiquestShare {
             throw e
         } catch (e: Exception) {
             Timber.w(e, "ankiquest conquered card text unavailable")
+            null
+        }
+
+    /**
+     * The name of the deck holding the card answered at review [at], as this phone's collection has
+     * it; null when the card is gone. A filtered deck gives way to the card's home deck. Deck names
+     * stay on the phone: only its owner sees this, and it leaves only in what they share themselves.
+     */
+    suspend fun conqueredCardDeck(at: Long): String? =
+        try {
+            CollectionManager.withCol {
+                val cid = db.queryLongScalar("select cid from revlog where id = ?", at)
+                if (cid == 0L) null else decks.nameIfExists(getCard(cid).currentDeckId())?.ifEmpty { null }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest conquered card deck unavailable")
             null
         }
 

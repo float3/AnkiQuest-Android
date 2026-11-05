@@ -431,12 +431,34 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                 val profile = if (account.token.isEmpty()) preview(account.server, account.encodedUser) else upload(account, again)
                 if (!background || feedback) present(profile, feedback)
                 if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
+                if (account.token.isNotEmpty()) announceConquest(account, profile)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest refresh failed")
             }
         }
+    }
+
+    /**
+     * Pops up a card the upload's answer says was just conquered, over the screen in front. With no
+     * screen in front, as for the background poll, it waits for the next upload made in the app.
+     */
+    private suspend fun announceConquest(
+        account: HomeAccount,
+        profile: JSONObject,
+    ) {
+        val host = activity.get()?.takeIf { !it.isFinishing && !it.isDestroyed } ?: return
+        val card =
+            AnkiquestConquestPopup.take(
+                AnkiDroidApp.sharedPrefs(),
+                account.notificationAccount,
+                profile.optJSONArray("conquests"),
+                TimeManager.time.intTimeMS(),
+            ) ?: return
+        val text = AnkiquestShare.conqueredCardText(card.at)
+        val deck = AnkiquestShare.conqueredCardDeck(card.at)
+        withContext(Dispatchers.Main) { AnkiquestConquestPopup.show(activity.get() ?: host, account, card, text, deck) }
     }
 
     internal suspend fun preview(

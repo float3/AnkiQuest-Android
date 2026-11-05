@@ -423,6 +423,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertTrue(card.mine)
             assertEquals(false, card.told)
             assertEquals(0, card.friends)
+            assertEquals(6L, card.win)
             assertEquals(0, AnkiquestCommunity.tell(account, at))
             assertTrue(requests.containsAll(listOf("GET /api/conquests/hill/$at", "POST /api/conquests/hill/$at/tell")))
         }
