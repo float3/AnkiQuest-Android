@@ -8,6 +8,8 @@ import android.view.View
 import androidx.core.content.edit
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
+import androidx.core.view.get
+import androidx.core.view.isVisible
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.size
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -81,11 +83,11 @@ class AnkiquestTabBarTest : RobolectricTest() {
         for ((screen, selected) in tabs) {
             val bar = bar(screen)
             val name = screen::class.java.simpleName
-            assertTrue(bar.visibility == View.VISIBLE, name)
+            assertTrue(bar.isVisible, name)
             assertEquals(4, bar.menu.size, name)
             assertEquals(
                 listOf(R.id.ankiquest_nav_today, R.id.ankiquest_nav_friends, R.id.ankiquest_nav_progress, R.id.ankiquest_nav_decks),
-                (0 until bar.menu.size).map { bar.menu.getItem(it).itemId },
+                (0 until bar.menu.size).map { bar.menu[it].itemId },
                 name,
             )
             assertEquals(selected, bar.selectedItemId, name)

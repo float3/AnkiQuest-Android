@@ -33,7 +33,7 @@ object AnkiquestTabBar {
         root: LinearLayout,
         @IdRes selected: Int,
     ): BottomNavigationView {
-        val bar = LayoutInflater.from(activity).inflate(R.layout.ankiquest_tab_bar, root, false) as BottomNavigationView
+        val bar = LayoutInflater.from(activity).inflate(R.layout.view_ankiquest_tab_bar, root, false) as BottomNavigationView
         root.addView(bar)
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
