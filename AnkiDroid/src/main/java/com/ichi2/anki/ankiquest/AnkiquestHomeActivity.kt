@@ -18,20 +18,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CollectionManager
-import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
@@ -88,24 +84,8 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             setTextColor(getColor(R.color.aq_home_text))
             setOnClickListener { startActivity(AnkiquestFeedActivity.intent(this@AnkiquestHomeActivity)) }
         }
-        findViewById<BottomNavigationView>(R.id.aq_home_navigation).apply {
-            selectedItemId = R.id.ankiquest_nav_today
-            setOnItemSelectedListener { item ->
-                when (item.itemId) {
-                    R.id.ankiquest_nav_today -> {}
-                    R.id.ankiquest_nav_decks -> openDecks()
-                    else -> AnkiquestNavigation.destination(this@AnkiquestHomeActivity, item.itemId)?.let(::startActivity)
-                }
-                item.itemId == R.id.ankiquest_nav_today
-            }
-        }
         findViewById<View>(R.id.aq_home_account).setOnClickListener { settings() }
-        val root = findViewById<View>(R.id.aq_home_root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
-            insets
-        }
+        AnkiquestTabBar.attach(this, findViewById(R.id.aq_home_root), R.id.ankiquest_nav_today)
         account = AnkiquestHomeData.account()
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
@@ -531,13 +511,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     }
 
     private fun openDecks(deck: Long? = null) {
-        startActivity(
-            Intent(this, DeckPicker::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra(EXTRA_SKIP_HOME, true)
-                deck?.let { putExtra(EXTRA_STUDY_DECK, it) }
-            },
-        )
+        startActivity(AnkiquestNavigation.decks(this, deck))
     }
 
     private fun settings() = startActivity(PreferencesActivity.getIntent(this, AnkiquestSettingsFragment::class))

@@ -12,11 +12,8 @@ import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatCheckBox
 import androidx.core.content.edit
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat.Type.navigationBars
 import androidx.core.view.children
 import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
@@ -257,17 +254,7 @@ object AnkiquestDeckPickerHooks {
             }
         }
         contentWrapper.isVisible = true
-        bottomNav.menu.clear()
-        bottomNav.inflateMenu(R.menu.ankiquest_navigation)
-        bottomNav.selectedItemId = R.id.ankiquest_nav_decks
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNav) { view, insets ->
-            view.updatePadding(bottom = insets.getInsets(navigationBars()).bottom)
-            insets
-        }
-        bottomNav.setOnItemSelectedListener { item ->
-            AnkiquestNavigation.destination(deckPicker, item.itemId)?.let(deckPicker::startActivity)
-            item.itemId == R.id.ankiquest_nav_decks
-        }
+        AnkiquestTabBar.setup(deckPicker, bottomNav, R.id.ankiquest_nav_decks)
         return true
     }
 

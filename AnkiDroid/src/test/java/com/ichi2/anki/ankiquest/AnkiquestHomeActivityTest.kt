@@ -135,7 +135,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     @Test
     fun `navigation keeps Today, Activity, friend goals and Progress native and opens other community pages on the website`() {
         val home = launch()
-        val nav = home.findViewById<BottomNavigationView>(R.id.aq_home_navigation)
+        val nav = home.findViewById<BottomNavigationView>(R.id.ankiquest_tab_bar)
         assertEquals(4, nav.menu.size)
 
         nav.selectedItemId = R.id.ankiquest_nav_friends

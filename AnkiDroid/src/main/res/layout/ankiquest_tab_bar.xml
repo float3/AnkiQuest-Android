@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- The AnkiQuest bottom navigation of Today, Friends and Progress; matches DeckPicker's bottom_navigation. -->
+<com.google.android.material.bottomnavigation.BottomNavigationView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/ankiquest_tab_bar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurface"
+    app:labelVisibilityMode="labeled"
+    app:menu="@menu/ankiquest_navigation" />

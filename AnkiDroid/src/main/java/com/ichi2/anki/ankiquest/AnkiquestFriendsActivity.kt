@@ -23,9 +23,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
@@ -87,12 +85,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             }
         }
         findViewById<View>(R.id.aq_feed_loading).contentDescription = getString(R.string.aq_friends_loading)
-        val root = findViewById<View>(R.id.aq_feed_root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
-            insets
-        }
+        AnkiquestTabBar.attach(this, findViewById(R.id.aq_feed_root), R.id.ankiquest_nav_friends)
         account = AnkiquestHomeData.account()
         if (savedInstanceState == null) {
             val addressed = intent.getStringExtra(EXTRA_ACCOUNT)
