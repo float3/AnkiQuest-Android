@@ -1,16 +1,16 @@
 AnkiDroid with [AnkiQuest](https://github.com/float3/ankiquest): study, shared goals, and progress in one place.
 
-**Everything is native now.** The app no longer opens the AnkiQuest website inside the app. The activity feed, friend goals, leaderboards and player profiles, friends and groups, records and study history, the community calendar, reminder settings, conquered cards and your account settings (password, linking Google or GitHub, signed-in devices, downloading your data, deleting your account) are all native screens. The privacy notice opens in your browser. If your server is too old for a screen, the app tells you so instead of opening a web page.
+**Moments.** Every big moment now gets its own card with Aki: a conquered card or leech, a level up, a streak milestone, climbing the leaderboard, an achievement, a record and reaching your daily goal. Moments never interrupt a review. They wait until you're back on the deck list, the deck overview, the congrats screen or Today, then show one at a time, most important first; the rest fold into "And N more" to swipe through. Each card can be shared with its picture, told to your friends, or opened. A moment you already saw, in the app or as a notification, doesn't come back. "Streak secured" on an ordinary day no longer sends a notification; it adds a badge to Today instead.
 
-**Today and goals.** Today shows your streak minimum and a daily goal: by default the cards due today plus a share of any overdue backlog (10% a day, adjustable), so a backlog shrinks steadily instead of all at once. You can set a fixed number of cards or minutes instead under Settings → AnkiQuest → Study. An animated bar shows your progress, and a celebration appears when today counts for your streak and again when you reach your goal. Right after the weekly reset, Today and your profile show last week's XP as "still counting" until your own day ends.
+**Conquered cards.** Sharing a conquered card now attaches its picture. The card shows which of your decks it's from, read from your phone and never stored on the server. "Show what the card was" uses the card's front from your collection instead of asking you to type it.
 
-**Aki.** A home-screen streak widget shows your streak next to Aki or Ankilope, and the streak and leaderboard widgets can now be made much bigger: the streak widget gets a giant number with a big Aki, and the leaderboard shows more players in larger rows. Aki's mood now shows on the app icon by default and changes as soon as it's on; you can turn it off under Settings → AnkiQuest → Study. New celebration art marks achievements, streak milestones, finished decks and the top three.
+**One bottom bar.** Today, Friends, Progress and Decks all have the same bottom bar at the same height, so you switch between them with a tap instead of going back.
 
-**Sharing.** Share a win with your AnkiQuest friends or any other app. Shared wins and rank climbs are worded in your own voice ("I passed Mago Rojo"). A conquered card can carry a label of what it was, only if you add one. When you finish a deck, the app asks who to tell.
+**Updates.** On the nightly channel, the app now also offers a newer stable release when there is one.
 
-**Notifications** open the screen they're about. Reviews now record the time zone they were made in, so studying offline across a time-zone change still counts toward the right day.
+This release includes the latest AnkiDroid changes.
 
-Update your server to this companion release for the new screens, Google/GitHub linking from the app, the weekly recap and first-person sharing.
+Update your server to this companion release so moments you already saw aren't shown twice.
 
 Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then fill in Settings → AnkiQuest (server URL, player, token). Later releases are offered inside the app.
 
