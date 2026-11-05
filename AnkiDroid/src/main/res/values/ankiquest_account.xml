@@ -45,7 +45,7 @@
     <string name="ankiquest_device_signed_in">Signed in %s</string>
     <string name="ankiquest_device_used">Signed in %1$s, last used %2$s</string>
     <string name="ankiquest_device_sign_out_confirm">Sign out %s? It will have to sign in again.</string>
-    <string name="ankiquest_device_sign_out">Sign out</string>
+    <string name="ankiquest_device_sign_out" maxLength="41">Sign out</string>
     <string name="ankiquest_sign_out_others_title" maxLength="41">Sign out all other devices</string>
     <string name="ankiquest_sign_out_others_summary">Every app and website session except this one</string>
     <string name="ankiquest_sign_out_others_confirm">Sign out every other device and website session?</string>

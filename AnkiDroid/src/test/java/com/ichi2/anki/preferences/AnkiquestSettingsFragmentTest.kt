@@ -2,7 +2,6 @@
 
 package com.ichi2.anki.preferences
 
-import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
@@ -174,7 +173,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     fun `the notification check shows only when alerts cannot get through, and leads to the fix`() {
         val notifications = shadowOf(targetContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
         notifications.setNotificationsEnabled(true)
-        shadowOf(targetContext as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        shadowOf(targetContext as Application).grantPermissions("android.permission.POST_NOTIFICATIONS")
         val fragment = open()
         val health = fragment.preference<Preference>(R.string.ankiquest_health_key)
         assertFalse(health.isVisible, "nothing to fix")
