@@ -108,6 +108,18 @@ class AnkiquestApiContractTest : RobolectricTest() {
     }
 
     @Test
+    fun `capabilities give the features and, from servers that name it, an https main address`() {
+        val answer = JSONObject(example("capabilities"))
+        assertTrue("devices" in AnkiquestCapabilities.parse(answer.toString()))
+        // Servers before float3/ankiquest#171 do not name a main address.
+        if (answer.has("public_url")) {
+            assertEquals("https://anki.example.test", AnkiquestServerMove.mainAddress(answer))
+        } else {
+            assertNull(AnkiquestServerMove.mainAddress(answer))
+        }
+    }
+
+    @Test
     fun `signing up and signing in keep the returned user and token`() =
         runBlocking {
             val created = AnkiquestAccount.submit(AnkiquestAccount.Credentials(url, "ana", "password", "Ana", create = true), "Pixel 9")
@@ -575,6 +587,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         val CONSUMED =
             ROUTES.values.toSet() +
                 setOf(
+                    "capabilities",
                     "sign_up",
                     "sign_in",
                     "leaderboard",
@@ -602,7 +615,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "records",
                 )
 
-        val UNUSED = setOf("capabilities")
+        val UNUSED = emptySet<String>()
 
         /** What the native leaderboard and profiles read. */
         val BOARDS = setOf("leaderboard_day", "week", "player_profile", "wins")

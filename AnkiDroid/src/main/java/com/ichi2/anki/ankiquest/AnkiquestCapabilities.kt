@@ -56,10 +56,14 @@ internal object AnkiquestCapabilities {
         return refresh(account)
     }
 
-    /** Asks [account]'s server for its features; when it cannot be reached, answers the ones it last reported. */
+    /**
+     * Asks [account]'s server for its features; when it cannot be reached, answers the ones it last
+     * reported. When the server names a main address other than the saved one, the account moves
+     * there once its token works there ([AnkiquestServerMove]).
+     */
     suspend fun refresh(account: HomeAccount): Set<String> =
         withContext(Dispatchers.IO) {
-            val fetched =
+            val (fetched, main) =
                 try {
                     fetch(account)
                 } catch (e: CancellationException) {
@@ -69,6 +73,7 @@ internal object AnkiquestCapabilities {
                     return@withContext features(account)
                 }
             store(account, fetched)
+            AnkiquestServerMove.consider(account, main)
             fetched
         }
 
@@ -85,12 +90,21 @@ internal object AnkiquestCapabilities {
         return (0 until features.length()).mapNotNull { features.opt(it) as? String }.filter { it.isNotEmpty() }.toSet()
     }
 
-    private fun fetch(account: HomeAccount): Set<String> {
+    /** The features and the main address ([AnkiquestServerMove.mainAddress]) [account]'s server reports. */
+    private fun fetch(account: HomeAccount): Pair<Set<String>, String?> {
         val request = AnkiquestApi.request(account.url("api/capabilities"), "", account.language).build()
         return try {
-            AnkiquestApi.call(request, AnkiquestApi.Timeout.QUICK) { parse(it.body.string()) }
+            AnkiquestApi.call(request, AnkiquestApi.Timeout.QUICK) { response ->
+                val answer =
+                    try {
+                        JSONObject(response.body.string())
+                    } catch (_: JSONException) {
+                        JSONObject()
+                    }
+                parse(answer) to AnkiquestServerMove.mainAddress(answer)
+            }
         } catch (e: AnkiquestHttpException) {
-            if (e.code == 404) emptySet() else throw e
+            if (e.code == 404) emptySet<String>() to null else throw e
         }
     }
 
