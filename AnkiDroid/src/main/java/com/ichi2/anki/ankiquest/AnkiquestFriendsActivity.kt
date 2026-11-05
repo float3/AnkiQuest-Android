@@ -76,7 +76,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             setText(R.string.ankiquest_nav_friends)
             ViewCompat.setAccessibilityHeading(this, true)
         }
-        findViewById<View>(R.id.aq_feed_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        AnkiquestTabBar.removeBack(findViewById(R.id.aq_feed_back), findViewById(R.id.aq_feed_title))
         findViewById<ImageButton>(R.id.aq_feed_refresh).apply {
             contentDescription = getString(R.string.aq_friends_refresh)
             setOnClickListener {

@@ -5,10 +5,14 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.content.Intent
 import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.annotation.IdRes
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
@@ -42,6 +46,18 @@ object AnkiquestTabBar {
         }
         setup(activity, bar, selected)
         return bar
+    }
+
+    /**
+     * Removes the top-left [back] arrow of a tab: the bar switches tabs, and the system Back still leads to the deck list.
+     * [title] moves over to start where the arrow's icon did, in line with the content below.
+     */
+    fun removeBack(
+        back: View,
+        title: View,
+    ) {
+        back.isVisible = false
+        title.updateLayoutParams<ViewGroup.MarginLayoutParams> { marginStart = back.paddingStart }
     }
 
     /** Turns [bar] into the tab bar of [activity] with [selected] chosen; the deck list calls this for its own bar. */
