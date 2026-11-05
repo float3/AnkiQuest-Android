@@ -17,6 +17,9 @@ concurrency:
 
 env:
   JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
   lintKotlin:
