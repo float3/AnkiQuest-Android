@@ -1,0 +1,60 @@
+name: Robolectric SDK cache
+description: >-
+  Makes the Robolectric android-all jars available as a read-only Gradle dependency
+  cache (GRADLE_RO_DEP_CACHE), cached on its own key: the SDK list and the Gradle version.
+  Linux only. Run it after setup-gradle and before the first Gradle command.
+
+# Why: setup-gradle's basic cache key is a hash of every Gradle file, so any version bump
+# leaves the next runs without a cache, and each Robolectric job then downloaded the
+# ~2 GB of SDK jars from Maven Central at the same time. That is what got HTTP 429s.
+# The SDK list rarely changes, so keeping the jars apart from the rest of the cache
+# means they come from Maven Central about once per Robolectric upgrade.
+# PR runs only read this cache; runs on main save it, like the setup-gradle cache.
+
+runs:
+  using: composite
+  steps:
+    - name: Restore Robolectric SDKs
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.robolectric-ro-cache
+        key: robolectric-sdks-v1-${{ runner.os }}-${{ hashFiles('buildSrc/src/main/kotlin/ankidroid.plugins.robolectric-downloader.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties', '.github/actions/robolectric-sdk-cache/sdks/*.kts') }}
+
+    - name: Download Robolectric SDKs
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        home="$RUNNER_TEMP/robolectric-gradle-home"
+        cache="$HOME/.robolectric-ro-cache"
+        mkdir -p "$home"
+        # Reuse the Gradle distribution setup-gradle restored, if there is one
+        if [ -d "$HOME/.gradle/wrapper" ]; then cp -r "$HOME/.gradle/wrapper" "$home/"; fi
+        for attempt in 1 2 3; do
+          if ./gradlew --project-dir .github/actions/robolectric-sdk-cache/sdks \
+              --gradle-user-home "$home" --no-daemon downloadRobolectricSdks; then
+            break
+          fi
+          if [ "$attempt" = 3 ]; then exit 1; fi
+          echo "::warning::Robolectric SDK download failed, retrying in $((attempt * 120))s"
+          sleep $((attempt * 120))
+        done
+        rm -rf "$cache"
+        mkdir -p "$cache"
+        cp -r "$home/caches/modules-2" "$cache/"
+        # A read-only dependency cache must not contain lock files
+        rm -f "$cache"/modules-2/*.lock "$cache"/modules-2/gc.properties
+        rm -rf "$home"
+
+    - name: Save Robolectric SDKs
+      if: steps.restore.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+      continue-on-error: true
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.robolectric-ro-cache
+        key: ${{ steps.restore.outputs.cache-primary-key }}
+
+    - name: Use the Robolectric SDK cache
+      shell: bash
+      run: echo "GRADLE_RO_DEP_CACHE=$HOME/.robolectric-ro-cache" >> "$GITHUB_ENV"

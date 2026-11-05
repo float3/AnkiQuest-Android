@@ -31,6 +31,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# No setup-gradle cache here: this only runs when Gradle files change, and those changes
+# change the cache key, so a cache would always miss.
+env:
+  # Gradle retries HTTP 429 and 5xx, by default 3 tries 1s and 2s apart. Maven Central's rate
+  # limit lasts longer than that, so try 7 times with doubling waits from 2s (about 2 minutes).
+  GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
+
 jobs:
   nixos:
     name: Build and test in the dev shell
@@ -48,6 +55,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/src" -w /src -e CI=true \
             -e NIX_CONFIG="experimental-features = nix-command flakes" \
+            -e GRADLE_OPTS \
             nixos/nix sh -euc '
               git config --global --add safe.directory /src
               nix flake check
