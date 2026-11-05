@@ -87,7 +87,10 @@ def roboto(
 
     def load(bold: bytes | str, regular: bytes | str):
         def font(source, size):
-            return ImageFont.truetype(io.BytesIO(source) if isinstance(source, bytes) else source, size)
+            # The basic layout engine everywhere: Raqm, where installed, spaces text differently.
+            return ImageFont.truetype(
+                io.BytesIO(source) if isinstance(source, bytes) else source, size, layout_engine=ImageFont.Layout.BASIC
+            )
 
         return font(bold, 66), font(regular, 32), font(regular, 10)
 
