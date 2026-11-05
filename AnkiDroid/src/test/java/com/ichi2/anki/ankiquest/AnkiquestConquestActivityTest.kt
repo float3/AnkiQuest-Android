@@ -3,9 +3,12 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.net.Uri
 import android.view.View
 import android.widget.TextView
+import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
+import androidx.core.net.toUri
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -16,8 +19,10 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockkObject
+import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkObject
+import io.mockk.unmockkStatic
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -43,14 +48,16 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     @Before
     fun prepareCard() {
-        mockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing)
+        mockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
         every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
         coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(friends = 2)
     }
 
     @After
     fun clearCardMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing)
+        unmockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
+        unmockkStatic(FileProvider::class)
     }
 
     @Test
@@ -118,14 +125,59 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `sharing sends the card's words with its page on the server`() {
+    fun `the owner shares the card's words, deck, picture and page`() {
+        val picture = "https://anki.example.test/w/tok.png"
+        coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Español::Animales"
+        coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
+            AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
+        every { AnkiquestShare.image(picture) } returns "png".toByteArray()
+        // Robolectric's cache folder is not always under the provider's root, so the picture's address is made up.
+        val stream = "content://com.ichi2.anki.debug.apkgfileprovider/cache-directory/ankiquest-share/win.png".toUri()
+        mockkStatic(FileProvider::class)
+        every { FileProvider.getUriForFile(any(), any(), any()) } returns stream
         val card = launch()
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_deck, "Español::Animales")))
         card.click(card.getString(R.string.ankiquest_share))
-        val chooser = assertNotNull(shadowOf(card).nextStartedActivity)
-        val sent = assertNotNull(IntentCompat.getParcelableExtra(chooser, Intent.EXTRA_INTENT, Intent::class.java))
+        val sent = card.sent()
+        assertEquals("image/png", sent.type)
+        assertEquals(stream, IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
         val text = sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
         assertTrue(text.startsWith(card.resources.getQuantityString(R.plurals.aq_conquest_share_label_mine, 4, "el murciélago", 4)))
+        assertTrue(text.contains(card.getString(R.string.aq_conquest_share_deck, "Español::Animales")))
         assertTrue(text.endsWith("https://anki.example.test/conquered/hill/$AT"))
+    }
+
+    @Test
+    fun `before the server keeps a win for the card it is asked again, then the words go alone`() {
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(win = null)
+        val card = launch()
+        card.click(card.getString(R.string.ankiquest_share))
+        val sent = card.sent()
+        assertEquals("text/plain", sent.type)
+        assertFalse(sent.hasExtra(Intent.EXTRA_STREAM))
+        coVerify(exactly = 2) { AnkiquestCommunity.conquest(identity, "hill", AT) }
+        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+    }
+
+    @Test
+    fun `someone else's card is shared without a deck or picture`() {
+        coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
+            recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null, win = null)
+        val card = launch("cerro")
+        card.click(card.getString(R.string.ankiquest_share))
+        val sent = card.sent()
+        assertEquals("text/plain", sent.type)
+        assertEquals(
+            card.resources.getQuantityString(R.plurals.aq_conquest_share, 4, "Cerro", 4) + " https://anki.example.test/conquered/cerro/$AT",
+            sent.getStringExtra(Intent.EXTRA_TEXT),
+        )
+        coVerify(exactly = 0) { AnkiquestShare.conqueredCardDeck(any()) }
+        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+    }
+
+    private fun AnkiquestConquestActivity.sent(): Intent {
+        val chooser = assertNotNull(shadowOf(this).nextStartedActivity)
+        return assertNotNull(IntentCompat.getParcelableExtra(chooser, Intent.EXTRA_INTENT, Intent::class.java))
     }
 
     @Test

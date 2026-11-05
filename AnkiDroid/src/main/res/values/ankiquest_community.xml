@@ -133,5 +133,13 @@
         <item quantity="one">%1$s finally learned “%2$s”, a card they had forgotten %3$d time. 🏆</item>
         <item quantity="other">%1$s finally learned “%2$s”, a card they had forgotten %3$d times. 🏆</item>
     </plurals>
+    <!-- Only the card's owner sees its deck, read from their own collection. -->
+    <string name="aq_conquest_deck">From your deck %1$s</string>
+    <!-- Added to what the owner shares, after the sentence about the card. -->
+    <string name="aq_conquest_share_deck">From my deck “%1$s”.</string>
+    <!-- The pop-up right after a review conquers a card: the card's front, from this phone. -->
+    <string name="aq_conquest_popup_card">“%1$s”</string>
+    <string name="aq_conquest_popup_open">See the card</string>
+    <string name="aq_conquest_popup_later">Keep studying</string>
     <string name="aq_server_outdated">This needs a newer AnkiQuest server. Ask whoever runs yours to update it.</string>
 </resources>
