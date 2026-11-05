@@ -627,6 +627,10 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "password_change",
                 "devices_sign_out",
                 "sign_in_methods",
+                // The global leaderboard (float3/ankiquest#170) until the app shows it.
+                "leaderboard_global",
+                "leaderboard_global_hidden",
+                "global_leaderboard_on",
             ) - CONSUMED - UNUSED
     }
 }
