@@ -105,11 +105,21 @@ jobs:
           SOURCE: ${{ github.ref_name }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          cp "$RUNNER_TEMP/banner/docs/graphics/logos/banner_readme.png" docs/graphics/logos/banner_readme.png
-          if git diff --quiet -- docs/graphics/logos/banner_readme.png; then
+          new="$RUNNER_TEMP/banner/docs/graphics/logos/banner_readme.png"
+          # Compare pixels, not bytes: PNG encoders differ between platforms.
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow==13.0.0
+          if "$RUNNER_TEMP/venv/bin/python" - "$new" docs/graphics/logos/banner_readme.png <<'EOF'
+          import sys
+          from PIL import Image, ImageChops
+          new, old = (Image.open(path).convert("RGBA") for path in sys.argv[1:])
+          sys.exit(0 if new.size == old.size and ImageChops.difference(new, old).getbbox() is None else 1)
+          EOF
+          then
             echo "The banner is unchanged."
             exit 0
           fi
+          cp "$new" docs/graphics/logos/banner_readme.png
           if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then branch="banner-$SOURCE"; else branch="banner-run-$RUN_ID"; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
