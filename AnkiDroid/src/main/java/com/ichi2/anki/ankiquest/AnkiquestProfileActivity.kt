@@ -73,6 +73,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         // The player's own profile is the Progress tab; another player's is a page of its own.
         if (!intent.hasExtra(EXTRA_USER)) {
             AnkiquestTabBar.attach(this, root, R.id.ankiquest_nav_progress)
+            AnkiquestTabBar.removeBack(findViewById(R.id.aq_board_back), findViewById(R.id.aq_board_title))
         } else {
             ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
                 val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())

@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.content.Intent
 import android.view.View
+import android.view.ViewGroup
 import androidx.core.content.edit
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -50,18 +51,19 @@ class AnkiquestTabBarTest : RobolectricTest() {
             putString(Ankiquest.PREF_USER, identity.user)
             putString(Ankiquest.PREF_TOKEN, identity.token)
         }
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards)
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject().put("level", 2)
         coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
         coEvery { AnkiquestSocial.overview(identity) } throws IOException("offline")
         coEvery { AnkiquestBoards.player(identity, any()) } throws IOException("offline")
+        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } throws IOException("offline")
     }
 
     @After
     fun clearTabMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed)
     }
 
     @Test
@@ -163,6 +165,64 @@ class AnkiquestTabBarTest : RobolectricTest() {
     fun `another player's profile is a page of its own without the bar`() {
         val other = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, "ana"))
         assertNull(other.findViewById<View>(R.id.ankiquest_tab_bar))
+    }
+
+    @Test
+    fun `tab screens have no back arrow and Back still leaves them`() {
+        val home =
+            startActivityNormallyOpenCollectionWithIntent(
+                AnkiquestHomeActivity::class.java,
+                AnkiquestHomeActivity.intent(targetContext),
+            )
+        val friends = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
+        val progress = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext))
+        for (tab in listOf(home, friends, progress)) {
+            val name = tab::class.java.simpleName
+            assertTrue(backControls(tab).isEmpty(), "$name shows no back arrow")
+        }
+        val title = friends.findViewById<View>(R.id.aq_feed_title)
+        val back = friends.findViewById<View>(R.id.aq_feed_back)
+        assertEquals(
+            back.paddingStart,
+            (title.layoutParams as ViewGroup.MarginLayoutParams).marginStart,
+            "the title starts where the arrow did",
+        )
+
+        for (tab in listOf(friends, progress)) {
+            tab.onBackPressedDispatcher.onBackPressed()
+            assertTrue(tab.isFinishing, "${tab::class.java.simpleName} goes back to the deck list underneath")
+        }
+    }
+
+    @Test
+    fun `pages without the bar keep their back arrow`() {
+        val pages =
+            listOf(
+                startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, "ana")),
+                startRegularActivity<AnkiquestFeedActivity>(AnkiquestFeedActivity.intent(targetContext)),
+            )
+        for (page in pages) {
+            val name = page::class.java.simpleName
+            assertNull(page.findViewById<View>(R.id.ankiquest_tab_bar), name)
+            val back = backControls(page).singleOrNull()
+            assertNotNull(back, "$name has a back arrow")
+            back.performClick()
+            assertTrue(page.isFinishing, name)
+        }
+    }
+
+    /** The visible controls of [screen] announced as going back. */
+    private fun backControls(screen: Activity): List<View> {
+        val back = screen.getString(R.string.aq_feed_back)
+        val found = mutableListOf<View>()
+
+        fun visit(view: View) {
+            if (!view.isShown) return
+            if (view.contentDescription == back) found += view
+            if (view is ViewGroup) (0 until view.childCount).forEach { visit(view.getChildAt(it)) }
+        }
+        visit(screen.window.decorView)
+        return found
     }
 
     private fun bar(screen: Activity): BottomNavigationView =
