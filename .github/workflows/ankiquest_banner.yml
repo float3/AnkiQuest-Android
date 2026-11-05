@@ -113,7 +113,7 @@ jobs:
           import sys
           from PIL import Image, ImageChops
           new, old = (Image.open(path).convert("RGBA") for path in sys.argv[1:])
-          sys.exit(0 if new.size == old.size and ImageChops.difference(new, old).getbbox() is None else 1)
+          sys.exit(0 if new.size == old.size and ImageChops.difference(new, old).getbbox(alpha_only=False) is None else 1)
           EOF
           then
             echo "The banner is unchanged."
