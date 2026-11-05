@@ -9,14 +9,9 @@ import com.ichi2.anki.libanki.sched.DeckNode
 
 /** Daily deck states shown in the deck list. */
 internal object AnkiquestDeckListStates {
-    /** @return the states of the decks in [dueTree], or an empty map when the deck list does not show them. */
+    /** @return the states of the decks in [dueTree]; the deck list always shows them. */
     fun load(
         col: Collection,
         dueTree: DeckNode,
-    ): Map<DeckId, DailyDeckState> =
-        if (AnkiquestDecks.statusInDeckList()) {
-            AnkiquestDecks.dailyStates(col, TimeManager.time.intTimeMS(), dueTree)
-        } else {
-            emptyMap()
-        }
+    ): Map<DeckId, DailyDeckState> = AnkiquestDecks.dailyStates(col, TimeManager.time.intTimeMS(), dueTree)
 }

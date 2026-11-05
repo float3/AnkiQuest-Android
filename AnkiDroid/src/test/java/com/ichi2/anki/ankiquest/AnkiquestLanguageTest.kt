@@ -43,10 +43,10 @@ class AnkiquestLanguageTest : RobolectricTest() {
                 "Terminé pour aujourd’hui",
                 "État des notifications",
                 "Quel classement ?",
-                "Rappel de série",
+                "Rappels",
                 "Je m’en occupe !",
                 "Aki est là pour t’aider. Une carte, un petit pas.",
-                "Célébrations",
+                "Mes moments",
             ),
             listOf(
                 "de-DE",
@@ -54,10 +54,10 @@ class AnkiquestLanguageTest : RobolectricTest() {
                 "Für heute erledigt",
                 "Benachrichtigungsstatus",
                 "Welche Rangliste?",
-                "Lernserien-Erinnerung",
+                "Erinnerungen",
                 "Ich kümmere mich darum!",
                 "Aki hilft dir. Eine Karte, ein kleiner Schritt.",
-                "Erfolge feiern",
+                "Meine Momente",
             ),
             listOf(
                 "pt-PT",
@@ -65,10 +65,10 @@ class AnkiquestLanguageTest : RobolectricTest() {
                 "Concluído por hoje",
                 "Estado das notificações",
                 "Qual classificação?",
-                "Lembrete da sequência",
+                "Lembretes",
                 "Já trato disso!",
                 "Aki está aqui para te ajudar. Um cartão, um pequeno passo.",
-                "Celebrações",
+                "Os meus momentos",
             ),
         )) {
             val (tag, friends, done, health, widget) = expected
@@ -82,10 +82,10 @@ class AnkiquestLanguageTest : RobolectricTest() {
             assertEquals(done, localized.getString(R.string.aq_deck_done))
             assertEquals(health, localized.getString(R.string.ankiquest_health_title))
             assertEquals(widget, localized.getString(R.string.ankiquest_widget_period_title))
-            assertEquals(reminder, localized.getString(R.string.ankiquest_streak_hours_title))
+            assertEquals(reminder, localized.getString(R.string.ankiquest_notify_reminders_title))
             assertEquals(reply, localized.getString(R.string.ankiquest_reply_on_it))
             assertEquals(aki, localized.getString(R.string.aki_welcome))
-            assertEquals(celebrations, localized.getString(R.string.ankiquest_celebrations_title))
+            assertEquals(celebrations, localized.getString(R.string.ankiquest_notify_moments_title))
         }
     }
 
@@ -100,6 +100,6 @@ class AnkiquestLanguageTest : RobolectricTest() {
         assertEquals("Amigos", spanish.getString(R.string.ankiquest_nav_friends))
         assertEquals("Misiones diarias", spanish.getString(R.string.aq_home_quests))
         assertEquals("esta semana", spanish.getString(R.string.ankiquest_period_week))
-        assertEquals("Notificaciones que recibo", spanish.getString(R.string.ankiquest_subscriptions_title))
+        assertEquals("Avísame de", spanish.getString(R.string.ankiquest_group_notify))
     }
 }

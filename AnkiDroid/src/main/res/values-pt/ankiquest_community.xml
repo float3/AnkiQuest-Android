@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="aq_reminders_kinds">Lembretes do teu servidor</string>
-    <string name="aq_reminders_timing">Horário</string>
     <string name="aq_reminder_gentle_daily">Lembrete diário suave</string>
     <string name="aq_reminder_gentle_daily_summary">Um empurrãozinho amigável quando ainda não estudaste.</string>
     <string name="aq_reminder_urgent_streak">Aviso de sequência desprotegida</string>
@@ -18,24 +16,6 @@
     <string name="aq_reminder_weekly_recap">Resumo semanal</string>
     <string name="aq_reminder_weekly_recap_summary">Os teus dias de estudo, XP, vitórias diárias, posição semanal e evolução.</string>
     <string name="aq_reminders_hour">Lembrete diário às</string>
-    <string name="aq_reminders_quiet_start">Início das horas de silêncio</string>
-    <string name="aq_reminders_quiet_end">Fim das horas de silêncio</string>
-    <string name="aq_reminders_limit">Limite diário</string>
-    <plurals name="aq_reminders_limit_value">
-        <item quantity="one">%1$d notificação por dia</item>
-        <item quantity="many">%1$d notificações por dia</item>
-        <item quantity="other">%1$d notificações por dia</item>
-    </plurals>
-    <string name="aq_reminders_quiet_off">Desligadas: começam e acabam à mesma hora</string>
-    <string name="aq_reminders_hint">Estes lembretes vêm do teu servidor AnkiQuest, no teu fuso horário do AnkiQuest. Os avisos de sequência seguem a tua mudança de dia do Anki e param assim que o estudo é registado. As horas de silêncio e o limite diário aplicam-se a todos, incluindo os urgentes. O lembrete de sequência e os alertas acima são deste telemóvel.</string>
-    <string name="aq_reminders_loading">A carregar os teus lembretes da comunidade…</string>
-    <string name="aq_reminders_saving">A guardar os teus lembretes da comunidade…</string>
-    <string name="aq_reminders_saved">As tuas preferências de lembretes foram guardadas.</string>
-    <string name="aq_reminders_configure">Inicia sessão no AnkiQuest para escolher os teus lembretes da comunidade.</string>
-    <string name="aq_reminders_auth">O teu servidor não aceitou esta conta. Verifica-a nas definições do AnkiQuest e tenta novamente.</string>
-    <string name="aq_reminders_unsupported">Este servidor não tem lembretes da comunidade.</string>
-    <string name="aq_reminders_error">Não foi possível confirmar os teus lembretes da comunidade. Verifica a ligação e tenta novamente antes de fazeres outra alteração.</string>
-    <string name="aq_reminders_retry">Recarregar lembretes</string>
     <string name="aq_privacy_title">Aviso de privacidade</string>
     <string name="aq_privacy_summary">O que o teu servidor AnkiQuest guarda sobre ti e quem o gere. Abre no teu navegador.</string>
     <string name="aq_calendar_title">Calendário da comunidade</string>

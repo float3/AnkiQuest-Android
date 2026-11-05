@@ -16,8 +16,6 @@
     </plurals>
     <string name="ankiquest_summary_continue">Continuer à étudier</string>
     <string name="ankiquest_summary_progress">Voir la progression</string>
-    <string name="ankiquest_summary_preference_title">Résumé de la session</string>
-    <string name="ankiquest_summary_preference_summary">Affiche un résumé discret et accessible quand tu quittes une séance d’étude.</string>
     <string name="ankiquest_summary_dont_show_again">Ne plus afficher ceci</string>
     <string name="ankiquest_missing_deck">Ce paquet n’est plus disponible. Choisis-en un autre.</string>
     <string name="ankiquest_deck_ready_later">Aucune carte n’est prête dans ce paquet pour le moment. Choisis un autre paquet ou reviens plus tard.</string>

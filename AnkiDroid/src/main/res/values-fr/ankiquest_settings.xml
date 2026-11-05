@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_group_account">Compte</string>
+    <string name="ankiquest_group_notify">Me prévenir pour</string>
+    <string name="ankiquest_group_sharing">Partage</string>
+    <string name="ankiquest_group_app">Appli et confidentialité</string>
+    <string name="ankiquest_manage_account_title">Gérer le compte</string>
+    <string name="ankiquest_connection_title">Connexion</string>
+    <string name="ankiquest_signed_in_as">Connecté en tant que %1$s</string>
+    <string name="ankiquest_sign_out_confirm">Se déconnecter d’AnkiQuest sur ce téléphone ? Tes cartes et révisions restent dans Anki.</string>
+    <string name="ankiquest_signed_out">Tu es déconnecté d’AnkiQuest.</string>
+    <string name="ankiquest_notify_friends_summary">Quand tes amis terminent des paquets qu’ils partagent avec toi</string>
+    <string name="ankiquest_notify_reminders_title">Rappels</string>
+    <string name="ankiquest_notify_reminders_summary">Un rappel quotidien pour étudier, et une alerte avant la fin de ta série</string>
+    <string name="ankiquest_quiet_hours_title">Heures calmes</string>
+    <string name="ankiquest_quiet_hours_range">De %1$s à %2$s</string>
+    <string name="ankiquest_quiet_hours_none">Pas d’heures calmes</string>
+    <string name="ankiquest_quiet_hours_from">Début</string>
+    <string name="ankiquest_quiet_hours_until">Jusqu’à</string>
+    <string name="ankiquest_quiet_hours_turn_off">Désactiver</string>
+    <string name="ankiquest_notify_moments_title">Mes moments</string>
+    <string name="ankiquest_notify_moments_summary">Niveaux, succès, records personnels et places au classement, et quand l’un est à portée</string>
+    <string name="ankiquest_share_moments_title">Partager mes moments avec mes amis</string>
+    <string name="ankiquest_share_moments_summary">Tes amis peuvent apprendre tes objectifs, séries et succès. Désactive pour les garder pour toi.</string>
+    <string name="ankiquest_health_problem_title">AnkiQuest ne peut pas te prévenir</string>
+    <string name="ankiquest_health_problem_summary">Les notifications sont désactivées sur ce téléphone. Touche pour corriger.</string>
+    <string name="ankiquest_deck_menu_share">Parler de ce paquet à mes amis</string>
+    <string name="ankiquest_deck_menu_share_title">Qui est prévenu quand tu termines %1$s ?</string>
+    <string name="ankiquest_deck_menu_share_on">Les amis choisis seront prévenus quand tu termineras %1$s.</string>
+    <string name="ankiquest_deck_menu_share_off">Personne ne sera prévenu quand tu termineras %1$s.</string>
+    <string name="aq_goal_change">Changer l’objectif</string>
+    <string name="aq_profile_deck_alerts_stop">Ne plus recevoir les alertes de paquets de %1$s</string>
+    <string name="aq_profile_deck_alerts_start">Recevoir à nouveau les alertes de paquets de %1$s</string>
+    <string name="aq_profile_freezes_pause">Suspendre la protection de série</string>
+    <string name="aq_profile_freezes_resume">Reprendre la protection de série</string>
+</resources>

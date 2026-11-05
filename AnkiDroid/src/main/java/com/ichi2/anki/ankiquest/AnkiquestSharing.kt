@@ -10,12 +10,38 @@ import org.json.JSONObject
 /** Which wins reach friends, and the daily goal, as kept by the server for every client of one player. */
 internal object AnkiquestSharing {
     val DAILY_CAP = 1..10
+    const val PRIVATE = "private"
+    private const val ASK = "ask"
+
+    /** The server's own starting policies; kinds it adds later start at [ASK]. */
+    private val DEFAULT_POLICIES =
+        mapOf(
+            "daily_goal" to ASK,
+            "streak_secured" to PRIVATE,
+            "streak" to ASK,
+            "level" to ASK,
+            "achievement" to ASK,
+            "record" to ASK,
+            "quest" to PRIVATE,
+            "conquered" to ASK,
+            "place" to ASK,
+            "challenge" to ASK,
+        )
 
     /** A sharing policy, `private`, `ask` or `auto`, for each kind of win, and how many automatic wins each friend gets a day. */
     data class Settings(
         val policies: Map<String, String>,
         val dailyCap: Int,
     ) {
+        /** Whether any kind of win can reach friends. */
+        val shared: Boolean get() = policies.values.any { it != PRIVATE }
+
+        /**
+         * The policies that turn all sharing off, or back on as a new player starts: with every kind
+         * private, or with the server's defaults.
+         */
+        fun switched(on: Boolean): Map<String, String> = policies.keys.associateWith { if (on) DEFAULT_POLICIES[it] ?: ASK else PRIVATE }
+
         companion object {
             fun parse(json: JSONObject): Settings {
                 val policies = json.getJSONObject("policies")

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_sign_in_screen_title">Anmeldung, Geräte und Daten</string>
     <string name="ankiquest_sign_in_screen_summary">Passwort, Google und GitHub, angemeldete Geräte, deine Daten und Konto löschen</string>
     <string name="ankiquest_providers_title">Anmelden mit</string>
     <string name="ankiquest_devices_title">Angemeldete Geräte</string>

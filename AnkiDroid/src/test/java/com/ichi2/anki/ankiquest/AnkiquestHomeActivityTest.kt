@@ -14,6 +14,7 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -159,6 +160,22 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertFalse(decks.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK))
         assertTrue(decks.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+    }
+
+    @Test
+    fun `the daily goal is changed on Today, from the server's goal`() {
+        val goal = AnkiquestDailyGoal.Status(100, 4, 10, 2, AnkiquestDailyGoal.Mode.CARDS, AnkiquestDailyGoal.Goal(20))
+        coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12, goal = goal)
+        mockkObject(AnkiquestDailyGoal, AnkiquestGoalDialog)
+        try {
+            coEvery { AnkiquestDailyGoal.fetch(identity, any()) } throws IOException("offline")
+            val home = launch()
+            assertTrue(home.hasText(home.getString(R.string.aq_goal_today)))
+            home.click(home.getString(R.string.aq_goal_change))
+            coVerify { AnkiquestDailyGoal.fetch(identity, any()) }
+        } finally {
+            unmockkObject(AnkiquestDailyGoal, AnkiquestGoalDialog)
+        }
     }
 
     @Test

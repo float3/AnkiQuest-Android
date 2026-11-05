@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="aq_reminders_kinds">Recordatorios de tu servidor</string>
-    <string name="aq_reminders_timing">Horario</string>
     <string name="aq_reminder_gentle_daily">Recordatorio diario amable</string>
     <string name="aq_reminder_gentle_daily_summary">Un empujoncito amistoso cuando aún no has estudiado.</string>
     <string name="aq_reminder_urgent_streak">Aviso de racha sin protección</string>
@@ -18,24 +16,6 @@
     <string name="aq_reminder_weekly_recap">Resumen semanal</string>
     <string name="aq_reminder_weekly_recap_summary">Tus días de estudio, XP, victorias diarias, posición semanal y mejora.</string>
     <string name="aq_reminders_hour">Recordatorio diario a las</string>
-    <string name="aq_reminders_quiet_start">Inicio de horas de silencio</string>
-    <string name="aq_reminders_quiet_end">Fin de horas de silencio</string>
-    <string name="aq_reminders_limit">Límite diario</string>
-    <plurals name="aq_reminders_limit_value">
-        <item quantity="one">%1$d notificación al día</item>
-        <item quantity="many">%1$d notificaciones al día</item>
-        <item quantity="other">%1$d notificaciones al día</item>
-    </plurals>
-    <string name="aq_reminders_quiet_off">Desactivadas: empiezan y terminan a la misma hora</string>
-    <string name="aq_reminders_hint">Estos recordatorios los envía tu servidor de AnkiQuest, en tu zona horaria de AnkiQuest. Los avisos de racha siguen tu cambio de día de Anki y se detienen en cuanto se registra estudio. Las horas de silencio y el límite diario se aplican a todos, incluidos los urgentes. El recordatorio de racha y las alertas de arriba son de este teléfono.</string>
-    <string name="aq_reminders_loading">Cargando tus recordatorios de la comunidad…</string>
-    <string name="aq_reminders_saving">Guardando tus recordatorios de la comunidad…</string>
-    <string name="aq_reminders_saved">Tus preferencias de recordatorios están guardadas.</string>
-    <string name="aq_reminders_configure">Inicia sesión en AnkiQuest para elegir tus recordatorios de la comunidad.</string>
-    <string name="aq_reminders_auth">Tu servidor no aceptó esta cuenta. Revísala en los ajustes de AnkiQuest y vuelve a intentarlo.</string>
-    <string name="aq_reminders_unsupported">Este servidor no tiene recordatorios de la comunidad.</string>
-    <string name="aq_reminders_error">No se pudieron confirmar tus recordatorios de la comunidad. Revisa tu conexión y vuelve a intentarlo antes de hacer otro cambio.</string>
-    <string name="aq_reminders_retry">Recargar recordatorios</string>
     <string name="aq_privacy_title">Aviso de privacidad</string>
     <string name="aq_privacy_summary">Qué guarda tu servidor de AnkiQuest sobre ti y quién lo gestiona. Se abre en tu navegador.</string>
     <string name="aq_calendar_title">Calendario de la comunidad</string>

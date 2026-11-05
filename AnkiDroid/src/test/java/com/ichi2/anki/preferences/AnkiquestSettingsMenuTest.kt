@@ -7,82 +7,98 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.xmlpull.v1.XmlPullParser
 import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestSettingsMenuTest : RobolectricTest() {
-    @Test
-    fun `each existing setting remains available exactly once`() {
-        val pages =
-            listOf(
-                R.xml.preferences_ankiquest,
-                R.xml.preferences_ankiquest_account,
-                R.xml.preferences_ankiquest_sign_in,
-                R.xml.preferences_ankiquest_study,
-                R.xml.preferences_ankiquest_notifications,
-                R.xml.preferences_ankiquest_sharing,
-                R.xml.preferences_ankiquest_maintenance,
-            )
-        val navigationKeys =
-            setOf(
-                R.string.ankiquest_screen_key,
-                R.string.ankiquest_account_screen_key,
-                R.string.ankiquest_sign_in_screen_key,
-                R.string.ankiquest_study_screen_key,
-                R.string.ankiquest_notifications_screen_key,
-                R.string.ankiquest_sharing_screen_key,
-                R.string.ankiquest_maintenance_screen_key,
-            ).map(targetContext::getString).toSet()
-        val settings =
-            pages
-                .flatMap { PreferenceTestUtils.getAttrFromXml(targetContext, it, "key") }
-                .map { targetContext.getString(it.removePrefix("@").toInt()) }
-                .filterNot { it in navigationKeys }
-        val expected =
-            listOf(
-                R.string.ankiquest_dashboard_key,
-                R.string.ankiquest_sign_in_key,
-                R.string.ankiquest_url_key,
-                R.string.ankiquest_user_key,
-                R.string.ankiquest_token_key,
-                R.string.ankiquest_account_status_key,
-                R.string.ankiquest_password_key,
-                R.string.ankiquest_providers_key,
-                R.string.ankiquest_devices_key,
-                R.string.ankiquest_sign_out_others_key,
-                R.string.ankiquest_export_key,
-                R.string.ankiquest_delete_account_key,
-                R.string.ankiquest_avatar_key,
-                R.string.ankiquest_companion_key,
-                R.string.ankiquest_test_key,
-                R.string.ankiquest_open_today_key,
-                R.string.ankiquest_summary_preference_key,
-                R.string.ankiquest_goal_key,
-                R.string.ankiquest_mood_icon_key,
-                R.string.ankiquest_deck_status_key,
-                R.string.ankiquest_streak_protection_key,
-                R.string.ankiquest_notify_rank_key,
-                R.string.ankiquest_streak_hours_key,
-                R.string.ankiquest_nudges_key,
-                R.string.ankiquest_celebrations_key,
-                R.string.ankiquest_community_reminders_key,
-                R.string.ankiquest_message_alerts_key,
-                R.string.ankiquest_nudge_alerts_key,
-                R.string.ankiquest_health_key,
-                R.string.ankiquest_moments_key,
-                R.string.ankiquest_moments_status_key,
-                R.string.ankiquest_share_cap_key,
-                R.string.ankiquest_moments_decks_key,
-                R.string.ankiquest_deck_share_ask_key,
-                R.string.ankiquest_subscriptions_key,
-                R.string.ankiquest_upload_all_key,
-                R.string.ankiquest_update_channel_key,
-                R.string.ankiquest_check_updates_key,
-                R.string.aq_privacy_key,
-            ).map(targetContext::getString)
+    /** Each group's key and its settings, in order; a setting outside any group is a group of its own. */
+    private fun layout(xml: Int): List<Pair<String, List<String>>> {
+        val groups = mutableListOf<Pair<String, MutableList<String>>>()
+        targetContext.resources.getXml(xml).use { parser ->
+            var depth = 0
+            while (parser.next() != XmlPullParser.END_DOCUMENT) {
+                when (parser.eventType) {
+                    XmlPullParser.START_TAG -> {
+                        depth++
+                        val id = parser.getAttributeResourceValue(ANDROID, "key", 0)
+                        val key = if (id == 0) "" else targetContext.getString(id)
+                        when (depth) {
+                            1 -> {}
+                            2 -> groups.add(key to mutableListOf())
+                            else -> groups.last().second.add(key)
+                        }
+                    }
+                    XmlPullParser.END_TAG -> depth--
+                }
+            }
+        }
+        return groups
+    }
 
-        assertEquals(expected.size, settings.size, "A setting was omitted or duplicated")
-        assertEquals(expected.toSet(), settings.toSet())
-        assertEquals(5, PreferenceTestUtils.getAttrFromXml(targetContext, R.xml.preferences_ankiquest, "fragment").size)
+    private fun keys(vararg ids: Int) = ids.map(targetContext::getString)
+
+    @Test
+    fun `one screen with four short groups`() {
+        assertEquals(
+            listOf(
+                targetContext.getString(R.string.ankiquest_health_key) to emptyList(),
+                targetContext.getString(R.string.ankiquest_account_group_key) to
+                    keys(
+                        R.string.ankiquest_sign_in_key,
+                        R.string.ankiquest_avatar_key,
+                        R.string.ankiquest_companion_key,
+                        R.string.ankiquest_sign_out_key,
+                        R.string.ankiquest_sign_in_screen_key,
+                    ),
+                targetContext.getString(R.string.ankiquest_notify_group_key) to
+                    keys(
+                        R.string.ankiquest_notify_friends_key,
+                        R.string.ankiquest_notify_reminders_key,
+                        R.string.ankiquest_reminder_time_key,
+                        R.string.ankiquest_quiet_hours_key,
+                        R.string.ankiquest_notify_moments_key,
+                    ),
+                targetContext.getString(R.string.ankiquest_sharing_group_key) to
+                    keys(
+                        R.string.ankiquest_share_moments_key,
+                        R.string.ankiquest_moments_decks_key,
+                        R.string.ankiquest_deck_share_ask_key,
+                    ),
+                targetContext.getString(R.string.ankiquest_app_group_key) to
+                    keys(
+                        R.string.ankiquest_mood_icon_key,
+                        R.string.ankiquest_open_today_key,
+                        R.string.ankiquest_update_channel_key,
+                        R.string.ankiquest_check_updates_key,
+                        R.string.aq_privacy_key,
+                    ),
+            ),
+            layout(R.xml.preferences_ankiquest),
+        )
+    }
+
+    @Test
+    fun `only manage account leads to another screen`() {
+        assertEquals(
+            listOf(AnkiquestSignInFragment::class.java.name),
+            PreferenceTestUtils.getAttrFromXml(targetContext, R.xml.preferences_ankiquest, "fragment"),
+        )
+        assertEquals(AnkiquestSignInFragment::class, getFragmentFromXmlRes(R.xml.preferences_ankiquest_sign_in)!!::class)
+    }
+
+    @Test
+    fun `manage account holds the account's devices, data and connection`() {
+        val groups = layout(R.xml.preferences_ankiquest_sign_in).toMap()
+        assertEquals(
+            keys(R.string.ankiquest_url_key, R.string.ankiquest_user_key, R.string.ankiquest_token_key, R.string.ankiquest_test_key),
+            groups[targetContext.getString(R.string.ankiquest_connection_key)],
+        )
+        assertEquals(keys(R.string.ankiquest_sign_out_others_key), groups[targetContext.getString(R.string.ankiquest_devices_key)])
+        assertEquals(keys(R.string.ankiquest_export_key, R.string.ankiquest_delete_account_key), groups[""])
+    }
+
+    private companion object {
+        const val ANDROID = "http://schemas.android.com/apk/res/android"
     }
 }

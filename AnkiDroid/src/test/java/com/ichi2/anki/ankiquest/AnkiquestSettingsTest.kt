@@ -6,15 +6,16 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.contextmenu.DeckPickerMenuContentProvider
+import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.xmlpull.v1.XmlPullParser
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -62,15 +63,71 @@ class AnkiquestSettingsTest : RobolectricTest() {
     }
 
     @Test
-    fun `streak protection is available in native settings`() {
-        val keys = mutableListOf<String>()
-        targetContext.resources.getXml(R.xml.preferences_ankiquest_study).use { xml ->
-            while (xml.next() != XmlPullParser.END_DOCUMENT) {
-                if (xml.eventType != XmlPullParser.START_TAG) continue
-                val key = xml.getAttributeResourceValue("http://schemas.android.com/apk/res/android", "key", 0)
-                if (key != 0) keys.add(targetContext.getString(key))
-            }
+    fun `sharing switches every kind of win off, and back on to the server's defaults`() {
+        val settings =
+            AnkiquestSharing.Settings(
+                mapOf("daily_goal" to "auto", "quest" to "ask", "streak" to "private", "future_kind" to "auto"),
+                dailyCap = 3,
+            )
+        assertTrue(settings.shared)
+        val off = settings.switched(false)
+        assertEquals(setOf("private"), off.values.toSet())
+        assertFalse(settings.copy(policies = off).shared)
+        assertEquals(
+            mapOf("daily_goal" to "ask", "quest" to "private", "streak" to "ask", "future_kind" to "ask"),
+            settings.switched(true),
+        )
+    }
+
+    @Test
+    fun `the reminders switch turns the phone's streak warning off and back on without losing chosen hours`() {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        prefs.edit { remove(AnkiquestNotifier.PREF_STREAK_HOURS) }
+        assertTrue(AnkiquestNotifier.streakReminder(prefs), "on for a new player")
+        prefs.edit { putString(AnkiquestNotifier.PREF_STREAK_HOURS, "4") }
+        AnkiquestNotifier.setStreakReminder(true, prefs)
+        assertEquals("4", prefs.getString(AnkiquestNotifier.PREF_STREAK_HOURS, null), "already on: the chosen hours stay")
+        AnkiquestNotifier.setStreakReminder(false, prefs)
+        assertFalse(AnkiquestNotifier.streakReminder(prefs))
+        AnkiquestNotifier.setStreakReminder(true, prefs)
+        assertEquals(AnkiquestNotifier.DEFAULT_STREAK_HOURS, prefs.getString(AnkiquestNotifier.PREF_STREAK_HOURS, null))
+    }
+
+    @Test
+    fun `leaderboard alerts are on until the moments switch turns them off`() {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        prefs.edit { remove(AnkiquestNotifier.PREF_RANK) }
+        assertTrue(AnkiquestNotifier.rankAlerts(prefs))
+        AnkiquestNotifier.setRankAlerts(false, prefs)
+        assertFalse(AnkiquestNotifier.rankAlerts(prefs))
+    }
+
+    @Test
+    fun `a deck's menu offers telling friends only to a signed-in player`() {
+        AnkiDroidApp.sharedPrefs().edit {
+            remove(Ankiquest.PREF_URL)
+            remove(Ankiquest.PREF_USER)
+            remove(Ankiquest.PREF_TOKEN)
         }
-        assertTrue("ankiquestStreakProtection" in keys, "The settings page must include the leaderboard's streak protection setting")
+        assertFalse(AnkiquestDeckShare.available())
+        assertFalse(
+            DeckPickerContextMenuOption.SHARE_WITH_FRIENDS in
+                DeckPickerMenuContentProvider.createOptionsList(isDynamic = false, hasBuriedInDeck = false),
+        )
+        AnkiDroidApp.sharedPrefs().edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "member")
+            putString(Ankiquest.PREF_TOKEN, "test-token")
+        }
+        assertTrue(AnkiquestDeckShare.available())
+        assertTrue(
+            DeckPickerContextMenuOption.SHARE_WITH_FRIENDS in
+                DeckPickerMenuContentProvider.createOptionsList(isDynamic = false, hasBuriedInDeck = false),
+        )
+        assertFalse(
+            DeckPickerContextMenuOption.SHARE_WITH_FRIENDS in
+                DeckPickerMenuContentProvider.createOptionsList(isDynamic = true, hasBuriedInDeck = false),
+            "filtered decks are not shared",
+        )
     }
 }

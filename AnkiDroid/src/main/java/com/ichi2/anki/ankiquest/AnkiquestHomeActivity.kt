@@ -331,6 +331,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 topMargin = dp(10)
             },
         )
+        // The goal is set where it shows; there is no goal setting elsewhere.
+        account?.takeIf { it.token.isNotEmpty() }?.let { signed ->
+            button(panel, R.string.aq_goal_change) { AnkiquestGoalDialog.edit(this, signed) { refresh() } }
+        }
     }
 
     private fun renderDeckCopies() {

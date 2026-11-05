@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_account_title">Compte et connexion</string>
-    <string name="ankiquest_account_summary">Serveur, joueur, jeton et photo de profil</string>
-    <string name="ankiquest_study_title">Étude et séries</string>
-    <string name="ankiquest_study_summary">Étude quotidienne et protection des séries</string>
-    <string name="ankiquest_notifications_title">Rappels et alertes</string>
-    <string name="ankiquest_notifications_summary">Rappels, encouragements et alertes</string>
-    <string name="ankiquest_sharing_title">Amis et partage</string>
-    <string name="ankiquest_sharing_summary">Victoires, actualités des paquets et abonnements</string>
-    <string name="ankiquest_maintenance_title">Application et données</string>
-    <string name="ankiquest_maintenance_summary">Envois de révisions et mises à jour</string>
-    <string name="ankiquest_notification_events_title">Quand notifier</string>
-    <string name="ankiquest_notification_delivery_title">Paramètres des alertes</string>
     <string name="ankiquest_dashboard_title">Classement</string>
-    <string name="ankiquest_community_reminders_title">Rappels communautaires</string>
-    <string name="ankiquest_community_reminders_summary">Choisir des rappels pour les événements communautaires</string>
-    <string name="ankiquest_streak_protection_title">Protection de série</string>
     <string name="ankiquest_streak_protection_summary">Activée par défaut. Termine les trois missions quotidiennes pendant que la protection est active pour gagner un gel de série par jour Anki, jusqu’à 3. Un gel protège automatiquement chaque jour terminé sans révisions. La désactivation suspend le gain et l’utilisation, mais conserve les gels gagnés.</string>
     <string name="ankiquest_avatar_title">Photo de profil</string>
     <string name="ankiquest_avatar_summary">Choisis une photo pour ton profil, le classement et les widgets.</string>
@@ -31,13 +16,9 @@
     <string name="ankiquest_reply">Réponse</string>
     <string name="ankiquest_reply_context">%1$s\n\nEn réponse à : %2$s</string>
     <string name="ankiquest_nudges_title">Coups de pouce</string>
-    <string name="ankiquest_nudges_summary">Préviens-moi quand une place, mon meilleur jour ou le prochain niveau est à portée</string>
-    <string name="ankiquest_celebrations_title">Célébrations</string>
-    <string name="ankiquest_celebrations_summary">Félicite-moi pour mes réussites, les étapes de ma série et mes records personnels</string>
     <string name="ankiquest_nudges_unavailable">Configure d’abord le serveur, le joueur et le jeton</string>
     <string name="ankiquest_message_alerts_title">Alertes de messages et d’étude</string>
     <string name="ankiquest_nudge_alerts_title">Alertes de coups de pouce</string>
-    <string name="ankiquest_alerts_summary">Choisis le son, la vibration et les bannières dans les réglages Android</string>
     <string name="ankiquest_deck_collapse">Réduire les sous-paquets</string>
     <string name="ankiquest_deck_expand">Développer les sous-paquets</string>
     <string name="ankiquest_deck_apply_subdecks">Appliquer aux sous-paquets</string>
@@ -79,8 +60,6 @@
     <string name="ankiquest_sign_in_invalid">Vérifie le nom d’utilisateur (3 à 32 minuscules, chiffres, - ou _) et utilise un mot de passe d’au moins 10 caractères.</string>
     <string name="ankiquest_sign_in_connecting">Connexion…</string>
     <string name="ankiquest_sign_in_done">Connecté en tant que %1$s.</string>
-    <string name="ankiquest_upload_all_title">Envoyer toutes les révisions</string>
-    <string name="ankiquest_upload_all_summary">Envoie tout l’historique des révisions. Le serveur ignore celles déjà reçues.</string>
     <string name="ankiquest_check_running">Connexion au serveur…</string>
     <string name="ankiquest_check_ok">Connecté en tant que %1$s : niveau %2$d, %3$d XP, %4$d révisions sur le serveur.</string>
     <string name="ankiquest_check_no_token">Aucun jeton n’est défini : les révisions sont seulement prévisualisées, sans être enregistrées. Les serveurs privés exigent ton jeton de membre.</string>
@@ -106,17 +85,6 @@
     <string name="ankiquest_local_build">version locale</string>
     <string name="ankiquest_update_none">Tu as la dernière version (%1$s).</string>
     <string name="ankiquest_update_check_failed">Impossible de vérifier les mises à jour sur GitHub. Réessaie plus tard.</string>
-    <string name="ankiquest_notify_rank_title">Alertes de classement</string>
-    <string name="ankiquest_notify_rank_summary">Préviens-moi quand ma place au classement hebdomadaire change</string>
-    <string name="ankiquest_streak_hours_title">Rappel de série</string>
-    <string-array name="ankiquest_streak_hours_entries">
-        <item>Désactivé</item>
-        <item>1 heure avant la fin du jour</item>
-        <item>2 heures avant la fin du jour</item>
-        <item>3 heures avant la fin du jour</item>
-        <item>4 heures avant la fin du jour</item>
-        <item>6 heures avant la fin du jour</item>
-    </string-array>
     <string name="ankiquest_period_hour">cette heure</string>
     <string name="ankiquest_period_day">Aujourd\'hui</string>
     <string name="ankiquest_period_week">cette semaine</string>

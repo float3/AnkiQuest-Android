@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_group_account">Konto</string>
+    <string name="ankiquest_group_notify">Benachrichtige mich über</string>
+    <string name="ankiquest_group_sharing">Teilen</string>
+    <string name="ankiquest_group_app">App und Datenschutz</string>
+    <string name="ankiquest_manage_account_title">Konto verwalten</string>
+    <string name="ankiquest_connection_title">Verbindung</string>
+    <string name="ankiquest_signed_in_as">Angemeldet als %1$s</string>
+    <string name="ankiquest_sign_out_confirm">Auf diesem Telefon von AnkiQuest abmelden? Deine Karten und Wiederholungen bleiben in Anki.</string>
+    <string name="ankiquest_signed_out">Du bist von AnkiQuest abgemeldet.</string>
+    <string name="ankiquest_notify_friends_summary">Wenn Freunde Stapel beenden, die sie mit dir teilen</string>
+    <string name="ankiquest_notify_reminders_title">Erinnerungen</string>
+    <string name="ankiquest_notify_reminders_summary">Eine tägliche Lernerinnerung und eine Warnung, bevor deine Serie endet</string>
+    <string name="ankiquest_quiet_hours_title">Ruhezeiten</string>
+    <string name="ankiquest_quiet_hours_range">%1$s bis %2$s</string>
+    <string name="ankiquest_quiet_hours_none">Keine Ruhezeiten</string>
+    <string name="ankiquest_quiet_hours_from">Von</string>
+    <string name="ankiquest_quiet_hours_until">Bis</string>
+    <string name="ankiquest_quiet_hours_turn_off">Ausschalten</string>
+    <string name="ankiquest_notify_moments_title">Meine Momente</string>
+    <string name="ankiquest_notify_moments_summary">Level, Erfolge, persönliche Bestwerte und Ranglistenplätze, und wenn einer in Reichweite ist</string>
+    <string name="ankiquest_share_moments_title">Meine Momente mit Freunden teilen</string>
+    <string name="ankiquest_share_moments_summary">Freunde können von deinen Zielen, Serien und Erfolgen erfahren. Schalte es aus, um sie für dich zu behalten.</string>
+    <string name="ankiquest_health_problem_title">AnkiQuest erreicht dich nicht</string>
+    <string name="ankiquest_health_problem_summary">Benachrichtigungen sind auf diesem Telefon ausgeschaltet. Tippe, um das zu beheben.</string>
+    <string name="ankiquest_deck_menu_share">Freunden von diesem Stapel erzählen</string>
+    <string name="ankiquest_deck_menu_share_title">Wer erfährt, wenn du %1$s beendest?</string>
+    <string name="ankiquest_deck_menu_share_on">Die gewählten Freunde erfahren, wenn du %1$s beendest.</string>
+    <string name="ankiquest_deck_menu_share_off">Niemand erfährt, wenn du %1$s beendest.</string>
+    <string name="aq_goal_change">Ziel ändern</string>
+    <string name="aq_profile_deck_alerts_stop">Keine Stapelmeldungen mehr von %1$s</string>
+    <string name="aq_profile_deck_alerts_start">Stapelmeldungen von %1$s wieder erhalten</string>
+    <string name="aq_profile_freezes_pause">Serienschutz pausieren</string>
+    <string name="aq_profile_freezes_resume">Serienschutz fortsetzen</string>
+</resources>

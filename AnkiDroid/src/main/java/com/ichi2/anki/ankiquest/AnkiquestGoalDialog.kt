@@ -24,6 +24,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Choice
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.ServerGoal
+import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -234,6 +235,31 @@ internal object AnkiquestGoalDialog {
             else -> lines += resources.getQuantityString(R.plurals.ankiquest_goal_estimate_cleared, days, days)
         }
         return lines.joinToString("\n")
+    }
+
+    /**
+     * Changes the goal from where it shows, such as Today: reads the goal the server keeps, then opens
+     * the dialog on it. A failed read says why instead of offering a stale goal.
+     */
+    fun edit(
+        activity: FragmentActivity,
+        account: HomeAccount,
+        onSaved: (ServerGoal) -> Unit = {},
+    ) {
+        activity.lifecycleScope.launch {
+            try {
+                val goal = AnkiquestDailyGoal.fetch(account)
+                if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
+                if (AnkiquestHomeData.account()?.scope != account.scope) return@launch
+                show(activity, account, goal.choice, onSaved = onSaved)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "AnkiQuest goal could not be read")
+                val reason = (e as? AnkiquestHttpException)?.explanation ?: e.message ?: e.javaClass.simpleName
+                showThemedToast(activity, activity.getString(R.string.ankiquest_check_failed, reason), shortLength = false)
+            }
+        }
     }
 
     /**

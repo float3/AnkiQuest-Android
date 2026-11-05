@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.R
@@ -23,7 +25,7 @@ import timber.log.Timber
  * Right after a deck is finished for the day, asks whether to tell friends and which ones. Decks
  * already announced to chosen people every day are left to the server; players can turn the
  * question off in the sharing settings. Nobody is ticked to begin with, and the deck's name only
- * leaves the phone for the friends the player picks.
+ * leaves the phone for the friends the player picks. A deck's menu sets the same per deck, see [choose].
  */
 internal object AnkiquestDeckShare {
     const val PREF_ASK = "ankiquestAskToShareDecks"
@@ -60,12 +62,101 @@ internal object AnkiquestDeckShare {
                     (it.optJSONArray("recipients")?.length() ?: 0) > 0
             }
         if (automatic) return null
-        val recipients =
-            settings.optJSONArray("recipients")?.objects().orEmpty().mapNotNull { person ->
-                val user = person.optString("user").ifEmpty { return@mapNotNull null }
-                Recipient(user, person.optString("display").ifEmpty { user })
-            }
+        val recipients = recipients(settings)
         return if (recipients.isEmpty()) null else Prompt(deck, name, recipients)
+    }
+
+    /** The people the server lets the player tell, from its deck settings. */
+    private fun recipients(settings: JSONObject): List<Recipient> =
+        settings.optJSONArray("recipients")?.objects().orEmpty().mapNotNull { person ->
+            val user = person.optString("user").ifEmpty { return@mapNotNull null }
+            Recipient(user, person.optString("display").ifEmpty { user })
+        }
+
+    /** The people already told whenever [deck] is finished, as the server's deck settings keep them. */
+    fun told(
+        deck: Long,
+        settings: JSONObject,
+    ): Set<String> =
+        settings
+            .optJSONArray("decks")
+            ?.objects()
+            .orEmpty()
+            .firstOrNull { it.optString("id") == deck.toString() && it.optBoolean("enabled") }
+            ?.optJSONArray("recipients")
+            ?.strings()
+            .orEmpty()
+            .toSet()
+
+    /** Whether a deck's menu offers [choose]: only to a signed-in player. */
+    fun available(): Boolean = AnkiquestHomeData.account()?.token?.isNotEmpty() == true
+
+    /**
+     * From a deck's menu: who hears whenever [deck] is finished, ticked as the server keeps it now.
+     * Ticking nobody stops telling anyone about it.
+     */
+    fun choose(
+        activity: FragmentActivity,
+        deck: Long,
+    ) {
+        activity.lifecycleScope.launch {
+            val language = AnkiquestLanguage.context(activity)
+            try {
+                val settings = Ankiquest.deckNotificationSettings()
+                val name = withCol { decks.name(deck) }
+                val people = recipients(settings)
+                if (people.isEmpty()) {
+                    showThemedToast(activity, language.getString(R.string.ankiquest_deck_notifications_no_people), shortLength = false)
+                    return@launch
+                }
+                val chosen = told(deck, settings)
+                val picked = people.map { it.user in chosen }.toBooleanArray()
+                AlertDialog
+                    .Builder(activity)
+                    .setTitle(language.getString(R.string.ankiquest_deck_menu_share_title, name))
+                    .setMultiChoiceItems(people.map { it.display }.toTypedArray(), picked) { _, which, checked ->
+                        picked[which] = checked
+                    }.setPositiveButton(language.getString(R.string.ankiquest_deck_notifications_save)) { _, _ ->
+                        val recipients = people.filterIndexed { index, _ -> picked[index] }.map { it.user }
+                        save(activity.applicationContext, deck, name, recipients)
+                    }.setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "ankiquest deck sharing unavailable")
+                val reason = (e as? AnkiquestHttpException)?.explanation ?: e.message ?: e.javaClass.simpleName
+                showThemedToast(activity, language.getString(R.string.ankiquest_check_failed, reason), shortLength = false)
+            }
+        }
+    }
+
+    private fun save(
+        context: Context,
+        deck: Long,
+        name: String,
+        recipients: List<String>,
+    ) {
+        applicationScope.launch {
+            val language = AnkiquestLanguage.context(context)
+            val message =
+                try {
+                    val id = listOf(deck.toString())
+                    if (recipients.isEmpty()) {
+                        Ankiquest.saveDeckNotificationSettings(emptyList(), id, emptyList())
+                        language.getString(R.string.ankiquest_deck_menu_share_off, name)
+                    } else {
+                        Ankiquest.saveDeckNotificationSettings(id, emptyList(), recipients)
+                        language.getString(R.string.ankiquest_deck_menu_share_on, name)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "ankiquest deck sharing not saved")
+                    language.getString(R.string.ankiquest_share_failed)
+                }
+            launch(Dispatchers.Main) { showThemedToast(context, message, shortLength = false) }
+        }
     }
 
     /** True the first time it is asked for [account], [deck] and Anki [day]; it keeps only the current day's answers. */

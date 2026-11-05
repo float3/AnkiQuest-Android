@@ -14,6 +14,7 @@ import com.ichi2.anki.preferences.PreferencesActivity
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import org.json.JSONObject
@@ -43,14 +44,64 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @Before
     fun prepareProfile() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards)
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
+        every { AnkiquestSubscriptions.repository } returns repository
+        coEvery { repository.load(any()) } throws IOException("offline")
     }
+
+    private val repository = mockk<SubscriptionRepository>()
 
     @After
     fun clearProfileMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions)
+    }
+
+    private fun overview(vararg muted: String) =
+        AnkiquestSocial.Overview(
+            friends = emptyList(),
+            incoming = emptyList(),
+            outgoing = emptyList(),
+            muted = muted.map { AnkiquestSocial.Person(it, it.replaceFirstChar(Char::uppercase)) },
+            groups = emptyList(),
+            public = true,
+        )
+
+    @Test
+    fun `another player can be muted and their deck alerts stopped from their profile`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        coEvery { repository.load(identity) } returns IncomingSubscriptions(true, emptySet(), listOf(IncomingSender("cerro", "Cerro")))
+        coEvery { repository.setSubscribed(identity, "cerro", false) } returns
+            IncomingSubscriptions(true, setOf("cerro"), listOf(IncomingSender("cerro", "Cerro")))
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        assertTrue(screen.hasText(screen.getString(R.string.aq_friends_mute)))
+        val stop = screen.getString(R.string.aq_profile_deck_alerts_stop, "Cerro")
+        assertTrue(screen.hasText(stop))
+
+        coEvery { repository.load(identity) } returns IncomingSubscriptions(true, setOf("cerro"), listOf(IncomingSender("cerro", "Cerro")))
+        screen.click(stop)
+        advanceRobolectricLooper()
+        coVerify { repository.setSubscribed(identity, "cerro", false) }
+        assertTrue(screen.hasText(screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")))
+    }
+
+    @Test
+    fun `controls the server cannot tell about stay hidden, and the player's own profile pauses streak protection`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        val theirs = launch("cerro")
+        advanceRobolectricLooper()
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_friends_mute)))
+        assertFalse(theirs.hasText(theirs.getString(R.string.aq_profile_freezes_pause)))
+
+        val mine = launch()
+        assertTrue(mine.hasText(mine.getString(R.string.aq_profile_freezes_pause)))
+        assertFalse(mine.hasText(mine.getString(R.string.aq_friends_mute)))
     }
 
     @Test

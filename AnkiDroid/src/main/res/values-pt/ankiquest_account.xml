@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_sign_in_screen_title">Sessão, dispositivos e dados</string>
     <string name="ankiquest_sign_in_screen_summary">Palavra-passe, Google e GitHub, dispositivos com sessão iniciada, os teus dados e eliminar a conta</string>
     <string name="ankiquest_providers_title">Iniciar sessão com</string>
     <string name="ankiquest_devices_title">Dispositivos com sessão</string>

@@ -10,7 +10,6 @@
     <string name="ankiquest_export_key" translatable="false">ankiquestExport</string>
     <string name="ankiquest_delete_account_key" translatable="false">ankiquestDeleteAccount</string>
 
-    <string name="ankiquest_sign_in_screen_title" maxLength="41">Sign-in, devices and data</string>
     <string name="ankiquest_sign_in_screen_summary">Password, Google and GitHub, signed-in devices, your data and deleting your account</string>
     <string name="ankiquest_providers_title" maxLength="41">Sign in with</string>
     <string name="ankiquest_devices_title" maxLength="41">Signed-in devices</string>
@@ -46,7 +45,7 @@
     <string name="ankiquest_device_signed_in">Signed in %s</string>
     <string name="ankiquest_device_used">Signed in %1$s, last used %2$s</string>
     <string name="ankiquest_device_sign_out_confirm">Sign out %s? It will have to sign in again.</string>
-    <string name="ankiquest_device_sign_out">Sign out</string>
+    <string name="ankiquest_device_sign_out" maxLength="41">Sign out</string>
     <string name="ankiquest_sign_out_others_title" maxLength="41">Sign out all other devices</string>
     <string name="ankiquest_sign_out_others_summary">Every app and website session except this one</string>
     <string name="ankiquest_sign_out_others_confirm">Sign out every other device and website session?</string>

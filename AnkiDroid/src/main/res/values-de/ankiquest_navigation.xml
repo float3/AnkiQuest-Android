@@ -16,8 +16,6 @@
     </plurals>
     <string name="ankiquest_summary_continue">Weiterlernen</string>
     <string name="ankiquest_summary_progress">Fortschritt ansehen</string>
-    <string name="ankiquest_summary_preference_title">Sitzungszusammenfassung</string>
-    <string name="ankiquest_summary_preference_summary">Zeige eine unaufdringliche, barrierefreie Zusammenfassung, wenn du eine Lernsitzung verlässt.</string>
     <string name="ankiquest_summary_dont_show_again">Nicht mehr anzeigen</string>
     <string name="ankiquest_missing_deck">Dieser Stapel ist nicht mehr verfügbar. Wähle einen anderen.</string>
     <string name="ankiquest_deck_ready_later">In diesem Stapel sind gerade keine Karten bereit. Wähle einen anderen oder komme später wieder.</string>

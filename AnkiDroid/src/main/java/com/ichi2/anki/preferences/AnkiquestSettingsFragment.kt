@@ -9,16 +9,19 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.text.format.DateFormat
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -26,34 +29,33 @@ import androidx.preference.SwitchPreferenceCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ichi2.anki.AnkiActivity
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestAccount
+import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestAvatarEditor
 import com.ichi2.anki.ankiquest.AnkiquestAvatars
+import com.ichi2.anki.ankiquest.AnkiquestCommunity
+import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
-import com.ichi2.anki.ankiquest.AnkiquestDailyGoal
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
-import com.ichi2.anki.ankiquest.AnkiquestHosts
-import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.AnkiquestIcon
-import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
+import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
+import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
-import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
-import com.ichi2.preferences.IncrementerNumberRangePreferenceCompat
-import com.ichi2.preferences.VersatileTextPreference
 import com.ichi2.utils.Permissions.openAppSettingsScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
@@ -61,20 +63,32 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONObject
 import java.util.Date
+import java.util.TimeZone
 
-open class AnkiquestSettingsFragment : SettingsFragment() {
+/**
+ * AnkiQuest settings on one short screen: the account, what to be notified about, what friends hear
+ * about, and the app itself. A new account needs none of them. Settings the server keeps are read
+ * for the signed-in account each time the screen shows, and change only once the server confirms;
+ * the rest are this phone's own.
+ *
+ * The other controls live where they are used: the daily goal on Today, streak protection, muting
+ * and deck alerts on a profile, and telling friends about one deck in that deck's menu.
+ */
+class AnkiquestSettingsFragment : SettingsFragment() {
     override val preferenceResource = R.xml.preferences_ankiquest
     override val analyticsScreenNameConstant = "prefs.ankiquest"
 
     private var running = false
-    private val sharingRequests = Mutex()
+
+    /** Every server write from this screen, one at a time, so a write never overwrites another's answer. */
+    private val serverWrites = Mutex()
     private val refreshServerSettings = mutableListOf<() -> Unit>()
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) AnkiquestPoll.refreshNow(requireContext())
+            if (isAdded) showHealth()
         }
 
     // Deliberately memory-only: a restored picker result is discarded after process recreation.
@@ -103,28 +117,47 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     override fun initSubscreen() {
         refreshServerSettings.clear()
-        bindDashboard(R.string.ankiquest_dashboard_key)
-        updateCompanionIcon()
+        bindAccount()
+        bindNotifications()
+        bindSharing()
+        bindApp()
+        showAccount()
     }
 
-    protected fun bindAccount() {
-        val url = requirePreference<VersatileTextPreference>(R.string.ankiquest_url_key)
-        url.continuousValidator =
-            VersatileTextPreference.Validator { value ->
-                if (value.isNotEmpty()) value.toHttpUrl()
+    /** The signed-in account that server settings belong to, or null on a phone that is not signed in. */
+    private fun signedIn(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
+
+    private fun requireSignedIn(): HomeAccount = signedIn() ?: throw HomeAccountChanged()
+
+    /**
+     * Without an account, the screen offers signing in and the app's own settings; the rest only
+     * appear once there is an account for them to belong to.
+     */
+    private fun showAccount() {
+        val account = signedIn()
+        requirePreference<Preference>(R.string.ankiquest_sign_in_key).apply {
+            if (account == null) {
+                setTitle(R.string.ankiquest_sign_in_title)
+                setSummary(R.string.ankiquest_sign_in_summary)
+            } else {
+                title = getString(R.string.ankiquest_signed_in_as, account.user)
+                summary = account.server.toUri().host ?: account.server
             }
-        val plain = EditTextPreference.SimpleSummaryProvider.getInstance()
-        url.summaryProvider =
-            Preference.SummaryProvider<EditTextPreference> { preference ->
-                val summary = plain.provideSummary(preference)
-                val typed = preference.text.orEmpty()
-                if (AnkiquestHosts.insecure(typed)) "$summary\n${getString(R.string.ankiquest_check_insecure, typed.trim())}" else summary
-            }
-        bindCompanion()
+            isSelectable = account == null
+        }
+        for (key in listOf(R.string.ankiquest_avatar_key, R.string.ankiquest_companion_key, R.string.ankiquest_sign_out_key)) {
+            requirePreference<Preference>(key).isVisible = account != null
+        }
+        requirePreference<PreferenceCategory>(R.string.ankiquest_notify_group_key).isVisible = account != null
+        requirePreference<PreferenceCategory>(R.string.ankiquest_sharing_group_key).isVisible = account != null
+    }
+
+    private fun bindAccount() {
         requirePreference<Preference>(R.string.ankiquest_sign_in_key).setOnPreferenceClickListener {
-            showSignIn()
+            if (signedIn() == null) showSignIn()
             true
         }
+        bindCompanion()
         requirePreference<Preference>(R.string.ankiquest_avatar_key).setOnPreferenceClickListener {
             pictureAction {
                 val account = checkNotNull(AnkiquestAvatars.account()) { getString(R.string.ankiquest_nudges_unavailable) }
@@ -161,7 +194,20 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             }
             true
         }
-        bindAction(R.string.ankiquest_test_key) { Ankiquest.runFromSettings(requireContext(), uploadAll = false) }
+        requirePreference<Preference>(R.string.ankiquest_sign_out_key).setOnPreferenceClickListener {
+            val account = signedIn() ?: return@setOnPreferenceClickListener true
+            AlertDialog
+                .Builder(requireContext())
+                .setMessage(R.string.ankiquest_sign_out_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.ankiquest_device_sign_out) { _, _ ->
+                    lifecycleScope.launch {
+                        AnkiquestAccountSettings.signOutHere(account)
+                        if (isAdded) showSnackbar(R.string.ankiquest_signed_out)
+                    }
+                }.show()
+            true
+        }
     }
 
     /** Asks for a username and password, and fills in the server, player and token from the answer. */
@@ -174,8 +220,8 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         val display = view.findViewById<EditText>(R.id.ankiquest_sign_in_display)
         val hint = view.findViewById<TextView>(R.id.ankiquest_sign_in_hint)
         val status = view.findViewById<TextView>(R.id.ankiquest_sign_in_status)
-        val urlPreference = requirePreference<VersatileTextPreference>(R.string.ankiquest_url_key)
-        server.setText(urlPreference.text?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
+        val prefs = AnkiDroidApp.sharedPrefs()
+        server.setText(prefs.getString(Ankiquest.PREF_URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
         val dialog =
             AlertDialog
                 .Builder(requireContext())
@@ -217,9 +263,11 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                 try {
                     val signed = AnkiquestAccount.submit(credentials)
                     if (!isAdded) return@launch
-                    urlPreference.text = signed.url
-                    requirePreference<VersatileTextPreference>(R.string.ankiquest_user_key).text = signed.user
-                    requirePreference<VersatileTextPreference>(R.string.ankiquest_token_key).text = signed.token
+                    prefs.edit {
+                        putString(Ankiquest.PREF_URL, signed.url)
+                        putString(Ankiquest.PREF_USER, signed.user)
+                        putString(Ankiquest.PREF_TOKEN, signed.token)
+                    }
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
                     AnkiquestPoll.refreshNow(requireContext())
@@ -235,8 +283,190 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
-    protected fun bindStudy() {
-        bindGoal()
+    /**
+     * Three switches and the reminder timing. Each switch stands for a few underlying settings, on
+     * the server and on this phone, and shows on while any of them is on.
+     */
+    private fun bindNotifications() {
+        bindServerToggle(
+            R.string.ankiquest_notify_friends_key,
+            read = { AnkiquestSubscriptions.repository.load(requireSignedIn()).enabled },
+            save = { AnkiquestSubscriptions.repository.setEnabled(requireSignedIn(), it).enabled },
+            notify = true,
+        )
+        val reminders = sharedRead { AnkiquestCommunity.reminders(requireSignedIn()) }
+        bindServerToggle(
+            R.string.ankiquest_notify_reminders_key,
+            read = { reminders().enabled.isNotEmpty() || AnkiquestNotifier.streakReminder() },
+            save = { on ->
+                val saved = saveReminders { it.copy(enabled = if (on) AnkiquestCommunity.Reminder.entries.toSet() else emptySet()) }
+                AnkiquestNotifier.setStreakReminder(on)
+                saved.enabled.isNotEmpty() || AnkiquestNotifier.streakReminder()
+            },
+            notify = true,
+        )
+        bindReminderTiming(reminders)
+        val switches = sharedRead { Ankiquest.notificationSwitches() }
+        bindServerToggle(
+            R.string.ankiquest_notify_moments_key,
+            read = {
+                val read = switches()
+                read.optBoolean(Ankiquest.NUDGES) || Ankiquest.celebrations(read) || AnkiquestNotifier.rankAlerts()
+            },
+            save = { on ->
+                val saved =
+                    serverWrites.withLock {
+                        Ankiquest.setNotificationSwitch(Ankiquest.NUDGES, on)
+                        Ankiquest.setNotificationSwitch(Ankiquest.CELEBRATIONS, on)
+                    }
+                AnkiquestNotifier.setRankAlerts(on)
+                saved.optBoolean(Ankiquest.NUDGES) || Ankiquest.celebrations(saved) || AnkiquestNotifier.rankAlerts()
+            },
+            notify = true,
+        )
+        requirePreference<Preference>(R.string.ankiquest_health_key).setOnPreferenceClickListener {
+            showNotificationHealth()
+            true
+        }
+    }
+
+    /** Saves the reminders [change] makes of the server's current ones, read again first so nothing else is overwritten. */
+    private suspend fun saveReminders(change: (Reminders) -> Reminders): Reminders =
+        serverWrites.withLock {
+            val account = requireSignedIn()
+            AnkiquestCommunity.saveReminders(account, change(AnkiquestCommunity.reminders(account)))
+        }
+
+    /** When the daily reminder comes, and the quiet hours that hold back every reminder. */
+    private fun bindReminderTiming(read: suspend () -> Reminders) {
+        val time = requirePreference<ListPreference>(R.string.ankiquest_reminder_time_key)
+        val quiet = requirePreference<Preference>(R.string.ankiquest_quiet_hours_key)
+        time.entries = Reminders.HOURS.map(::hourLabel).toTypedArray()
+        time.entryValues = Reminders.HOURS.map { it.toString() }.toTypedArray()
+        time.dialogTitle = time.title
+        var loaded: Reminders? = null
+        var generation = 0
+
+        fun show(reminders: Reminders?) {
+            loaded = reminders
+            time.isEnabled = reminders != null
+            quiet.isEnabled = reminders != null
+            if (reminders == null) {
+                time.setSummary(R.string.ankiquest_check_running)
+                quiet.setSummary(R.string.ankiquest_check_running)
+                return
+            }
+            time.value = reminders.hour.toString()
+            time.summary = time.entry
+            quiet.summary =
+                if (reminders.quiet) {
+                    getString(R.string.ankiquest_quiet_hours_range, hourLabel(reminders.quietStart), hourLabel(reminders.quietEnd))
+                } else {
+                    getString(R.string.ankiquest_quiet_hours_none)
+                }
+        }
+
+        fun run(action: suspend () -> Reminders) {
+            val request = ++generation
+            val account = signedIn()
+            show(null)
+            lifecycleScope.launch {
+                try {
+                    val reminders = action()
+                    if (request != generation || signedIn()?.scope != account?.scope || !isAdded) return@launch
+                    show(reminders)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (request != generation || !isAdded) return@launch
+                    val message = getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
+                    time.summary = message
+                    quiet.summary = message
+                }
+            }
+        }
+        refreshServerSettings.add { run(read) }
+        time.setOnPreferenceChangeListener { _, value ->
+            val hour = (value as? String)?.toIntOrNull()
+            if (hour != null && loaded != null) run { saveReminders { it.copy(hour = hour) } }
+            false
+        }
+        quiet.setOnPreferenceClickListener {
+            val current = loaded ?: return@setOnPreferenceClickListener true
+            chooseQuietHours(current) { start, end -> run { saveReminders { it.copy(quietStart = start, quietEnd = end) } } }
+            true
+        }
+    }
+
+    /** Asks for the hours reminders stay silent; the same hour for both ends turns quiet hours off. */
+    private fun chooseQuietHours(
+        current: Reminders,
+        save: (start: Int, end: Int) -> Unit,
+    ) {
+        val context = requireContext()
+        val hours = Reminders.HOURS.map(::hourLabel)
+
+        fun picker(
+            label: Int,
+            hour: Int,
+        ): Pair<TextView, Spinner> =
+            TextView(context).apply { setText(label) } to
+                Spinner(context).apply {
+                    adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, hours)
+                    setSelection(hour)
+                }
+        val (fromLabel, from) = picker(R.string.ankiquest_quiet_hours_from, current.quietStart)
+        val (untilLabel, until) = picker(R.string.ankiquest_quiet_hours_until, current.quietEnd)
+        val padding = (20 * resources.displayMetrics.density).toInt()
+        val content =
+            LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(padding, padding / 2, padding, 0)
+                listOf(fromLabel, from, untilLabel, until).forEach(::addView)
+            }
+        AlertDialog
+            .Builder(context)
+            .setTitle(R.string.ankiquest_quiet_hours_title)
+            .setView(content)
+            .setPositiveButton(R.string.ankiquest_deck_notifications_save) { _, _ ->
+                save(from.selectedItemPosition, until.selectedItemPosition)
+            }.setNeutralButton(R.string.ankiquest_quiet_hours_turn_off) { _, _ ->
+                save(current.quietStart, current.quietStart)
+            }.setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** An hour of the day as this device writes times, such as "20:00" or "8:00 PM". */
+    private fun hourLabel(hour: Int): String =
+        DateFormat
+            .getTimeFormat(requireContext())
+            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+            .format(Date(hour * 3_600_000L))
+
+    private fun bindSharing() {
+        bindServerToggle(
+            R.string.ankiquest_share_moments_key,
+            read = { AnkiquestSharing.settings(requireSignedIn()).shared },
+            save = { on ->
+                serverWrites.withLock {
+                    val account = requireSignedIn()
+                    AnkiquestSharing.saveSettings(account, AnkiquestSharing.settings(account).switched(on), dailyCap = null).shared
+                }
+            },
+        )
+        bindAction(R.string.ankiquest_moments_decks_key) {
+            try {
+                showDeckNotifications(Ankiquest.deckNotificationSettings())
+                null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
+            }
+        }
+    }
+
+    private fun bindApp() {
         val moodIcon = requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_mood_icon_key)
         moodIcon.isVisible = AnkiquestIcon.available(requireContext())
         moodIcon.setOnPreferenceChangeListener { _, enabled ->
@@ -249,199 +479,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             }
             true
         }
-        bindServerToggle(
-            R.string.ankiquest_streak_protection_key,
-            read = { Ankiquest.streakProtectionEnabled() },
-            save = { Ankiquest.setStreakProtection(it) },
-        )
-    }
-
-    /**
-     * The daily goal lives on the server: the setting shows the last known goal, and opens the goal
-     * dialog once the server's goal is loaded.
-     */
-    private fun bindGoal() {
-        val preference = requirePreference<Preference>(R.string.ankiquest_goal_key)
-        var generation = 0
-
-        fun show(choice: AnkiquestDailyGoal.Choice) {
-            preference.summary = AnkiquestDailyGoal.describe(requireContext(), choice)
-        }
-
-        val refresh = refresh@{
-            val request = ++generation
-            preference.isEnabled = false
-            show(AnkiquestDailyGoal.choice())
-            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return@refresh
-            lifecycleScope.launch {
-                try {
-                    val goal = AnkiquestDailyGoal.fetch(account)
-                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
-                    show(goal.choice)
-                    preference.isEnabled = true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (request == generation && isAdded) showThemedToast(requireContext(), serverMessage(e), shortLength = false)
-                }
-            }
-        }
-        refreshServerSettings.add { refresh() }
-        preference.setOnPreferenceClickListener {
-            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return@setOnPreferenceClickListener true
-            AnkiquestGoalDialog.show(requireActivity(), account, AnkiquestDailyGoal.choice()) { saved ->
-                if (isAdded && AnkiquestHomeData.account()?.scope == account.scope) show(saved.choice)
-            }
-            true
-        }
-    }
-
-    /** What the server said when it turned a change down, or why it could not be asked. */
-    private fun serverMessage(e: Exception): String =
-        (e as? AnkiquestHttpException)?.explanation ?: getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
-
-    protected fun bindNotifications() {
-        requirePreference<SwitchPreferenceCompat>(R.string.ankiquest_notify_rank_key).setOnPreferenceChangeListener { _, enabled ->
-            if (enabled == true) askForNotifications()
-            true
-        }
-        requirePreference<ListPreference>(R.string.ankiquest_streak_hours_key).setOnPreferenceChangeListener { _, hours ->
-            if (hours != "0") askForNotifications()
-            true
-        }
-        val switches = sharedRead { Ankiquest.notificationSwitches() }
-        bindServerToggle(
-            R.string.ankiquest_nudges_key,
-            read = { switches().getBoolean(Ankiquest.NUDGES) },
-            save = { Ankiquest.setNotificationSwitch(Ankiquest.NUDGES, it).getBoolean(Ankiquest.NUDGES) },
-            notify = true,
-        )
-        bindServerToggle(
-            R.string.ankiquest_celebrations_key,
-            read = { Ankiquest.celebrations(switches()) },
-            save = { Ankiquest.setNotificationSwitch(Ankiquest.CELEBRATIONS, it).optBoolean(Ankiquest.CELEBRATIONS, it) },
-            notify = true,
-        )
-        bindAlertSettings(R.string.ankiquest_message_alerts_key, nudge = false)
-        bindAlertSettings(R.string.ankiquest_nudge_alerts_key, nudge = true)
-        requirePreference<Preference>(R.string.ankiquest_health_key).setOnPreferenceClickListener {
-            showNotificationHealth()
-            true
-        }
-    }
-
-    protected fun bindSharing() {
-        bindAction(R.string.ankiquest_moments_decks_key) {
-            try {
-                showDeckNotifications(Ankiquest.deckNotificationSettings())
-                null
-            } catch (e: Exception) {
-                getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
-            }
-        }
-        bindMoments()
-    }
-
-    /**
-     * Who hears about each kind of win, and how many automatic wins each friend gets a day, as the
-     * server keeps them. Requests run one at a time, so a reload after a change reads the change.
-     */
-    private fun bindMoments() {
-        val category = requirePreference<PreferenceCategory>(R.string.ankiquest_moments_key)
-        val status = requirePreference<Preference>(R.string.ankiquest_moments_status_key)
-        val cap = requirePreference<IncrementerNumberRangePreferenceCompat>(R.string.ankiquest_share_cap_key)
-        val idle = status.summary
-        val kinds = resources.getStringArray(R.array.ankiquest_moment_kinds)
-        val titles = resources.getStringArray(R.array.ankiquest_moment_titles)
-        val moments =
-            kinds.mapIndexed { index, kind ->
-                ListPreference(requireContext()).apply {
-                    key = "$MOMENT_PREFIX$kind"
-                    title = titles[index]
-                    dialogTitle = titles[index]
-                    order = index + 1
-                    isPersistent = false
-                    isEnabled = false
-                    entries = resources.getStringArray(R.array.ankiquest_moment_policy_entries)
-                    entryValues = resources.getStringArray(R.array.ankiquest_moment_policy_values)
-                    summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
-                    category.addPreference(this)
-                }
-            }
-        cap.isEnabled = false
-        var loaded: AnkiquestSharing.Settings? = null
-        var generation = 0
-
-        fun show(settings: AnkiquestSharing.Settings?) {
-            loaded = settings
-            moments.forEachIndexed { index, preference ->
-                val policy = settings?.policies?.get(kinds[index])
-                if (policy != null) preference.value = policy
-                preference.isVisible = settings == null || policy != null
-                preference.isEnabled = policy != null
-            }
-            settings?.let { cap.setValue(it.dailyCap) }
-            cap.isEnabled = settings != null
-        }
-
-        fun request(
-            saving: Boolean,
-            action: suspend (HomeAccount) -> AnkiquestSharing.Settings,
-        ) {
-            val request = ++generation
-            val previous = loaded
-            show(null)
-            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
-            if (account == null) {
-                status.summary = getString(R.string.ankiquest_nudges_unavailable)
-                return
-            }
-            status.summary = getString(R.string.ankiquest_check_running)
-            lifecycleScope.launch {
-                try {
-                    val settings = sharingRequests.withLock { action(account) }
-                    if (request != generation || AnkiquestHomeData.account()?.scope != account.scope || !isAdded) return@launch
-                    status.summary = idle
-                    show(settings)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    if (request != generation || !isAdded) return@launch
-                    val message = serverMessage(e)
-                    showThemedToast(requireContext(), message, shortLength = false)
-                    if (saving && previous != null && AnkiquestHomeData.account()?.scope == account.scope) {
-                        status.summary = idle
-                        show(previous)
-                    } else {
-                        status.summary = message
-                    }
-                }
-            }
-        }
-        moments.forEachIndexed { index, preference ->
-            preference.setOnPreferenceChangeListener { _, value ->
-                val policy = value as? String
-                val dailyCap = loaded?.dailyCap
-                if (policy != null && dailyCap != null) {
-                    request(saving = true) { AnkiquestSharing.saveSettings(it, mapOf(kinds[index] to policy), dailyCap) }
-                }
-                false
-            }
-        }
-        cap.setOnPreferenceChangeListener(
-            Preference.OnPreferenceChangeListener { _, value ->
-                val dailyCap = value as? Int
-                if (dailyCap != null && loaded != null) {
-                    request(saving = true) { AnkiquestSharing.saveSettings(it, emptyMap(), dailyCap) }
-                }
-                false
-            },
-        )
-        refreshServerSettings.add { request(saving = false) { AnkiquestSharing.settings(it) } }
-    }
-
-    protected fun bindMaintenance() {
-        bindAction(R.string.ankiquest_upload_all_key) { Ankiquest.runFromSettings(requireContext(), uploadAll = true) }
         requirePreference<Preference>(R.string.ankiquest_check_updates_key).summary =
             getString(
                 R.string.ankiquest_check_updates_summary,
@@ -499,15 +536,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
-    private fun updateCompanionIcon() {
-        preferenceScreen.findPreference<Preference>(getString(R.string.ankiquest_dashboard_key))?.icon =
-            if (AnkiquestCompanion.visible()) {
-                ContextCompat.getDrawable(requireContext(), AnkiquestCompanion.resource(R.drawable.aki_face))
-            } else {
-                null
-            }
-    }
-
     private fun bindCompanion() {
         val preference = requirePreference<ListPreference>(R.string.ankiquest_companion_key)
         var generation = 0
@@ -518,11 +546,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         val refresh = refresh@{
             val request = ++generation
             preference.isEnabled = false
-            val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() }
-            if (account == null) {
-                preference.summary = getString(R.string.ankiquest_check_unconfigured)
-                return@refresh
-            }
+            val account = signedIn() ?: return@refresh
             preference.summary = getString(R.string.ankiquest_check_running)
             if (saving) {
                 refreshPending = true
@@ -536,13 +560,10 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                     preference.value = choice
                     preference.summary = preference.entry
                     preference.isEnabled = true
-                    updateCompanionIcon()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    if (request == generation &&
-                        isAdded
-                    ) {
+                    if (request == generation && isAdded) {
                         preference.summary = getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
                     }
                 }
@@ -562,7 +583,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                     preference.value = choice
                     preference.summary = preference.entry
                     preference.isEnabled = true
-                    updateCompanionIcon()
                     AnkiquestWidget.requestUpdate(requireContext())
                 } catch (e: CancellationException) {
                     throw e
@@ -587,17 +607,6 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             }
             false
         }
-        updateCompanionIcon()
-    }
-
-    private fun bindAlertSettings(
-        key: Int,
-        nudge: Boolean,
-    ) {
-        requirePreference<Preference>(key).setOnPreferenceClickListener {
-            openAlertSettings(nudge)
-            true
-        }
     }
 
     private fun openAlertSettings(nudge: Boolean) {
@@ -608,7 +617,15 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
-    private fun showNotificationHealth() {
+    /** The warning at the top of the screen, there only while a signed-in player's alerts cannot reach them. */
+    private fun showHealth() {
+        requirePreference<Preference>(R.string.ankiquest_health_key).isVisible =
+            signedIn() != null && !AnkiquestNotifier.deliverable(requireContext())
+    }
+
+    /** What stops alerts, and the way to each Android setting that can fix it. */
+    @VisibleForTesting
+    internal fun showNotificationHealth() {
         val context = requireContext()
         val permissionGranted =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -630,19 +647,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             .Builder(context)
             .setTitle(R.string.ankiquest_health_title)
             .setMessage(details)
-            .setPositiveButton(R.string.ankiquest_health_test) { _, _ ->
-                val message =
-                    when (AnkiquestNotifier.testAlert(context)) {
-                        AnkiquestNotifier.Delivery.POSTED -> R.string.ankiquest_health_test_posted
-                        AnkiquestNotifier.Delivery.CHANNEL_BLOCKED -> R.string.ankiquest_health_test_blocked
-                        AnkiquestNotifier.Delivery.DISABLED -> R.string.ankiquest_health_test_disabled
-                    }
-                AlertDialog
-                    .Builder(context)
-                    .setMessage(message)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show()
-            }.setNeutralButton(CommonString.settings) { _, _ ->
+            .setPositiveButton(CommonString.settings) { _, _ ->
                 AlertDialog
                     .Builder(context)
                     .setTitle(CommonString.settings)
@@ -669,23 +674,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             .show()
     }
 
-    /** The leaderboard, natively; it shows the website's page itself on a server without the board's JSON. */
-    private fun bindDashboard(key: Int) {
-        requirePreference<Preference>(key).setOnPreferenceClickListener {
-            if (Ankiquest.dashboardUrl() == null) {
-                AlertDialog
-                    .Builder(requireContext())
-                    .setMessage(Ankiquest.unconfigured(requireContext()))
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show()
-            } else {
-                startActivity(AnkiquestLeaderboardActivity.intent(requireContext()))
-            }
-            true
-        }
-    }
-
-    /** Lets toggles refreshed together share one in-flight [read] instead of each asking the server. */
+    /** Lets settings refreshed together share one in-flight [read] instead of each asking the server. */
     private fun <T> sharedRead(read: suspend () -> T): suspend () -> T {
         var running: Deferred<T>? = null
         return {
@@ -771,6 +760,13 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
+    /** Shows the account, then reads every server setting again for it; without an account there are none to read. */
+    private fun refreshAll() {
+        showAccount()
+        showHealth()
+        if (signedIn() != null) refreshServerSettings.forEach { it() }
+    }
+
     override fun onSharedPreferenceChanged(
         sharedPreferences: SharedPreferences,
         key: String?,
@@ -780,7 +776,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
             pictureAccount = null
             pictureEditor?.dismiss()
             pictureEditor = null
-            refreshServerSettings.forEach { it() }
+            refreshAll()
         }
     }
 
@@ -934,6 +930,8 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
                         ),
                     ).setPositiveButton(android.R.string.ok, null)
                     .show()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AlertDialog
                     .Builder(context)
@@ -947,7 +945,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
     override fun onStart() {
         super.onStart()
         val prefs = preferenceManager.sharedPreferences ?: return
-        if (!prefs.getBoolean(PREF_ASKED, false)) {
+        if (signedIn() != null && !prefs.getBoolean(PREF_ASKED, false)) {
             prefs.edit { putBoolean(PREF_ASKED, true) }
             askForNotifications()
         }
@@ -963,8 +961,7 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     override fun onResume() {
         super.onResume()
-        updateCompanionIcon()
-        refreshServerSettings.forEach { it() }
+        refreshAll()
         // Deliver pending messages promptly after returning from Android alert settings.
         AnkiquestPoll.refreshNow(requireContext())
     }
@@ -977,6 +974,5 @@ open class AnkiquestSettingsFragment : SettingsFragment() {
 
     companion object {
         private const val PREF_ASKED = "ankiquestAskedNotifications"
-        private const val MOMENT_PREFIX = "ankiquestMoment:"
     }
 }

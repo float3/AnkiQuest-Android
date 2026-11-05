@@ -4,9 +4,11 @@ package com.ichi2.anki.ankiquest
 
 import androidx.core.content.edit
 import com.ichi2.anki.AnkiDroidApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import timber.log.Timber
 import java.io.IOException
 import java.io.OutputStream
 
@@ -185,6 +187,21 @@ internal object AnkiquestAccountSettings {
                     .delete(AnkiquestApi.body(body))
                     .build()
             AnkiquestApi.call(account, request) { }
+        }
+        signOut(account)
+    }
+
+    /**
+     * Ends this device's session on the server when it can, and then forgets the account here either
+     * way: signing out must work offline too.
+     */
+    suspend fun signOutHere(account: HomeAccount) {
+        try {
+            devices(account).firstOrNull { it.current }?.let { signOutDevice(account, it.id) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "AnkiQuest could not end this device's session on the server")
         }
         signOut(account)
     }

@@ -11,6 +11,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
@@ -21,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.Job
@@ -41,6 +43,11 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     private var page: AnkiquestBoards.PlayerPage? = null
     private var loading = false
     private var allAchievements = false
+
+    /** Whether the player muted the one shown, and gets deck alerts from them; null where unknown. */
+    private var muted: Boolean? = null
+    private var deckAlerts: Boolean? = null
+    private var changing = false
 
     @StringRes private var failure: Int? = null
     private var generation = 0
@@ -92,6 +99,8 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (current?.scope != account?.scope) {
             account = current
             page = null
+            muted = null
+            deckAlerts = null
         }
         loadJob?.cancel()
         val turn = ++generation
@@ -122,7 +131,88 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 loading = false
                 render()
                 if (problem == null) refreshPicture(current, user)
+                if (problem == null && page?.own == false) loadControls(current, user, turn)
             }
+    }
+
+    /**
+     * What the player can change about someone else from their profile: muting them, and their deck
+     * alerts while they share decks with the player. A control the server cannot tell about stays hidden.
+     */
+    private fun loadControls(
+        current: HomeAccount,
+        user: String,
+        turn: Int,
+    ) {
+        lifecycleScope.launch {
+            var mute: Boolean? = null
+            var alerts: Boolean? = null
+            boardAttempt { mute = AnkiquestSocial.overview(current).isMuted(user) }
+            boardAttempt {
+                val subscriptions = AnkiquestSubscriptions.repository.load(current)
+                if (subscriptions.senders.any { it.user == user }) alerts = user !in subscriptions.unsubscribedSenders
+            }
+            if (turn != generation || account?.scope != current.scope) return@launch
+            muted = mute
+            deckAlerts = alerts
+            render()
+        }
+    }
+
+    /** Runs one change from the profile, then reads the profile and its controls again. */
+    private fun change(work: suspend (HomeAccount) -> Unit) {
+        val current = account ?: return
+        if (changing) return
+        changing = true
+        render()
+        lifecycleScope.launch {
+            val problem = boardAttempt { work(current) }
+            changing = false
+            if (problem != null) showThemedToast(this@AnkiquestProfileActivity, getString(problem), shortLength = false)
+            load()
+        }
+    }
+
+    private fun controls(page: AnkiquestBoards.PlayerPage) {
+        val p = page.profile
+        if (page.own) {
+            val enabled = p.freezesEnabled
+            views
+                .button(content, getString(if (enabled) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume)) {
+                    if (changing) return@button
+                    AlertDialog
+                        .Builder(this)
+                        .setTitle(if (enabled) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume)
+                        .setMessage(R.string.ankiquest_streak_protection_summary)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(android.R.string.ok) { _, _ -> change { Ankiquest.setStreakProtection(!enabled) } }
+                        .show()
+                }.isEnabled = !changing
+            return
+        }
+        deckAlerts?.let { on ->
+            val label = if (on) R.string.aq_profile_deck_alerts_stop else R.string.aq_profile_deck_alerts_start
+            views
+                .button(content, getString(label, p.display)) {
+                    change { AnkiquestSubscriptions.repository.setSubscribed(it, p.user, !on) }
+                }.isEnabled = !changing
+        }
+        muted?.let { isMuted ->
+            views
+                .button(content, getString(if (isMuted) R.string.aq_friends_unmute else R.string.aq_friends_mute)) {
+                    if (isMuted) {
+                        change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Unmute(p.user)) }
+                    } else {
+                        AlertDialog
+                            .Builder(this)
+                            .setMessage(getString(R.string.aq_friends_mute_confirm, p.display))
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .setPositiveButton(R.string.aq_friends_mute) { _, _ ->
+                                change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Mute(p.user)) }
+                            }.show()
+                    }
+                }.isEnabled = !changing
+        }
     }
 
     private fun refreshPicture(
@@ -293,6 +383,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             ),
         )
         if (p.achievements.isNotEmpty()) achievements(p)
+        controls(page)
         if (page.own) views.button(content, getString(R.string.aq_home_settings)) { settings() }
     }
 

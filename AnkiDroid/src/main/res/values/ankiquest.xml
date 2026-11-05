@@ -1,30 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="ankiquest_account_screen_key" translatable="false">ankiquestAccountScreen</string>
-    <string name="ankiquest_account_title" maxLength="41">Account &amp; connection</string>
-    <string name="ankiquest_account_summary">Server, player, token and profile picture</string>
-    <string name="ankiquest_study_screen_key" translatable="false">ankiquestStudyScreen</string>
-    <string name="ankiquest_study_title" maxLength="41">Study &amp; streaks</string>
-    <string name="ankiquest_study_summary">Daily study options and streak protection</string>
-    <string name="ankiquest_notifications_screen_key" translatable="false">ankiquestNotificationsScreen</string>
-    <string name="ankiquest_notifications_title" maxLength="41">Reminders &amp; alerts</string>
-    <string name="ankiquest_notifications_summary">Reminders, nudges and alert delivery</string>
-    <string name="ankiquest_sharing_screen_key" translatable="false">ankiquestSharingScreen</string>
-    <string name="ankiquest_sharing_title" maxLength="41">Friends &amp; sharing</string>
-    <string name="ankiquest_sharing_summary">Wins, deck updates and subscriptions</string>
-    <string name="ankiquest_maintenance_screen_key" translatable="false">ankiquestMaintenanceScreen</string>
-    <string name="ankiquest_maintenance_title" maxLength="41">App &amp; data</string>
-    <string name="ankiquest_maintenance_summary">Review uploads and app updates</string>
-    <string name="ankiquest_notification_events_title" maxLength="41">When to notify</string>
-    <string name="ankiquest_notification_delivery_title" maxLength="41">Alert settings</string>
-    <string name="ankiquest_dashboard_key" translatable="false">ankiquestDashboard</string>
     <string name="ankiquest_dashboard_title" maxLength="41">Leaderboard</string>
-    <string name="ankiquest_community_reminders_key" translatable="false">ankiquestCommunityReminders</string>
-    <string name="ankiquest_community_reminders_title" maxLength="41">Community reminders</string>
-    <string name="ankiquest_community_reminders_summary">Choose reminders for community events</string>
-    <string name="ankiquest_streak_protection_key" translatable="false">ankiquestStreakProtection</string>
-    <string name="ankiquest_streak_protection_title" maxLength="41">Streak protection</string>
     <string name="ankiquest_streak_protection_summary">On by default. Finish all three daily quests while protection is on to earn one freeze per Anki day, up to 3. One is used automatically for each ended day without reviews. Turning this off pauses earning and use; saved freezes stay.</string>
     <string name="ankiquest_avatar_key" translatable="false">ankiquestAvatar</string>
     <string name="ankiquest_avatar_title" maxLength="41">Profile picture</string>
@@ -39,18 +16,10 @@
     <string name="ankiquest_deck_notifications_save">@string/save</string>
     <string name="ankiquest_reply">Reply</string>
     <string name="ankiquest_reply_context">%1$s\n\nIn reply to: %2$s</string>
-    <string name="ankiquest_nudges_key" translatable="false">ankiquestNudges</string>
     <string name="ankiquest_nudges_title" maxLength="41">Nudges</string>
-    <string name="ankiquest_nudges_summary">Tell me when a place, my best day or the next level is within reach</string>
-    <string name="ankiquest_celebrations_key" translatable="false">ankiquestCelebrations</string>
-    <string name="ankiquest_celebrations_title" maxLength="41">Celebrations</string>
-    <string name="ankiquest_celebrations_summary">Congratulate me on achievements, streak milestones and personal bests</string>
     <string name="ankiquest_nudges_unavailable">Set the server, player and token first</string>
-    <string name="ankiquest_message_alerts_key" translatable="false">ankiquestMessageAlerts</string>
-    <string name="ankiquest_nudge_alerts_key" translatable="false">ankiquestNudgeAlerts</string>
     <string name="ankiquest_message_alerts_title" maxLength="41">Message and study alerts</string>
     <string name="ankiquest_nudge_alerts_title" maxLength="41">Nudge alerts</string>
-    <string name="ankiquest_alerts_summary">Choose sound, vibration and pop-up banners in Android settings</string>
     <string name="ankiquest_deck_collapse">Collapse subdecks</string>
     <string name="ankiquest_deck_expand">Expand subdecks</string>
     <string name="ankiquest_deck_apply_subdecks">Apply to subdecks</string>
@@ -80,7 +49,6 @@
     <string name="ankiquest_user_title" maxLength="41">ankiquest player</string>
     <string name="ankiquest_token_title" maxLength="41">ankiquest token</string>
     <string name="ankiquest_test_key" translatable="false">ankiquestTest</string>
-    <string name="ankiquest_upload_all_key" translatable="false">ankiquestUploadAll</string>
     <string name="ankiquest_test_title" maxLength="41">Test connection</string>
     <string name="ankiquest_test_summary">Check the URL, player and token</string>
     <string name="ankiquest_sign_in_key" translatable="false">ankiquestSignIn</string>
@@ -101,8 +69,6 @@
     <string name="ankiquest_sign_in_invalid">Check the username (3 to 32 lowercase letters, numbers, - or _) and use a password of at least 10 characters.</string>
     <string name="ankiquest_sign_in_connecting">Connecting…</string>
     <string name="ankiquest_sign_in_done">Signed in as %1$s.</string>
-    <string name="ankiquest_upload_all_title" maxLength="41">Upload all reviews now</string>
-    <string name="ankiquest_upload_all_summary">Send your whole review history. Already uploaded reviews are skipped by the server.</string>
     <string name="ankiquest_check_running">Contacting the server…</string>
     <string name="ankiquest_check_ok">Connected as %1$s: level %2$d, %3$d XP, %4$d reviews on the server.</string>
     <string name="ankiquest_check_no_token">No token is set, so reviews are only previewed and not stored. Private servers require your member token.</string>
@@ -129,27 +95,6 @@
     <string name="ankiquest_local_build">local build</string>
     <string name="ankiquest_update_none">You have the latest version (%1$s).</string>
     <string name="ankiquest_update_check_failed">Could not check GitHub for updates. Try again later.</string>
-    <string name="ankiquest_notify_rank_key" translatable="false">ankiquestNotifyRank</string>
-    <string name="ankiquest_notify_rank_title" maxLength="41">Leaderboard notifications</string>
-    <string name="ankiquest_notify_rank_summary">Notify me when my position on the weekly leaderboard changes</string>
-    <string name="ankiquest_streak_hours_key" translatable="false">ankiquestStreakReminderHours</string>
-    <string name="ankiquest_streak_hours_title" maxLength="41">Streak reminder</string>
-    <string-array name="ankiquest_streak_hours_entries">
-        <item>Off</item>
-        <item>1 hour before the day ends</item>
-        <item>2 hours before the day ends</item>
-        <item>3 hours before the day ends</item>
-        <item>4 hours before the day ends</item>
-        <item>6 hours before the day ends</item>
-    </string-array>
-    <string-array name="ankiquest_streak_hours_values" translatable="false">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-        <item>4</item>
-        <item>6</item>
-    </string-array>
     <string name="ankiquest_period_hour">this hour</string>
     <string name="ankiquest_period_day" comment="Daily leaderboard period label, in sentence case">today</string>
     <string name="ankiquest_period_week">this week</string>

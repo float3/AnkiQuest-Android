@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_health_title">État des notifications</string>
-    <string name="ankiquest_health_summary">Vérifier la réception et envoyer une alerte test</string>
     <string name="ankiquest_health_permission">Autorisation des notifications : %1$s</string>
     <string name="ankiquest_health_messages">Alertes de messages : %1$s</string>
     <string name="ankiquest_health_nudges">Alertes de coups de pouce : %1$s</string>
@@ -10,11 +9,5 @@
     <string name="ankiquest_health_allowed">Autorisé</string>
     <string name="ankiquest_health_blocked">Bloqué dans les paramètres Android</string>
     <string name="ankiquest_health_never">Jamais pour ce compte</string>
-    <string name="ankiquest_health_test">Envoyer une alerte test</string>
     <string name="ankiquest_health_permission_settings">Ouvrir les autorisations des notifications</string>
-    <string name="ankiquest_health_test_title">Alerte test AnkiQuest</string>
-    <string name="ankiquest_health_test_body">Si tu vois ceci, les alertes locales fonctionnent.</string>
-    <string name="ankiquest_health_test_posted">Alerte test envoyée. Ton téléphone gère les bannières, le son et la vibration.</string>
-    <string name="ankiquest_health_test_blocked">Le canal des messages est désactivé. Ouvre ses réglages Android pour l’activer.</string>
-    <string name="ankiquest_health_test_disabled">Les notifications AnkiQuest ne sont pas autorisées. Active-les dans les réglages Android.</string>
 </resources>

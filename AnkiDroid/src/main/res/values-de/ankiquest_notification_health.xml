@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_health_title">Benachrichtigungsstatus</string>
-    <string name="ankiquest_health_summary">Zustellung prüfen und Testbenachrichtigung senden</string>
     <string name="ankiquest_health_permission">Benachrichtigungsberechtigung: %1$s</string>
     <string name="ankiquest_health_messages">Nachrichtenbenachrichtigungen: %1$s</string>
     <string name="ankiquest_health_nudges">Anstupser-Benachrichtigungen: %1$s</string>
@@ -10,11 +9,5 @@
     <string name="ankiquest_health_allowed">Erlaubt</string>
     <string name="ankiquest_health_blocked">In Android-Einstellungen blockiert</string>
     <string name="ankiquest_health_never">Für dieses Konto noch nie</string>
-    <string name="ankiquest_health_test">Testbenachrichtigung senden</string>
     <string name="ankiquest_health_permission_settings">Benachrichtigungsberechtigungen öffnen</string>
-    <string name="ankiquest_health_test_title">AnkiQuest-Testbenachrichtigung</string>
-    <string name="ankiquest_health_test_body">Wenn du dies siehst, funktionieren lokale Benachrichtigungen.</string>
-    <string name="ankiquest_health_test_posted">Testbenachrichtigung gesendet. Dein Telefon steuert Banner, Ton und Vibration.</string>
-    <string name="ankiquest_health_test_blocked">Der Nachrichtenkanal ist ausgeschaltet. Aktiviere ihn in den Android-Einstellungen.</string>
-    <string name="ankiquest_health_test_disabled">Benachrichtigungen für AnkiQuest sind nicht erlaubt. Aktiviere sie in den Android-Einstellungen.</string>
 </resources>
