@@ -51,6 +51,22 @@ class AnkiquestUpdaterTest : RobolectricTest() {
     }
 
     @Test
+    fun `the nightly channel offers a stable release newer than the nightly`() {
+        val nightly = AnkiquestUpdater.parseNightly(nightlyJson)!!
+        val stable = AnkiquestUpdater.Release(number = 18, name = "AnkiQuest 18", apkUrl = "", apkSize = 0)
+        assertEquals(stable, AnkiquestUpdater.newest(nightly, stable))
+        val older = stable.copy(number = 17, name = "AnkiQuest 17")
+        assertEquals(nightly, AnkiquestUpdater.newest(nightly, older))
+        val sameRelease =
+            AnkiquestUpdater.parseNightly(
+                JSONObject(nightlyJson.toString()).put("nightly", 0).put("version_code", 50_017_000),
+            )!!
+        assertEquals(older, AnkiquestUpdater.newest(sameRelease, older))
+        assertEquals(stable, AnkiquestUpdater.newest(null, stable))
+        assertEquals(nightly, AnkiquestUpdater.newest(nightly, null))
+    }
+
+    @Test
     fun `the channel follows the setting and defaults to stable`() {
         assertEquals(AnkiquestUpdater.Channel.STABLE, AnkiquestUpdater.channel())
         AnkiDroidApp.sharedPrefs().edit { putString(AnkiquestUpdater.PREF_CHANNEL, "nightly") }
