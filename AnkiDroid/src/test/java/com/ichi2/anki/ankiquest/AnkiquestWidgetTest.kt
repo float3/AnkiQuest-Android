@@ -25,7 +25,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.ankiquest.AnkiquestWidget.Size
+import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings.Scale
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -312,21 +312,22 @@ class AnkiquestWidgetTest : RobolectricTest() {
 
     @Test
     fun `a wide and tall leaderboard draws larger`() {
-        assertEquals(Size.REGULAR, Size.fitting(250f, 110f))
-        assertEquals(Size.REGULAR, Size.fitting(500f, 110f), "a wide strip keeps its rows")
-        assertEquals(Size.REGULAR, Size.fitting(250f, 600f), "a narrow column only shows more rows")
-        assertEquals(Size.LARGE, Size.fitting(360f, 260f))
-        assertEquals(Size.HUGE, Size.fitting(520f, 420f))
-        assertEquals(Size.HUGE, Size.fitting(800f, 800f))
-        assertEquals(Size.REGULAR, Size.of(Bundle()))
-        assertEquals(Size.LARGE, Size.of(options(400, 300)))
+        assertEquals(1f, AnkiquestWidgetSettings.autoScale(250f, 110f))
+        assertEquals(1f, AnkiquestWidgetSettings.autoScale(500f, 110f), "a wide strip keeps its rows")
+        assertEquals(1f, AnkiquestWidgetSettings.autoScale(250f, 600f), "a narrow column only shows more rows")
+        assertTrue(AnkiquestWidgetSettings.autoScale(360f, 260f) > 1.2f)
+        assertEquals(1.6f, AnkiquestWidgetSettings.autoScale(520f, 420f))
+        assertEquals(1.6f, AnkiquestWidgetSettings.autoScale(800f, 800f))
+        assertEquals(1f, AnkiquestWidgetSettings.autoScale(Bundle()))
+        assertEquals(1f, AnkiquestWidgetSettings.autoScale(null))
+        assertEquals(AnkiquestWidgetSettings.autoScale(400f, 300f), AnkiquestWidgetSettings.autoScale(options(400, 300)))
     }
 
     @Test
-    fun `larger sizes scale the header and the rows`() {
+    fun `larger scales scale the header and the rows`() {
         for (style in AnkiquestWidget.styles) {
-            val sizes =
-                Size.entries.map { size ->
+            val scales =
+                Scale.entries.mapNotNull { it.factor }.map { scale ->
                     val header =
                         AnkiquestWidget
                             .layout(
@@ -335,21 +336,21 @@ class AnkiquestWidgetTest : RobolectricTest() {
                                 0,
                                 false,
                                 style,
-                                size = size,
+                                scale = scale,
                             ).apply(targetContext, FrameLayout(targetContext))
                     val row =
                         AnkiquestWidget
-                            .collection(targetContext, leaderboard(), style, size)
+                            .collection(targetContext, leaderboard(), style, scale)
                             .getItemView(3)
                             .apply(targetContext, FrameLayout(targetContext))
-                    assertEquals("Player 4", row.text(R.id.ankiquest_widget_name), size.name)
+                    assertEquals("Player 4", row.text(R.id.ankiquest_widget_name), "$scale")
                     Triple(
                         header.findViewById<TextView>(R.id.ankiquest_widget_title).textSize,
                         row.findViewById<TextView>(R.id.ankiquest_widget_name).textSize,
                         row.findViewById<View>(R.id.ankiquest_widget_portrait).layoutParams.width,
                     )
                 }
-            for ((smaller, larger) in sizes.zipWithNext()) {
+            for ((smaller, larger) in scales.zipWithNext()) {
                 assertTrue(larger.first > smaller.first, "title grows")
                 assertTrue(larger.second > smaller.second, "names grow")
                 assertTrue(larger.third > smaller.third, "pictures grow")
@@ -446,7 +447,7 @@ class AnkiquestWidgetTest : RobolectricTest() {
         heightDp: Int,
     ) = Bundle().apply {
         putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
-        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
     }
 
     private fun measureWidget(

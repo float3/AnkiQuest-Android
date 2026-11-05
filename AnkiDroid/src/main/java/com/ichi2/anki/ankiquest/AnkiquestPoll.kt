@@ -117,6 +117,13 @@ object AnkiquestPoll {
         }
         if (!configured) return Result.success()
         try {
+            AnkiquestWidget.refreshOwnBoards(context, photoBoard)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ankiquest widget standings update failed")
+        }
+        try {
             AnkiquestNotifier.onProfile(context, Ankiquest.profile())
         } catch (e: CancellationException) {
             throw e

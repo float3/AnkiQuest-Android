@@ -588,7 +588,7 @@
 
         <activity
             android:name="com.ichi2.anki.ankiquest.AnkiquestWidgetConfig"
-            android:label="@string/ankiquest_widget_period_title"
+            android:label="@string/ankiquest_widget_settings_title"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
