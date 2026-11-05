@@ -72,10 +72,24 @@ object AnkiquestNotifier {
                 prefs.edit { putLong(firstPollKey, start) }
                 start
             }
+        var queued = false
         for (entry in entries) {
             val id = entry.getLong("id")
             if (id <= previous) continue
             val fresh = AnkiquestCompletionPolicy.freshNotification(entry.optLong("created_at"), firstPoll)
+            // The player's own moments wait for the app while it is open, and are never shown twice.
+            val route =
+                if (fresh) {
+                    AnkiquestMoments.route(prefs, account, entry, Ankiquest.inForeground())
+                } else {
+                    AnkiquestMoments.Route.NOTIFY
+                }
+            if (route != AnkiquestMoments.Route.NOTIFY) {
+                queued = queued || route == AnkiquestMoments.Route.QUEUED
+                previous = id
+                prefs.edit { putLong(key, previous) }
+                continue
+            }
             val tag = 5_140_000 + (id % 1_000_000).toInt()
             val title = entry.getString("title")
             val body = entry.getString("body")
@@ -133,11 +147,13 @@ object AnkiquestNotifier {
                     art = AnkiquestArt.forNotice(kind, entry.optString("topic").ifEmpty { null }),
                 ) == Delivery.DISABLED
             ) {
-                return
+                break
             }
+            if (fresh) AnkiquestMoments.fromNotice(entry)?.let { AnkiquestMoments.markShown(prefs, account, listOf(it.key)) }
             previous = id
             prefs.edit { putLong(key, previous) }
         }
+        if (queued) Ankiquest.presentMomentsSoon()
     }
 
     /** Asks the server how this player moved since the order stored here, and says so when they did. */
@@ -158,7 +174,16 @@ object AnkiquestNotifier {
         val change = result.optJSONObject("change") ?: return
         val title = change.getString("title")
         val body = change.getString("body")
-        val place = climbedTo(previous, order, Ankiquest.player())?.takeIf { it <= 3 }
+        val climbed = climbedTo(previous, order, Ankiquest.player())
+        val place = climbed?.takeIf { it <= 3 }
+        val account = AnkiquestHomeData.account(prefs)?.notificationAccount
+        if (climbed != null && account != null && Ankiquest.inForeground()) {
+            // A climb while the app is open waits for the session to end, like every other moment.
+            val now = TimeManager.time.intTimeMS()
+            AnkiquestMoments.offer(prefs, account, listOf(AnkiquestMoments.rank(change, climbed, result.optLong("week"), now)))
+            Ankiquest.presentMomentsSoon()
+            return
+        }
         val (shareTitle, shareBody) = shareText(change)
         notify(
             context,
