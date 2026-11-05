@@ -23,6 +23,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.ReviewerTest
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmap
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -45,6 +46,8 @@ import org.junit.Before
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
 import java.io.IOException
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 /**
  * Phone screens for the README banner (`docs/graphics/logos/banner_readme.png`), drawn from sample
@@ -101,6 +104,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
     /** The deck list with each deck's daily status and the review heatmap below it. */
     @Test
     fun decks() {
+        pinHeatmapToBannerDay()
         ensureCollectionLoadIsSynchronous()
         setIntroductionSlidesShown(true)
         BackupManagerTestUtilities.setupSpaceForBackup(targetContext)
@@ -200,6 +204,24 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         captureScreen("5_profile")
     }
 
+    /**
+     * The backend dates reviews by the real clock, which a test cannot set. Move the loaded
+     * history so the heatmap's today is always [BANNER_DAY], keeping each review's distance from
+     * today, so the heatmap looks the same whenever the banner is rendered.
+     */
+    private fun pinHeatmapToBannerDay() {
+        mockkObject(ReviewHeatmap)
+        every { ReviewHeatmap.load(any()) } answers {
+            val loaded = callOriginal()
+            val shift = ChronoUnit.DAYS.between(loaded.today, BANNER_DAY)
+            ReviewHeatmap.summarize(
+                BANNER_DAY,
+                loaded.reviews.mapKeys { (date, _) -> date.plusDays(shift) },
+                loaded.scheduled.mapKeys { (date, _) -> date.plusDays(shift) },
+            )
+        }
+    }
+
     /** The server screens: a signed-in sample player at a fixed time, with the API mocked. */
     private fun social() {
         TimeManager.resetWith(MockTime(NOW))
@@ -217,10 +239,11 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         TimeManager.reset()
         val due = mutableListOf<Card>()
         val studied = mutableListOf<Card>()
-        SPANISH.forEachIndexed { i, (front, back) ->
-            val card = addBasicNote(front, back).also { it.moveToDeck("Spanish") }.firstCard()
-            if (i % 3 != 2) due += card
-        }
+        // Every Spanish card is a review due today, with "despacio" the most overdue: the
+        // scheduler shows the most overdue review first, so the reviewer always opens on it.
+        val spanishCards = SPANISH.map { (front, back) -> addBasicNote(front, back).also { it.moveToDeck("Spanish") }.firstCard() }
+        val first = spanishCards[SPANISH.indexOfFirst { it.first == "despacio" }]
+        due += spanishCards - first
 
         fun deck(
             name: String,
@@ -251,9 +274,10 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
             factor = 2500
         }
         due.forEach { it.review(0) }
+        first.review(-3)
         studied.forEach { it.review(9) }
         history.review(60)
-        col.updateCards(due + studied + history, skipUndoEntry = true)
+        col.updateCards(due + first + studied + history, skipUndoEntry = true)
 
         val tomorrow = col.backend.schedTimingToday().nextDayAt * 1000L
         studied.forEachIndexed { i, card ->
@@ -344,6 +368,9 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
     private companion object {
         /** Wednesday 28 October 2026, mid-afternoon, as in the API examples. */
         const val NOW = 1_793_183_460_000L
+
+        /** The day of [NOW], which the heatmap shows as today. */
+        val BANNER_DAY: LocalDate = LocalDate.of(2026, 10, 28)
         const val HOUR = 60 * 60 * 1000L
         const val DAY = 24 * HOUR
 

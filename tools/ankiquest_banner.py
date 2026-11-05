@@ -19,6 +19,9 @@ Regenerate (from the repository root):
     python -m venv /tmp/banner-venv && /tmp/banner-venv/bin/pip install Pillow
     /tmp/banner-venv/bin/python tools/ankiquest_banner.py
 
+The result is the same on every run: the screens use fixed sample data, a fixed clock for
+the server screens, a fixed review card and a heatmap pinned to 28 October 2026.
+
 The test is skipped unless -PreadmeBanner is given, so the screenshot workflows never run it.
 .github/workflows/ankiquest_banner.yml runs both steps for every quest-* release tag and opens
 a pull request against main when the banner changed.

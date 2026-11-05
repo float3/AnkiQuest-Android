@@ -69,7 +69,7 @@ jobs:
       - name: Compose the banner
         run: |
           python3 -m venv "$RUNNER_TEMP/banner"
-          "$RUNNER_TEMP/banner/bin/pip" install --quiet pillow==12.0.0
+          "$RUNNER_TEMP/banner/bin/pip" install --quiet pillow==13.0.0
           # Roboto comes from the Robolectric runtime jar the step above downloaded.
           "$RUNNER_TEMP/banner/bin/python" tools/ankiquest_banner.py --require-roboto
 
