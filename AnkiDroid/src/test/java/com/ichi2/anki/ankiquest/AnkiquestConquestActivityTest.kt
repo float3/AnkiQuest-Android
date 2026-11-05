@@ -86,6 +86,24 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `showing the card uses its front from the collection without asking`() {
+        mockkObject(AnkiquestShare)
+        try {
+            coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = null)
+            coEvery { AnkiquestShare.conqueredCardText(AT) } returns "la ardilla"
+            coEvery { AnkiquestSharing.setConquestLabel(identity, AT, "la ardilla") } just runs
+            val card = launch()
+            coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = "la ardilla")
+            card.click(card.getString(R.string.aq_conquest_label_add))
+            coVerify(exactly = 1) { AnkiquestSharing.setConquestLabel(identity, AT, "la ardilla") }
+            assertTrue(card.hasText("la ardilla"))
+            assertTrue(card.hasText(card.getString(R.string.aq_conquest_label_remove)))
+        } finally {
+            unmockkObject(AnkiquestShare)
+        }
+    }
+
+    @Test
     fun `another player's card has no owner's choices and leads to their profile`() {
         coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
             recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null)

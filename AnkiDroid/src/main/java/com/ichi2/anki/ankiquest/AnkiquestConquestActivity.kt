@@ -320,11 +320,28 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                     }
                 }.isEnabled = !busy
         } else {
-            views.button(content, getString(R.string.aq_conquest_label_add)) { askForLabel(card) }.isEnabled = !busy
+            views.button(content, getString(R.string.aq_conquest_label_add)) { showLabel(card) }.isEnabled = !busy
+        }
+    }
+
+    /** Shows the card's front from this phone's collection; asks only when the card is not here. */
+    private fun showLabel(card: AnkiquestCommunity.Conquest) {
+        if (busy) return
+        lifecycleScope.launch {
+            val text = AnkiquestShare.conqueredCardText(card.at)
+            if (text == null) {
+                askForLabel(card)
+                return@launch
+            }
+            act(R.string.ankiquest_goal_saving) { current ->
+                AnkiquestSharing.setConquestLabel(current, card.at, text)
+                null
+            }
         }
     }
 
     private fun askForLabel(card: AnkiquestCommunity.Conquest) {
+        if (isFinishing || isDestroyed) return
         val field =
             EditText(this).apply {
                 hint = getString(R.string.ankiquest_share_card_hint)
