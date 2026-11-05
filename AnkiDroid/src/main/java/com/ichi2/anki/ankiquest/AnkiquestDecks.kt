@@ -10,13 +10,6 @@ import java.util.TimeZone
 /** Deck completion uses Anki's daily limits, including subdecks and learning later today. */
 internal object AnkiquestDecks {
     private const val DAY_MS = 86_400_000L
-    const val PREF_DECK_STATUS = "ankiquestDeckStatus"
-
-    /** Whether the deck list marks decks finished today and learning due later. */
-    fun statusInDeckList(): Boolean =
-        com.ichi2.anki.AnkiDroidApp
-            .sharedPrefs()
-            .getBoolean(PREF_DECK_STATUS, true)
 
     fun dailyStates(
         col: Collection,

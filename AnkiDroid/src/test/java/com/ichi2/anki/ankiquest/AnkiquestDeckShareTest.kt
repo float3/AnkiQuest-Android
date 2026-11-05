@@ -84,4 +84,12 @@ class AnkiquestDeckShareTest : RobolectricTest() {
         prefs.edit { putBoolean(AnkiquestDeckShare.PREF_ASK, false) }
         assertFalse(AnkiquestDeckShare.enabled(prefs))
     }
+
+    @Test
+    fun `a deck's menu ticks the people already told about it`() {
+        val settings = settings(deck(7, true, "cerro"), deck(8, false, "ana"))
+        assertEquals(setOf("cerro"), AnkiquestDeckShare.told(7, settings))
+        assertEquals(emptySet(), AnkiquestDeckShare.told(8, settings), "a deck not shared tells nobody")
+        assertEquals(emptySet(), AnkiquestDeckShare.told(9, settings))
+    }
 }

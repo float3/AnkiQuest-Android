@@ -4,40 +4,117 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/ankiquest_screen_title"
     android:key="@string/ankiquest_screen_key">
+    <!-- Shown only while alerts cannot reach the player. -->
     <Preference
-        android:key="@string/ankiquest_dashboard_key"
+        android:key="@string/ankiquest_health_key"
         android:persistent="false"
-        android:title="@string/ankiquest_dashboard_title"
-        android:icon="@drawable/aki_face"
-        android:summary="@string/aki_settings_summary" />
-    <Preference
-        android:key="@string/ankiquest_account_screen_key"
-        android:fragment="com.ichi2.anki.preferences.AnkiquestAccountSettingsFragment"
-        android:persistent="false"
-        android:title="@string/ankiquest_account_title"
-        android:summary="@string/ankiquest_account_summary" />
-    <Preference
-        android:key="@string/ankiquest_study_screen_key"
-        android:fragment="com.ichi2.anki.preferences.AnkiquestStudySettingsFragment"
-        android:persistent="false"
-        android:title="@string/ankiquest_study_title"
-        android:summary="@string/ankiquest_study_summary" />
-    <Preference
-        android:key="@string/ankiquest_notifications_screen_key"
-        android:fragment="com.ichi2.anki.preferences.AnkiquestNotificationsSettingsFragment"
-        android:persistent="false"
-        android:title="@string/ankiquest_notifications_title"
-        android:summary="@string/ankiquest_notifications_summary" />
-    <Preference
-        android:key="@string/ankiquest_sharing_screen_key"
-        android:fragment="com.ichi2.anki.preferences.AnkiquestSharingSettingsFragment"
-        android:persistent="false"
-        android:title="@string/ankiquest_sharing_title"
-        android:summary="@string/ankiquest_sharing_summary" />
-    <Preference
-        android:key="@string/ankiquest_maintenance_screen_key"
-        android:fragment="com.ichi2.anki.preferences.AnkiquestMaintenanceSettingsFragment"
-        android:persistent="false"
-        android:title="@string/ankiquest_maintenance_title"
-        android:summary="@string/ankiquest_maintenance_summary" />
+        android:title="@string/ankiquest_health_problem_title"
+        android:summary="@string/ankiquest_health_problem_summary"
+        app:isPreferenceVisible="false" />
+    <PreferenceCategory
+        android:key="@string/ankiquest_account_group_key"
+        android:title="@string/ankiquest_group_account">
+        <Preference
+            android:key="@string/ankiquest_sign_in_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_sign_in_title"
+            android:summary="@string/ankiquest_sign_in_summary" />
+        <Preference
+            android:key="@string/ankiquest_avatar_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_avatar_title"
+            android:summary="@string/ankiquest_avatar_summary" />
+        <ListPreference
+            android:key="@string/ankiquest_companion_key"
+            android:persistent="false"
+            android:entries="@array/ankiquest_companion_entries"
+            android:entryValues="@array/ankiquest_companion_values"
+            android:title="@string/ankiquest_companion_title"
+            android:summary="@string/ankiquest_companion_summary" />
+        <Preference
+            android:key="@string/ankiquest_sign_out_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_device_sign_out" />
+        <Preference
+            android:key="@string/ankiquest_sign_in_screen_key"
+            android:fragment="com.ichi2.anki.preferences.AnkiquestSignInFragment"
+            android:persistent="false"
+            android:title="@string/ankiquest_manage_account_title"
+            android:summary="@string/ankiquest_sign_in_screen_summary" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:key="@string/ankiquest_notify_group_key"
+        android:title="@string/ankiquest_group_notify">
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_notify_friends_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_nav_friends"
+            android:summary="@string/ankiquest_notify_friends_summary" />
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_notify_reminders_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_notify_reminders_title"
+            android:summary="@string/ankiquest_notify_reminders_summary" />
+        <ListPreference
+            android:key="@string/ankiquest_reminder_time_key"
+            android:persistent="false"
+            android:title="@string/aq_reminders_hour" />
+        <Preference
+            android:key="@string/ankiquest_quiet_hours_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_quiet_hours_title" />
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_notify_moments_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_notify_moments_title"
+            android:summary="@string/ankiquest_notify_moments_summary" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:key="@string/ankiquest_sharing_group_key"
+        android:title="@string/ankiquest_group_sharing">
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_share_moments_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_share_moments_title"
+            android:summary="@string/ankiquest_share_moments_summary" />
+        <Preference
+            android:key="@string/ankiquest_moments_decks_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_moments_decks_title"
+            android:summary="@string/ankiquest_moments_decks_summary" />
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="@string/ankiquest_deck_share_ask_key"
+            android:summary="@string/ankiquest_deck_share_ask_summary"
+            android:title="@string/ankiquest_deck_share_ask_title" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:key="@string/ankiquest_app_group_key"
+        android:title="@string/ankiquest_group_app">
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="@string/ankiquest_mood_icon_key"
+            android:summary="@string/ankiquest_mood_icon_summary"
+            android:title="@string/ankiquest_mood_icon_title" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="@string/ankiquest_open_today_key"
+            android:summary="@string/ankiquest_open_today_summary"
+            android:title="@string/ankiquest_open_today_title" />
+        <ListPreference
+            android:defaultValue="stable"
+            android:entries="@array/ankiquest_update_channel_entries"
+            android:entryValues="@array/ankiquest_update_channel_values"
+            android:key="@string/ankiquest_update_channel_key"
+            android:title="@string/ankiquest_update_channel_title"
+            app:useSimpleSummaryProvider="true" />
+        <Preference
+            android:key="@string/ankiquest_check_updates_key"
+            android:title="@string/ankiquest_check_updates_title" />
+        <Preference
+            android:key="@string/aq_privacy_key"
+            android:persistent="false"
+            android:title="@string/aq_privacy_title"
+            android:summary="@string/aq_privacy_summary" />
+    </PreferenceCategory>
 </PreferenceScreen>

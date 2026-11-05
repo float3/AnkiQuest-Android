@@ -7,6 +7,7 @@ import android.view.Menu
 import android.view.MenuItem
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.DeckPicker
+import com.ichi2.anki.ankiquest.AnkiquestDeckShare
 import com.ichi2.anki.dialogs.DeckPickerContextMenu
 import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
@@ -104,6 +105,9 @@ class DeckPickerMenuContentProvider(
                 }
                 if (Prefs.newReviewRemindersEnabled) {
                     add(DeckPickerContextMenu.DeckPickerContextMenuOption.SCHEDULE_REMINDERS)
+                }
+                if (!isDynamic && AnkiquestDeckShare.available()) {
+                    add(DeckPickerContextMenu.DeckPickerContextMenuOption.SHARE_WITH_FRIENDS)
                 }
                 add(DeckPickerContextMenu.DeckPickerContextMenuOption.DELETE_DECK)
             }

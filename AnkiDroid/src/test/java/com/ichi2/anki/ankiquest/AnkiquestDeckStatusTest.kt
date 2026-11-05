@@ -20,7 +20,6 @@ import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.anki.withDeckPicker
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -74,20 +73,18 @@ class AnkiquestDeckStatusTest : RobolectricTest() {
     }
 
     @Test
-    fun `the deck list shows daily status only while the setting is on`() {
+    fun `the deck list always shows daily status, even after it was turned off in an older version`() {
         val spanish = addDeck("Spanish")
         col.decks.select(spanish)
-        for ((enabled, expected) in listOf(true to true, false to false)) {
-            AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDecks.PREF_DECK_STATUS, enabled) }
-            withDeckPicker(deckCount = 0) { deckPicker ->
-                deckPicker.awaitInitialDeckHolder(spanish)
-                val adapter =
-                    (deckPicker.deckPickerBinding.decks.adapter as ConcatAdapter)
-                        .adapters
-                        .filterIsInstance<DeckAdapter>()
-                        .single()
-                assertEquals(expected, adapter.currentList.any { it.dailyState != null }, "setting on: $enabled")
-            }
+        AnkiDroidApp.sharedPrefs().edit { putBoolean("ankiquestDeckStatus", false) }
+        withDeckPicker(deckCount = 0) { deckPicker ->
+            deckPicker.awaitInitialDeckHolder(spanish)
+            val adapter =
+                (deckPicker.deckPickerBinding.decks.adapter as ConcatAdapter)
+                    .adapters
+                    .filterIsInstance<DeckAdapter>()
+                    .single()
+            assertTrue(adapter.currentList.any { it.dailyState != null })
         }
     }
 

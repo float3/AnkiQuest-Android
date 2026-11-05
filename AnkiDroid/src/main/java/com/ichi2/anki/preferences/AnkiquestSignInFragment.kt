@@ -20,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import com.ichi2.anki.CommonString
@@ -32,16 +33,19 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Purpose
 import com.ichi2.anki.ankiquest.AnkiquestAccountSettings.Summary
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
+import com.ichi2.anki.ankiquest.AnkiquestHosts
 import com.ichi2.anki.ankiquest.AnkiquestHttpException
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.preferences.VersatileTextPreference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.io.IOException
 import java.util.Date
 
@@ -105,7 +109,43 @@ class AnkiquestSignInFragment : SettingsFragment() {
             startDeletion()
             true
         }
+        bindConnection()
         render()
+    }
+
+    /** The server, player and token behind the account, for servers set up by hand; signing in fills them in. */
+    private fun bindConnection() {
+        val url = requirePreference<VersatileTextPreference>(R.string.ankiquest_url_key)
+        url.continuousValidator =
+            VersatileTextPreference.Validator { value ->
+                if (value.isNotEmpty()) value.toHttpUrl()
+            }
+        val plain = EditTextPreference.SimpleSummaryProvider.getInstance()
+        url.summaryProvider =
+            Preference.SummaryProvider<EditTextPreference> { preference ->
+                val summary = plain.provideSummary(preference)
+                val typed = preference.text.orEmpty()
+                if (AnkiquestHosts.insecure(typed)) "$summary\n${getString(R.string.ankiquest_check_insecure, typed.trim())}" else summary
+            }
+        val test = requirePreference<Preference>(R.string.ankiquest_test_key)
+        val idle = test.summary
+        test.setOnPreferenceClickListener {
+            if (!test.isEnabled) return@setOnPreferenceClickListener true
+            test.isEnabled = false
+            test.setSummary(R.string.ankiquest_check_running)
+            val context = requireContext()
+            lifecycleScope.launch {
+                val message =
+                    try {
+                        Ankiquest.runFromSettings(context, uploadAll = false)
+                    } finally {
+                        test.isEnabled = true
+                        test.summary = idle
+                    }
+                if (isAdded) alert(message)
+            }
+            true
+        }
     }
 
     override fun onStart() {

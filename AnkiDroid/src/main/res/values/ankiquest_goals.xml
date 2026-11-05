@@ -18,7 +18,6 @@
     <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
     <string name="ankiquest_goal_cards_title" maxLength="41">Cards per day</string>
     <string name="ankiquest_goal_minutes_title" maxLength="41">Minutes per day</string>
-    <string name="ankiquest_goal_key" translatable="false">ankiquestGoal</string>
     <string name="ankiquest_goal_title" maxLength="41">Daily goal</string>
     <string name="ankiquest_goal_setup_title">Choose your daily goal</string>
     <string name="ankiquest_goal_mode_backlog">Clear my backlog in a number of days</string>

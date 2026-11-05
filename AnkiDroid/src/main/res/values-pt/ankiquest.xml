@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_account_title">Conta e conexão</string>
-    <string name="ankiquest_account_summary">Servidor, jogador, token e foto de perfil</string>
-    <string name="ankiquest_study_title">Estudo e sequências</string>
-    <string name="ankiquest_study_summary">Estudo diário e proteção de sequências</string>
-    <string name="ankiquest_notifications_title">Lembretes e alertas</string>
-    <string name="ankiquest_notifications_summary">Lembretes, incentivos e alertas</string>
-    <string name="ankiquest_sharing_title">Amigos e partilha</string>
-    <string name="ankiquest_sharing_summary">Conquistas, avisos de baralhos e subscrições</string>
-    <string name="ankiquest_maintenance_title">Aplicação e dados</string>
-    <string name="ankiquest_maintenance_summary">Envio de revisões e atualizações</string>
-    <string name="ankiquest_notification_events_title">Quando notificar</string>
-    <string name="ankiquest_notification_delivery_title">Definições dos alertas</string>
     <string name="ankiquest_dashboard_title">Classificação</string>
-    <string name="ankiquest_community_reminders_title">Avisos comunitários</string>
-    <string name="ankiquest_community_reminders_summary">Escolha lembretes para eventos comunitários</string>
-    <string name="ankiquest_streak_protection_title">Proteção de sequência</string>
     <string name="ankiquest_streak_protection_summary">Ativada por predefinição. Conclui as três missões diárias enquanto a proteção estiver ativa para ganhares uma proteção por dia Anki, até 3. Uma é usada automaticamente por cada dia sem revisões. Ao desativar, deixas de ganhar e usar proteções, mas conservas as guardadas.</string>
     <string name="ankiquest_avatar_title">Imagem do perfil</string>
     <string name="ankiquest_avatar_summary">Escolhe uma imagem para o teu perfil, a classificação e os widgets.</string>
@@ -31,13 +16,9 @@
     <string name="ankiquest_reply">Responder</string>
     <string name="ankiquest_reply_context">%1$s\n\nEm resposta a: %2$s</string>
     <string name="ankiquest_nudges_title">Lembretes</string>
-    <string name="ankiquest_nudges_summary">Avisa-me quando uma posição, o meu melhor dia ou o próximo nível estiver ao alcance</string>
-    <string name="ankiquest_celebrations_title">Celebrações</string>
-    <string name="ankiquest_celebrations_summary">Felicita-me por conquistas, marcos da sequência e recordes pessoais</string>
     <string name="ankiquest_nudges_unavailable">Configura primeiro o servidor, o jogador e o token</string>
     <string name="ankiquest_message_alerts_title">Alertas de mensagens e de estudo</string>
     <string name="ankiquest_nudge_alerts_title">Alertas de lembrete</string>
-    <string name="ankiquest_alerts_summary">Escolhe o som, a vibração e os avisos no ecrã nas definições do Android</string>
     <string name="ankiquest_deck_collapse">Recolher sub-baralhos</string>
     <string name="ankiquest_deck_expand">Expandir sub-baralhos</string>
     <string name="ankiquest_deck_apply_subdecks">Aplicar aos sub-baralhos</string>
@@ -79,8 +60,6 @@
     <string name="ankiquest_sign_in_invalid">Verifica o nome de utilizador (3 a 32 minúsculas, números, - ou _) e usa uma palavra-passe com pelo menos 10 caracteres.</string>
     <string name="ankiquest_sign_in_connecting">A ligar…</string>
     <string name="ankiquest_sign_in_done">Sessão iniciada como %1$s.</string>
-    <string name="ankiquest_upload_all_title">Enviar todas as revisões</string>
-    <string name="ankiquest_upload_all_summary">Envia todo o histórico de revisões. O servidor ignora as revisões já enviadas.</string>
     <string name="ankiquest_check_running">A ligar ao servidor…</string>
     <string name="ankiquest_check_ok">Ligado como %1$s: nível %2$d, %3$d XP e %4$d revisões no servidor.</string>
     <string name="ankiquest_check_no_token">Sem token, as revisões são apenas pré-visualizadas e não são guardadas. Os servidores privados exigem o teu token de membro.</string>
@@ -106,17 +85,6 @@
     <string name="ankiquest_local_build">versão local</string>
     <string name="ankiquest_update_none">Tens a versão mais recente (%1$s).</string>
     <string name="ankiquest_update_check_failed">Não foi possível procurar atualizações no GitHub. Tenta novamente mais tarde.</string>
-    <string name="ankiquest_notify_rank_title">Alertas de classificação</string>
-    <string name="ankiquest_notify_rank_summary">Avisa-me quando a minha posição na classificação semanal mudar</string>
-    <string name="ankiquest_streak_hours_title">Lembrete da sequência</string>
-    <string-array name="ankiquest_streak_hours_entries">
-        <item>Desativado</item>
-        <item>1 hora antes do fim do dia</item>
-        <item>2 horas antes do fim do dia</item>
-        <item>3 horas antes do fim do dia</item>
-        <item>4 horas antes do fim do dia</item>
-        <item>6 horas antes do fim do dia</item>
-    </string-array>
     <string name="ankiquest_period_hour">esta hora</string>
     <string name="ankiquest_period_day">hoje</string>
     <string name="ankiquest_period_week">esta semana</string>

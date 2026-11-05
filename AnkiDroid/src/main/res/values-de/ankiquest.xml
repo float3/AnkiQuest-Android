@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_account_title">Konto und Verbindung</string>
-    <string name="ankiquest_account_summary">Server, Spieler, Token und Profilbild</string>
-    <string name="ankiquest_study_title">Lernen und Serien</string>
-    <string name="ankiquest_study_summary">Tägliches Lernen und Serienschutz</string>
-    <string name="ankiquest_notifications_title">Erinnerungen und Hinweise</string>
-    <string name="ankiquest_notifications_summary">Erinnerungen, Hinweise und Alarme</string>
-    <string name="ankiquest_sharing_title">Freunde und Teilen</string>
-    <string name="ankiquest_sharing_summary">Erfolge, Deckmeldungen und Abonnements</string>
-    <string name="ankiquest_maintenance_title">App und Daten</string>
-    <string name="ankiquest_maintenance_summary">Uploads und App-Updates</string>
-    <string name="ankiquest_notification_events_title">Wann benachrichtigen</string>
-    <string name="ankiquest_notification_delivery_title">Benachrichtigungseinstellungen</string>
     <string name="ankiquest_dashboard_title">Rangliste</string>
-    <string name="ankiquest_community_reminders_title">Gemeinschaftserinnerungen</string>
-    <string name="ankiquest_community_reminders_summary">Wähle Erinnerungen für Community-Events</string>
-    <string name="ankiquest_streak_protection_title">Schutz der Lernserie</string>
     <string name="ankiquest_streak_protection_summary">Standardmäßig an. Wenn der Schutz aktiviert ist, erhältst du für alle drei täglichen Aufgaben einen Serienschutz pro Anki-Tag, bis zu 3. Für jeden Tag ohne Wiederholungen wird automatisch einer verwendet. Beim Ausschalten pausieren Sammeln und Einsatz; gesammelte Schutzmöglichkeiten bleiben erhalten.</string>
     <string name="ankiquest_avatar_title">Profilbild</string>
     <string name="ankiquest_avatar_summary">Wähle ein Bild für dein Profil, die Rangliste und die Widgets.</string>
@@ -31,13 +16,9 @@
     <string name="ankiquest_reply">Antwort</string>
     <string name="ankiquest_reply_context">%1$s\n\nAls Antwort auf: %2$s</string>
     <string name="ankiquest_nudges_title">Anstupser</string>
-    <string name="ankiquest_nudges_summary">Benachrichtige mich, wenn ein Platz, mein bester Tag oder die nächste Stufe in Reichweite ist</string>
-    <string name="ankiquest_celebrations_title">Erfolge feiern</string>
-    <string name="ankiquest_celebrations_summary">Gratuliere mir zu Erfolgen, Meilensteinen der Lernserie und persönlichen Bestleistungen</string>
     <string name="ankiquest_nudges_unavailable">Richte zuerst Server, Spieler und Token ein</string>
     <string name="ankiquest_message_alerts_title">Nachrichten- und Lernbenachrichtigungen</string>
     <string name="ankiquest_nudge_alerts_title">Anstupser-Benachrichtigungen</string>
-    <string name="ankiquest_alerts_summary">Wähle Ton, Vibration und Banner in den Android-Einstellungen</string>
     <string name="ankiquest_deck_collapse">Unterstapel einklappen</string>
     <string name="ankiquest_deck_expand">Unterstapel ausklappen</string>
     <string name="ankiquest_deck_apply_subdecks">Auf Unterstapel anwenden</string>
@@ -79,8 +60,6 @@
     <string name="ankiquest_sign_in_invalid">Prüfe den Benutzernamen (3 bis 32 Kleinbuchstaben, Ziffern, - oder _) und verwende ein Passwort mit mindestens 10 Zeichen.</string>
     <string name="ankiquest_sign_in_connecting">Verbinde…</string>
     <string name="ankiquest_sign_in_done">Angemeldet als %1$s.</string>
-    <string name="ankiquest_upload_all_title">Alle Wiederholungen hochladen</string>
-    <string name="ankiquest_upload_all_summary">Sende deinen gesamten Wiederholungsverlauf. Bereits hochgeladene Wiederholungen werden übersprungen.</string>
     <string name="ankiquest_check_running">Verbindung zum Server wird hergestellt…</string>
     <string name="ankiquest_check_ok">Verbunden als %1$s: Stufe %2$d, %3$d XP, %4$d Wiederholungen auf dem Server.</string>
     <string name="ankiquest_check_no_token">Ohne Token werden Wiederholungen nur als Vorschau angezeigt und nicht gespeichert. Private Server benötigen dein Mitgliedstoken.</string>
@@ -106,17 +85,6 @@
     <string name="ankiquest_local_build">Lokaler Build</string>
     <string name="ankiquest_update_none">Du hast die neueste Version (%1$s).</string>
     <string name="ankiquest_update_check_failed">Updates konnten auf GitHub nicht geprüft werden. Versuche es später erneut.</string>
-    <string name="ankiquest_notify_rank_title">Ranglisten-Benachrichtigungen</string>
-    <string name="ankiquest_notify_rank_summary">Benachrichtige mich, wenn sich mein Platz in der Wochenrangliste ändert</string>
-    <string name="ankiquest_streak_hours_title">Lernserien-Erinnerung</string>
-    <string-array name="ankiquest_streak_hours_entries">
-        <item>Aus</item>
-        <item>1 Stunde vor Tagesende</item>
-        <item>2 Stunden vor Tagesende</item>
-        <item>3 Stunden vor Tagesende</item>
-        <item>4 Stunden vor Tagesende</item>
-        <item>6 Stunden vor Tagesende</item>
-    </string-array>
     <string name="ankiquest_period_hour">Diese Stunde</string>
     <string name="ankiquest_period_day">Heute</string>
     <string name="ankiquest_period_week">Diese Woche</string>

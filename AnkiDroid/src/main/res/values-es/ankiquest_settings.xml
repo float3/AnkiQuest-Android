@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_group_account">Cuenta</string>
+    <string name="ankiquest_group_notify">Avísame de</string>
+    <string name="ankiquest_group_sharing">Compartir</string>
+    <string name="ankiquest_group_app">App y privacidad</string>
+    <string name="ankiquest_manage_account_title">Gestionar cuenta</string>
+    <string name="ankiquest_connection_title">Conexión</string>
+    <string name="ankiquest_signed_in_as">Sesión iniciada como %1$s</string>
+    <string name="ankiquest_sign_out_confirm">¿Cerrar sesión de AnkiQuest en este teléfono? Tus tarjetas y repasos se quedan en Anki.</string>
+    <string name="ankiquest_signed_out">Has cerrado sesión en AnkiQuest.</string>
+    <string name="ankiquest_notify_friends_summary">Cuando tus amigos terminan mazos que comparten contigo</string>
+    <string name="ankiquest_notify_reminders_title">Recordatorios</string>
+    <string name="ankiquest_notify_reminders_summary">Un recordatorio diario para estudiar y un aviso antes de que termine tu racha</string>
+    <string name="ankiquest_quiet_hours_title">Horas de silencio</string>
+    <string name="ankiquest_quiet_hours_range">De %1$s a %2$s</string>
+    <string name="ankiquest_quiet_hours_none">Sin horas de silencio</string>
+    <string name="ankiquest_quiet_hours_from">Desde</string>
+    <string name="ankiquest_quiet_hours_until">Hasta</string>
+    <string name="ankiquest_quiet_hours_turn_off">Desactivar</string>
+    <string name="ankiquest_notify_moments_title">Mis momentos</string>
+    <string name="ankiquest_notify_moments_summary">Niveles, logros, récords personales y puestos en la clasificación, y cuando uno está a tu alcance</string>
+    <string name="ankiquest_share_moments_title">Compartir mis momentos con amigos</string>
+    <string name="ankiquest_share_moments_summary">Tus amigos pueden enterarse de tus metas, rachas y logros. Desactívalo para guardártelos.</string>
+    <string name="ankiquest_health_problem_title">AnkiQuest no puede avisarte</string>
+    <string name="ankiquest_health_problem_summary">Las notificaciones están desactivadas en este teléfono. Toca para arreglarlo.</string>
+    <string name="ankiquest_deck_menu_share">Contar a amigos sobre este mazo</string>
+    <string name="ankiquest_deck_menu_share_title">¿Quién se entera cuando terminas %1$s?</string>
+    <string name="ankiquest_deck_menu_share_on">Los amigos elegidos se enterarán cuando termines %1$s.</string>
+    <string name="ankiquest_deck_menu_share_off">Nadie se enterará cuando termines %1$s.</string>
+    <string name="aq_goal_change">Cambiar meta</string>
+    <string name="aq_profile_deck_alerts_stop">Dejar de recibir avisos de mazos de %1$s</string>
+    <string name="aq_profile_deck_alerts_start">Volver a recibir avisos de mazos de %1$s</string>
+    <string name="aq_profile_freezes_pause">Pausar la protección de racha</string>
+    <string name="aq_profile_freezes_resume">Reanudar la protección de racha</string>
+</resources>

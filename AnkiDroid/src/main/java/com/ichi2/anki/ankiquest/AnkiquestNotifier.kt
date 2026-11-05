@@ -7,6 +7,7 @@ import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
@@ -31,6 +32,7 @@ object AnkiquestNotifier {
     const val PREF_RANK = "ankiquestNotifyRank"
     const val PREF_STREAK_HOURS = "ankiquestStreakReminderHours"
     const val DEFAULT_STREAK_HOURS = "2"
+    private const val STREAK_REMINDER_OFF = "0"
 
     private const val CHANNEL = "ankiquest"
 
@@ -43,7 +45,6 @@ object AnkiquestNotifier {
     internal const val PREF_STREAK_DAY = "ankiquestStreakNotifiedDay"
     private const val RANK_ID = 5_130_001
     private const val STREAK_ID = 5_130_002
-    private const val TEST_ID = 5_130_003
     private const val HOUR_MS = 60 * 60 * 1000L
 
     /**
@@ -170,7 +171,7 @@ object AnkiquestNotifier {
         val result = Ankiquest.rank(previous)
         val order = result.getJSONArray("order").strings()
         prefs.edit { putString(orderKey, order.joinToString(",")) }
-        if (!prefs.getBoolean(PREF_RANK, true)) return
+        if (!rankAlerts(prefs)) return
         val change = result.optJSONObject("change") ?: return
         val title = change.getString("title")
         val body = change.getString("body")
@@ -370,17 +371,33 @@ object AnkiquestNotifier {
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
         }
 
-    /** A local alert checks Android delivery without sending a server message. */
-    fun testAlert(context: Context): Delivery {
-        val language = AnkiquestLanguage.context(context)
-        return notify(
-            context,
-            TEST_ID,
-            language.getString(R.string.ankiquest_health_test_title),
-            language.getString(R.string.ankiquest_health_test_body),
-            context.packageManager.getLaunchIntentForPackage(context.packageName)
-                ?: Intent(context, AnkiquestHomeActivity::class.java),
-        )
+    /** Whether this phone warns before the streak ends; it does unless the player turned reminders off. */
+    fun streakReminder(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean =
+        prefs.getString(PREF_STREAK_HOURS, DEFAULT_STREAK_HOURS) != STREAK_REMINDER_OFF
+
+    /** Turns the streak warning on, at the hours chosen before or the default, or off. */
+    fun setStreakReminder(
+        on: Boolean,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) {
+        if (on == streakReminder(prefs)) return
+        prefs.edit { putString(PREF_STREAK_HOURS, if (on) DEFAULT_STREAK_HOURS else STREAK_REMINDER_OFF) }
+    }
+
+    /** Whether this phone tells the player when their weekly leaderboard place changes. */
+    fun rankAlerts(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_RANK, true)
+
+    fun setRankAlerts(
+        on: Boolean,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) = prefs.edit { putBoolean(PREF_RANK, on) }
+
+    /** Whether alerts can reach the player at all: notifications allowed, and both of AnkiQuest's channels on. */
+    fun deliverable(context: Context): Boolean {
+        val permission =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        return permission && alertsEnabled(context, nudge = false) && alertsEnabled(context, nudge = true)
     }
 
     fun alertsEnabled(

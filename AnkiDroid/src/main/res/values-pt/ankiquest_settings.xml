@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_group_account">Conta</string>
+    <string name="ankiquest_group_notify">Avisar-me sobre</string>
+    <string name="ankiquest_group_sharing">Partilha</string>
+    <string name="ankiquest_group_app">App e privacidade</string>
+    <string name="ankiquest_manage_account_title">Gerir conta</string>
+    <string name="ankiquest_connection_title">Ligação</string>
+    <string name="ankiquest_signed_in_as">Sessão iniciada como %1$s</string>
+    <string name="ankiquest_sign_out_confirm">Terminar sessão do AnkiQuest neste telemóvel? Os teus cartões e revisões ficam no Anki.</string>
+    <string name="ankiquest_signed_out">Terminou a sessão do AnkiQuest.</string>
+    <string name="ankiquest_notify_friends_summary">Quando amigos terminam baralhos que partilham contigo</string>
+    <string name="ankiquest_notify_reminders_title">Lembretes</string>
+    <string name="ankiquest_notify_reminders_summary">Um lembrete diário para estudar e um aviso antes de a tua sequência terminar</string>
+    <string name="ankiquest_quiet_hours_title">Horas de silêncio</string>
+    <string name="ankiquest_quiet_hours_range">Das %1$s às %2$s</string>
+    <string name="ankiquest_quiet_hours_none">Sem horas de silêncio</string>
+    <string name="ankiquest_quiet_hours_from">Desde</string>
+    <string name="ankiquest_quiet_hours_until">Até</string>
+    <string name="ankiquest_quiet_hours_turn_off">Desligar</string>
+    <string name="ankiquest_notify_moments_title">Os meus momentos</string>
+    <string name="ankiquest_notify_moments_summary">Níveis, conquistas, recordes pessoais e lugares na classificação, e quando um está ao teu alcance</string>
+    <string name="ankiquest_share_moments_title">Partilhar os meus momentos com amigos</string>
+    <string name="ankiquest_share_moments_summary">Os amigos podem saber das tuas metas, sequências e conquistas. Desliga para as guardares para ti.</string>
+    <string name="ankiquest_health_problem_title">O AnkiQuest não te consegue avisar</string>
+    <string name="ankiquest_health_problem_summary">As notificações estão desligadas neste telemóvel. Toca para resolver.</string>
+    <string name="ankiquest_deck_menu_share">Contar aos amigos sobre este baralho</string>
+    <string name="ankiquest_deck_menu_share_title">Quem fica a saber quando terminas %1$s?</string>
+    <string name="ankiquest_deck_menu_share_on">Os amigos escolhidos vão saber quando terminares %1$s.</string>
+    <string name="ankiquest_deck_menu_share_off">Ninguém vai saber quando terminares %1$s.</string>
+    <string name="aq_goal_change">Mudar meta</string>
+    <string name="aq_profile_deck_alerts_stop">Deixar de receber avisos de baralhos de %1$s</string>
+    <string name="aq_profile_deck_alerts_start">Voltar a receber avisos de baralhos de %1$s</string>
+    <string name="aq_profile_freezes_pause">Pausar a proteção da sequência</string>
+    <string name="aq_profile_freezes_resume">Retomar a proteção da sequência</string>
+</resources>

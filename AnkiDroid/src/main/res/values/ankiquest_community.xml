@@ -2,12 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <!-- Community reminders (settings › AnkiQuest › Reminders & alerts › Community reminders) -->
-    <string name="aq_reminders_status_key" translatable="false">ankiquestRemindersStatus</string>
-    <string name="aq_reminders_retry_key" translatable="false">ankiquestRemindersRetry</string>
-    <string name="aq_reminders_kinds_key" translatable="false">ankiquestRemindersKinds</string>
-    <string name="aq_reminders_timing_key" translatable="false">ankiquestRemindersTiming</string>
-    <string name="aq_reminders_kinds" maxLength="41">Reminders from your server</string>
-    <string name="aq_reminders_timing" maxLength="41">Timing</string>
     <string name="aq_reminder_gentle_daily" maxLength="41">Gentle daily reminder</string>
     <string name="aq_reminder_gentle_daily_summary">A friendly nudge when you haven’t studied yet.</string>
     <string name="aq_reminder_urgent_streak" maxLength="41">Unprotected streak warning</string>
@@ -23,23 +17,6 @@
     <string name="aq_reminder_weekly_recap" maxLength="41">Weekly recap</string>
     <string name="aq_reminder_weekly_recap_summary">Your study days, XP, daily wins, weekly position, and improvement.</string>
     <string name="aq_reminders_hour" maxLength="41">Daily reminder at</string>
-    <string name="aq_reminders_quiet_start" maxLength="41">Quiet hours start</string>
-    <string name="aq_reminders_quiet_end" maxLength="41">Quiet hours end</string>
-    <string name="aq_reminders_limit" maxLength="41">Daily limit</string>
-    <plurals name="aq_reminders_limit_value">
-        <item quantity="one">%1$d notification a day</item>
-        <item quantity="other">%1$d notifications a day</item>
-    </plurals>
-    <string name="aq_reminders_quiet_off">Off: quiet hours start and end at the same hour</string>
-    <string name="aq_reminders_hint">These reminders come from your AnkiQuest server, in your AnkiQuest time zone. Streak warnings follow your Anki day cutoff and stop once studying is recorded. Quiet hours and the daily limit apply to all of them, urgent ones included. The streak reminder and alerts above are this phone’s own.</string>
-    <string name="aq_reminders_loading">Loading your community reminders…</string>
-    <string name="aq_reminders_saving">Saving your community reminders…</string>
-    <string name="aq_reminders_saved">Your reminder preferences are saved.</string>
-    <string name="aq_reminders_configure">Sign in to AnkiQuest to choose your community reminders.</string>
-    <string name="aq_reminders_auth">Your server did not accept this account. Check it in AnkiQuest settings, then try again.</string>
-    <string name="aq_reminders_unsupported">This server has no community reminders.</string>
-    <string name="aq_reminders_error">Could not confirm your community reminders. Check your connection and try again before making another change.</string>
-    <string name="aq_reminders_retry" maxLength="41">Reload reminders</string>
 
     <!-- Privacy notice (settings › AnkiQuest › App & data) -->
     <string name="aq_privacy_key" translatable="false">ankiquestPrivacy</string>

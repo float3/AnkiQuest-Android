@@ -6,5 +6,4 @@
     <string name="aki_complete">Your cards are done for now. Nice work!</string>
     <string name="aki_streak">You showed up today. That is progress worth keeping.</string>
     <string name="aki_protected">Your streak is protected by a freeze. A fresh start is waiting.</string>
-    <string name="aki_settings_summary">Your study companion for small steps and shared progress</string>
 </resources>

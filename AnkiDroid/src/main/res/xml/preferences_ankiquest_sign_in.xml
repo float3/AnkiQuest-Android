@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="@string/ankiquest_sign_in_screen_title"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/ankiquest_manage_account_title"
     android:key="@string/ankiquest_sign_in_screen_key">
     <Preference
         android:key="@string/ankiquest_account_status_key"
@@ -34,5 +35,30 @@
             android:persistent="false"
             android:title="@string/ankiquest_delete_title"
             android:summary="@string/ankiquest_delete_summary" />
+    </PreferenceCategory>
+    <!-- The account behind a manual sign-in; signing in fills these in. -->
+    <PreferenceCategory
+        android:key="@string/ankiquest_connection_key"
+        android:title="@string/ankiquest_connection_title">
+        <com.ichi2.preferences.VersatileTextPreference
+            android:key="@string/ankiquest_url_key"
+            android:title="@string/ankiquest_url_title"
+            android:inputType="textUri"
+            app:dialogHint="@string/dialog_hint_url"
+            app:useSimpleSummaryProvider="true" />
+        <com.ichi2.preferences.VersatileTextPreference
+            android:key="@string/ankiquest_user_key"
+            android:title="@string/ankiquest_user_title"
+            android:inputType="text"
+            app:useSimpleSummaryProvider="true" />
+        <com.ichi2.preferences.VersatileTextPreference
+            android:key="@string/ankiquest_token_key"
+            android:title="@string/ankiquest_token_title"
+            android:inputType="textPassword" />
+        <Preference
+            android:key="@string/ankiquest_test_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_test_title"
+            android:summary="@string/ankiquest_test_summary" />
     </PreferenceCategory>
 </PreferenceScreen>

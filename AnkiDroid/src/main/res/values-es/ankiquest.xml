@@ -1,22 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_account_title">Cuenta y conexión</string>
-    <string name="ankiquest_account_summary">Servidor, jugador, token y foto de perfil</string>
-    <string name="ankiquest_study_title">Estudio y rachas</string>
-    <string name="ankiquest_study_summary">Opciones de estudio diario y protección de racha</string>
-    <string name="ankiquest_notifications_title">Recordatorios y alertas</string>
-    <string name="ankiquest_notifications_summary">Recordatorios, avisos y alertas</string>
-    <string name="ankiquest_sharing_title">Amigos y contenido compartido</string>
-    <string name="ankiquest_sharing_summary">Logros, avisos de mazos y suscripciones</string>
-    <string name="ankiquest_maintenance_title">Aplicación y datos</string>
-    <string name="ankiquest_maintenance_summary">Subida de repasos y actualizaciones</string>
-    <string name="ankiquest_notification_events_title">Cuándo avisar</string>
-    <string name="ankiquest_notification_delivery_title">Ajustes de alertas</string>
     <string name="ankiquest_dashboard_title">Clasificación</string>
-    <string name="ankiquest_community_reminders_title">Recordatorios de la comunidad</string>
-    <string name="ankiquest_community_reminders_summary">Elige recordatorios de eventos de la comunidad</string>
-    <string name="ankiquest_streak_protection_title">Protección de racha</string>
     <string name="ankiquest_streak_protection_summary">Activada inicialmente. Completa las tres misiones diarias mientras la protección esté activada para ganar un protector por día de Anki, hasta 3. Se usa uno automáticamente por cada día terminado sin repasos. Desactivarla pausa su obtención y uso; conservas los protectores guardados.</string>
     <string name="ankiquest_avatar_title">Foto de perfil</string>
     <string name="ankiquest_avatar_summary">Elige una foto para tu perfil, clasificación y widgets</string>
@@ -38,9 +23,6 @@
     <string name="ankiquest_reply">Responder</string>
     <string name="ankiquest_reply_context">%1$s\n\nEn respuesta a: %2$s</string>
     <string name="ankiquest_nudges_title">Toques</string>
-    <string name="ankiquest_nudges_summary">Avísame cuando pueda alcanzar un puesto, mi mejor día o el siguiente nivel</string>
-    <string name="ankiquest_celebrations_title">Celebraciones</string>
-    <string name="ankiquest_celebrations_summary">Felicítame por logros, rachas y récords personales</string>
     <string name="ankiquest_nudges_unavailable">Configura primero el servidor, el jugador y el token</string>
     <string name="ankiquest_message_alerts_title">Avisos de mensajes y estudio</string>
     <string name="ankiquest_reply_cheer">¡Buen trabajo!</string>
@@ -90,8 +72,6 @@
     <string name="ankiquest_sign_in_invalid">Revisa el nombre de usuario (de 3 a 32 minúsculas, números, - o _) y usa una contraseña de al menos 10 caracteres.</string>
     <string name="ankiquest_sign_in_connecting">Conectando…</string>
     <string name="ankiquest_sign_in_done">Sesión iniciada como %1$s.</string>
-    <string name="ankiquest_upload_all_title">Subir todos los repasos ahora</string>
-    <string name="ankiquest_upload_all_summary">Envía todo tu historial de repasos. El servidor omite los que ya se hayan subido.</string>
     <string name="ankiquest_check_running">Contactando con el servidor…</string>
     <string name="ankiquest_check_ok">Conectado como %1$s: nivel %2$d, %3$d XP, %4$d repasos en el servidor.</string>
     <string name="ankiquest_check_no_token">No hay token configurado, así que los repasos solo se previsualizan y no se guardan. Los servidores privados requieren tu token de miembro.</string>
@@ -117,17 +97,6 @@
     <string name="ankiquest_local_build">Versión local</string>
     <string name="ankiquest_update_none">Tienes la versión más reciente (%1$s).</string>
     <string name="ankiquest_update_check_failed">No se pudieron buscar actualizaciones en GitHub. Inténtalo más tarde.</string>
-    <string name="ankiquest_notify_rank_title">Avisos de clasificación</string>
-    <string name="ankiquest_notify_rank_summary">Avísame cuando cambie mi puesto en la clasificación semanal</string>
-    <string name="ankiquest_streak_hours_title">Recordatorio de racha</string>
-    <string-array name="ankiquest_streak_hours_entries">
-        <item>Desactivado</item>
-        <item>1 hora antes de terminar el día</item>
-        <item>2 horas antes de terminar el día</item>
-        <item>3 horas antes de terminar el día</item>
-        <item>4 horas antes de terminar el día</item>
-        <item>6 horas antes de terminar el día</item>
-    </string-array>
     <string name="ankiquest_period_hour">esta hora</string>
     <string name="ankiquest_period_day">hoy</string>
     <string name="ankiquest_period_week">esta semana</string>
@@ -150,7 +119,6 @@
     <string name="ankiquest_update_downloading">Descargando… %1$d%%</string>
     <string name="ankiquest_update_failed">No se pudo descargar la actualización. Se ofrecerá de nuevo más tarde.</string>
     <string name="ankiquest_nudge_alerts_title">Avisos de toques</string>
-    <string name="ankiquest_alerts_summary">Elige el sonido, la vibración y los avisos emergentes en los ajustes de Android</string>
     <string name="ankiquest_deck_collapse">Contraer submazos</string>
     <string name="ankiquest_deck_expand">Expandir submazos</string>
     <string name="ankiquest_deck_apply_subdecks">Aplicar a los submazos</string>

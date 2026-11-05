@@ -101,6 +101,7 @@ import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.android.view.locationInWindow
 import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
+import com.ichi2.anki.ankiquest.AnkiquestDeckShare
 import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.ankiquest.AnkiquestStudySession
@@ -1123,6 +1124,7 @@ open class DeckPicker :
                 dismissAllDialogFragments()
                 openScheduleReminders(deckId)
             }
+            DeckPickerContextMenuOption.SHARE_WITH_FRIENDS -> AnkiquestDeckShare.choose(this, deckId)
         }
     }
 

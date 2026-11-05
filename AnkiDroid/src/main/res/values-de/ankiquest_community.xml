@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="aq_reminders_kinds">Erinnerungen deines Servers</string>
-    <string name="aq_reminders_timing">Zeitpunkt</string>
     <string name="aq_reminder_gentle_daily">Sanfte tägliche Erinnerung</string>
     <string name="aq_reminder_gentle_daily_summary">Ein freundlicher Anstoß, wenn du noch nicht gelernt hast.</string>
     <string name="aq_reminder_urgent_streak">Warnung bei ungeschützter Serie</string>
@@ -18,23 +16,6 @@
     <string name="aq_reminder_weekly_recap">Wochenrückblick</string>
     <string name="aq_reminder_weekly_recap_summary">Deine Lerntage, XP, Tagessiege, Wochenplatzierung und Fortschritte.</string>
     <string name="aq_reminders_hour">Tägliche Erinnerung um</string>
-    <string name="aq_reminders_quiet_start">Ruhezeit beginnt</string>
-    <string name="aq_reminders_quiet_end">Ruhezeit endet</string>
-    <string name="aq_reminders_limit">Tageslimit</string>
-    <plurals name="aq_reminders_limit_value">
-        <item quantity="one">%1$d Benachrichtigung am Tag</item>
-        <item quantity="other">%1$d Benachrichtigungen am Tag</item>
-    </plurals>
-    <string name="aq_reminders_quiet_off">Aus: Ruhezeit beginnt und endet zur selben Stunde</string>
-    <string name="aq_reminders_hint">Diese Erinnerungen kommen von deinem AnkiQuest-Server, in deiner AnkiQuest-Zeitzone. Serienwarnungen richten sich nach deinem Anki-Tageswechsel und hören auf, sobald Lernen erfasst ist. Ruhezeit und Tageslimit gelten für alle, auch die dringenden. Die Serienerinnerung und die Benachrichtigungen oben gehören zu diesem Handy.</string>
-    <string name="aq_reminders_loading">Deine Community-Erinnerungen werden geladen…</string>
-    <string name="aq_reminders_saving">Deine Community-Erinnerungen werden gespeichert…</string>
-    <string name="aq_reminders_saved">Deine Erinnerungen sind gespeichert.</string>
-    <string name="aq_reminders_configure">Melde dich bei AnkiQuest an, um deine Community-Erinnerungen zu wählen.</string>
-    <string name="aq_reminders_auth">Dein Server hat dieses Konto nicht akzeptiert. Prüfe es in den AnkiQuest-Einstellungen und versuche es erneut.</string>
-    <string name="aq_reminders_unsupported">Dieser Server hat keine Community-Erinnerungen.</string>
-    <string name="aq_reminders_error">Deine Community-Erinnerungen konnten nicht bestätigt werden. Prüfe deine Verbindung und versuche es erneut, bevor du etwas änderst.</string>
-    <string name="aq_reminders_retry">Erinnerungen neu laden</string>
     <string name="aq_privacy_title">Datenschutzerklärung</string>
     <string name="aq_privacy_summary">Was dein AnkiQuest-Server über dich speichert und wer ihn betreibt. Öffnet sich im Browser.</string>
     <string name="aq_calendar_title">Community-Kalender</string>

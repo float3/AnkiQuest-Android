@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="aq_reminders_kinds">Rappels de ton serveur</string>
-    <string name="aq_reminders_timing">Horaires</string>
     <string name="aq_reminder_gentle_daily">Rappel quotidien en douceur</string>
     <string name="aq_reminder_gentle_daily_summary">Un petit coup de pouce amical quand tu n’as pas encore étudié.</string>
     <string name="aq_reminder_urgent_streak">Alerte de série non protégée</string>
@@ -18,24 +16,6 @@
     <string name="aq_reminder_weekly_recap">Bilan de la semaine</string>
     <string name="aq_reminder_weekly_recap_summary">Tes jours d’étude, tes XP, tes victoires du jour, ta place de la semaine et tes progrès.</string>
     <string name="aq_reminders_hour">Rappel quotidien à</string>
-    <string name="aq_reminders_quiet_start">Début des heures calmes</string>
-    <string name="aq_reminders_quiet_end">Fin des heures calmes</string>
-    <string name="aq_reminders_limit">Limite quotidienne</string>
-    <plurals name="aq_reminders_limit_value">
-        <item quantity="one">%1$d notification par jour</item>
-        <item quantity="many">%1$d notifications par jour</item>
-        <item quantity="other">%1$d notifications par jour</item>
-    </plurals>
-    <string name="aq_reminders_quiet_off">Désactivées : elles commencent et finissent à la même heure</string>
-    <string name="aq_reminders_hint">Ces rappels viennent de ton serveur AnkiQuest, dans ton fuseau horaire AnkiQuest. Les alertes de série suivent ton changement de jour Anki et s’arrêtent dès que l’étude est enregistrée. Les heures calmes et la limite quotidienne s’appliquent à tous, y compris les urgents. Le rappel de série et les alertes plus haut sont ceux de ce téléphone.</string>
-    <string name="aq_reminders_loading">Chargement de tes rappels de la communauté…</string>
-    <string name="aq_reminders_saving">Enregistrement de tes rappels de la communauté…</string>
-    <string name="aq_reminders_saved">Tes préférences de rappel sont enregistrées.</string>
-    <string name="aq_reminders_configure">Connecte-toi à AnkiQuest pour choisir tes rappels de la communauté.</string>
-    <string name="aq_reminders_auth">Ton serveur n’a pas accepté ce compte. Vérifie-le dans les réglages AnkiQuest, puis réessaie.</string>
-    <string name="aq_reminders_unsupported">Ce serveur n’a pas de rappels de la communauté.</string>
-    <string name="aq_reminders_error">Impossible de confirmer tes rappels de la communauté. Vérifie ta connexion et réessaie avant de faire un autre changement.</string>
-    <string name="aq_reminders_retry">Recharger les rappels</string>
     <string name="aq_privacy_title">Politique de confidentialité</string>
     <string name="aq_privacy_summary">Ce que ton serveur AnkiQuest garde sur toi et qui le gère. S’ouvre dans ton navigateur.</string>
     <string name="aq_calendar_title">Calendrier de la communauté</string>

@@ -3,7 +3,6 @@
 <resources>
     <string name="ankiquest_health_key" translatable="false">ankiquestNotificationHealth</string>
     <string name="ankiquest_health_title" maxLength="41">Notification health</string>
-    <string name="ankiquest_health_summary">Check delivery and send a test alert</string>
     <string name="ankiquest_health_permission">Notification permission: %1$s</string>
     <string name="ankiquest_health_messages">Message alerts: %1$s</string>
     <string name="ankiquest_health_nudges">Nudge alerts: %1$s</string>
@@ -11,11 +10,5 @@
     <string name="ankiquest_health_allowed">Allowed</string>
     <string name="ankiquest_health_blocked">Blocked in Android settings</string>
     <string name="ankiquest_health_never">Never for this account</string>
-    <string name="ankiquest_health_test">Send test alert</string>
     <string name="ankiquest_health_permission_settings">Open notification permissions</string>
-    <string name="ankiquest_health_test_title">AnkiQuest test alert</string>
-    <string name="ankiquest_health_test_body">If you see this, local alerts are working.</string>
-    <string name="ankiquest_health_test_posted">Test alert sent. Your phone controls banners, sound and vibration.</string>
-    <string name="ankiquest_health_test_blocked">The message alert channel is off. Open its Android settings to enable it.</string>
-    <string name="ankiquest_health_test_disabled">Notifications are not allowed for AnkiQuest. Enable them in Android settings.</string>
 </resources>

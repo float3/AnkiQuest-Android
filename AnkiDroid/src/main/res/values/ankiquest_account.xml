@@ -10,7 +10,6 @@
     <string name="ankiquest_export_key" translatable="false">ankiquestExport</string>
     <string name="ankiquest_delete_account_key" translatable="false">ankiquestDeleteAccount</string>
 
-    <string name="ankiquest_sign_in_screen_title" maxLength="41">Sign-in, devices and data</string>
     <string name="ankiquest_sign_in_screen_summary">Password, Google and GitHub, signed-in devices, your data and deleting your account</string>
     <string name="ankiquest_providers_title" maxLength="41">Sign in with</string>
     <string name="ankiquest_devices_title" maxLength="41">Signed-in devices</string>

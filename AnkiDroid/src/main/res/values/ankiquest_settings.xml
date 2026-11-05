@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_account_group_key" translatable="false">ankiquestAccountGroup</string>
+    <string name="ankiquest_notify_group_key" translatable="false">ankiquestNotifyGroup</string>
+    <string name="ankiquest_sharing_group_key" translatable="false">ankiquestSharingGroup</string>
+    <string name="ankiquest_app_group_key" translatable="false">ankiquestAppGroup</string>
+    <string name="ankiquest_sign_out_key" translatable="false">ankiquestSignOut</string>
+    <string name="ankiquest_notify_friends_key" translatable="false">ankiquestNotifyFriends</string>
+    <string name="ankiquest_notify_reminders_key" translatable="false">ankiquestNotifyReminders</string>
+    <string name="ankiquest_reminder_time_key" translatable="false">ankiquestReminderTime</string>
+    <string name="ankiquest_quiet_hours_key" translatable="false">ankiquestQuietHours</string>
+    <string name="ankiquest_notify_moments_key" translatable="false">ankiquestNotifyMoments</string>
+    <string name="ankiquest_share_moments_key" translatable="false">ankiquestShareMoments</string>
+    <string name="ankiquest_connection_key" translatable="false">ankiquestConnection</string>
+
+    <string name="ankiquest_group_account" maxLength="41">Account</string>
+    <string name="ankiquest_group_notify" maxLength="41">Notify me about</string>
+    <string name="ankiquest_group_sharing" maxLength="41">Sharing</string>
+    <string name="ankiquest_group_app" maxLength="41">App and privacy</string>
+    <string name="ankiquest_manage_account_title" maxLength="41">Manage account</string>
+    <string name="ankiquest_connection_title" maxLength="41">Connection</string>
+    <string name="ankiquest_signed_in_as" maxLength="41">Signed in as %1$s</string>
+    <string name="ankiquest_sign_out_confirm">Sign out of AnkiQuest on this phone? Your cards and reviews stay in Anki.</string>
+    <string name="ankiquest_signed_out">You are signed out of AnkiQuest.</string>
+
+    <string name="ankiquest_notify_friends_summary">When friends finish decks they share with you</string>
+    <string name="ankiquest_notify_reminders_title" maxLength="41">Reminders</string>
+    <string name="ankiquest_notify_reminders_summary">A daily reminder to study, and a warning before your streak ends</string>
+    <string name="ankiquest_quiet_hours_title" maxLength="41">Quiet hours</string>
+    <string name="ankiquest_quiet_hours_range">%1$s to %2$s</string>
+    <string name="ankiquest_quiet_hours_none">No quiet hours</string>
+    <string name="ankiquest_quiet_hours_from" maxLength="41">From</string>
+    <string name="ankiquest_quiet_hours_until" maxLength="41">Until</string>
+    <string name="ankiquest_quiet_hours_turn_off" maxLength="28">Turn off</string>
+    <string name="ankiquest_notify_moments_title" maxLength="41">My moments</string>
+    <string name="ankiquest_notify_moments_summary">Levels, achievements, personal bests and leaderboard places, and when one is within reach</string>
+
+    <string name="ankiquest_share_moments_title" maxLength="41">Share my moments with friends</string>
+    <string name="ankiquest_share_moments_summary">Friends can hear about your goals, streaks and achievements. Turn off to keep them to yourself.</string>
+
+    <string name="ankiquest_health_problem_title" maxLength="41">AnkiQuest can’t alert you</string>
+    <string name="ankiquest_health_problem_summary">Notifications are turned off on this phone. Tap to fix it.</string>
+
+    <string name="ankiquest_deck_menu_share" maxLength="41">Tell friends about this deck</string>
+    <string name="ankiquest_deck_menu_share_title">Who hears when you finish %1$s?</string>
+    <string name="ankiquest_deck_menu_share_on">Friends you picked will hear when you finish %1$s.</string>
+    <string name="ankiquest_deck_menu_share_off">Nobody will hear when you finish %1$s.</string>
+
+    <string name="aq_goal_change" maxLength="28">Change goal</string>
+    <string name="aq_profile_deck_alerts_stop">Stop deck alerts from %1$s</string>
+    <string name="aq_profile_deck_alerts_start">Get deck alerts from %1$s again</string>
+    <string name="aq_profile_freezes_pause" maxLength="41">Pause streak protection</string>
+    <string name="aq_profile_freezes_resume" maxLength="41">Resume streak protection</string>
+</resources>
