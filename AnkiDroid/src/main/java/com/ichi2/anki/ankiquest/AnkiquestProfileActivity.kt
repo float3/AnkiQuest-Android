@@ -62,11 +62,16 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             setOnClickListener { load() }
         }
         findViewById<View>(R.id.aq_board_loading).contentDescription = getString(R.string.aq_profile_loading)
-        val root = findViewById<View>(R.id.aq_board_root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
-            insets
+        val root = findViewById<LinearLayout>(R.id.aq_board_root)
+        // The player's own profile is the Progress tab; another player's is a page of its own.
+        if (!intent.hasExtra(EXTRA_USER)) {
+            AnkiquestTabBar.attach(this, root, R.id.ankiquest_nav_progress)
+        } else {
+            ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+                val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+                root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
+                insets
+            }
         }
         account = AnkiquestHomeData.account()
         load()

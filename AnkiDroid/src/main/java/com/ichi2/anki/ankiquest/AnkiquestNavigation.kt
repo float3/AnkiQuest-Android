@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.content.Context
 import android.content.Intent
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 
 /** Entry policy is independent of connectivity: the local study library always works. */
@@ -82,6 +83,17 @@ object AnkiquestNavigation {
             R.id.ankiquest_nav_friends -> AnkiquestFriendsActivity.intent(context)
             R.id.ankiquest_nav_progress -> AnkiquestProfileActivity.intent(context)
             else -> null
+        }
+
+    /** The deck list, brought back over any AnkiQuest screen, which goes on to study [deck] when one is given. */
+    fun decks(
+        context: Context,
+        deck: Long? = null,
+    ): Intent =
+        Intent(context, DeckPicker::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
+            deck?.let { putExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK, it) }
         }
 
     /** A credential change invalidates private presentation state, including a same-user token change. */

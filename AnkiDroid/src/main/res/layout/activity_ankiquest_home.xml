@@ -71,11 +71,4 @@
             android:orientation="vertical"
             android:padding="20dp" />
     </androidx.core.widget.NestedScrollView>
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/aq_home_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/ankiquest_navigation" />
 </LinearLayout>
