@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Regenerates the README banner (docs/graphics/logos/banner_readme.png) from the app's own
+# screens for every release, and proposes it to main as a pull request when it changed.
+# Pull requests touching the banner tooling render it without proposing anything.
+name: ankiquest README banner
+
+on:
+  push:
+    tags: ["quest-*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/ankiquest_banner.yml'
+      - 'tools/ankiquest_banner.py'
+      - 'AnkiDroid/src/test/java/com/ichi2/anki/ankiquest/AnkiquestBannerScreenshots.kt'
+
+permissions: {}
+
+concurrency:
+  group: ankiquest-banner-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JAVA_TOOL_OPTIONS: -Dkotlin.daemon.options=autoshutdownIdleSeconds=10
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      # Work around Ubuntu 26.04's RAM-backed /tmp until the image fix rolls out.
+      # https://github.com/actions/runner-images/pull/14814
+      - name: Keep /tmp on disk
+        run: |
+          if [ "$(findmnt -n -o FSTYPE --target /tmp)" = "tmpfs" ]; then
+            sudo systemctl mask tmp.mount
+            sudo umount -l /tmp
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: "jetbrains"
+          java-version: "21"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          gradle-version: wrapper
+
+      - name: Download Robolectric and compile
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 15
+          retry_wait_seconds: 60
+          max_attempts: 3
+          command: ./gradlew robolectricSdkDownload compileScreenshotTests -Pscreenshot --daemon
+
+      - name: Record the screens
+        run: |
+          ./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot -PreadmeBanner \
+            --tests '*AnkiquestBannerScreenshots*' --stacktrace
+
+      - name: Compose the banner
+        run: |
+          python3 -m venv "$RUNNER_TEMP/banner"
+          "$RUNNER_TEMP/banner/bin/pip" install --quiet pillow==12.0.0
+          # Roboto comes from the Robolectric runtime jar the step above downloaded.
+          "$RUNNER_TEMP/banner/bin/python" tools/ankiquest_banner.py --require-roboto
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: banner
+          path: |
+            docs/graphics/logos/banner_readme.png
+            AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots/*.png
+          if-no-files-found: error
+
+  propose:
+    needs: render
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: banner
+          path: ${{ runner.temp }}/banner
+
+      - name: Open a pull request when the banner changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          cp "$RUNNER_TEMP/banner/docs/graphics/logos/banner_readme.png" docs/graphics/logos/banner_readme.png
+          if git diff --quiet -- docs/graphics/logos/banner_readme.png; then
+            echo "The banner is unchanged."
+            exit 0
+          fi
+          if [[ "$GITHUB_REF" == refs/tags/quest-* ]]; then branch="banner-$SOURCE"; else branch="banner-run-$RUN_ID"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -m "README banner for $SOURCE" -- docs/graphics/logos/banner_readme.png
+          git push --force origin "$branch"
+          body="The README banner rendered from $SOURCE by tools/ankiquest_banner.py ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID))."
+          if ! gh pr create --base main --head "$branch" --title "README banner for $SOURCE" --body "$body"; then
+            # Needs "Allow GitHub Actions to create and approve pull requests" in the repository settings.
+            echo "::warning::Could not open the pull request; open it from $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$branch"
+          fi

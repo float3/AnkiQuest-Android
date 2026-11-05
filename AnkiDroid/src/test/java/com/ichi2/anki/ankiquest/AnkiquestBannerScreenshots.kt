@@ -2,22 +2,41 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.graphics.BitmapFactory
+import android.content.Intent
+import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.provider.Settings
+import android.text.Html
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.content.edit
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
+import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
+import com.ichi2.anki.Reviewer
+import com.ichi2.anki.ReviewerTest
 import com.ichi2.anki.ScreenshotTest
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.libanki.Card
+import com.ichi2.anki.libanki.CardType
+import com.ichi2.anki.libanki.DeckId
+import com.ichi2.anki.libanki.QueueType
+import com.ichi2.anki.setIntroductionSlidesShown
+import com.ichi2.testutils.BackupManagerTestUtilities
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -29,10 +48,14 @@ import java.io.IOException
 
 /**
  * Phone screens for the README banner (`docs/graphics/logos/banner_readme.png`), drawn from sample
- * players only. Skipped unless `-PreadmeBanner` is given, so the screenshot workflows ignore it:
- * `tools/ankiquest_banner.py` documents the commands that record these and compose the banner.
+ * decks and players only. Skipped unless `-PreadmeBanner` is given, so the screenshot workflows
+ * ignore it: `tools/ankiquest_banner.py` documents the commands that record these and compose the
+ * banner, and `.github/workflows/ankiquest_banner.yml` reruns both for each release.
  */
 class AnkiquestBannerScreenshots : ScreenshotTest() {
+    // The reviewer renders a card, which requires a media folder.
+    override fun getCollectionStorageMode() = CollectionStorageMode.IN_MEMORY_WITH_MEDIA
+
     private val identity = HomeAccount("https://anki.example.test", "mira", "banner-sample-token")
 
     override fun applyGlobalConfig() {
@@ -48,19 +71,53 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
 
     @Before
     fun prepareSamples() {
-        TimeManager.resetWith(MockTime(NOW))
         Settings.Global.putFloat(targetContext.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestFeed, AnkiquestShare, AnkiquestChallenges)
-        every { AnkiquestHomeData.account(any()) } returns identity
     }
 
     @After
     fun clearSamples() {
         unmockkAll()
+        BackupManagerTestUtilities.reset()
+    }
+
+    /**
+     * A Spanish card with its answer shown. Robolectric draws the card's WebView blank, so the card
+     * is drawn natively over it from the HTML the collection rendered for it, in the default note
+     * type's style (centred 20px sans-serif, black on white, a rule between question and answer).
+     */
+    @Test
+    fun reviewer() {
+        val spanish = addDeck("Spanish", setAsSelected = true)
+        sampleCollection(spanish)
+        val reviewer = ReviewerTest.startReviewer(this)
+        advanceRobolectricLooper()
+        reviewer.displayCardAnswer()
+        advanceRobolectricLooper()
+        reviewer.drawCardNatively()
+        advanceRobolectricLooper()
+        captureScreen("1_reviewer")
+    }
+
+    /** The deck list with each deck's daily status and the review heatmap below it. */
+    @Test
+    fun decks() {
+        ensureCollectionLoadIsSynchronous()
+        setIntroductionSlidesShown(true)
+        BackupManagerTestUtilities.setupSpaceForBackup(targetContext)
+        targetContext.sharedPrefs().edit { putBoolean("backupPromptDisabled", true) }
+        sampleCollection(addDeck("Spanish"))
+        val picker = startActivityNormallyOpenCollectionWithIntent(DeckPicker::class.java, Intent())
+        runTest { picker.viewModel.flowOfDeckList.first { it.data.isNotEmpty() } }
+        advanceRobolectricLooper()
+        // Release builds are named AnkiQuest (-PcustomName); the debug build under test keeps AnkiDroid.
+        picker.supportActionBar?.title = "AnkiQuest"
+        advanceRobolectricLooper()
+        captureScreen("2_decks")
     }
 
     @Test
     fun today() {
+        social()
         val goal =
             AnkiquestDailyGoal.Status(
                 day = 1,
@@ -86,30 +143,23 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         advanceRobolectricLooper()
         // Scroll just far enough to show the whole daily goal card under the streak.
         val scroll = home.findViewById<NestedScrollView>(R.id.aq_home_scroll)
+        val goalTitle = home.getString(R.string.aq_goal_today)
         val goalCard =
             scroll.allViews
                 .filterIsInstance<TextView>()
-                .first {
-                    it.text.toString() ==
-                        home.getString(
-                            R.string.aq_goal_today,
-                        )
-                }.parent as View
+                .first { it.text.toString() == goalTitle }
+                .parent as View
         val bounds = Rect().also { goalCard.getDrawingRect(it) }
         scroll.offsetDescendantRectToMyCoords(goalCard, bounds)
-        scroll.scrollTo(
-            0,
-            maxOf(
-                0,
-                bounds.bottom + scroll.paddingBottom + (16 * home.resources.displayMetrics.density).toInt() - scroll.height,
-            ),
-        )
+        val margin = (16 * home.resources.displayMetrics.density).toInt()
+        scroll.scrollTo(0, maxOf(0, bounds.bottom + scroll.paddingBottom + margin - scroll.height))
         advanceRobolectricLooper()
-        captureScreen("1_today")
+        captureScreen("3_today")
     }
 
     @Test
     fun leaderboard() {
+        social()
         val rows = JSONArray()
         listOf(
             Player("lucia", "Lucía", level = 9, week = 1840, today = 62, streak = 41),
@@ -128,11 +178,12 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
                 AnkiquestLeaderboardActivity.intent(targetContext, AnkiquestBoards.Period.WEEK.query, null),
             )
         advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
-        captureScreen("2_leaderboard")
+        captureScreen("4_leaderboard")
     }
 
     @Test
     fun profile() {
+        social()
         val page =
             AnkiquestBoards.PlayerPage(
                 AnkiquestBoards.parseProfile(JSONObject(PROFILE)),
@@ -146,27 +197,128 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
         coEvery { AnkiquestBoards.player(identity, "mira") } returns page
         val screen = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, null))
         advanceRobolectricLooperUntil { !screen.findViewById<View>(R.id.aq_board_loading).isVisible }
-        captureScreen("3_profile")
+        captureScreen("5_profile")
     }
 
-    @Test
-    fun feed() {
-        val win = BitmapFactory.decodeResource(targetContext.resources, R.drawable.aki_streak_milestone)
-        coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(FEED))
-        every { AnkiquestShare.picture(any()) } returns win
-        startActivityNormallyOpenCollectionWithIntent(AnkiquestFeedActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
-        advanceRobolectricLooper()
-        captureScreen("4_feed")
+    /** The server screens: a signed-in sample player at a fixed time, with the API mocked. */
+    private fun social() {
+        TimeManager.resetWith(MockTime(NOW))
+        mockkObject(AnkiquestHomeData, AnkiquestBoards)
+        every { AnkiquestHomeData.account(any()) } returns identity
     }
 
-    @Test
-    fun friendGoals() {
-        val overview = AnkiquestChallenges.parse(JSONObject(sample("challenges")))
-        coEvery { AnkiquestChallenges.overview(identity) } returns overview
-        coEvery { AnkiquestChallenges.weekly(identity, any(), any()) } returns overview
-        val goals = startRegularActivity<AnkiquestChallengesActivity>(AnkiquestChallengesActivity.intent(targetContext, null, null))
-        advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible }
-        captureScreen("5_friend_goals")
+    /**
+     * Sample decks: some with cards due today, some already done today, and four months of
+     * reviews behind them for the heatmap.
+     */
+    private fun sampleCollection(spanish: DeckId) {
+        // The real clock, as the backend's own day and the heatmap use it: the tests' fixed 2020 clock
+        // would put today's reviews years in the future for the deck list.
+        TimeManager.reset()
+        val due = mutableListOf<Card>()
+        val studied = mutableListOf<Card>()
+        SPANISH.forEachIndexed { i, (front, back) ->
+            val card = addBasicNote(front, back).also { it.moveToDeck("Spanish") }.firstCard()
+            if (i % 3 != 2) due += card
+        }
+
+        fun deck(
+            name: String,
+            new: Int,
+            review: Int,
+            studiedToday: Int = 0,
+        ) {
+            repeat(new) { addBasicNote("$name $it", "").moveToDeck(name) }
+            repeat(review) { due += addBasicNote("$name review $it", "").also { it.moveToDeck(name) }.firstCard() }
+            repeat(studiedToday) { studied += addBasicNote("$name done $it", "").also { it.moveToDeck(name) }.firstCard() }
+        }
+        deck("Japanese::Kanji", new = 5, review = 14)
+        deck("Japanese::Vocabulary", new = 0, review = 0, studiedToday = 6)
+        deck("Biology", new = 2, review = 9)
+        deck("Geography", new = 0, review = 0, studiedToday = 4)
+        deck("Music theory", new = 3, review = 0)
+        // The heatmap's history, on a card scheduled well after today.
+        val history = addBasicNote("historia", "history").also { it.moveToDeck("Spanish") }.firstCard()
+        check(col.decks.id("Spanish") == spanish)
+
+        val day = col.sched.today
+
+        fun Card.review(dueIn: Int) {
+            queue = QueueType.Rev
+            type = CardType.Rev
+            this.due = day + dueIn
+            ivl = 12
+            factor = 2500
+        }
+        due.forEach { it.review(0) }
+        studied.forEach { it.review(9) }
+        history.review(60)
+        col.updateCards(due + studied + history, skipUndoEntry = true)
+
+        val tomorrow = col.backend.schedTimingToday().nextDayAt * 1000L
+        studied.forEachIndexed { i, card ->
+            col.db.execute(
+                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, ?, -1, 3, 9, 4, 2500, 6000, 1)",
+                tomorrow - DAY + 9 * HOUR + i * 60_000L,
+                card.id,
+            )
+        }
+        // A 23-day streak, with lighter weekends and a few missed days before it, the same on every run.
+        for (ago in 1..120) {
+            val missed = ago == 23 || (ago > 23 && (ago % 11 == 4 || ago % 17 == 9))
+            val count = if (missed) 0 else 18 + (ago * 37 % 45) - (if (ago % 7 in 2..3) 12 else 0)
+            if (count <= 0) continue
+            col.db.execute(
+                "with recursive n(i) as (select 0 union all select i + 1 from n where i < ?) " +
+                    "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) " +
+                    "select ? + i * 20000, ?, -1, 3, 10, 5, 2500, 7000, 1 from n",
+                count - 1,
+                tomorrow - (ago + 1) * DAY + 8 * HOUR,
+                history.id,
+            )
+        }
+    }
+
+    /** Covers the blank WebView with the current card's rendered question and answer. */
+    private fun Reviewer.drawCardNatively() {
+        val card = checkNotNull(currentCard)
+        val html = card.answer(this@AnkiquestBannerScreenshots.col).replace(Regex("(?s)<style>.*?</style>"), "")
+        val parts = html.split(Regex("<hr id=answer>", RegexOption.IGNORE_CASE), limit = 2)
+        val question = parts[0]
+        val answer = parts.getOrElse(1) { "" }
+
+        fun part(source: String) =
+            TextView(this).apply {
+                text = Html.fromHtml(source.trim(), Html.FROM_HTML_MODE_COMPACT)
+                textSize = 20f
+                typeface = Typeface.SANS_SERIF
+                gravity = Gravity.CENTER_HORIZONTAL
+                setTextColor(Color.BLACK)
+            }
+        val density = resources.displayMetrics.density
+        val page =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundColor(Color.WHITE)
+                val pad = (16 * density).toInt()
+                setPadding(pad, pad, pad, pad)
+                addView(part(question))
+                addView(
+                    View(context).apply { setBackgroundColor(Color.rgb(0xCC, 0xCC, 0xCC)) },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, density.toInt())).apply {
+                        topMargin = (20 * density).toInt()
+                        bottomMargin = (20 * density).toInt()
+                    },
+                )
+                addView(part(answer))
+            }
+        findViewById<FrameLayout>(R.id.flashcard).addView(
+            ScrollView(this).apply {
+                setBackgroundColor(Color.WHITE)
+                addView(page)
+            },
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
+        )
     }
 
     private data class Player(
@@ -192,18 +344,27 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
     private companion object {
         /** Wednesday 28 October 2026, mid-afternoon, as in the API examples. */
         const val NOW = 1_793_183_460_000L
-        const val DAY = 24 * 60 * 60 * 1000L
+        const val HOUR = 60 * 60 * 1000L
+        const val DAY = 24 * HOUR
 
-        /** An API example with its sample players renamed to the banner's. */
-        fun sample(name: String): String =
-            requireNotNull(AnkiquestBannerScreenshots::class.java.classLoader?.getResource("ankiquest-api/$name.json"))
-                .readText(Charsets.UTF_8)
-                .replace("\"Hill\"", "\"Mira\"")
-                .replace("\"hill\"", "\"mira\"")
-                .replace("\"Friend\"", "\"Kenji\"")
-                .replace("\"friend\"", "\"kenji\"")
-                .replace("\"Cerro\"", "\"Lucía\"")
-                .replace("\"cerro\"", "\"lucia\"")
+        val SPANISH =
+            listOf(
+                "la mariposa" to "the butterfly<br><br><i>La mariposa vuela sobre las flores.</i><br>The butterfly flies over the flowers.",
+                "el desayuno" to "breakfast<br><br><i>Tomo el desayuno a las ocho.</i><br>I have breakfast at eight.",
+                "la biblioteca" to "the library<br><br><i>Estudio en la biblioteca.</i><br>I study in the library.",
+                "despacio" to "slowly<br><br><i>Habla más despacio, por favor.</i><br>Speak more slowly, please.",
+                "el paraguas" to "the umbrella<br><br><i>Lleva el paraguas, va a llover.</i><br>Take the umbrella, it's going to rain.",
+                "madrugar" to "to get up early<br><br><i>Mañana tengo que madrugar.</i><br>Tomorrow I have to get up early.",
+                "la cosecha" to
+                    "the harvest<br><br><i>La cosecha de uvas empieza en septiembre.</i><br>The grape harvest starts in September.",
+                "el ayuntamiento" to "the town hall<br><br><i>El ayuntamiento está en la plaza.</i><br>The town hall is on the square.",
+                "sin embargo" to "however<br><br><i>Llueve; sin embargo, salimos.</i><br>It's raining; however, we're going out.",
+                "el atardecer" to "the sunset<br><br><i>Vimos el atardecer desde la playa.</i><br>We watched the sunset from the beach.",
+                "aprovechar" to
+                    "to make the most of<br><br><i>Hay que aprovechar el buen tiempo.</i><br>We should make the most of the good weather.",
+                "la sobremesa" to
+                    "time spent chatting at the table after a meal<br><br><i>La sobremesa duró dos horas.</i><br>The chat after lunch lasted two hours.",
+            )
 
         const val HOME = """{
             "level": 7, "streak": 23, "streak_state": "studied", "xp_into_level": 640, "xp_for_next": 900,
@@ -232,30 +393,6 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
                  "unlocked": "2026-09-30"}
             ],
             "conquests": [{"at": 1793183400000, "lapses": 9, "answers": 20, "since": 1790000000000, "leech": true}]
-        }"""
-
-        const val FEED = """{
-            "items": [
-                {"id": 42, "title": "Challenge invitation", "body": "Kenji invited you to Fifty reviews each.", "day": 20754,
-                 "created_at": 1793183300, "sender": "kenji", "replied": false, "kind": "challenge_invite", "read_at": null,
-                 "challenge_id": 4, "route": "/community#challenge-4", "action_required": true},
-                {"id": 41, "action_required": false, "body": "21 day streak: “Three weeks in a row.”", "challenge_id": null,
-                 "created_at": 1793182000, "day": 20754, "image": "https://anki.example.test/w/sample-win.png", "kind": "share",
-                 "reacted": false, "read_at": null, "replied": false, "route": null, "sender": "lucia",
-                 "title": "🎉 Lucía shared a win", "topic": "streak", "win": 2},
-                {"id": 40, "action_required": false, "body": "“Daily goal reached!”", "challenge_id": null, "created_at": 1793181000,
-                 "day": 20754, "kind": "reaction", "read_at": null, "replied": false, "route": null, "sender": "priya",
-                 "title": "🎉 Priya cheered", "win": 1},
-                {"id": 39, "title": "Kenji replied", "body": "Same time tomorrow?", "day": 20754, "created_at": 1793180000,
-                 "sender": "kenji", "replied": true, "kind": "reply", "read_at": 1793183000, "challenge_id": null, "route": null,
-                 "action_required": false, "reply_to": {"title": "Deck complete", "body": "Spanish is done for today."}}
-            ],
-            "attention": [
-                {"id": 42, "title": "Challenge invitation", "body": "Kenji invited you to Fifty reviews each.", "day": 20754,
-                 "created_at": 1793183300, "sender": "kenji", "replied": false, "kind": "challenge_invite", "read_at": null,
-                 "challenge_id": 4, "route": "/community#challenge-4", "action_required": true}
-            ],
-            "unread_count": 3, "action_count": 1, "latest_id": 42, "retention_days": 90, "window_days": 90, "next_before": null
         }"""
     }
 }

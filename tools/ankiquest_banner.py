@@ -3,9 +3,10 @@
 """Compose the README banner, docs/graphics/logos/banner_readme.png (1280x741).
 
 The banner shows AnkiQuest's title, a tagline, Aki, and five phones in a fan with the
-app's own screens: Today in front, then the week leaderboard and a player profile,
-with the activity feed and friend goals behind them. The screens come from
-AnkiquestBannerScreenshots, which renders them with Robolectric from sample players.
+app's own screens, left to right: a card being reviewed, the deck list with each deck's
+daily status and the review heatmap, Today in front, the week leaderboard and a profile.
+The screens come from AnkiquestBannerScreenshots, which renders them with Robolectric from
+sample decks and players.
 
 Regenerate (from the repository root):
 
@@ -19,6 +20,11 @@ Regenerate (from the repository root):
     /tmp/banner-venv/bin/python tools/ankiquest_banner.py
 
 The test is skipped unless -PreadmeBanner is given, so the screenshot workflows never run it.
+.github/workflows/ankiquest_banner.yml runs both steps for every quest-* release tag and opens
+a pull request against main when the banner changed.
+
+The reviewer's card is a WebView, which Robolectric draws blank: the test draws the card's
+rendered question and answer natively over it, in the default note type's style.
 
 Text is set in Roboto (Apache 2.0), read from the Robolectric native-runtime jar that
 step 1 downloads into the Gradle cache; pass --font-dir for a folder holding
@@ -63,15 +69,17 @@ PHONE_TOP = 124
 
 # Back to front, so nearer phones cover the ones behind them: (screen, centre x).
 FAN = [
-    ("4_feed", 240),
-    ("5_friend_goals", 1040),
-    ("2_leaderboard", 435),
-    ("3_profile", 845),
-    ("1_today", 640),
+    ("1_reviewer", 160),
+    ("5_profile", 1120),
+    ("2_decks", 400),
+    ("4_leaderboard", 880),
+    ("3_today", 640),
 ]
 
 
-def roboto(font_dir: str | None) -> tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]:
+def roboto(
+    font_dir: str | None, require: bool = False
+) -> tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]:
     """Title, tagline and status-bar fonts."""
 
     def load(bold: bytes | str, regular: bytes | str):
@@ -89,6 +97,8 @@ def roboto(font_dir: str | None) -> tuple[ImageFont.FreeTypeFont, ImageFont.Free
             names = set(archive.namelist())
             if {"fonts/Roboto-Bold.ttf", "fonts/Roboto-Regular.ttf"} <= names:
                 return load(archive.read("fonts/Roboto-Bold.ttf"), archive.read("fonts/Roboto-Regular.ttf"))
+    if require:
+        sys.exit("Roboto not found in the Gradle cache: record the screens first, or pass --font-dir")
     for bold, regular in [
         ("C:/Windows/Fonts/segoeuib.ttf", "C:/Windows/Fonts/segoeui.ttf"),
         ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
@@ -145,8 +155,8 @@ def shadow(size: tuple[int, int]) -> Image.Image:
     return mask.filter(ImageFilter.GaussianBlur(16))
 
 
-def compose(shots: Path, font_dir: str | None) -> Image.Image:
-    title_font, tagline_font, status_font = roboto(font_dir)
+def compose(shots: Path, font_dir: str | None, require_roboto: bool = False) -> Image.Image:
+    title_font, tagline_font, status_font = roboto(font_dir, require_roboto)
     canvas = background()
     for name, centre in FAN:
         path = shots / f"{name}.png"
@@ -173,9 +183,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--shots", type=Path, default=SHOTS, help="folder with the recorded screens")
     parser.add_argument("--font-dir", help="folder with Roboto-Bold.ttf and Roboto-Regular.ttf")
+    parser.add_argument("--require-roboto", action="store_true", help="fail instead of falling back to a system font")
     parser.add_argument("--out", type=Path, default=OUT)
     args = parser.parse_args()
-    banner = compose(args.shots, args.font_dir)
+    banner = compose(args.shots, args.font_dir, args.require_roboto)
     assert banner.size == (WIDTH, HEIGHT)
     banner.save(args.out, optimize=True)
     print(f"Wrote {args.out}")
