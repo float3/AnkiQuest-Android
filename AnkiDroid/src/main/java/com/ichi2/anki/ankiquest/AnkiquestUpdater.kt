@@ -134,7 +134,23 @@ object AnkiquestUpdater {
         return null
     }
 
-    private fun available(): Release? = if (channel() == Channel.NIGHTLY) nightly() else latest()
+    /** The nightly channel follows whichever build is newest, so a fresh stable release is offered too. */
+    private fun available(): Release? = if (channel() == Channel.NIGHTLY) newest(nightly(), latest()) else latest()
+
+    /** The build Android would install as the bigger version; a stable release wins a tie with its own nightly. */
+    internal fun newest(
+        nightly: Release?,
+        stable: Release?,
+    ): Release? =
+        when {
+            nightly == null -> stable
+            stable == null -> nightly
+            nightly.versionCode > stableCode(stable.number) -> nightly
+            else -> stable
+        }
+
+    /** Matches the version code CI gives `quest-<n>` in build.gradle.kts. */
+    private fun stableCode(number: Int): Long = 50_000_000L + number * 1000L
 
     private fun nightly(): Release? {
         val request = Request.Builder().url(NIGHTLY_URL + "nightly.json").build()
