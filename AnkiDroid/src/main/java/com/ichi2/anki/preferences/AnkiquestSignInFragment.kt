@@ -109,8 +109,43 @@ class AnkiquestSignInFragment : SettingsFragment() {
             startDeletion()
             true
         }
+        bindUploadAll()
         bindConnection()
         render()
+    }
+
+    /**
+     * Sends the whole review history again, in batches the server accepts, for reviews it lacks. The
+     * server keeps one copy of each, so nothing is counted twice. Progress shows in the summary.
+     */
+    private fun bindUploadAll() {
+        val upload = requirePreference<Preference>(R.string.ankiquest_upload_all_key)
+        val idle = upload.summary
+        upload.setOnPreferenceClickListener {
+            if (signedIn() == null) return@setOnPreferenceClickListener true
+            if (Ankiquest.uploadingAll()) {
+                alert(getString(R.string.ankiquest_upload_all_busy))
+                return@setOnPreferenceClickListener true
+            }
+            upload.isEnabled = false
+            upload.setSummary(R.string.ankiquest_check_running)
+            val context = requireContext()
+            lifecycleScope.launch {
+                val message =
+                    try {
+                        Ankiquest.runFromSettings(context, uploadAll = true) { sent, total ->
+                            lifecycleScope.launch {
+                                if (!upload.isEnabled) upload.summary = getString(R.string.ankiquest_upload_all_progress, sent, total)
+                            }
+                        }
+                    } finally {
+                        upload.isEnabled = true
+                        upload.summary = idle
+                    }
+                if (isAdded) alert(message)
+            }
+            true
+        }
     }
 
     /** The server, player and token behind the account, for servers set up by hand; signing in fills them in. */
@@ -259,6 +294,8 @@ class AnkiquestSignInFragment : SettingsFragment() {
             isVisible = status != null
             summary = status
         }
+        // Only a signed-in account stores reviews on the server.
+        requirePreference<Preference>(R.string.ankiquest_upload_all_key).isVisible = current() != null
         requirePreference<Preference>(R.string.ankiquest_password_key).apply {
             isVisible = methods?.account == true
             isEnabled = !busy

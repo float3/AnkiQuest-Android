@@ -26,6 +26,7 @@ import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.NotificationChannel
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.cancelSync
 import com.ichi2.anki.common.permissions.canPostNotifications
 import com.ichi2.anki.libanki.Collection
@@ -92,6 +93,7 @@ class SyncWorker(
 
         try {
             syncCollection(auth, shouldSyncMedia)
+            uploadToAnkiquest()
         } catch (cancellationException: CancellationException) {
             Timber.w(cancellationException, "SyncWorker cancelled (user tapped Cancel or WorkManager cancelled)")
             notificationManager?.cancel(NotificationId.SYNC)
@@ -116,6 +118,17 @@ class SyncWorker(
 
         Timber.d("SyncWorker: success")
         return Result.success()
+    }
+
+    /** Reviews synced in from elsewhere can have ids below AnkiQuest's upload mark; a failure never fails the sync. */
+    private suspend fun uploadToAnkiquest() {
+        try {
+            Ankiquest.uploadAfterSync()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "AnkiQuest upload after sync failed")
+        }
     }
 
     private suspend fun syncCollection(

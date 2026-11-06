@@ -13,6 +13,8 @@
     <string name="aq_goal_done_title">Tagesziel erreicht! 🎉</string>
     <string name="aq_goal_time_left">Noch ~%1$d Min.</string>
     <string name="aq_goal_streak_minutes">%1$d / %2$d Min.</string>
+    <string name="aq_goal_streak_syncing">Wird synchronisiert…</string>
+    <string name="aq_goal_minimum_syncing">Deine heutigen Wiederholungen sind noch auf dem Weg zum Server. Die Lernserie ist gesichert, sobald der Server sie zählt.</string>
     <string name="aq_goal_streak_safe">Lernserie sicher</string>
     <string name="aq_goal_streak_any">Einmal wiederholen rettet deine Serie</string>
     <string name="ankiquest_streak_short">Heute %1$d von %2$d Minuten</string>

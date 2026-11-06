@@ -158,4 +158,13 @@
     <string name="ankiquest_streak_protected">Streak protected · Not studied yet</string>
     <string name="ankiquest_streak_unknown">Refresh to see today\'s study status</string>
     <string name="ankiquest_streak_description">%1$s day streak · %2$s</string>
+    <string name="ankiquest_upload_all_key" translatable="false">ankiquestUploadAll</string>
+    <string name="ankiquest_upload_all_title" maxLength="41">Upload all reviews now</string>
+    <string name="ankiquest_upload_all_summary">Send your whole review history again. The server keeps one copy of each review.</string>
+    <string name="ankiquest_upload_all_progress">Uploading… %1$d of %2$d reviews</string>
+    <string name="ankiquest_upload_all_busy">Your reviews are already being uploaded.</string>
+    <plurals name="ankiquest_upload_all_done">
+        <item quantity="one">Sent %d review.</item>
+        <item quantity="other">Sent %d reviews.</item>
+    </plurals>
 </resources>

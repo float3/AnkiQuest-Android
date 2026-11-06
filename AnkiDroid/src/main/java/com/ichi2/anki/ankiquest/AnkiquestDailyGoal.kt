@@ -35,6 +35,7 @@ internal object AnkiquestDailyGoal {
     private const val PREF_SERVER_GOAL = "ankiquestServerGoal"
     private const val PREF_MIGRATED = "ankiquestGoalMigrated"
     private const val PREF_REPORTED_DAY = "ankiquestGoalReportedDay"
+    private const val PREF_SERVER_DAY = "ankiquestServerDay"
 
     const val DEFAULT_BACKLOG_DAYS = 30
     const val DEFAULT_CARDS = 100
@@ -167,11 +168,22 @@ internal object AnkiquestDailyGoal {
         val serverProgress: Int? = null,
         /** The server says today's goal is reached. */
         val reached: Boolean = false,
+        /**
+         * Whether the server counts today toward the streak, as it last said today; null when the
+         * server stores nothing for this account, so only this device can judge.
+         */
+        val serverCounts: Boolean? = null,
     ) {
         val progress: Int get() = serverProgress ?: if (mode == Mode.MINUTES) minutes else studiedCards
 
-        /** Today counts toward the streak, by the same rule as the server. */
+        /** Today counts toward the streak by this device's reviews, by the same rule as the server. */
         val minimumDone: Boolean get() = studiedCards > 0 && minutes >= streakMinutes
+
+        /** The streak is secured: the server says so, or it stores nothing and this device's reviews count. */
+        val secured: Boolean get() = serverCounts == true || (serverCounts == null && minimumDone)
+
+        /** This device's reviews count for today, but the server has not counted them yet. */
+        val syncing: Boolean get() = minimumDone && !secured
 
         val goalDone: Boolean get() = mode != Mode.OFF && (reached || (progress > 0 && progress >= goal.target))
     }
@@ -276,6 +288,7 @@ internal object AnkiquestDailyGoal {
             val key = streakMinutesKey(prefs)
             if (prefs.getInt(key, -1) != minutes) prefs.edit { putInt(key, minutes) }
         }
+        rememberServerDay(profile, prefs)
         val scope = AnkiquestHomeData.account(prefs)?.scope ?: return
         val goal = ServerGoal.parse(profile.optJSONObject("goal")) ?: return
         if (!migrated(prefs, scope)) {
@@ -283,6 +296,42 @@ internal object AnkiquestDailyGoal {
             prefs.edit { putBoolean(scopedKey(PREF_MIGRATED, scope), true) }
         }
         cache(prefs, scope, goal)
+    }
+
+    /** Whether [profile] says today counts toward the streak. */
+    internal fun serverCounts(profile: JSONObject): Boolean {
+        if (profile.has("streak_state")) return profile.optString("streak_state") == "studied"
+        val today = profile.optJSONObject("today") ?: return false
+        return today.optInt("reviews") > 0 && today.optInt("minutes") >= today.optInt("streak_minutes")
+    }
+
+    /** Keeps whether the server counts today, until the day [profile] belongs to ends. */
+    internal fun rememberServerDay(
+        profile: JSONObject,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ) {
+        val ends = profile.optLong("day_ends_at")
+        if (ends <= 0) return
+        val scope = AnkiquestHomeData.account(prefs)?.scope ?: return
+        val value = JSONObject().put("ends", ends).put("counts", serverCounts(profile)).toString()
+        val key = scopedKey(PREF_SERVER_DAY, scope)
+        if (prefs.getString(key, null) != value) prefs.edit { putString(key, value) }
+    }
+
+    /**
+     * Whether the server counts today for the configured account, as it last said: null for an
+     * account without a token, whose reviews the server never stores; false while it has said nothing today.
+     */
+    internal fun serverVerdict(
+        prefs: SharedPreferences,
+        now: Long = TimeManager.time.intTimeMS(),
+    ): Boolean? {
+        val account = AnkiquestHomeData.account(prefs) ?: return null
+        if (account.token.isEmpty()) return null
+        val saved =
+            prefs.getString(scopedKey(PREF_SERVER_DAY, account.scope), null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+                ?: return false
+        return saved.optLong("ends") > now && saved.optBoolean("counts")
     }
 
     /** The streak minimum of the configured account; another account's minimum is never assumed. */
@@ -350,6 +399,7 @@ internal object AnkiquestDailyGoal {
         profile: JSONObject,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
+        if (AnkiquestHomeData.account(prefs)?.scope == account.scope) rememberServerDay(profile, prefs)
         val goal = profile.optJSONObject("goal") ?: return
         val server = ServerGoal.parse(goal) ?: return
         val current = if (migrated(prefs, account.scope)) server else migrate(account, server, prefs)
@@ -468,7 +518,15 @@ internal object AnkiquestDailyGoal {
                     }
                 }
             }
-        return Status(load.day, load.minutes, streakMinutes(prefs), load.studiedCards, settings.mode, goal)
+        return Status(
+            load.day,
+            load.minutes,
+            streakMinutes(prefs),
+            load.studiedCards,
+            settings.mode,
+            goal,
+            serverCounts = serverVerdict(prefs),
+        )
     }
 
     /**
@@ -482,7 +540,23 @@ internal object AnkiquestDailyGoal {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
         now: Long = TimeManager.time.intTimeMS(),
     ): Status {
-        if (profile == null || !migrated(prefs, AnkiquestHomeData.account(prefs)?.scope)) return status
+        if (profile == null) return status
+        val counted =
+            if (status.serverCounts != null && profile.optLong("day_ends_at") > now) {
+                status.copy(serverCounts = serverCounts(profile))
+            } else {
+                status
+            }
+        return withGoal(counted, profile, prefs, now)
+    }
+
+    private fun withGoal(
+        status: Status,
+        profile: JSONObject,
+        prefs: SharedPreferences,
+        now: Long,
+    ): Status {
+        if (!migrated(prefs, AnkiquestHomeData.account(prefs)?.scope)) return status
         if (profile.optLong("day_ends_at") in 1..now) return status
         val goal = profile.optJSONObject("goal") ?: return status
         val choice = Choice.parse(goal) ?: return status

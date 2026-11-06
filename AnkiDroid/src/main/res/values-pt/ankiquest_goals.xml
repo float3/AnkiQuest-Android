@@ -13,6 +13,8 @@
     <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
     <string name="aq_goal_time_left">Faltam ~%1$d min</string>
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_syncing">A sincronizar…</string>
+    <string name="aq_goal_minimum_syncing">As revisões de hoje ainda estão a caminho do servidor. A sequência fica garantida quando o servidor as contar.</string>
     <string name="aq_goal_streak_safe">Sequência garantida</string>
     <string name="aq_goal_streak_any">Revise uma vez para manter sua sequência</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
