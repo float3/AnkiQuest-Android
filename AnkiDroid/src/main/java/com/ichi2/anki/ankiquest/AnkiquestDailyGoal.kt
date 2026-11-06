@@ -17,7 +17,9 @@ import java.io.IOException
 /**
  * Today's two targets:
  * - the streak minimum: the review minutes the server needs for today to count toward the streak
- *   (`today.streak_minutes`; 0 means any review counts), and
+ *   (`today.streak_minutes`; 0 means any review counts). Whether today met it is the server's
+ *   verdict, with reviews not uploaded yet added the server's way by [AnkiquestDay], and
+ *   never the collection's own count, and
  * - the daily goal, which the server keeps for every client of the player: a number of cards or
  *   minutes, which the server judges, or a plan to clear the overdue backlog in a number of days,
  *   which only this device can count, so it reports when that goal is reached. See [AnkiquestGoalPlan].
@@ -132,6 +134,10 @@ internal object AnkiquestDailyGoal {
         val backlog: Int,
         /** Today as the server numbers Anki days, which backlog plans are counted in. */
         val studyDay: Long = 0,
+        /** What the server last said of today, for the streak minimum. */
+        val server: AnkiquestDay.Server? = null,
+        /** The collection's reviews after the server's last one. */
+        val unsent: List<AnkiquestDay.Review> = emptyList(),
     )
 
     data class Settings(
@@ -167,11 +173,28 @@ internal object AnkiquestDailyGoal {
         val serverProgress: Int? = null,
         /** The server says today's goal is reached. */
         val reached: Boolean = false,
+        /** Today's streak verdict; null while nothing current is known from the server. */
+        val streakDay: AnkiquestDay.Verdict? = null,
+        /** The collection's reviews after the server's last one, to judge a fresher profile with. */
+        val unsent: List<AnkiquestDay.Review> = emptyList(),
     ) {
         val progress: Int get() = serverProgress ?: if (mode == Mode.MINUTES) minutes else studiedCards
 
-        /** Today counts toward the streak, by the same rule as the server. */
-        val minimumDone: Boolean get() = studiedCards > 0 && minutes >= streakMinutes
+        /** Today counts toward the streak: the server said so, or reviews not uploaded yet provably make it. */
+        val minimumDone: Boolean get() = streakDay?.met == true
+
+        /** Minutes toward the streak minimum: the server's, with reviews not uploaded yet; the collection's while unknown. */
+        val streakProgress: Int get() = streakDay?.minutes ?: minutes
+
+        /** [streakDay] for [profile] when it says anything of today, as an upload or the server just answered. */
+        fun withServerDay(
+            profile: JSONObject?,
+            now: Long,
+        ): Status {
+            val server = AnkiquestDay.Server.profile(profile) ?: return this
+            val day = AnkiquestDay.judge(server, unsent, now) ?: return this
+            return copy(streakDay = day, streakMinutes = day.streakMinutes)
+        }
 
         val goalDone: Boolean get() = mode != Mode.OFF && (reached || (progress > 0 && progress >= goal.target))
     }
@@ -271,6 +294,7 @@ internal object AnkiquestDailyGoal {
         profile: JSONObject,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
+        AnkiquestDay.remember(profile, prefs)
         profile.optJSONObject("today")?.let { today ->
             val minutes = today.optInt("streak_minutes", 0).coerceAtLeast(0)
             val key = streakMinutesKey(prefs)
@@ -390,13 +414,18 @@ internal object AnkiquestDailyGoal {
         }
     }
 
-    fun load(col: Collection): Load {
+    fun load(
+        col: Collection,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Load {
         val today = col.sched.today
         val cutoff = col.sched.dayCutoff
+        val server = AnkiquestDay.last(prefs)
         val (studied, minutes) =
             col.db
                 .query(
-                    "select count(distinct cid), coalesce(sum(time), 0) from revlog where id >= ? and ease > 0 and type < 4",
+                    "select count(distinct cid), coalesce(sum(time), 0) from revlog " +
+                        "where id >= ? and ${AnkiquestDay.UPLOADED_REVIEWS}",
                     (cutoff - 86_400) * 1000,
                 ).use { cursor ->
                     cursor.moveToFirst()
@@ -431,6 +460,8 @@ internal object AnkiquestDailyGoal {
             dueReviews + learning + newCards,
             backlog,
             AnkiquestDecks.studyDay(col, TimeManager.time.intTimeMS()),
+            server,
+            AnkiquestDay.unsent(col, server),
         )
     }
 
@@ -468,20 +499,32 @@ internal object AnkiquestDailyGoal {
                     }
                 }
             }
-        return Status(load.day, load.minutes, streakMinutes(prefs), load.studiedCards, settings.mode, goal)
+        val day = AnkiquestDay.judge(load.server, load.unsent, TimeManager.time.intTimeMS())
+        return Status(
+            load.day,
+            load.minutes,
+            day?.streakMinutes ?: streakMinutes(prefs),
+            load.studiedCards,
+            settings.mode,
+            goal,
+            streakDay = day,
+            unsent = load.unsent,
+        )
     }
 
     /**
      * [status] with what the server says in the owner's [profile] about today's goal: for cards and
      * minutes the server's count and verdict, for a backlog goal whether a reach was reported. A profile
      * from a day that has ended, or from before a goal chosen on this device moved to the server, says nothing.
+     * The streak minimum follows the [profile]'s verdict on today, as [Status.withServerDay] judges it.
      */
     fun withProfile(
-        status: Status,
+        current: Status,
         profile: JSONObject?,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
         now: Long = TimeManager.time.intTimeMS(),
     ): Status {
+        val status = current.withServerDay(profile, now)
         if (profile == null || !migrated(prefs, AnkiquestHomeData.account(prefs)?.scope)) return status
         if (profile.optLong("day_ends_at") in 1..now) return status
         val goal = profile.optJSONObject("goal") ?: return status

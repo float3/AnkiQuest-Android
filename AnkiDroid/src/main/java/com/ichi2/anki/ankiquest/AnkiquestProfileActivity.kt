@@ -451,14 +451,21 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         }
     }
 
-    private fun streakStatus(p: AnkiquestBoards.Profile): String =
-        when {
-            p.streakState == "studied" -> getString(R.string.ankiquest_streak_studied)
-            p.streakMinutes > 0 -> getString(R.string.ankiquest_streak_short, minOf(p.todayMinutes, p.streakMinutes), p.streakMinutes)
-            p.streakState == "protected" -> getString(R.string.ankiquest_streak_protected)
-            p.todayReviews > 0 -> getString(R.string.ankiquest_streak_studied)
-            else -> getString(R.string.ankiquest_streak_pending)
-        }
+    /** Today's streak status as the server judged it, in the words every screen uses. */
+    private fun streakStatus(p: AnkiquestBoards.Profile): String {
+        val server =
+            AnkiquestDay.Server(
+                streak = p.streak,
+                streakState = p.streakState,
+                dayEndsAt = p.dayEndsAt.takeIf { it > 0 } ?: Long.MAX_VALUE,
+                lastReviewId = Long.MAX_VALUE,
+                startsAt = null,
+                reviews = p.todayReviews.toInt(),
+                timeMs = p.todayMinutes * 60_000L,
+                streakMinutes = p.streakMinutes.toInt(),
+            )
+        return AnkiquestDay.words(this, AnkiquestDay.label(server, TimeManager.time.intTimeMS()), p.todayMinutes, p.streakMinutes)
+    }
 
     private fun days(count: Long): String = resources.getQuantityString(R.plurals.aq_profile_days, count.toInt(), views.number(count))
 

@@ -333,14 +333,7 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
     /** Today's status for a row with a streak, in words; null without a streak. */
     private fun streakLine(row: AnkiquestBoards.Standing): String? {
         if (row.streak <= 0) return null
-        val status =
-            when (row.state) {
-                "studied" -> getString(R.string.ankiquest_streak_studied)
-                "protected" -> getString(R.string.ankiquest_streak_protected)
-                "short" -> getString(R.string.ankiquest_streak_short, minOf(row.todayMinutes, row.streakMinutes), row.streakMinutes)
-                "pending" -> getString(R.string.ankiquest_streak_pending)
-                else -> getString(R.string.ankiquest_streak_unknown)
-            }
+        val status = AnkiquestDay.words(this, row.state, row.todayMinutes, row.streakMinutes)
         return "${views.number(row.streak.toLong())} · $status"
     }
 

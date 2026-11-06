@@ -183,22 +183,32 @@ internal class AnkiquestStreakChip
                 status: AnkiquestDailyGoal.Status,
             ): Streak {
                 val minimum = status.streakMinutes
+                val waiting = status.streakDay?.awaitingUpload == true
                 return when {
-                    status.minimumDone ->
-                        Streak(
-                            context.getString(R.string.aq_goal_streak_safe),
+                    status.minimumDone -> {
+                        val done =
                             if (minimum > 0) {
                                 context.getString(R.string.aq_goal_minimum_minutes_done, minimum)
                             } else {
                                 context.getString(R.string.aq_goal_minimum_any_done)
-                            },
+                            }
+                        Streak(
+                            context.getString(if (waiting) R.string.aq_goal_streak_safe_unsent else R.string.aq_goal_streak_safe),
+                            if (waiting) done + " " + context.getString(R.string.aq_goal_minimum_unsent) else done,
                             1f,
                             true,
                         )
+                    }
                     minimum > 0 -> {
-                        val minutes = status.minutes.coerceIn(0, minimum)
+                        val minutes = status.streakProgress.coerceIn(0, minimum)
+                        // Without a current verdict the collection's own minutes are progress only: never safe.
+                        val checking = status.streakDay == null && minutes >= minimum
                         Streak(
-                            context.getString(R.string.aq_goal_streak_minutes, minutes, minimum),
+                            if (checking) {
+                                context.getString(R.string.aq_goal_streak_checking)
+                            } else {
+                                context.getString(R.string.aq_goal_streak_minutes, minutes, minimum)
+                            },
                             context.getString(R.string.aq_goal_minimum_minutes, minimum) + ". " +
                                 context.getString(R.string.ankiquest_streak_short, minutes, minimum),
                             minutes.toFloat() / minimum,
