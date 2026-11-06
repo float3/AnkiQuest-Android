@@ -82,7 +82,7 @@ class AnkiquestSignInFragment : SettingsFragment() {
             true
         }
         requirePreference<Preference>(R.string.ankiquest_password_key).setOnPreferenceClickListener {
-            methods?.let(::showPassword)
+            methods?.let(::startPassword)
             true
         }
         requirePreference<Preference>(R.string.ankiquest_sign_out_others_key).setOnPreferenceClickListener {
@@ -299,7 +299,10 @@ class AnkiquestSignInFragment : SettingsFragment() {
         requirePreference<Preference>(R.string.ankiquest_password_key).apply {
             isVisible = methods?.account == true
             isEnabled = !busy
-            summary = getString(if (methods?.password == true) R.string.ankiquest_password_change else R.string.ankiquest_password_set)
+            if (methods != null) {
+                setTitle(if (methods.password) R.string.ankiquest_password_title else R.string.ankiquest_password_set_title)
+                summary = passwordSummary(methods)
+            }
         }
         requirePreference<PreferenceCategory>(R.string.ankiquest_providers_key).apply {
             removeAll()
@@ -363,6 +366,21 @@ class AnkiquestSignInFragment : SettingsFragment() {
         }
     }
 
+    /**
+     * What it takes to set a password: the current one, signing in again with a linked provider, or,
+     * with no linked provider this server offers, the server operator, since a signed-in device alone
+     * may not add a way in.
+     */
+    private fun passwordSummary(methods: Methods): String {
+        val linked = methods.linked
+        return when {
+            methods.password -> getString(R.string.ankiquest_password_change)
+            linked.size == 1 -> getString(R.string.ankiquest_password_set_with, linked.single().name)
+            linked.isNotEmpty() -> getString(R.string.ankiquest_password_set)
+            else -> getString(R.string.ankiquest_password_operator)
+        }
+    }
+
     private fun describe(device: Device): String {
         val name =
             when {
@@ -388,11 +406,18 @@ class AnkiquestSignInFragment : SettingsFragment() {
         act(retry = { link(provider) }) { account -> openBrowser(account, provider, Purpose.LINK) }
     }
 
-    /** Has the player sign in with a provider they linked again, then carries on with [then]. */
+    /**
+     * Has the player sign in with a provider they linked again, then carries on with [then]. Without
+     * one the server offers, says who can help: an account that never linked one is not told it lost it.
+     */
     private fun reauthenticate(then: () -> Unit) {
-        val linked = methods?.providers.orEmpty().filter { it.linked }
+        val linked = methods?.linked.orEmpty()
         if (linked.isEmpty()) {
-            alert(getString(R.string.ankiquest_reauth_none))
+            alert(
+                getString(
+                    if (methods?.linkedUnavailable == true) R.string.ankiquest_reauth_none else R.string.ankiquest_password_operator,
+                ),
+            )
             return
         }
         AlertDialog
@@ -426,26 +451,52 @@ class AnkiquestSignInFragment : SettingsFragment() {
         return true
     }
 
+    /**
+     * Changes the password, or for an account without one, signs in again with a linked provider
+     * first when that is not fresh, and then asks for the first one.
+     */
+    private fun startPassword(methods: Methods) {
+        if (methods.password) {
+            showPassword(methods)
+            return
+        }
+        if (methods.linked.isEmpty()) {
+            reauthenticate { }
+            return
+        }
+        act { account ->
+            val until = AnkiquestAccountSettings.summary(account).confirmedUntil
+            if (until != null && until > TimeManager.time.intTimeMS()) {
+                showPassword(methods)
+            } else {
+                reauthenticate { showPassword(methods) }
+            }
+        }
+    }
+
+    /**
+     * Changes the password with the current one, or sets a first one: the new password twice, since
+     * there is no other to fall back on when it was mistyped.
+     */
     private fun showPassword(methods: Methods) {
         val context = requireContext()
-        val current =
+
+        fun field(hint: Int) =
             EditText(context).apply {
-                setHint(R.string.ankiquest_password_current)
-                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                visibility = if (methods.password) View.VISIBLE else View.GONE
-            }
-        val password =
-            EditText(context).apply {
-                setHint(R.string.ankiquest_password_new)
+                setHint(hint)
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             }
+        val current = field(R.string.ankiquest_password_current)
+        val password = field(R.string.ankiquest_password_new)
+        val repeat = field(R.string.ankiquest_password_repeat)
         val others = CheckBox(context).apply { setText(R.string.ankiquest_password_sign_out_others) }
         val message = TextView(context)
+        val fields = if (methods.password) arrayOf(current, password) else arrayOf(password, repeat)
         val dialog =
             AlertDialog
                 .Builder(context)
-                .setTitle(R.string.ankiquest_password_title)
-                .setView(column(current, password, others, message))
+                .setTitle(if (methods.password) R.string.ankiquest_password_title else R.string.ankiquest_password_set_title)
+                .setView(column(*fields, others, message))
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(CommonString.save, null)
                 .show()
@@ -454,6 +505,10 @@ class AnkiquestSignInFragment : SettingsFragment() {
             val typed = password.text.toString()
             if (typed.length !in PASSWORD_LENGTH) {
                 message.setText(R.string.ankiquest_password_length)
+                return@setOnClickListener
+            }
+            if (!methods.password && repeat.text.toString() != typed) {
+                message.setText(R.string.ankiquest_password_mismatch)
                 return@setOnClickListener
             }
             val account = signedIn() ?: return@setOnClickListener

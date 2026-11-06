@@ -462,6 +462,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 ),
                 methods.providers,
             )
+            // Servers before linked_unavailable do not say.
+            assertTrue(methods.linkedUnavailable != true, "the example's GitHub is offered")
             assertEquals(methods, AnkiquestAccountSettings.setPassword(account, "old password", "new password!", signOutOthers = false))
 
             val devices = AnkiquestAccountSettings.devices(account)

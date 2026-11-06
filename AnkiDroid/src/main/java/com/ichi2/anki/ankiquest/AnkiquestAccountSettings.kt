@@ -27,12 +27,20 @@ internal object AnkiquestAccountSettings {
         val linked: Boolean,
     )
 
-    /** [account] is false for a player from the server configuration, who has no password to change. */
+    /**
+     * [account] is false for a player from the server configuration, who has no password to change.
+     * [providers] are those the server offers; [linkedUnavailable] is true when the account also
+     * linked one it no longer offers, and null from servers that do not say.
+     */
     data class Methods(
         val account: Boolean,
         val password: Boolean,
         val providers: List<Provider>,
+        val linkedUnavailable: Boolean? = null,
     ) {
+        /** The offered providers the player can sign in again with. */
+        val linked: List<Provider> get() = providers.filter { it.linked }
+
         companion object {
             fun parse(json: JSONObject) =
                 Methods(
@@ -41,6 +49,7 @@ internal object AnkiquestAccountSettings {
                     json.getJSONArray("providers").objects().map {
                         Provider(it.getString("provider"), it.getString("name"), it.getBoolean("linked"))
                     },
+                    if (json.isNull("linked_unavailable")) null else json.getBoolean("linked_unavailable"),
                 )
         }
     }
