@@ -58,6 +58,15 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
             providers = listOf(Provider("google", "Google", false), Provider("github", "GitHub", true)),
         )
     private val withoutPassword = withPassword.copy(password = false)
+
+    /** An account moved over from the server configuration: no password and no linked sign-in. */
+    private val deviceOnly =
+        Methods(
+            account = true,
+            password = false,
+            providers = listOf(Provider("google", "Google", false), Provider("github", "GitHub", false)),
+            linkedUnavailable = false,
+        )
     private val devices =
         listOf(
             Device("this", "app", "Pixel 9", NOW - DAY, NOW, current = true),
@@ -260,26 +269,106 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
     }
 
     @Test
-    fun `a first password needs a fresh sign-in and is then saved`() {
+    fun `a first password signs in again with the linked provider and then asks for it twice`() {
         coEvery { AnkiquestAccountSettings.methods(any()) } returns withoutPassword
-        coEvery { AnkiquestAccountSettings.setPassword(any(), null, "a new long password", false) } throws
-            AnkiquestHttpException(403, "Sign in with your provider again first.", reauth = true) andThen withPassword
-        coEvery { AnkiquestAccountSettings.summary(any()) } returns Summary("ana", password = false, confirmedUntil = NOW + 60_000)
+        coEvery { AnkiquestAccountSettings.setPassword(any(), null, "a new long password", false) } returns withPassword
+        coEvery { AnkiquestAccountSettings.summary(any()) } returns
+            Summary("ana", password = false, confirmedUntil = null) andThen
+            Summary("ana", password = false, confirmedUntil = NOW + 60_000)
         val (controller, fragment) = open()
-        assertEquals(targetContext.getString(R.string.ankiquest_password_set), fragment.password().summary)
+        assertEquals(targetContext.getString(R.string.ankiquest_password_set_title), fragment.password().title)
+        assertEquals(targetContext.getString(R.string.ankiquest_password_set_with, "GitHub"), fragment.password().summary)
         fragment.password().performClick()
         idle()
-        val dialog = latest()
-        val edits = dialog.edits()
-        assertEquals(View.GONE, edits[0].visibility, "there is no current password")
-        edits[1].setText("a new long password")
-        positive(dialog)
-        latest().listView.performItemClick(null, 0, 0)
+        val choose = latest()
+        assertEquals(1, choose.listView.adapter.count, "only GitHub is linked")
+        choose.listView.performItemClick(null, 0, 0)
         idle()
+        coVerify { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
+        shadowOf(controller.get()).nextStartedActivity
         controller.pause().stop()
         controller.start().resume()
         idle()
-        coVerify(exactly = 2) { AnkiquestAccountSettings.setPassword(any(), null, "a new long password", false) }
+
+        val dialog = latest()
+        val edits = dialog.edits()
+        assertEquals(2, edits.size, "no current password to ask for")
+        assertEquals(targetContext.getString(R.string.ankiquest_password_new), edits[0].hint)
+        assertEquals(targetContext.getString(R.string.ankiquest_password_repeat), edits[1].hint)
+        edits[0].setText("a new long password")
+        edits[1].setText("a new long passwort")
+        positive(dialog)
+        assertEquals(
+            targetContext.getString(R.string.ankiquest_password_mismatch),
+            dialog
+                .texts()
+                .last()
+                .text
+                .toString(),
+        )
+        coVerify(exactly = 0) { AnkiquestAccountSettings.setPassword(any(), any(), any(), any()) }
+        edits[1].setText("a new long password")
+        positive(dialog)
+        coVerify(exactly = 1) { AnkiquestAccountSettings.setPassword(any(), null, "a new long password", false) }
+        assertFalse(dialog.isShowing)
+    }
+
+    @Test
+    fun `a first password after a fresh sign-in is asked for straight away`() {
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns withoutPassword
+        coEvery { AnkiquestAccountSettings.summary(any()) } returns Summary("ana", password = false, confirmedUntil = NOW + 60_000)
+        val fragment = open().second
+        fragment.password().performClick()
+        idle()
+        assertEquals(2, latest().edits().size)
+        coVerify(exactly = 0) { AnkiquestAccountSettings.browser(any(), any(), any()) }
+    }
+
+    @Test
+    fun `the password row says what setting one takes for each kind of account`() {
+        val fragment = open().second
+        assertEquals(targetContext.getString(R.string.ankiquest_password_title), fragment.password().title)
+        assertEquals(targetContext.getString(R.string.ankiquest_password_change), fragment.password().summary)
+
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns deviceOnly
+        fragment.status().performClick()
+        idle()
+        assertEquals(targetContext.getString(R.string.ankiquest_password_set_title), fragment.password().title)
+        assertEquals(targetContext.getString(R.string.ankiquest_password_operator), fragment.password().summary)
+
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns
+            withoutPassword.copy(providers = withoutPassword.providers.map { it.copy(linked = true) })
+        fragment.status().performClick()
+        idle()
+        assertEquals(targetContext.getString(R.string.ankiquest_password_set), fragment.password().summary, "several sign-ins")
+    }
+
+    @Test
+    fun `an account that never linked a sign-in is sent to the operator, not told it lost one`() {
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns deviceOnly
+        val fragment = open().second
+        fragment.password().performClick()
+        idle()
+        val explained = message(latest())
+        assertEquals(targetContext.getString(R.string.ankiquest_password_operator), explained)
+        assertFalse("any more" in explained)
+        assertTrue(latest().edits().isEmpty(), "no password dialog the server would turn down")
+
+        coEvery { AnkiquestAccountSettings.browser(any(), "google", Purpose.LINK) } throws
+            AnkiquestHttpException(403, "Sign in with your provider again first.", reauth = true)
+        fragment.provider("google").performClick()
+        idle()
+        assertEquals(targetContext.getString(R.string.ankiquest_password_operator), message(latest()), "linking needs the same")
+        coVerify(exactly = 0) { AnkiquestAccountSettings.setPassword(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `an account whose linked sign-in is no longer offered is told so`() {
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns deviceOnly.copy(linkedUnavailable = true)
+        val fragment = open().second
+        fragment.password().performClick()
+        idle()
+        assertEquals(targetContext.getString(R.string.ankiquest_reauth_none), message(latest()))
     }
 
     @Test

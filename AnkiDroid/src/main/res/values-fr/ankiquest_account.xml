@@ -10,7 +10,12 @@
     <string name="ankiquest_account_changed">Entre-temps, tu t’es connecté avec un autre compte. Réessaie.</string>
     <string name="ankiquest_password_title">Mot de passe</string>
     <string name="ankiquest_password_change">Change ton mot de passe</string>
-    <string name="ankiquest_password_set">Choisis un mot de passe pour te connecter aussi sans ton fournisseur</string>
+    <string name="ankiquest_password_set">Reconnecte-toi avec une connexion associée pour définir un mot de passe</string>
+    <string name="ankiquest_password_set_title">Définir un mot de passe</string>
+    <string name="ankiquest_password_set_with">Reconnecte-toi avec %s pour définir un mot de passe</string>
+    <string name="ankiquest_password_operator">Demande à la personne qui gère ton serveur de te définir un premier mot de passe ; tu pourras ensuite le changer ici.</string>
+    <string name="ankiquest_password_repeat">Répète le nouveau mot de passe</string>
+    <string name="ankiquest_password_mismatch">Les deux mots de passe ne sont pas identiques.</string>
     <string name="ankiquest_password_current">Mot de passe actuel</string>
     <string name="ankiquest_password_new">Nouveau mot de passe</string>
     <string name="ankiquest_password_sign_out_others">Déconnecter mes autres appareils</string>
@@ -25,7 +30,7 @@
     <string name="ankiquest_browser_foreign">Le serveur a envoyé une adresse sur un autre site, elle n’a donc pas été ouverte.</string>
     <string name="ankiquest_reauth_title">Reconnecte-toi pour confirmer que c’est toi</string>
     <string name="ankiquest_reauth_with">Se connecter avec %s</string>
-    <string name="ankiquest_reauth_none">Ce serveur ne propose plus aucune de tes connexions associées. Demande de l’aide à la personne qui gère le serveur.</string>
+    <string name="ankiquest_reauth_none">Ce serveur ne propose plus aucune de tes connexions associées. Demande à la personne qui gère ton serveur de te définir un premier mot de passe ; tu pourras ensuite le changer ici.</string>
     <string name="ankiquest_reauth_pending">Tu ne t’es pas encore reconnecté. Termine dans le navigateur, puis reviens ici.</string>
     <string name="ankiquest_device_website">Site web</string>
     <string name="ankiquest_device_app">App</string>

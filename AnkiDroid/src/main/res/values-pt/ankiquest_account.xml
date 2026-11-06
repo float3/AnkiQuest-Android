@@ -10,7 +10,12 @@
     <string name="ankiquest_account_changed">Entretanto iniciaste sessão como outra pessoa. Tenta de novo.</string>
     <string name="ankiquest_password_title">Palavra-passe</string>
     <string name="ankiquest_password_change">Altera a tua palavra-passe</string>
-    <string name="ankiquest_password_set">Define uma palavra-passe para iniciares sessão também sem o teu fornecedor</string>
+    <string name="ankiquest_password_set">Volta a entrar com uma sessão associada para definires uma palavra-passe</string>
+    <string name="ankiquest_password_set_title">Definir palavra-passe</string>
+    <string name="ankiquest_password_set_with">Volta a entrar com %s para definires uma palavra-passe</string>
+    <string name="ankiquest_password_operator">Pede a quem gere o teu servidor que te defina uma primeira palavra-passe; depois podes alterá-la aqui.</string>
+    <string name="ankiquest_password_repeat">Repete a nova palavra-passe</string>
+    <string name="ankiquest_password_mismatch">As duas palavras-passe não são iguais.</string>
     <string name="ankiquest_password_current">Palavra-passe atual</string>
     <string name="ankiquest_password_new">Nova palavra-passe</string>
     <string name="ankiquest_password_sign_out_others">Terminar sessão nos meus outros dispositivos</string>
@@ -25,7 +30,7 @@
     <string name="ankiquest_browser_foreign">O servidor enviou um endereço noutro site, por isso não foi aberto.</string>
     <string name="ankiquest_reauth_title">Inicia sessão de novo para confirmar que és tu</string>
     <string name="ankiquest_reauth_with">Iniciar sessão com %s</string>
-    <string name="ankiquest_reauth_none">Este servidor já não oferece nenhuma das tuas sessões associadas. Pede ajuda a quem gere o servidor.</string>
+    <string name="ankiquest_reauth_none">Este servidor já não oferece nenhuma das tuas sessões associadas. Pede a quem gere o teu servidor que te defina uma primeira palavra-passe; depois podes alterá-la aqui.</string>
     <string name="ankiquest_reauth_pending">Ainda não iniciaste sessão de novo. Termina no navegador e depois volta aqui.</string>
     <string name="ankiquest_device_website">Site</string>
     <string name="ankiquest_device_app">App</string>

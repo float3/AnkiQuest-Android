@@ -10,7 +10,12 @@
     <string name="ankiquest_account_changed">Mientras tanto iniciaste sesión como otra persona. Vuelve a intentarlo.</string>
     <string name="ankiquest_password_title">Contraseña</string>
     <string name="ankiquest_password_change">Cambia tu contraseña</string>
-    <string name="ankiquest_password_set">Crea una contraseña para iniciar sesión también sin tu proveedor</string>
+    <string name="ankiquest_password_set">Vuelve a iniciar sesión con un inicio de sesión vinculado para crear una contraseña</string>
+    <string name="ankiquest_password_set_title">Crear una contraseña</string>
+    <string name="ankiquest_password_set_with">Vuelve a iniciar sesión con %s para crear una contraseña</string>
+    <string name="ankiquest_password_operator">Pide a quien gestiona tu servidor que te ponga una primera contraseña; después podrás cambiarla aquí.</string>
+    <string name="ankiquest_password_repeat">Repite la contraseña nueva</string>
+    <string name="ankiquest_password_mismatch">Las dos contraseñas no coinciden.</string>
     <string name="ankiquest_password_current">Contraseña actual</string>
     <string name="ankiquest_password_new">Contraseña nueva</string>
     <string name="ankiquest_password_sign_out_others">Cerrar sesión en mis otros dispositivos</string>
@@ -25,7 +30,7 @@
     <string name="ankiquest_browser_foreign">El servidor envió una dirección de otro sitio, así que no se abrió.</string>
     <string name="ankiquest_reauth_title">Vuelve a iniciar sesión para confirmar que eres tú</string>
     <string name="ankiquest_reauth_with">Iniciar sesión con %s</string>
-    <string name="ankiquest_reauth_none">Este servidor ya no ofrece ninguno de tus inicios de sesión vinculados. Pide ayuda a quien gestiona el servidor.</string>
+    <string name="ankiquest_reauth_none">Este servidor ya no ofrece ninguno de tus inicios de sesión vinculados. Pide a quien gestiona tu servidor que te ponga una primera contraseña; después podrás cambiarla aquí.</string>
     <string name="ankiquest_reauth_pending">Todavía no has vuelto a iniciar sesión. Termina en el navegador y luego vuelve aquí.</string>
     <string name="ankiquest_device_website">Sitio web</string>
     <string name="ankiquest_device_app">App</string>

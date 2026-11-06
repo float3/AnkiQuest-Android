@@ -10,7 +10,12 @@
     <string name="ankiquest_account_changed">Du hast dich inzwischen als jemand anderes angemeldet. Versuche es erneut.</string>
     <string name="ankiquest_password_title">Passwort</string>
     <string name="ankiquest_password_change">Ändere dein Passwort</string>
-    <string name="ankiquest_password_set">Lege ein Passwort fest, um dich auch ohne deinen Anbieter anzumelden</string>
+    <string name="ankiquest_password_set">Melde dich erneut mit einer verknüpften Anmeldung an, um ein Passwort festzulegen</string>
+    <string name="ankiquest_password_set_title">Passwort festlegen</string>
+    <string name="ankiquest_password_set_with">Melde dich erneut mit %s an, um ein Passwort festzulegen</string>
+    <string name="ankiquest_password_operator">Bitte die Person, die deinen Server betreibt, dir ein erstes Passwort festzulegen; danach kannst du es hier ändern.</string>
+    <string name="ankiquest_password_repeat">Neues Passwort wiederholen</string>
+    <string name="ankiquest_password_mismatch">Die beiden Passwörter stimmen nicht überein.</string>
     <string name="ankiquest_password_current">Aktuelles Passwort</string>
     <string name="ankiquest_password_new">Neues Passwort</string>
     <string name="ankiquest_password_sign_out_others">Meine anderen Geräte abmelden</string>
@@ -25,7 +30,7 @@
     <string name="ankiquest_browser_foreign">Der Server hat eine Adresse auf einer anderen Website geschickt, deshalb wurde sie nicht geöffnet.</string>
     <string name="ankiquest_reauth_title">Melde dich zur Bestätigung erneut an</string>
     <string name="ankiquest_reauth_with">Mit %s anmelden</string>
-    <string name="ankiquest_reauth_none">Keine deiner verknüpften Anmeldungen wird von diesem Server noch angeboten. Bitte die Person, die den Server betreibt, um Hilfe.</string>
+    <string name="ankiquest_reauth_none">Keine deiner verknüpften Anmeldungen wird von diesem Server noch angeboten. Bitte die Person, die deinen Server betreibt, dir ein erstes Passwort festzulegen; danach kannst du es hier ändern.</string>
     <string name="ankiquest_reauth_pending">Du hast dich noch nicht erneut angemeldet. Melde dich im Browser an und kehre dann hierher zurück.</string>
     <string name="ankiquest_device_website">Website</string>
     <string name="ankiquest_device_app">App</string>

@@ -20,7 +20,12 @@
 
     <string name="ankiquest_password_title" maxLength="41">Password</string>
     <string name="ankiquest_password_change">Change your password</string>
-    <string name="ankiquest_password_set">Set a password, to also sign in without your provider</string>
+    <string name="ankiquest_password_set">Sign in again with a linked sign-in to set a password</string>
+    <string name="ankiquest_password_set_title" maxLength="41">Set a password</string>
+    <string name="ankiquest_password_set_with">Sign in again with %s to set a password</string>
+    <string name="ankiquest_password_operator">Ask the person who runs your server to set a first password for you; you can change it here afterwards.</string>
+    <string name="ankiquest_password_repeat">New password again</string>
+    <string name="ankiquest_password_mismatch">The two passwords are not the same.</string>
     <string name="ankiquest_password_current">Current password</string>
     <string name="ankiquest_password_new">New password</string>
     <string name="ankiquest_password_sign_out_others">Sign out my other devices</string>
@@ -36,7 +41,7 @@
     <string name="ankiquest_browser_foreign">The server sent an address on another site, so it was not opened.</string>
     <string name="ankiquest_reauth_title">Sign in again to confirm it’s you</string>
     <string name="ankiquest_reauth_with">Sign in with %s</string>
-    <string name="ankiquest_reauth_none">None of your linked sign-ins is offered by this server any more. Ask whoever runs the server for help.</string>
+    <string name="ankiquest_reauth_none">None of the sign-ins you linked is offered by this server any more. Ask the person who runs your server to set a first password for you; you can change it here afterwards.</string>
     <string name="ankiquest_reauth_pending">You haven’t signed in again yet. Finish signing in in the browser, then come back here.</string>
 
     <string name="ankiquest_device_website">Website</string>
