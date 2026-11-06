@@ -147,6 +147,18 @@ class AnkiquestGoalBarTest : RobolectricTest() {
         assertTrue(later.gold)
     }
 
+    private fun day(
+        minutes: Int,
+        minimum: Int,
+        confirmed: Boolean = true,
+    ) = AnkiquestDay.Verdict(true, "studied", 1, 1, minutes * 60_000L, minimum, if (confirmed) 0 else 1, confirmed)
+
+    /** The server has [minutes] of [minimum]: not met. */
+    private fun short(
+        minutes: Int,
+        minimum: Int,
+    ) = AnkiquestDay.Verdict(false, "pending", 1, 1, minutes * 60_000L, minimum, 0, false)
+
     @Test
     fun `the streak chip counts minutes until today is safe`() {
         val counting = AnkiquestStreakChip(targetContext).apply { show(Status(100, 7, 10, 20, Mode.CARDS, Goal(100))) }
@@ -155,16 +167,30 @@ class AnkiquestGoalBarTest : RobolectricTest() {
         assertFalse(counting.ring.safe)
         assertTrue(counting.contentDescription.startsWith(targetContext.getString(R.string.aq_goal_minimum_minutes, 10)))
 
-        val safe = AnkiquestStreakChip(targetContext).apply { show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100))) }
+        val unknown = AnkiquestStreakChip(targetContext).apply { show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100))) }
+        assertEquals(targetContext.getString(R.string.aq_goal_streak_syncing), unknown.label.text.toString())
+        assertFalse(unknown.ring.safe, "the collection's own minutes never make the streak safe")
+
+        val safe =
+            AnkiquestStreakChip(
+                targetContext,
+            ).apply { show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = day(12, 10))) }
         assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), safe.label.text.toString())
         assertTrue(safe.ring.safe)
         assertEquals(targetContext.getString(R.string.aq_goal_minimum_minutes_done, 10), safe.contentDescription)
+
+        val unsent =
+            AnkiquestStreakChip(targetContext).apply {
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = day(12, 10, confirmed = false)))
+            }
+        assertEquals(targetContext.getString(R.string.aq_goal_streak_safe_unsent), unsent.label.text.toString())
+        assertTrue(unsent.contentDescription.endsWith(targetContext.getString(R.string.aq_goal_minimum_unsent)))
 
         val any = AnkiquestStreakChip(targetContext).apply { show(Status(100, 0, 0, 0, Mode.OFF, Goal(0))) }
         assertEquals(targetContext.getString(R.string.aq_goal_streak_any), any.label.text.toString())
         assertEquals(targetContext.getString(R.string.aq_goal_minimum_any), any.contentDescription)
 
-        val anyDone = AnkiquestStreakChip(targetContext).apply { show(Status(100, 0, 0, 1, Mode.OFF, Goal(0))) }
+        val anyDone = AnkiquestStreakChip(targetContext).apply { show(Status(100, 0, 0, 1, Mode.OFF, Goal(0), streakDay = day(0, 0))) }
         assertEquals(targetContext.getString(R.string.aq_goal_minimum_any_done), anyDone.contentDescription)
     }
 
@@ -172,7 +198,7 @@ class AnkiquestGoalBarTest : RobolectricTest() {
     fun `the streak chip waits for the server before calling today safe`() {
         val syncing =
             AnkiquestStreakChip(targetContext).apply {
-                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), serverCounts = false))
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = short(9, 10)))
             }
         assertEquals(targetContext.getString(R.string.aq_goal_streak_syncing), syncing.label.text.toString())
         assertEquals(targetContext.getString(R.string.aq_goal_minimum_syncing), syncing.contentDescription)
@@ -180,14 +206,14 @@ class AnkiquestGoalBarTest : RobolectricTest() {
 
         val counted =
             AnkiquestStreakChip(targetContext).apply {
-                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), serverCounts = true))
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = day(12, 10)))
             }
         assertTrue(counted.ring.safe)
 
         val line =
             AnkiquestDeckPickerHooks.showGoal(
                 LinearLayout(targetContext),
-                Status(100, 12, 10, 20, Mode.CARDS, Goal(100), serverCounts = false),
+                Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = short(9, 10)),
             )
         assertFalse(assertNotNull(line).ring.safe, "the deck list says the same as Today")
     }

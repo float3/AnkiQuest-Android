@@ -74,4 +74,6 @@
     <string name="ankiquest_mood_icon_key" translatable="false">ankiquestMoodIcon</string>
     <string name="ankiquest_mood_icon_title" maxLength="41">Aki’s mood on the app icon</string>
     <string name="ankiquest_mood_icon_summary">The icon smiles once today counts, worries late in the day, and shows a freeze when one protects you. Some launchers briefly drop the icon while it changes.</string>
+    <string name="aq_goal_streak_safe_unsent">Streak safe · not uploaded yet</string>
+    <string name="aq_goal_minimum_unsent">Your reviews reach it; AnkiQuest counts them once they are uploaded.</string>
 </resources>

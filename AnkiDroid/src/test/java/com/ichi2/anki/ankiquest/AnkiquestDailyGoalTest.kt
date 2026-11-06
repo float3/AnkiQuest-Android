@@ -116,9 +116,57 @@ class AnkiquestDailyGoalTest {
         val short = AnkiquestDailyGoal.status(Load(5, 8, 6, 30, 0), prefs)
         assertEquals(10, short.streakMinutes)
         assertFalse(short.minimumDone)
-        assertTrue(AnkiquestDailyGoal.status(Load(5, 14, 10, 30, 0), prefs).minimumDone)
-        AnkiquestDailyGoal.remember(JSONObject().put("today", JSONObject()), prefs)
-        assertTrue(AnkiquestDailyGoal.status(Load(5, 1, 0, 30, 0), prefs).minimumDone, "older servers count any review")
+    }
+
+    @Test
+    fun `the streak is secured by the server's verdict, or by unsent reviews the server's way`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+            putString(Ankiquest.PREF_TOKEN, "token")
+        }
+        val now = TimeManager.time.intTimeMS()
+        val server =
+            AnkiquestDay.Server(
+                streak = 4,
+                streakState = "pending",
+                dayEndsAt = now + 3_600_000,
+                lastReviewId = now - 60_000,
+                startsAt = now - 3_600_000,
+                reviews = 3,
+                timeMs = 540_000,
+                streakMinutes = 10,
+            )
+        val short = AnkiquestDailyGoal.status(Load(5, 30, 25, 30, 0, server = server), prefs)
+        assertFalse(short.secured, "the server has 9 of 10 minutes, whatever the collection says")
+        assertTrue(short.syncing)
+        assertEquals(9, short.streakProgress)
+
+        val unsent = listOf(AnkiquestDay.Review(now - 30_000, 60_000))
+        val secured = AnkiquestDailyGoal.status(Load(5, 30, 25, 30, 0, server = server, unsent = unsent), prefs)
+        assertTrue(secured.secured, "the unsent minute reaches the server's minimum by its own rule")
+        assertTrue(secured.awaitingUpload)
+        assertFalse(secured.syncing)
+
+        val confirmed =
+            short.withServerDay(
+                JSONObject()
+                    .put("streak", 5)
+                    .put("streak_state", "studied")
+                    .put("day_ends_at", now + 3_600_000)
+                    .put("last_review_id", now)
+                    .put(
+                        "today",
+                        JSONObject()
+                            .put("starts_at", now - 3_600_000)
+                            .put("reviews", 4)
+                            .put("time_ms", 600_000)
+                            .put("streak_minutes", 10),
+                    ),
+                now,
+            )
+        assertTrue(confirmed.secured)
+        assertFalse(confirmed.awaitingUpload)
     }
 
     @Test

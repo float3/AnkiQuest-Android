@@ -130,6 +130,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
                 studiedCards = 92,
                 mode = AnkiquestDailyGoal.Mode.CARDS,
                 goal = AnkiquestDailyGoal.Goal(140),
+                streakDay = AnkiquestDay.Verdict(true, "studied", 12, 92, 14 * 60_000L, 10, 0, true),
             )
         val decks =
             listOf(

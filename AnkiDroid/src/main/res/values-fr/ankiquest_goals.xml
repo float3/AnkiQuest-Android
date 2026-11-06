@@ -73,4 +73,6 @@
     </plurals>
     <string name="ankiquest_mood_icon_title">L’humeur d’Aki sur l’icône</string>
     <string name="ankiquest_mood_icon_summary">L’icône sourit quand la journée compte, s’inquiète tard le soir et montre une protection quand elle te couvre. Certains lanceurs masquent brièvement l’icône pendant le changement.</string>
+    <string name="aq_goal_streak_safe_unsent">Série assurée · pas encore envoyée</string>
+    <string name="aq_goal_minimum_unsent">AnkiQuest compte tes révisions une fois envoyées.</string>
 </resources>

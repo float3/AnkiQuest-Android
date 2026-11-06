@@ -143,6 +143,8 @@ internal object AnkiquestBoards {
         val conquests: List<Conquest>,
         val records: Map<Period, Best>,
         val closingWeek: ClosingWeek? = null,
+        /** When today ends for the player; the today counts mean nothing after it. 0 from servers that do not say. */
+        val dayEndsAt: Long = 0,
     ) {
         val unlocked: Int get() = achievements.count { it.unlocked != null }
     }
@@ -318,6 +320,7 @@ internal object AnkiquestBoards {
             todayMinutes = today.optLong("minutes"),
             todayXp = today.optLong("xp"),
             streakMinutes = today.optLong("streak_minutes"),
+            dayEndsAt = json.optLong("day_ends_at"),
             lifetimeReviews = lifetime.optLong("reviews"),
             lifetimeHours = lifetime.optLong("hours"),
             bestStreak = lifetime.optLong("best_streak"),

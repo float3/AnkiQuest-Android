@@ -768,37 +768,14 @@ open class AnkiquestWidget : AppWidgetProvider() {
             languageContext: Context,
             entry: JSONObject,
             state: String,
-        ): String =
-            when (state) {
-                "studied" -> languageContext.getString(R.string.ankiquest_streak_studied)
-                "protected" -> languageContext.getString(R.string.ankiquest_streak_protected)
-                "short" ->
-                    languageContext.getString(
-                        R.string.ankiquest_streak_short,
-                        entry.optLong("today_minutes"),
-                        entry.optLong("streak_minutes"),
-                    )
-                "pending" -> languageContext.getString(R.string.ankiquest_streak_pending)
-                else -> languageContext.getString(R.string.ankiquest_streak_unknown)
-            }
+        ): String = AnkiquestDay.words(languageContext, state, entry.optLong("today_minutes"), entry.optLong("streak_minutes"))
 
         /**
-         * studied, protected, short (under the minimum), pending, or unknown when the data is stale or missing.
-         * Servers with a streak minimum say how far today is; older ones count any review.
+         * studied, protected, short (under the minimum), pending, or unknown when the data is stale or missing,
+         * as [AnkiquestDay] judges the row.
          */
-        internal fun streakState(entry: JSONObject): String {
-            val dayEndsAt = entry.optLong("day_ends_at")
-            if (dayEndsAt > 0 && dayEndsAt <= TimeManager.time.intTimeMS()) return "unknown"
-            if (!entry.has("today_reviews") || entry.isNull("today_reviews")) return "unknown"
-            return when {
-                entry.optString("streak_state") == "studied" -> "studied"
-                entry.optLong("today_reviews") > 0 &&
-                    entry.optLong("today_minutes") >= entry.optLong("streak_minutes", 0) -> "studied"
-                entry.optString("streak_state") == "protected" -> "protected"
-                entry.optLong("today_reviews") > 0 -> "short"
-                else -> "pending"
-            }
-        }
+        internal fun streakState(entry: JSONObject): String =
+            AnkiquestDay.label(AnkiquestDay.Server.row(entry), TimeManager.time.intTimeMS())
     }
 }
 

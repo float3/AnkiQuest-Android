@@ -184,17 +184,23 @@ internal class AnkiquestStreakChip
             ): Streak {
                 val minimum = status.streakMinutes
                 return when {
-                    status.secured ->
-                        Streak(
-                            context.getString(R.string.aq_goal_streak_safe),
+                    status.secured -> {
+                        val done =
                             if (minimum > 0) {
                                 context.getString(R.string.aq_goal_minimum_minutes_done, minimum)
                             } else {
                                 context.getString(R.string.aq_goal_minimum_any_done)
-                            },
+                            }
+                        // Safe before the server agrees only when unsent reviews provably reach its minimum, and then says so.
+                        Streak(
+                            context.getString(
+                                if (status.awaitingUpload) R.string.aq_goal_streak_safe_unsent else R.string.aq_goal_streak_safe,
+                            ),
+                            if (status.awaitingUpload) done + " " + context.getString(R.string.aq_goal_minimum_unsent) else done,
                             1f,
                             true,
                         )
+                    }
                     // Only the server's count keeps the streak, so it is not called safe before the server agrees.
                     status.syncing ->
                         Streak(
@@ -204,7 +210,7 @@ internal class AnkiquestStreakChip
                             false,
                         )
                     minimum > 0 -> {
-                        val minutes = status.minutes.coerceIn(0, minimum)
+                        val minutes = status.streakProgress.coerceIn(0, minimum)
                         Streak(
                             context.getString(R.string.aq_goal_streak_minutes, minutes, minimum),
                             context.getString(R.string.aq_goal_minimum_minutes, minimum) + ". " +
