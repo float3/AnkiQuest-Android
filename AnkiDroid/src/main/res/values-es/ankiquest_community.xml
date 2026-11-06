@@ -88,6 +88,10 @@
     <string name="aq_conquest_label_explanation">Lo verá cualquiera que pueda abrir esta tarjeta, y también los amigos a los que se lo cuentes. Puedes retirarlo más tarde.</string>
     <string name="aq_conquest_label_save">Mostrarlo en la tarjeta</string>
     <string name="aq_conquest_label_remove">Dejar de mostrar la tarjeta</string>
+    <string name="aq_conquest_untelling">Retirándolo…</string>
+    <string name="aq_conquest_untold">Retirado para los amigos que aún no lo habían visto.</string>
+    <string name="aq_conquest_untell_late">Ya es tarde para retirarlo.</string>
+    <string name="aq_conquest_label_refresh">Mostrar «%1$s» en su lugar</string>
     <string name="aq_conquest_action_failed">No ha funcionado. Revisa tu conexión y vuelve a intentarlo.</string>
     <string name="aq_conquest_label_shown">Su dueño eligió mostrar qué tarjeta era.</string>
     <string name="aq_conquest_numbers_only">Solo se comparten estos números, nunca la tarjeta.</string>

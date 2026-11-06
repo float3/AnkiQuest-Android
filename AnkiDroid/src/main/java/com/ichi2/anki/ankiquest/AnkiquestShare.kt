@@ -208,13 +208,50 @@ internal object AnkiquestShare {
     fun conqueredAt(key: String?): Long? = key?.removePrefix("conquered:")?.takeIf { it != key }?.toLongOrNull()
 
     /**
-     * A card's first field as one line of plain text, at most [MAX_LABEL] characters, to offer as the
-     * conquered card's label. Sounds and markup are dropped, as the desktop add-on does.
+     * A card's text as one line of plain text, at most [MAX_LABEL] characters, to offer as the
+     * conquered card's label. Sounds, pictures, styles, scripts and markup are dropped, and cloze
+     * deletions show their text.
      */
     fun cardLabel(field: String): String {
-        val text = field.replace(Regex("""\[sound:[^\]]*\]"""), " ").replace(Regex("<[^>]*>"), " ")
+        val text =
+            field
+                .replace(HIDDEN, " ")
+                .replace(SOUND, " ")
+                .replace(CLOZE) { it.groupValues[1] }
+                .replace(Regex("<[^>]*>"), " ")
         return oneLine(HtmlCompat.fromHtml(text.replace("<", "&lt;"), HtmlCompat.FROM_HTML_MODE_LEGACY).toString())
     }
+
+    /**
+     * What to offer as a conquered card's label: the card's front as it shows it ([question], the
+     * rendered front, or for a cloze note the text with its deletions shown), else the first of
+     * its [fields] that is not an id such as `B1L02` or `00412`, else the first field even so.
+     * Null when there is no text at all.
+     */
+    fun suggestedLabel(
+        question: String,
+        fields: List<String>,
+        cloze: Boolean,
+    ): String? {
+        val front = if (cloze) fields.firstOrNull { CLOZE.containsMatchIn(it) }.orEmpty() else question
+        return sequenceOf(front)
+            .plus(fields)
+            .map(::cardLabel)
+            .firstOrNull { it.isNotEmpty() && !looksLikeId(it) }
+            ?: legacyLabel(fields)
+    }
+
+    /** The label an earlier version offered: the first field, whatever it holds. */
+    fun legacyLabel(fields: List<String>): String? = cardLabel(fields.firstOrNull().orEmpty()).ifEmpty { null }
+
+    /** Whether [text] reads as a note's id or code rather than a word: `B1L02`, `0042`, `ID-17`, `2024-05-01`. */
+    fun looksLikeId(text: String): Boolean = ID.matches(text) || (HEX_ID.matches(text) && text.any(Char::isDigit))
+
+    private val HIDDEN = Regex("""(?is)<(style|script)\b[^>]*>.*?</\1\s*>|<!--.*?-->""")
+    private val SOUND = Regex("""\[(?:sound|anki:play):[^\]]*\]""")
+    private val CLOZE = Regex("""\{\{c\d+::(.*?)(?:::[^}]*)?\}\}""", RegexOption.DOT_MATCHES_ALL)
+    private val ID = Regex("""[A-Za-z]{0,4}[-_.#]?\d+(?:[-_.:/]?[A-Za-z]{0,2}\d+)*[A-Za-z]?""")
+    private val HEX_ID = Regex("""[0-9A-Fa-f]{8,}(?:-[0-9A-Fa-f]{4,})*""")
 
     /** The label to share: the player's [text] as one line, only when they chose to [include] the card and wrote something. */
     fun chosenLabel(
@@ -230,21 +267,36 @@ internal object AnkiquestShare {
             .joinToString(" ")
             .take(MAX_LABEL)
 
-    /** What the card answered at review [at] says on its front, for the player to choose to share; null when it is gone. */
-    suspend fun conqueredCardText(at: Long): String? =
+    /** What the card answered at review [at] says on its front ([suggestedLabel]), for the player to choose to share; null when it is gone. */
+    suspend fun conqueredCardText(at: Long): String? = conqueredCardLabels(at)?.suggested
+
+    /** The label [suggestedLabel] offers for a card, and the one earlier versions offered and may have saved. */
+    data class Labels(
+        val suggested: String?,
+        val legacy: String?,
+    ) {
+        /** [suggested], when a label saved as [legacy] would read better as it. */
+        fun better(saved: String?): String? = suggested?.takeIf { saved != null && saved == legacy && it != legacy }
+    }
+
+    /** [Labels] for the card answered at review [at]; null when it is gone. */
+    suspend fun conqueredCardLabels(at: Long): Labels? =
         try {
             CollectionManager.withCol {
                 val cid = db.queryLongScalar("select cid from revlog where id = ?", at)
                 if (cid == 0L) {
                     null
                 } else {
-                    cardLabel(
-                        getCard(cid)
-                            .note(this)
-                            .fields
-                            .firstOrNull()
-                            .orEmpty(),
-                    ).ifEmpty { null }
+                    val card = getCard(cid)
+                    val note = card.note(this)
+                    val question =
+                        try {
+                            card.question(this)
+                        } catch (e: Exception) {
+                            Timber.w(e, "ankiquest conquered card front cannot be rendered")
+                            ""
+                        }
+                    Labels(suggestedLabel(question, note.fields, note.notetype.isCloze), legacyLabel(note.fields))
                 }
             }
         } catch (e: CancellationException) {
