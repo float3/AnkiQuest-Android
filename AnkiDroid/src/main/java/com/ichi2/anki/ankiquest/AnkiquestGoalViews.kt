@@ -184,7 +184,7 @@ internal class AnkiquestStreakChip
             ): Streak {
                 val minimum = status.streakMinutes
                 return when {
-                    status.minimumDone ->
+                    status.secured ->
                         Streak(
                             context.getString(R.string.aq_goal_streak_safe),
                             if (minimum > 0) {
@@ -194,6 +194,14 @@ internal class AnkiquestStreakChip
                             },
                             1f,
                             true,
+                        )
+                    // Only the server's count keeps the streak, so it is not called safe before the server agrees.
+                    status.syncing ->
+                        Streak(
+                            context.getString(R.string.aq_goal_streak_syncing),
+                            context.getString(R.string.aq_goal_minimum_syncing),
+                            1f,
+                            false,
                         )
                     minimum > 0 -> {
                         val minutes = status.minutes.coerceIn(0, minimum)

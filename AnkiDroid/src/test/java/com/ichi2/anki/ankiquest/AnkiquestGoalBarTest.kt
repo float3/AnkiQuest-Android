@@ -169,6 +169,30 @@ class AnkiquestGoalBarTest : RobolectricTest() {
     }
 
     @Test
+    fun `the streak chip waits for the server before calling today safe`() {
+        val syncing =
+            AnkiquestStreakChip(targetContext).apply {
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), serverCounts = false))
+            }
+        assertEquals(targetContext.getString(R.string.aq_goal_streak_syncing), syncing.label.text.toString())
+        assertEquals(targetContext.getString(R.string.aq_goal_minimum_syncing), syncing.contentDescription)
+        assertFalse(syncing.ring.safe)
+
+        val counted =
+            AnkiquestStreakChip(targetContext).apply {
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), serverCounts = true))
+            }
+        assertTrue(counted.ring.safe)
+
+        val line =
+            AnkiquestDeckPickerHooks.showGoal(
+                LinearLayout(targetContext),
+                Status(100, 12, 10, 20, Mode.CARDS, Goal(100), serverCounts = false),
+            )
+        assertFalse(assertNotNull(line).ring.safe, "the deck list says the same as Today")
+    }
+
+    @Test
     fun `the deck list shows a tappable goal line and hides it without a goal`() {
         animatorScale(0f)
         val parent = LinearLayout(targetContext).apply { addView(LinearLayout(targetContext)) }

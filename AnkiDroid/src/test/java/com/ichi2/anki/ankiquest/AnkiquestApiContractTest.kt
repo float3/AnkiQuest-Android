@@ -152,10 +152,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `an upload answers the profile after reading which decks are shared`() =
         runBlocking {
-            assertEquals(
-                targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L),
-                Ankiquest.runFromSettings(targetContext, uploadAll = true),
-            )
+            val message = Ankiquest.runFromSettings(targetContext, uploadAll = true)
+            assertTrue(message.endsWith(targetContext.getString(R.string.ankiquest_check_ok, "Hill", 2, 101L, 5L)), message)
             assertTrue("GET /api/decks/hill" in requests)
             assertTrue("POST /api/reviews/hill" in requests)
             assertNull(Ankiquest.feedback(JSONObject(example("upload")).optJSONObject("feedback"), showFeedback = true))

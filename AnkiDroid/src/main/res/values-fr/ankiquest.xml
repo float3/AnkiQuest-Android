@@ -128,4 +128,12 @@
     <string name="ankiquest_streak_protected">Série protégée · Pas encore étudié</string>
     <string name="ankiquest_streak_unknown">Actualise pour voir l’état des études aujourd’hui</string>
     <string name="ankiquest_streak_description">Série de %1$s jours · %2$s</string>
+    <string name="ankiquest_upload_all_title">Envoyer toutes les révisions</string>
+    <string name="ankiquest_upload_all_summary">Renvoie tout l’historique des révisions. Le serveur garde un seul exemplaire de chaque révision.</string>
+    <string name="ankiquest_upload_all_progress">Envoi… %1$d sur %2$d révisions</string>
+    <string name="ankiquest_upload_all_busy">Tes révisions sont déjà en cours d’envoi.</string>
+    <plurals name="ankiquest_upload_all_done">
+        <item quantity="one">%d révision envoyée.</item>
+        <item quantity="other">%d révisions envoyées.</item>
+    </plurals>
 </resources>

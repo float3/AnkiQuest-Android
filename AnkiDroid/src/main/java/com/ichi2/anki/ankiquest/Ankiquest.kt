@@ -60,13 +60,19 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private const val PREF_MARK = "ankiquestUploadedThrough"
     private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
+    private const val PREF_RESYNCED_AT = "ankiquestResyncedAt"
     const val NUDGES = "nudges"
     const val CELEBRATIONS = "celebrations"
 
     private const val MAX_PENDING = 5000
+
+    /** Undoing answers removes a few at a time; more than this many gone at once is never sent as deleted. */
+    @VisibleForTesting
+    internal const val MAX_DELETED = 100
     private const val BASELINE_MAX_AGE_MS = 10 * 60 * 1000L
     private const val RESUME_UPLOAD_INTERVAL_MS = 60 * 1000L
     private const val RESYNC_WINDOW_MS = 7 * 24 * 60 * 60 * 1000L
+    private const val DAILY_RESYNC_MS = 24 * 60 * 60 * 1000L
     private const val UNDO_WINDOW_MS = 2 * 24 * 60 * 60 * 1000L
     private const val BANNER_MS = 1800L
     private const val BANNER_LONG_MS = 3500L
@@ -76,6 +82,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
+    private val uploadAllRunning = AtomicBoolean(false)
 
     private var app: Application? = null
     private var activity = WeakReference<Activity>(null)
@@ -421,6 +428,33 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         refresh(background = true)
     }
 
+    /**
+     * After an AnkiWeb sync, sends again the last week of reviews, so rows that arrived with ids older
+     * than the upload mark (answered on another device, or restored by a full download) reach the
+     * server. The server keeps one copy of each review, so rows it already has change nothing.
+     */
+    internal suspend fun uploadAfterSync() {
+        if (HomeAccount.current()?.token.isNullOrEmpty() || !collectionAvailable()) return
+        if (!refreshes.offer(showFeedback = false, resync = true)) return
+        refresh(background = true)
+    }
+
+    /** [uploadAfterSync] without waiting for it, for a sync that finished on screen. */
+    fun onCollectionSynced() {
+        scope.launch { uploadAfterSync() }
+    }
+
+    /**
+     * Whether a resume should resend the last week: at most once a day per account, so opening the
+     * app catches up on anything a sync brought in without sending the week on every resume.
+     */
+    @VisibleForTesting
+    internal fun resyncDue(now: Long): Boolean {
+        val account = HomeAccount.current()?.takeIf { it.token.isNotEmpty() } ?: return false
+        val last = AnkiDroidApp.sharedPrefs().getLong(resyncedKey(account.notificationAccount), 0L)
+        return now - last !in 0 until DAILY_RESYNC_MS
+    }
+
     private suspend fun collectionAvailable(): Boolean =
         try {
             CollectionManager.tryWithCol { } != null
@@ -581,12 +615,19 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      * Uploads reviews after the account's mark in batches the server accepts. Only the final batch
      * carries deck progress, and connection tests never do. Sharing is fetched for the captured
      * account on every upload, so changed or revoked sharing is respected.
+     *
+     * A [resync] starts a week before the mark (or before now, should the mark lie ahead of the
+     * clock) and [everything] at the first review, for rows that reached the collection with ids
+     * below the mark. Neither moves the mark back; the server keeps one copy of each review.
+     * [progress] hears how many of the reviews to send went out after each batch.
      */
     private suspend fun upload(
         owner: HomeAccount,
         resync: Boolean,
         onlyTest: Boolean = false,
         catalog: Boolean = false,
+        everything: Boolean = false,
+        progress: ((sent: Int, total: Int) -> Unit)? = null,
     ): JSONObject {
         val prefs = AnkiDroidApp.sharedPrefs()
         val account = owner.notificationAccount
@@ -595,18 +636,27 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val mark = prefs.getLong(markKey, 0L)
         val initialSyncKey = initialSyncKey(account)
         val initialSyncDone = prefs.contains(markKey) && prefs.getBoolean(initialSyncKey, false)
-        var known = if (resync) maxOf(0L, mark - RESYNC_WINDOW_MS) else mark
+        val startedAt = TimeManager.time.intTimeMS()
+        var known =
+            when {
+                everything -> 0L
+                resync -> maxOf(0L, minOf(mark, startedAt) - RESYNC_WINDOW_MS)
+                else -> mark
+            }
         val clock = clock()
         val stamps = AnkiquestReviewOffsets.read(prefs)
 
-        val windowStart = TimeManager.time.intTimeMS() - UNDO_WINDOW_MS
+        val windowStart = startedAt - UNDO_WINDOW_MS
         val recent = recentUploads(prefs, recentKey(account), windowStart)
         val window = if (onlyTest) emptyList() else pendingReviews(windowStart).objects()
         val present = window.map { it.getLong("id") }
         val reconciled = AnkiquestCompletionPolicy.reconcile(present, recent, known, if (onlyTest) 0L else mark)
         val restoredIds = reconciled.restored.toSet()
         val restored = window.filter { it.getLong("id") in restoredIds }
+        val deleted = gone(reconciled.deleted)
 
+        val total = if (progress == null) 0 else countReviews(known) + restored.size
+        var sent = 0
         var profile: JSONObject
         var first = true
         do {
@@ -617,10 +667,13 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             val body =
                 JSONObject()
                     .put("clock", clock)
-                    .put("silent", catalog || AnkiquestCompletionPolicy.silentUpload(mark, initialSyncDone, full, onlyTest))
+                    .put(
+                        "silent",
+                        catalog || everything || AnkiquestCompletionPolicy.silentUpload(mark, initialSyncDone, full, onlyTest),
+                    )
             if (first) {
                 restored.forEach { batch.put(it) }
-                body.put("deleted", JSONArray(reconciled.deleted))
+                body.put("deleted", JSONArray(deleted))
             }
             body.put("reviews", AnkiquestReviewOffsets.stamp(batch, stamps))
             if (!full && !onlyTest) {
@@ -648,12 +701,15 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .build()
             profile = AnkiquestApi.call(owner, request, recheck = false) { AnkiquestApi.jsonObject(it) }
             if (!onlyTest) prefs.edit { putLong(markKey, maxOf(known, mark)) }
+            sent += batch.length()
+            progress?.invoke(sent, maxOf(sent, total))
             first = false
         } while (full)
         if (!onlyTest) {
             prefs.edit {
                 putString(recentKey(account), present.joinToString(","))
                 putBoolean(initialSyncKey, true)
+                if (resync || everything) putLong(resyncedKey(account), startedAt)
             }
             AnkiquestReviewOffsets.prune(prefs, prefs.getLong(markKey, 0L), TimeManager.time.intTimeMS())
         }
@@ -665,6 +721,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private fun recentKey(account: String) = "$PREF_RECENT:$account"
 
     private fun initialSyncKey(account: String) = "$INITIAL_SYNC_KEY:$account"
+
+    private fun resyncedKey(account: String) = "$PREF_RESYNCED_AT:$account"
 
     /**
      * Gives the upload mark that older versions kept for every account to the [account] it belongs to.
@@ -771,6 +829,34 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             rows
         }
 
+    /**
+     * The ids among [candidates] that are really gone from the collection, so the server may forget them:
+     * an id still in the revlog is never deleted, whatever the window comparison says. More than
+     * [MAX_DELETED] at once is not an undo but the collection changing under us, so then none are.
+     */
+    @VisibleForTesting
+    internal suspend fun gone(candidates: List<Long>): List<Long> {
+        if (candidates.isEmpty()) return candidates
+        val still =
+            CollectionManager.withCol {
+                candidates.chunked(500).flatMapTo(HashSet()) { chunk ->
+                    db.queryLongList("select id from revlog where id in (${chunk.joinToString(",")})")
+                }
+            }
+        val gone = candidates.filter { it !in still }
+        if (still.isNotEmpty()) Timber.w("ankiquest kept %d reviews the upload window missed", still.size)
+        if (gone.size > MAX_DELETED) {
+            Timber.w("ankiquest suppressed deleting %d reviews in one upload", gone.size)
+            return emptyList()
+        }
+        return gone
+    }
+
+    private suspend fun countReviews(afterId: Long): Int =
+        CollectionManager.withCol {
+            db.queryScalar("select count() from revlog where id > ? and ease > 0 and type < 4", afterId)
+        }
+
     private suspend fun deckSnapshots(clock: JSONObject): JSONArray =
         CollectionManager.withCol {
             val now = TimeManager.time.intTimeMS()
@@ -794,36 +880,49 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private fun dashboardOf(account: HomeAccount): String = "${account.server}/#${account.encodedUser}"
 
     /**
-     * Runs a connection test, or with [uploadAll] resends every review, for the settings screen.
+     * Runs a connection test, or with [uploadAll] resends every review in batches, for the settings
+     * screen. Only one upload of everything runs at a time; [progress] hears how far it got.
      *
      * @return a message describing the outcome, never throws
      */
     suspend fun runFromSettings(
         context: Context,
         uploadAll: Boolean,
-    ): String = withContext(Dispatchers.IO) { settingsAction(context, uploadAll) }
+        progress: ((sent: Int, total: Int) -> Unit)? = null,
+    ): String =
+        withContext(Dispatchers.IO) {
+            if (!uploadAll) return@withContext settingsAction(context, false, null)
+            if (!uploadAllRunning.compareAndSet(false, true)) return@withContext context.getString(R.string.ankiquest_upload_all_busy)
+            try {
+                settingsAction(context, true, progress)
+            } finally {
+                uploadAllRunning.set(false)
+            }
+        }
+
+    /** Whether the whole history is being uploaded right now. */
+    fun uploadingAll(): Boolean = uploadAllRunning.get()
 
     private suspend fun settingsAction(
         context: Context,
         uploadAll: Boolean,
+        progress: ((sent: Int, total: Int) -> Unit)?,
     ): String {
         val account = HomeAccount.current() ?: return unconfigured(context)
         val url = account.server
         val token = account.token
 
+        var sent = 0
         return try {
             mutex.withLock {
                 val profile =
                     if (token.isEmpty()) {
                         AnkiquestApi.json(account, AnkiquestApi.request(account, "api/profile/${account.encodedUser}").build())
                     } else {
-                        if (uploadAll) {
-                            AnkiDroidApp.sharedPrefs().edit {
-                                remove(markKey(account.notificationAccount))
-                                remove(initialSyncKey(account.notificationAccount))
-                            }
+                        upload(account, resync = false, onlyTest = !uploadAll, everything = uploadAll) { done, total ->
+                            sent = done
+                            progress?.invoke(done, total)
                         }
-                        upload(account, resync = false, onlyTest = !uploadAll)
                     }
                 present(profile, showFeedback = false)
                 val lifetime = profile.getJSONObject("lifetime")
@@ -835,7 +934,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                         profile.getLong("xp_total"),
                         lifetime.getLong("reviews"),
                     )
-                if (token.isEmpty()) summary + "\n\n" + context.getString(R.string.ankiquest_check_no_token) else summary
+                when {
+                    token.isEmpty() -> summary + "\n\n" + context.getString(R.string.ankiquest_check_no_token)
+                    uploadAll -> context.resources.getQuantityString(R.plurals.ankiquest_upload_all_done, sent, sent) + "\n\n" + summary
+                    else -> summary
+                }
             }
         } catch (e: AnkiquestHttpException) {
             when (e.code) {
@@ -935,7 +1038,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val now = TimeManager.time.intTimeMS()
         if (now - resumeUploadAt > RESUME_UPLOAD_INTERVAL_MS) {
             resumeUploadAt = now
-            launchRefresh(showFeedback = false, resync = true)
+            launchRefresh(showFeedback = false, resync = resyncDue(now))
         } else {
             // Without an upload, the icon still catches up with the clock, as when the last hours of the day begin.
             val context = activity.applicationContext
