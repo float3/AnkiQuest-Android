@@ -46,6 +46,8 @@ class ReviewHeatmapGrid
         private val outlineColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, 0)
         private val selectedColor = MaterialColors.getColor(context, androidx.appcompat.R.attr.colorPrimary, 0)
         private val protectedColor = ContextCompat.getColor(context, R.color.review_heatmap_protected)
+        private val frozenColor = ContextCompat.getColor(context, R.color.review_heatmap_frozen)
+        private val shortColor = ContextCompat.getColor(context, R.color.review_heatmap_short)
         private val reviewColors =
             intArrayOf(
                 R.color.review_heatmap_empty,
@@ -138,7 +140,15 @@ class ReviewHeatmapGrid
                 val future = date > currentData.today
                 val count = (if (future) currentData.scheduled else currentData.reviews)[date] ?: 0
                 cellPaint.style = Paint.Style.FILL
-                cellPaint.color = (if (future) forecastColors else reviewColors)[intensity(count, currentData.dailyAverage)]
+                // AnkiQuest's verdict colours the days it judged: only a day that met the streak
+                // minimum looks studied, and a frozen day looks frozen even with reviews.
+                cellPaint.color =
+                    when (if (future) null else currentData.verdicts[date]?.state) {
+                        DayState.SHORT -> shortColor
+                        DayState.FROZEN, DayState.SKIPPED -> frozenColor
+                        DayState.NONE -> reviewColors[0]
+                        else -> (if (future) forecastColors else reviewColors)[intensity(count, currentData.dailyAverage)]
+                    }
                 cellPaint.alpha = if (date > currentData.forecastEndDate) 70 else 255
                 canvas.drawRoundRect(bounds, 3 * density, 3 * density, cellPaint)
                 cellPaint.alpha = 255
@@ -373,6 +383,15 @@ internal fun ReviewHeatmapData.dayCountDescription(
         date > forecastEndDate -> context.getString(R.string.review_heatmap_forecast_unavailable)
         date > today -> due()
         date in protectedDays -> context.getString(R.string.review_heatmap_protected_day, reviews())
+        verdicts[date]?.state == DayState.SHORT ->
+            verdicts.getValue(date).let { verdict ->
+                context.getString(
+                    if (date == today) R.string.review_heatmap_short_today else R.string.review_heatmap_short_day,
+                    reviews(),
+                    number.format(verdict.minutes.coerceAtMost(verdict.streakMinutes)),
+                    number.format(verdict.streakMinutes),
+                )
+            }
         else -> reviews()
     }
 }

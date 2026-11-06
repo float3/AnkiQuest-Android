@@ -98,10 +98,12 @@ class ReviewHeatmapDataTest {
         reviews: Map<LocalDate, Int>,
         protectedDays: Set<LocalDate> = emptySet(),
         uploadedUntil: LocalDate = today,
+        verdicts: Map<LocalDate, DayVerdict> = emptyMap(),
     ) = ReviewHeatmap.ServerDays(
         reviews,
         protectedDays,
         uploadedUntil.atTime(12, 0).atZone(ZoneId.of("UTC")).toInstant(),
+        verdicts,
     )
 
     private fun withServer(
@@ -161,8 +163,8 @@ class ReviewHeatmapDataTest {
     }
 
     @Test
-    fun `a protected day after a gap starts nothing, and a studied or future day is not protected`() {
-        val reviews = mapOf(today.minusDays(1) to 5)
+    fun `a protected day starts nothing, reviews on it do not count, and today is not protected`() {
+        val reviews = mapOf(today.minusDays(1) to 5, today.minusDays(2) to 5)
         val data =
             ReviewHeatmap.summarize(
                 today,
@@ -170,9 +172,11 @@ class ReviewHeatmapDataTest {
                 emptyMap(),
                 setOf(today.minusDays(5), today.minusDays(1), today),
             )
+        // The server freezes only days that did not count, so a frozen day's reviews were short of the minimum.
         assertEquals(1, data.currentStreak)
         assertEquals(1, data.longestStreak)
-        assertEquals(setOf(today.minusDays(5)), data.protectedDays)
+        assertEquals(setOf(today.minusDays(5), today.minusDays(1)), data.protectedDays)
+        assertEquals(2, data.daysStudied)
     }
 
     @Test
@@ -192,5 +196,67 @@ class ReviewHeatmapDataTest {
         assertEquals(setOf(LocalDate.of(2026, 10, 28)), days.protectedDays)
         assertEquals(1793270000000L, days.uploadedUntil?.toEpochMilli())
         assertTrue(ReviewHeatmap.serverDays(JSONObject("{}")).reviews.isEmpty())
+    }
+
+    @Test
+    fun `a frozen day with reviews keeps the streak as frozen and does not lengthen it`() {
+        val frozen = today.minusDays(2)
+        val reviews = mapOf(today.minusDays(1) to 40, frozen to 3, today.minusDays(3) to 40)
+        val verdicts =
+            mapOf(
+                today.minusDays(3) to DayVerdict(DayState.MET, 12, 10),
+                frozen to DayVerdict(DayState.FROZEN, 1, 10),
+                today.minusDays(1) to DayVerdict(DayState.MET, 11, 10),
+                today to DayVerdict(DayState.NONE, 0, 10),
+            )
+        val data = withServer(ReviewHeatmap.summarize(today, reviews, emptyMap()), server(reviews, setOf(frozen), verdicts = verdicts))
+        assertEquals(setOf(frozen), data.protectedDays, "the freeze is shown although the day had reviews")
+        assertEquals(2, data.currentStreak, "the frozen day keeps the streak without adding to it")
+        assertEquals(2, data.longestStreak)
+        assertEquals(DayState.FROZEN, data.verdicts[frozen]?.state)
+    }
+
+    @Test
+    fun `a day short of the minimum breaks the streak although it had reviews, and today stays open`() {
+        val short = today.minusDays(2)
+        val reviews = mapOf(today to 2, today.minusDays(1) to 30, short to 4, today.minusDays(3) to 30)
+        val verdicts =
+            mapOf(
+                today.minusDays(3) to DayVerdict(DayState.MET, 10, 10),
+                short to DayVerdict(DayState.SHORT, 3, 10),
+                today.minusDays(1) to DayVerdict(DayState.MET, 15, 10),
+                today to DayVerdict(DayState.SHORT, 1, 10),
+            )
+        val data = withServer(ReviewHeatmap.summarize(today, reviews, emptyMap()), server(reviews, verdicts = verdicts))
+        assertEquals(1, data.currentStreak, "only yesterday counts: the short day broke the run and today is open")
+        assertEquals(1, data.longestStreak)
+        assertEquals(4, data.daysStudied, "short days are still study days")
+        assertTrue(data.protectedDays.isEmpty())
+    }
+
+    @Test
+    fun `the profile's heatmap gives the server's verdict on each day`() {
+        val profile =
+            JSONObject(
+                """
+                {"heatmap": [
+                  {"date": "2026-10-27", "reviews": 120, "minutes": 31, "streak_minutes": 10, "xp": 300, "frozen": false, "state": "met"},
+                  {"date": "2026-10-28", "reviews": 2, "minutes": 1, "streak_minutes": 10, "xp": 9, "frozen": true, "state": "frozen"},
+                  {"date": "2026-10-29", "reviews": 3, "minutes": 2, "streak_minutes": 10, "xp": 12, "frozen": false, "state": "short"},
+                  {"date": "2026-10-30", "reviews": 0, "xp": 0, "frozen": false}
+                ]}
+                """,
+            )
+        val days = ReviewHeatmap.serverDays(profile)
+        assertEquals(
+            mapOf(
+                LocalDate.of(2026, 10, 27) to DayVerdict(DayState.MET, 31, 10),
+                LocalDate.of(2026, 10, 28) to DayVerdict(DayState.FROZEN, 1, 10),
+                LocalDate.of(2026, 10, 29) to DayVerdict(DayState.SHORT, 2, 10),
+            ),
+            days.verdicts,
+            "a cell without a state, from an older server, has no verdict",
+        )
+        assertEquals(setOf(LocalDate.of(2026, 10, 28)), days.protectedDays)
     }
 }

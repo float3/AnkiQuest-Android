@@ -11,4 +11,6 @@
     <color name="review_heatmap_forecast_three">#8997A7</color>
     <color name="review_heatmap_forecast_four">#BAC4CF</color>
     <color name="review_heatmap_protected">#7DB8EC</color>
+    <color name="review_heatmap_frozen">#1F4A70</color>
+    <color name="review_heatmap_short">#5E5132</color>
 </resources>
