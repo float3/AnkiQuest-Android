@@ -127,4 +127,12 @@
     <string name="ankiquest_streak_protected">Racha protegida · Aún no ha estudiado</string>
     <string name="ankiquest_streak_unknown">Actualiza para ver si ha estudiado hoy</string>
     <string name="ankiquest_streak_description">Racha de %1$s días · %2$s</string>
+    <string name="ankiquest_upload_all_title">Subir todos los repasos ahora</string>
+    <string name="ankiquest_upload_all_summary">Envía de nuevo todo tu historial de repasos. El servidor guarda una sola copia de cada repaso.</string>
+    <string name="ankiquest_upload_all_progress">Subiendo… %1$d de %2$d repasos</string>
+    <string name="ankiquest_upload_all_busy">Tus repasos ya se están subiendo.</string>
+    <plurals name="ankiquest_upload_all_done">
+        <item quantity="one">Se envió %d repaso.</item>
+        <item quantity="other">Se enviaron %d repasos.</item>
+    </plurals>
 </resources>

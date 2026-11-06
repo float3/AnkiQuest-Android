@@ -25,6 +25,7 @@ import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestMoments.Kind
 import com.ichi2.anki.ankiquest.AnkiquestMoments.Moment
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +37,8 @@ import timber.log.Timber
 /**
  * The one card every moment gets: Aki in a pose for the moment (or the server's picture of it, once
  * it has one), a title, one line of detail and the date, with Share and, until friends were told,
- * Tell friends. Several moments fold into one card that swipes through them, "and N more" below.
+ * Tell friends. A conquered card's telling can be undone while the server allows it. Several
+ * moments fold into one card that swipes through them, "and N more" below.
  */
 internal object AnkiquestMomentCard {
     private const val ART_DP = 128
@@ -118,6 +120,8 @@ internal object AnkiquestMomentCard {
         val told: Boolean,
         val image: String?,
         val win: Long?,
+        /** Whether telling friends about a conquered card can still be taken back. */
+        val undoable: Boolean = false,
     )
 
     private class Pages(
@@ -129,6 +133,9 @@ internal object AnkiquestMomentCard {
         private val extras = mutableMapOf<String, Extras>()
         private val pictures = mutableMapOf<String, Bitmap>()
         private val told = mutableSetOf<String>()
+
+        /** Conquered cards whose telling friends can still be taken back. */
+        private val undoable = mutableSetOf<String>()
 
         override fun getItemCount() = moments.size
 
@@ -160,8 +167,10 @@ internal object AnkiquestMomentCard {
                 moment.conquest?.let { host.startActivity(AnkiquestConquestActivity.intent(host, account.user, it)) }
             }
             val known = extras[moment.key]
-            holder.tell.isVisible = tellable(moment) && moment.key !in told && known?.told != true
-            holder.tell.setOnClickListener { tell(moment, position) }
+            val undo = moment.key in undoable
+            holder.tell.isVisible = tellable(moment) && (undo || (moment.key !in told && known?.told != true))
+            holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
+            holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
             holder.share.setOnClickListener { share(moment) }
             if (known == null) load(moment, position)
         }
@@ -185,6 +194,7 @@ internal object AnkiquestMomentCard {
                         null
                     } ?: return@launch
                 extras[moment.key] = found
+                if (found.undoable) undoable += moment.key
                 found.image?.let { url -> withContext(Dispatchers.IO) { AnkiquestShare.picture(url) } }?.let { pictures[moment.key] = it }
                 if (!host.isFinishing && !host.isDestroyed) notifyItemChanged(position)
             }
@@ -193,15 +203,17 @@ internal object AnkiquestMomentCard {
         private suspend fun fetch(moment: Moment): Extras {
             var told = false
             var win = moment.win
+            var undo = false
             moment.conquest?.let { at ->
                 val conquest = AnkiquestCommunity.conquest(account, account.user, at)
                 told = conquest.told == true
                 win = win ?: conquest.win
+                undo = conquest.undoable(TimeManager.time.intTimeMS())
             }
             val listed = win?.let { AnkiquestSharing.win(account, it) }
             if (listed?.optBoolean("shared_with_friends") == true) told = true
             val image = listed?.optJSONObject("link")?.optString("image")?.ifEmpty { null }
-            return Extras(told, image, win)
+            return Extras(told, image, win, undo)
         }
 
         private fun current(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.scope == account.scope && it.token.isNotEmpty() }
@@ -223,6 +235,7 @@ internal object AnkiquestMomentCard {
                                 else -> Ankiquest.shareWin(moment.notification, moment.place, signedIn.scope)
                             }
                         told += moment.key
+                        if (moment.conquest != null) undoable += moment.key
                         notifyItemChanged(position)
                         if (friends == 0) {
                             host.getString(R.string.ankiquest_share_nobody)
@@ -237,6 +250,43 @@ internal object AnkiquestMomentCard {
                         Timber.w(e, "AnkiQuest moment: telling friends failed")
                         host.getString(R.string.ankiquest_share_failed)
                     }
+                showThemedToast(host, message, shortLength = false)
+            }
+        }
+
+        /** Takes back telling friends about a conquered card, from those who have not read it yet. */
+        private fun untell(
+            moment: Moment,
+            position: Int,
+        ) {
+            val scope = scope ?: return
+            val at = moment.conquest ?: return
+            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            scope.launch {
+                val message =
+                    try {
+                        AnkiquestCommunity.untell(signedIn, at)
+                        told -= moment.key
+                        undoable -= moment.key
+                        extras[moment.key]?.let { extras[moment.key] = it.copy(told = false, undoable = false) }
+                        host.getString(R.string.aq_conquest_untold)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: AnkiquestHttpException) {
+                        Timber.w(e, "AnkiQuest moment: taking back telling friends refused")
+                        if (e.code == 409) {
+                            undoable -= moment.key
+                            host.getString(R.string.aq_conquest_untell_late)
+                        } else {
+                            host.getString(R.string.ankiquest_share_failed)
+                        }
+                    } catch (_: HomeAccountChanged) {
+                        host.getString(R.string.ankiquest_share_account_changed)
+                    } catch (e: Exception) {
+                        Timber.w(e, "AnkiQuest moment: taking back telling friends failed")
+                        host.getString(R.string.ankiquest_share_failed)
+                    }
+                if (!host.isFinishing && !host.isDestroyed) notifyItemChanged(position)
                 showThemedToast(host, message, shortLength = false)
             }
         }

@@ -256,8 +256,13 @@ internal object AnkiquestCommunity {
         val friends: Int?,
         /** The owner's win for it, whose card they can share; null until the server keeps one, and for anyone else. */
         val win: Long? = null,
+        /** For the owner, while telling friends can still be taken back (Unix ms); null otherwise. */
+        val undoUntil: Long? = null,
     ) {
         val mine: Boolean get() = told != null
+
+        /** Whether its owner can still take back telling friends at [now] (Unix ms). */
+        fun undoable(now: Long): Boolean = told == true && (undoUntil ?: 0L) > now
 
         /** How long it took, at least one day, as the website counts it. */
         val days: Long get() = maxOf(1L, ((at - since) / DAY_MS.toDouble()).roundToLong())
@@ -294,6 +299,7 @@ internal object AnkiquestCommunity {
             told = if (json.has("told")) json.optBoolean("told") else null,
             friends = if (json.has("friends")) json.optInt("friends") else null,
             win = json.optLong("win").takeIf { it > 0 },
+            undoUntil = json.optLong("undo_until").takeIf { it > 0 },
         )
     }
 
@@ -302,6 +308,17 @@ internal object AnkiquestCommunity {
         account: HomeAccount,
         at: Long,
     ): Int = call(account, "POST", conquestPath(account.user, at) + "/tell", JSONObject()).optInt("told")
+
+    /**
+     * Takes back telling friends about the owner's card, from those who have not read it yet;
+     * answers how many rows were taken back. Asking again takes nothing back.
+     *
+     * @throws AnkiquestHttpException `409` once it is too late: a day after telling, or once a friend cheered it
+     */
+    suspend fun untell(
+        account: HomeAccount,
+        at: Long,
+    ): Int = call(account, "DELETE", conquestPath(account.user, at) + "/tell").optInt("retracted")
 
     /** The card's page on [server], to share where the app is not installed. */
     fun conquestLink(

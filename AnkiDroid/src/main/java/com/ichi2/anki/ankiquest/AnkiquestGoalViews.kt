@@ -183,32 +183,36 @@ internal class AnkiquestStreakChip
                 status: AnkiquestDailyGoal.Status,
             ): Streak {
                 val minimum = status.streakMinutes
-                val waiting = status.streakDay?.awaitingUpload == true
                 return when {
-                    status.minimumDone -> {
+                    status.secured -> {
                         val done =
                             if (minimum > 0) {
                                 context.getString(R.string.aq_goal_minimum_minutes_done, minimum)
                             } else {
                                 context.getString(R.string.aq_goal_minimum_any_done)
                             }
+                        // Safe before the server agrees only when unsent reviews provably reach its minimum, and then says so.
                         Streak(
-                            context.getString(if (waiting) R.string.aq_goal_streak_safe_unsent else R.string.aq_goal_streak_safe),
-                            if (waiting) done + " " + context.getString(R.string.aq_goal_minimum_unsent) else done,
+                            context.getString(
+                                if (status.awaitingUpload) R.string.aq_goal_streak_safe_unsent else R.string.aq_goal_streak_safe,
+                            ),
+                            if (status.awaitingUpload) done + " " + context.getString(R.string.aq_goal_minimum_unsent) else done,
                             1f,
                             true,
                         )
                     }
+                    // Only the server's count keeps the streak, so it is not called safe before the server agrees.
+                    status.syncing ->
+                        Streak(
+                            context.getString(R.string.aq_goal_streak_syncing),
+                            context.getString(R.string.aq_goal_minimum_syncing),
+                            1f,
+                            false,
+                        )
                     minimum > 0 -> {
                         val minutes = status.streakProgress.coerceIn(0, minimum)
-                        // Without a current verdict the collection's own minutes are progress only: never safe.
-                        val checking = status.streakDay == null && minutes >= minimum
                         Streak(
-                            if (checking) {
-                                context.getString(R.string.aq_goal_streak_checking)
-                            } else {
-                                context.getString(R.string.aq_goal_streak_minutes, minutes, minimum)
-                            },
+                            context.getString(R.string.aq_goal_streak_minutes, minutes, minimum),
                             context.getString(R.string.aq_goal_minimum_minutes, minimum) + ". " +
                                 context.getString(R.string.ankiquest_streak_short, minutes, minimum),
                             minutes.toFloat() / minimum,

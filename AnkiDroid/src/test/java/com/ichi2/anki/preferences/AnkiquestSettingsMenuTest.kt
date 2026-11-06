@@ -95,7 +95,10 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
             groups[targetContext.getString(R.string.ankiquest_connection_key)],
         )
         assertEquals(keys(R.string.ankiquest_sign_out_others_key), groups[targetContext.getString(R.string.ankiquest_devices_key)])
-        assertEquals(keys(R.string.ankiquest_export_key, R.string.ankiquest_delete_account_key), groups[""])
+        assertEquals(
+            keys(R.string.ankiquest_upload_all_key, R.string.ankiquest_export_key, R.string.ankiquest_delete_account_key),
+            groups[""],
+        )
     }
 
     private companion object {

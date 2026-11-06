@@ -13,6 +13,8 @@
     <string name="aq_goal_done_title">Meta diária alcançada! 🎉</string>
     <string name="aq_goal_time_left">Faltam ~%1$d min</string>
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_syncing">A sincronizar…</string>
+    <string name="aq_goal_minimum_syncing">As revisões de hoje ainda estão a caminho do servidor. A sequência fica garantida quando o servidor as contar.</string>
     <string name="aq_goal_streak_safe">Sequência garantida</string>
     <string name="aq_goal_streak_any">Revise uma vez para manter sua sequência</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
@@ -73,5 +75,4 @@
     <string name="ankiquest_mood_icon_summary">O ícone sorri quando hoje já conta, se preocupa no fim do dia e mostra um protetor quando ele te cobre. Alguns launchers escondem o ícone por um instante ao trocar.</string>
     <string name="aq_goal_streak_safe_unsent">Sequência garantida · ainda não enviada</string>
     <string name="aq_goal_minimum_unsent">O AnkiQuest conta suas revisões assim que forem enviadas.</string>
-    <string name="aq_goal_streak_checking">Verificando a sequência…</string>
 </resources>

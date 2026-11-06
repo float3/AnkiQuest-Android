@@ -13,6 +13,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CollectionManager.withColExclusive
+import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.dialogs.SyncErrorDialog
 import com.ichi2.anki.observability.ChangeManager.notifySubscribersAllValuesChanged
@@ -138,6 +139,8 @@ fun DeckPicker.handleNewSync(
             withCol { notetypes.clearCache() }
             notifySubscribersAllValuesChanged(deckPicker)
             refreshState()
+            // Reviews synced in from elsewhere can have ids below AnkiQuest's upload mark.
+            Ankiquest.onCollectionSynced()
         } finally {
             setLastSyncTimeToNow()
         }

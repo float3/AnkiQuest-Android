@@ -82,6 +82,10 @@
     <string name="aq_conquest_label_explanation">Alle, die diese Karte öffnen können, sehen es, ebenso Freunde, denen du davon erzählst. Du kannst es später zurücknehmen.</string>
     <string name="aq_conquest_label_save">Auf der Karte zeigen</string>
     <string name="aq_conquest_label_remove">Karte nicht mehr zeigen</string>
+    <string name="aq_conquest_untelling">Wird zurückgenommen…</string>
+    <string name="aq_conquest_untold">Zurückgenommen für Freunde, die es noch nicht gesehen hatten.</string>
+    <string name="aq_conquest_untell_late">Dafür ist es zu spät.</string>
+    <string name="aq_conquest_label_refresh">Stattdessen „%1$s“ zeigen</string>
     <string name="aq_conquest_action_failed">Das hat nicht geklappt. Prüfe deine Verbindung und versuche es erneut.</string>
     <string name="aq_conquest_label_shown">Die Person hat sich entschieden zu zeigen, welche Karte es war.</string>
     <string name="aq_conquest_numbers_only">Geteilt werden nur diese Zahlen, nie die Karte selbst.</string>

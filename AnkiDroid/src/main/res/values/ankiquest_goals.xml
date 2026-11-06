@@ -13,6 +13,8 @@
     <string name="aq_goal_done_title">Daily goal reached! 🎉</string>
     <string name="aq_goal_time_left">~%1$d min left</string>
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_syncing">Syncing…</string>
+    <string name="aq_goal_minimum_syncing">Your reviews today are still on their way to the server. The streak is secured once the server counts them.</string>
     <string name="aq_goal_streak_safe">Streak safe</string>
     <string name="aq_goal_streak_any">Review once to keep your streak</string>
     <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
@@ -74,5 +76,4 @@
     <string name="ankiquest_mood_icon_summary">The icon smiles once today counts, worries late in the day, and shows a freeze when one protects you. Some launchers briefly drop the icon while it changes.</string>
     <string name="aq_goal_streak_safe_unsent">Streak safe · not uploaded yet</string>
     <string name="aq_goal_minimum_unsent">Your reviews reach it; AnkiQuest counts them once they are uploaded.</string>
-    <string name="aq_goal_streak_checking">Checking the streak…</string>
 </resources>

@@ -88,6 +88,10 @@
     <string name="aq_conquest_label_explanation">Qualquer pessoa que possa abrir este cartão vai vê-lo, tal como os amigos a quem contares. Podes retirá-lo mais tarde.</string>
     <string name="aq_conquest_label_save">Mostrar no cartão</string>
     <string name="aq_conquest_label_remove">Deixar de mostrar o cartão</string>
+    <string name="aq_conquest_untelling">Retirando…</string>
+    <string name="aq_conquest_untold">Retirado para os amigos que ainda não tinham visto.</string>
+    <string name="aq_conquest_untell_late">Já é tarde para retirar.</string>
+    <string name="aq_conquest_label_refresh">Mostrar “%1$s” em vez disso</string>
     <string name="aq_conquest_action_failed">Não resultou. Verifica a ligação e tenta novamente.</string>
     <string name="aq_conquest_label_shown">O dono escolheu mostrar que cartão era.</string>
     <string name="aq_conquest_numbers_only">Só estes números são partilhados, nunca o cartão em si.</string>

@@ -51,6 +51,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         mockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
+        coEvery { AnkiquestShare.conqueredCardLabels(any()) } returns null
         coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(friends = 2)
     }
 
@@ -78,6 +79,47 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_told_count, 2, 2)))
         val told = card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_told) }
         assertFalse(told.isEnabled, "friends are told once")
+    }
+
+    @Test
+    fun `the owner can take back telling friends while the server allows it`() {
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns
+            recorded.copy(told = true, friends = 2, undoUntil = Long.MAX_VALUE)
+        coEvery { AnkiquestCommunity.untell(identity, AT) } returns 2
+        val card = launch()
+        val undo = card.getString(com.ichi2.anki.common.android.R.string.undo)
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_told)))
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(told = false, friends = 2)
+        card.click(undo)
+        coVerify(exactly = 1) { AnkiquestCommunity.untell(identity, AT) }
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_untold)))
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_tell)), "friends can be told again")
+        assertFalse(card.hasText(undo))
+    }
+
+    @Test
+    fun `too late to take back telling friends is said as such, and no undo is offered once expired`() {
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns
+            recorded.copy(told = true, friends = 2, undoUntil = Long.MAX_VALUE)
+        coEvery { AnkiquestCommunity.untell(identity, AT) } throws AnkiquestHttpException(409)
+        val card = launch()
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(told = true, friends = 2, undoUntil = 1)
+        card.click(card.getString(com.ichi2.anki.common.android.R.string.undo))
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_untell_late)))
+        assertFalse(card.hasText(card.getString(com.ichi2.anki.common.android.R.string.undo)))
+    }
+
+    @Test
+    fun `a label saved from an id is offered the card's front instead`() {
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = "B1L02")
+        coEvery { AnkiquestShare.conqueredCardLabels(AT) } returns AnkiquestShare.Labels("der Hund", "B1L02")
+        coEvery { AnkiquestSharing.setConquestLabel(identity, AT, "der Hund") } just runs
+        val card = launch()
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = "der Hund")
+        card.click(card.getString(R.string.aq_conquest_label_refresh, "der Hund"))
+        coVerify(exactly = 1) { AnkiquestSharing.setConquestLabel(identity, AT, "der Hund") }
+        assertTrue(card.hasText("der Hund"))
+        assertFalse(card.hasText(card.getString(R.string.aq_conquest_label_refresh, "der Hund")), "once is enough")
     }
 
     @Test

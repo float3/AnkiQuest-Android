@@ -173,15 +173,29 @@ internal object AnkiquestDailyGoal {
         val serverProgress: Int? = null,
         /** The server says today's goal is reached. */
         val reached: Boolean = false,
-        /** Today's streak verdict; null while nothing current is known from the server. */
+        /** Today's streak verdict from [AnkiquestDay]; null while nothing current is known from the server. */
         val streakDay: AnkiquestDay.Verdict? = null,
         /** The collection's reviews after the server's last one, to judge a fresher profile with. */
         val unsent: List<AnkiquestDay.Review> = emptyList(),
+        /** The account has no token, so the server stores none of its reviews and only this device can judge. */
+        val deviceOnly: Boolean = false,
     ) {
         val progress: Int get() = serverProgress ?: if (mode == Mode.MINUTES) minutes else studiedCards
 
-        /** Today counts toward the streak: the server said so, or reviews not uploaded yet provably make it. */
-        val minimumDone: Boolean get() = streakDay?.met == true
+        /** Today counts toward the streak by this device's reviews, by the same rule as the server. */
+        val minimumDone: Boolean get() = studiedCards > 0 && minutes >= streakMinutes
+
+        /**
+         * The streak is secured: the server says so, or reviews it has not received yet provably make it
+         * ([awaitingUpload]); for an account the server stores nothing for, this device's reviews.
+         */
+        val secured: Boolean get() = streakDay?.met == true || (deviceOnly && minimumDone)
+
+        /** Secured only by reviews the server has not received yet: say so until the upload lands. */
+        val awaitingUpload: Boolean get() = streakDay?.awaitingUpload == true
+
+        /** This device's reviews count for today, but the server has not counted them, nor can they be shown to. */
+        val syncing: Boolean get() = minimumDone && !secured
 
         /** Minutes toward the streak minimum: the server's, with reviews not uploaded yet; the collection's while unknown. */
         val streakProgress: Int get() = streakDay?.minutes ?: minutes
@@ -374,6 +388,7 @@ internal object AnkiquestDailyGoal {
         profile: JSONObject,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
+        if (AnkiquestHomeData.account(prefs)?.scope == account.scope) AnkiquestDay.remember(profile, prefs)
         val goal = profile.optJSONObject("goal") ?: return
         val server = ServerGoal.parse(goal) ?: return
         val current = if (migrated(prefs, account.scope)) server else migrate(account, server, prefs)
@@ -499,7 +514,8 @@ internal object AnkiquestDailyGoal {
                     }
                 }
             }
-        val day = AnkiquestDay.judge(load.server, load.unsent, TimeManager.time.intTimeMS())
+        val day = AnkiquestDay.judge(load.server ?: AnkiquestDay.last(prefs), load.unsent, TimeManager.time.intTimeMS())
+        val account = AnkiquestHomeData.account(prefs)
         return Status(
             load.day,
             load.minutes,
@@ -509,6 +525,7 @@ internal object AnkiquestDailyGoal {
             goal,
             streakDay = day,
             unsent = load.unsent,
+            deviceOnly = account == null || account.token.isEmpty(),
         )
     }
 
@@ -524,8 +541,17 @@ internal object AnkiquestDailyGoal {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
         now: Long = TimeManager.time.intTimeMS(),
     ): Status {
-        val status = current.withServerDay(profile, now)
-        if (profile == null || !migrated(prefs, AnkiquestHomeData.account(prefs)?.scope)) return status
+        if (profile == null) return current
+        return withGoal(current.withServerDay(profile, now), profile, prefs, now)
+    }
+
+    private fun withGoal(
+        status: Status,
+        profile: JSONObject,
+        prefs: SharedPreferences,
+        now: Long,
+    ): Status {
+        if (!migrated(prefs, AnkiquestHomeData.account(prefs)?.scope)) return status
         if (profile.optLong("day_ends_at") in 1..now) return status
         val goal = profile.optJSONObject("goal") ?: return status
         val choice = Choice.parse(goal) ?: return status

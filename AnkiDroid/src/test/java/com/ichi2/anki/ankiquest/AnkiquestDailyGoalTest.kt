@@ -116,14 +116,15 @@ class AnkiquestDailyGoalTest {
         val short = AnkiquestDailyGoal.status(Load(5, 8, 6, 30, 0), prefs)
         assertEquals(10, short.streakMinutes)
         assertFalse(short.minimumDone)
-        assertFalse(
-            AnkiquestDailyGoal.status(Load(5, 14, 10, 30, 0), prefs).minimumDone,
-            "the collection's own minutes never secure the streak",
-        )
     }
 
     @Test
     fun `the streak is secured by the server's verdict, or by unsent reviews the server's way`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+            putString(Ankiquest.PREF_TOKEN, "token")
+        }
         val now = TimeManager.time.intTimeMS()
         val server =
             AnkiquestDay.Server(
@@ -137,13 +138,15 @@ class AnkiquestDailyGoalTest {
                 streakMinutes = 10,
             )
         val short = AnkiquestDailyGoal.status(Load(5, 30, 25, 30, 0, server = server), prefs)
-        assertFalse(short.minimumDone, "the server has 9 of 10 minutes, whatever the collection says")
+        assertFalse(short.secured, "the server has 9 of 10 minutes, whatever the collection says")
+        assertTrue(short.syncing)
         assertEquals(9, short.streakProgress)
 
         val unsent = listOf(AnkiquestDay.Review(now - 30_000, 60_000))
         val secured = AnkiquestDailyGoal.status(Load(5, 30, 25, 30, 0, server = server, unsent = unsent), prefs)
-        assertTrue(secured.minimumDone)
-        assertTrue(checkNotNull(secured.streakDay).awaitingUpload)
+        assertTrue(secured.secured, "the unsent minute reaches the server's minimum by its own rule")
+        assertTrue(secured.awaitingUpload)
+        assertFalse(secured.syncing)
 
         val confirmed =
             short.withServerDay(
@@ -162,8 +165,50 @@ class AnkiquestDailyGoalTest {
                     ),
                 now,
             )
-        assertTrue(confirmed.minimumDone)
-        assertFalse(checkNotNull(confirmed.streakDay).awaitingUpload)
+        assertTrue(confirmed.secured)
+        assertFalse(confirmed.awaitingUpload)
+    }
+
+    @Test
+    fun `today is only called secured once the server counts it`() {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://quest.example")
+            putString(Ankiquest.PREF_USER, "cerro")
+            putString(Ankiquest.PREF_TOKEN, "token")
+        }
+        val now = TimeManager.time.intTimeMS()
+        val done = Load(5, 109, 13, 30, 0)
+
+        fun day(
+            state: String,
+            endsAt: Long = now + 3_600_000,
+        ) = JSONObject()
+            .put("streak_state", state)
+            .put("day_ends_at", endsAt)
+            .put("today", JSONObject().put("streak_minutes", 10).put("reviews", 55).put("minutes", 6))
+
+        val unheard = AnkiquestDailyGoal.status(done, prefs)
+        assertTrue(unheard.minimumDone)
+        assertFalse(unheard.secured, "the server has said nothing about today yet")
+        assertTrue(unheard.syncing)
+
+        AnkiquestDailyGoal.remember(day("pending"), prefs)
+        val pending = AnkiquestDailyGoal.status(done, prefs)
+        assertFalse(pending.secured, "this device counted the day, the server did not")
+        assertTrue(pending.syncing)
+
+        AnkiquestDailyGoal.remember(day("studied"), prefs)
+        assertTrue(AnkiquestDailyGoal.status(done, prefs).secured)
+        assertTrue(AnkiquestDailyGoal.status(Load(5, 0, 0, 30, 0), prefs).secured, "the server's count includes other devices")
+
+        AnkiquestDailyGoal.remember(day("studied", endsAt = now - 1), prefs)
+        assertTrue(AnkiquestDailyGoal.status(done, prefs).syncing, "yesterday's verdict says nothing about today")
+
+        assertTrue(AnkiquestDailyGoal.withProfile(pending, day("studied"), prefs, now).secured, "a fresh profile decides")
+        assertTrue(AnkiquestDailyGoal.withProfile(unheard, day("pending"), prefs, now).syncing)
+
+        prefs.edit { putString(Ankiquest.PREF_TOKEN, "") }
+        assertTrue(AnkiquestDailyGoal.status(done, prefs).secured, "without a token the server stores nothing, so this device decides")
     }
 
     @Test

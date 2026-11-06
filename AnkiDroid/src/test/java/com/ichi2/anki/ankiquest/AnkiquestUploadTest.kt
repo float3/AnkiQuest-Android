@@ -39,6 +39,7 @@ import kotlin.test.assertTrue
 
 private const val PREF_LEGACY_MARK = "ankiquestUploadedThrough"
 private const val PREF_LEGACY_RECENT = "ankiquestRecentUploads"
+private const val DAY_MS = 24 * 60 * 60 * 1000L
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
@@ -329,6 +330,107 @@ class AnkiquestUploadTest : RobolectricTest() {
         }
 
     @Test
+    fun `reviews synced in below the upload mark are sent after a sync`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+            val mark = uploadedIds().single()
+            requests.clear()
+            // Answered elsewhere three days ago and brought in by AnkiWeb: older than the mark and the undo window.
+            val synced = mark - 3 * DAY_MS
+            insertReview(synced)
+
+            Ankiquest.uploadPending()
+            assertEquals(emptyList<Long>(), uploadedIds(), "an ordinary upload only sends what follows the mark")
+            requests.clear()
+
+            Ankiquest.uploadAfterSync()
+            assertTrue(synced in uploadedIds())
+            assertEquals(mark, AnkiDroidApp.sharedPrefs().getLong("$PREF_LEGACY_MARK:$url/cerro", 0), "the mark never moves back")
+        }
+
+    @Test
+    fun `answers after a sync are still sent one upload at a time`() =
+        runBlocking {
+            Ankiquest.uploadAfterSync()
+            requests.clear()
+            addBasicNote("second")
+            col.sched.answerCard(col.sched.card!!, Rating.GOOD)
+            val answered = col.db.queryLongScalar("select max(id) from revlog")
+
+            Ankiquest.uploadPending()
+            assertEquals(listOf(answered), uploadedIds())
+            requests.clear()
+
+            Ankiquest.uploadPending()
+            assertEquals(emptyList<Long>(), uploadedIds(), "nothing is sent twice")
+        }
+
+    @Test
+    fun `opening the app resends the week at most once a day`() =
+        runBlocking {
+            val now = TimeManager.time.intTimeMS()
+            assertTrue(Ankiquest.resyncDue(now))
+
+            Ankiquest.uploadAfterSync()
+
+            assertFalse(Ankiquest.resyncDue(now + 60 * 60 * 1000L))
+            assertTrue(Ankiquest.resyncDue(now + DAY_MS + 60_000))
+        }
+
+    @Test
+    fun `uploading everything sends the whole history silently once`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+            val mark = uploadedIds().single()
+            requests.clear()
+            val old = mark - 30 * DAY_MS
+            insertReview(old)
+            val seen = CopyOnWriteArrayList<Pair<Int, Int>>()
+
+            val message =
+                Ankiquest.runFromSettings(targetContext, uploadAll = true) { sent, total ->
+                    assertTrue(Ankiquest.uploadingAll())
+                    seen.add(sent to total)
+                }
+
+            assertEquals(setOf(old, mark), uploadedIds().toSet())
+            assertTrue(reviewUpload().getBoolean("silent"), "old reviews never announce anything")
+            assertEquals(listOf(2 to 2), seen)
+            assertTrue(message.startsWith(targetContext.resources.getQuantityString(R.plurals.ankiquest_upload_all_done, 2, 2)))
+            assertFalse(Ankiquest.uploadingAll())
+            assertEquals(mark, AnkiDroidApp.sharedPrefs().getLong("$PREF_LEGACY_MARK:$url/cerro", 0))
+        }
+
+    @Test
+    fun `a review still in the collection is never deleted from the server`() =
+        runBlocking {
+            Ankiquest.uploadPending()
+            val kept = uploadedIds().single()
+            requests.clear()
+            // A row the window query does not return, though it is still in the revlog.
+            col.db.execute("update revlog set type = 4 where id = ?", kept)
+
+            Ankiquest.uploadPending()
+            assertEquals(0, reviewUpload().getJSONArray("deleted").length())
+            requests.clear()
+
+            col.db.execute("delete from revlog where id = ?", kept)
+            Ankiquest.uploadPending()
+            assertEquals(0, reviewUpload().getJSONArray("deleted").length(), "the earlier upload no longer lists it as sent")
+        }
+
+    @Test
+    fun `undone answers are deleted, but never a whole collection at once`() =
+        runBlocking {
+            val now = TimeManager.time.intTimeMS()
+            val ids = (1..Ankiquest.MAX_DELETED + 1).map { now - it * 1000L }
+            assertEquals(ids.take(3), Ankiquest.gone(ids.take(3)))
+            insertReview(ids[0])
+            assertEquals(ids.drop(1).take(2), Ankiquest.gone(ids.take(3)), "a row still there is kept")
+            assertEquals(emptyList<Long>(), Ankiquest.gone((1..Ankiquest.MAX_DELETED + 2).map { now + it }))
+        }
+
+    @Test
     fun `saving for subdecks stores the same choice for each deck in one request`() =
         runBlocking {
             Ankiquest.saveDeckNotificationSettings(listOf("1", unsharedDeck.toString()), emptyList(), listOf("hill"))
@@ -445,9 +547,21 @@ class AnkiquestUploadTest : RobolectricTest() {
     }
 
     private suspend fun uploadReviews() {
-        assertEquals(
-            targetContext.getString(R.string.ankiquest_check_ok, "Cerro", 1, 0L, 1L),
-            Ankiquest.runFromSettings(targetContext, uploadAll = true),
+        val message = Ankiquest.runFromSettings(targetContext, uploadAll = true)
+        assertTrue(message.endsWith(targetContext.getString(R.string.ankiquest_check_ok, "Cerro", 1, 0L, 1L)), message)
+    }
+
+    private fun uploadedIds(): List<Long> {
+        val reviews = reviewUpload().getJSONArray("reviews")
+        return (0 until reviews.length()).map { reviews.getJSONObject(it).getLong("id") }
+    }
+
+    private fun insertReview(id: Long) {
+        val cid = col.db.queryLongScalar("select id from cards limit 1")
+        col.db.execute(
+            "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, ?, -1, 3, 4, 1, 2500, 9000, 1)",
+            id,
+            cid,
         )
     }
 

@@ -262,6 +262,45 @@ class AnkiquestShareTest : RobolectricTest() {
     }
 
     @Test
+    fun `a conquered card is labelled by its front, not by an id in its first field`() {
+        val fields = listOf("B1L02", "der Hund", "the dog")
+        assertEquals(
+            "der Hund",
+            AnkiquestShare.suggestedLabel("<style>.card { color: red }</style><div>der Hund</div>[anki:play:q:0]", fields, cloze = false),
+        )
+        assertEquals(
+            "der Hund",
+            AnkiquestShare.suggestedLabel("<style>.card {}</style>B1L02", fields, cloze = false),
+            "a front that is the id gives way",
+        )
+        assertEquals("der Hund", AnkiquestShare.suggestedLabel("", fields, cloze = false), "an empty front falls back to the fields")
+        assertEquals("the dog", AnkiquestShare.suggestedLabel("<img src=dog.jpg>", listOf("00412", "", "the dog"), cloze = false))
+        assertEquals("B1L02", AnkiquestShare.suggestedLabel("", listOf("B1L02", "0042"), cloze = false), "only ids: the first field")
+        assertNull(AnkiquestShare.suggestedLabel("", listOf("", "<br>"), cloze = false))
+        assertEquals(
+            "Paris is the capital of France",
+            AnkiquestShare.suggestedLabel(
+                "<style>.cloze {}</style>[...] is the capital of France",
+                listOf("{{c1::Paris::city}} is the {{c2::capital}} of <b>France</b>", "Extra"),
+                cloze = true,
+            ),
+            "a cloze shows its text",
+        )
+        assertEquals(AnkiquestShare.MAX_LABEL, AnkiquestShare.suggestedLabel("word ".repeat(100), fields, cloze = false)?.length)
+        for (id in listOf("B1L02", "0042", "ID-17", "2024-05-01", "A12B", "3f2a9c1e-77d0")) assertTrue(AnkiquestShare.looksLikeId(id), id)
+        for (word in listOf("Hund", "der Hund", "la ardilla", "Straße", "x")) assertFalse(AnkiquestShare.looksLikeId(word), word)
+    }
+
+    @Test
+    fun `a label saved from an id is offered its front instead`() {
+        val labels = AnkiquestShare.Labels(suggested = "der Hund", legacy = "B1L02")
+        assertEquals("der Hund", labels.better("B1L02"))
+        assertNull(labels.better("my own words"), "a label the player wrote stays")
+        assertNull(labels.better(null))
+        assertNull(AnkiquestShare.Labels("der Hund", "der Hund").better("der Hund"))
+    }
+
+    @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun `the share sheet offers AnkiQuest friends next to the other apps`() {
         val share =

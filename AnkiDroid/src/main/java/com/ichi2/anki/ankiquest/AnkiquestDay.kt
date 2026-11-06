@@ -25,7 +25,7 @@ import org.json.JSONObject
  * The rule is pinned by `day_verdicts.json`, which the server writes from its own calculation.
  */
 internal object AnkiquestDay {
-    private const val PREF_SERVER_DAY = "ankiquestServerDay"
+    private const val PREF_SERVER_DAY = "ankiquestServerToday"
     private const val MINUTE_MS = 60_000L
 
     /** Revlog rows the upload sends: answers, not manual rescheduling. */

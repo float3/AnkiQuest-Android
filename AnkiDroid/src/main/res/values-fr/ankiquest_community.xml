@@ -88,6 +88,10 @@
     <string name="aq_conquest_label_explanation">Toute personne pouvant ouvrir cette carte le verra, tout comme les amis que tu préviens. Tu peux le retirer plus tard.</string>
     <string name="aq_conquest_label_save">L’afficher sur la carte</string>
     <string name="aq_conquest_label_remove">Ne plus montrer la carte</string>
+    <string name="aq_conquest_untelling">Retrait en cours…</string>
+    <string name="aq_conquest_untold">Retiré pour les amis qui ne l’avaient pas encore vu.</string>
+    <string name="aq_conquest_untell_late">Il est trop tard pour le retirer.</string>
+    <string name="aq_conquest_label_refresh">Afficher « %1$s » à la place</string>
     <string name="aq_conquest_action_failed">Ça n’a pas marché. Vérifie ta connexion et réessaie.</string>
     <string name="aq_conquest_label_shown">Son propriétaire a choisi de montrer quelle carte c’était.</string>
     <string name="aq_conquest_numbers_only">Seuls ces chiffres sont partagés, jamais la carte elle-même.</string>

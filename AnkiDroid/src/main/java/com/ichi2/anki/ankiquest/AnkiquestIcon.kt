@@ -24,7 +24,9 @@ internal object AnkiquestIcon {
     const val PREF_ENABLED = "ankiquestMoodIcon"
     private const val PREF_CURRENT = "ankiquestMoodIconCurrent"
     private const val PREF_LAST_PROFILE = "ankiquestMoodIconProfile"
-    private const val WORRY_HOURS = 6
+
+    /** The last hours of a study day in which a streak not yet secured counts as at risk. */
+    const val WORRY_HOURS = 6
 
     enum class Mood(
         val alias: String,
@@ -103,7 +105,10 @@ internal object AnkiquestIcon {
         }
     }
 
-    /** The parts of the configured account's last profile that the mood reads; another account's are never used. */
+    /**
+     * The parts of the configured account's last profile that the mood and the streak widget read;
+     * another account's are never used.
+     */
     internal fun lastKnown(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): JSONObject? =
         prefs.getString(lastProfileKey(prefs), null)?.let { runCatching { JSONObject(it) }.getOrNull() }
 
@@ -116,6 +121,7 @@ internal object AnkiquestIcon {
                 .put("streak", profile.optLong("streak"))
                 .put("streak_state", profile.optString("streak_state"))
                 .put("day_ends_at", profile.optLong("day_ends_at"))
+                .put("goal_reached", profile.optJSONObject("goal")?.optBoolean("reached") == true)
                 .toString()
         val key = lastProfileKey(prefs)
         if (prefs.getString(key, null) != kept) prefs.edit { putString(key, kept) }
@@ -123,43 +129,70 @@ internal object AnkiquestIcon {
 
     private fun lastProfileKey(prefs: SharedPreferences) = scopedKey(PREF_LAST_PROFILE, AnkiquestHomeData.account(prefs)?.scope)
 
+    /**
+     * Enables [mood]'s alias and disables the others. The pref only says what was last asked for:
+     * a switch can fail or be undone halfway, so the launcher's actual components are checked too,
+     * and only those that differ are changed, since every change makes some launchers redraw.
+     */
     fun show(
         context: Context,
         mood: Mood,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
-        if (prefs.getString(PREF_CURRENT, Mood.DEFAULT.name) == mood.name || !available(context)) return
+        if (!available(context)) return
         val packageManager = context.packageManager
         try {
+            val wrong = Mood.entries.filter { enabled(packageManager, context, it) != (it == mood) }
+            if (wrong.isEmpty()) {
+                if (prefs.getString(PREF_CURRENT, null) != mood.name) prefs.edit { putString(PREF_CURRENT, mood.name) }
+                return
+            }
             // Enable the new icon before disabling the old one, so there is never no launcher entry.
-            packageManager.setComponentEnabledSetting(
-                component(context, mood),
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP,
-            )
-            for (other in Mood.entries.filter { it != mood }) {
+            for (other in wrong.sortedBy { it != mood }) {
                 packageManager.setComponentEnabledSetting(
                     component(context, other),
-                    if (other == Mood.DEFAULT) {
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                    } else {
-                        PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
-                    },
+                    wanted(other, other == mood),
                     PackageManager.DONT_KILL_APP,
                 )
             }
-            if (mood == Mood.DEFAULT) {
-                packageManager.setComponentEnabledSetting(
-                    component(context, Mood.DEFAULT),
-                    PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
-                    PackageManager.DONT_KILL_APP,
-                )
+            if (Mood.entries.all { enabled(packageManager, context, it) == (it == mood) }) {
+                prefs.edit { putString(PREF_CURRENT, mood.name) }
+            } else {
+                prefs.edit { remove(PREF_CURRENT) }
+                Timber.w("AnkiQuest icon did not change to %s", mood)
             }
-            prefs.edit { putString(PREF_CURRENT, mood.name) }
         } catch (e: Exception) {
+            prefs.edit { remove(PREF_CURRENT) }
             Timber.w(e, "AnkiQuest icon could not change to %s", mood)
         }
     }
+
+    /** The mood the icon was last switched to completely, or null when unknown or a switch failed. */
+    internal fun current(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Mood? =
+        Mood.entries.firstOrNull { it.name == prefs.getString(PREF_CURRENT, null) }
+
+    /** The setting that makes [mood]'s alias [on]: the plain icon is enabled in the manifest, the moods are not. */
+    private fun wanted(
+        mood: Mood,
+        on: Boolean,
+    ): Int =
+        when {
+            on == (mood == Mood.DEFAULT) -> PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+            on -> PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else -> PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        }
+
+    /** Whether [mood]'s alias is a launcher entry now. */
+    private fun enabled(
+        packageManager: PackageManager,
+        context: Context,
+        mood: Mood,
+    ): Boolean =
+        when (packageManager.getComponentEnabledSetting(component(context, mood))) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+            PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> mood == Mood.DEFAULT
+            else -> false
+        }
 
     private fun component(
         context: Context,
