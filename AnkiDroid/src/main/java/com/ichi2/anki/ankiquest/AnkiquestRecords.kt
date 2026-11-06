@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import com.ichi2.anki.ankiquest.heatmap.DayVerdict
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmap
 import com.ichi2.anki.ankiquest.heatmap.ReviewHeatmapData
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +131,8 @@ internal object AnkiquestRecords {
         val streak: Int,
         /** A streak freeze covered the day. */
         val frozen: Boolean,
+        /** The server's verdict on the day; null from servers that do not judge days yet. */
+        val verdict: DayVerdict? = null,
     ) {
         val minutes: Long get() = Math.round(timeMs / 60_000.0)
 
@@ -167,6 +170,7 @@ internal object AnkiquestRecords {
                 days.associate { it.date to it.reviews },
                 emptyMap(),
                 days.filter { it.frozen }.map { it.date }.toSet(),
+                days.mapNotNull { day -> day.verdict?.let { day.date to it } }.toMap(),
             )
         }
     }
@@ -203,6 +207,7 @@ internal object AnkiquestRecords {
                         newCards = day.optInt("new_cards"),
                         streak = day.optInt("streak"),
                         frozen = day.optBoolean("frozen"),
+                        verdict = DayVerdict.parse(day),
                     )
                 }.sortedBy { it.date }
         val years = json.optJSONArray("years")?.let { list -> (0 until list.length()).map { list.getInt(it) } }.orEmpty()

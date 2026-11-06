@@ -12,9 +12,14 @@ import java.time.temporal.ChronoUnit
 /**
  * Collection history: counts are answers, not distinct cards or server points.
  *
- * [protectedDays] are days without reviews that AnkiQuest kept the streak through, with a
- * streak freeze or because moving the clock east skipped them. Both streaks count them as
- * AnkiQuest does: such a day keeps a streak going and does not lengthen it.
+ * [verdicts] are AnkiQuest's judgement of the days it covers: whether each reached the streak
+ * minimum, fell short of it, or was kept by a streak freeze. Where AnkiQuest judged a day, the
+ * heatmap colours it and counts it toward the streaks by that verdict only; a day it never
+ * judged counts when it has a review, as Anki has it.
+ *
+ * [protectedDays] are the ended days AnkiQuest kept the streak through, with a streak freeze or
+ * because moving the clock east skipped them, whether or not they had reviews. Both streaks
+ * count them as AnkiQuest does: such a day keeps a streak going and does not lengthen it.
  */
 data class ReviewHeatmapData(
     val today: LocalDate,
@@ -27,8 +32,53 @@ data class ReviewHeatmapData(
     val firstReviewDate: LocalDate?,
     val dailyAverage: Double,
     val protectedDays: Set<LocalDate> = emptySet(),
+    val verdicts: Map<LocalDate, DayVerdict> = emptyMap(),
 ) {
     val forecastEndDate: LocalDate get() = today.plusDays(ReviewHeatmap.FORECAST_DAYS)
+}
+
+/** The server's verdict on one day, as a heatmap cell or study day gives it. */
+enum class DayState(
+    val key: String,
+) {
+    /** Reached the streak minimum: the day counts toward the streak. */
+    MET("met"),
+
+    /** Reviews short of the minimum. Today stays short until it is met or ends. */
+    SHORT("short"),
+
+    /** A streak freeze or an admin kept the streak through the day, reviewed or not. */
+    FROZEN("frozen"),
+
+    /** Moving the clock east stepped over the day; it keeps the streak like a frozen day. */
+    SKIPPED("skipped"),
+
+    /** No reviews, and nothing kept the streak. */
+    NONE("none"),
+    ;
+
+    val keepsStreak: Boolean get() = this == FROZEN || this == SKIPPED
+
+    companion object {
+        /** The state the server named, or null from servers that do not judge days yet. */
+        fun of(key: String?): DayState? = entries.firstOrNull { it.key == key }
+    }
+}
+
+/** What the server says of a day: its [state], the [minutes] studied and the [streakMinutes] it needed. */
+data class DayVerdict(
+    val state: DayState,
+    val minutes: Int = 0,
+    val streakMinutes: Int = 0,
+) {
+    companion object {
+        /** The verdict in a heatmap cell or study day, or null from servers that do not send one. */
+        fun parse(json: JSONObject): DayVerdict? {
+            val state = DayState.of(json.optString("state").ifEmpty { null }) ?: return null
+            val minutes = json.optInt("minutes", (json.optLong("time_ms") / 60_000).toInt())
+            return DayVerdict(state, minutes, json.optInt("streak_minutes"))
+        }
+    }
 }
 
 object ReviewHeatmap {
@@ -120,14 +170,15 @@ object ReviewHeatmap {
             .minusDays(1)
 
     /**
-     * What an AnkiQuest profile's heatmap says of each day: its reviews, and whether it was
-     * frozen. [uploadedUntil] is the time of the last review the server has, whose id is the
-     * millisecond it was made at.
+     * What an AnkiQuest profile's heatmap says of each day: its reviews, whether it was
+     * frozen, and the server's [verdicts]. [uploadedUntil] is the time of the last review the
+     * server has, whose id is the millisecond it was made at.
      */
     data class ServerDays(
         val reviews: Map<LocalDate, Int>,
         val protectedDays: Set<LocalDate>,
         val uploadedUntil: Instant? = null,
+        val verdicts: Map<LocalDate, DayVerdict> = emptyMap(),
     )
 
     fun serverDays(profile: JSONObject): ServerDays {
@@ -135,13 +186,15 @@ object ReviewHeatmap {
         val cells = profile.optJSONArray("heatmap") ?: return ServerDays(emptyMap(), emptySet(), last)
         val reviews = mutableMapOf<LocalDate, Int>()
         val protectedDays = mutableSetOf<LocalDate>()
+        val verdicts = mutableMapOf<LocalDate, DayVerdict>()
         for (i in 0 until cells.length()) {
             val cell = cells.optJSONObject(i) ?: continue
             val date = runCatching { LocalDate.parse(cell.optString("date")) }.getOrNull() ?: continue
             reviews[date] = cell.optInt("reviews")
             if (cell.optBoolean("frozen")) protectedDays += date
+            DayVerdict.parse(cell)?.let { verdicts[date] = it }
         }
-        return ServerDays(reviews, protectedDays, last)
+        return ServerDays(reviews, protectedDays, last, verdicts)
     }
 
     /**
@@ -175,7 +228,7 @@ object ReviewHeatmap {
                 data.reviews.filterKeys { it < first || it >= until } +
                     server.reviews.filter { (date, count) -> date >= first && date < until && count > 0 }
             }
-        return summarize(data.today, reviews, data.scheduled, server.protectedDays)
+        return summarize(data.today, reviews, data.scheduled, server.protectedDays, server.verdicts)
     }
 
     internal fun summarize(
@@ -183,21 +236,32 @@ object ReviewHeatmap {
         reviews: Map<LocalDate, Int>,
         scheduled: Map<LocalDate, Int>,
         protectedDays: Set<LocalDate> = emptySet(),
+        verdicts: Map<LocalDate, DayVerdict> = emptyMap(),
     ): ReviewHeatmapData {
         val history = reviews.filter { (date, count) -> date <= today && count > 0 }.toSortedMap()
         val forecastEnd = today.plusDays(FORECAST_DAYS)
         val forecast = scheduled.filter { (date, count) -> date > today && date <= forecastEnd && count > 0 }.toSortedMap()
-        val kept = protectedDays.filter { it < today && !history.containsKey(it) }.toSortedSet()
+        val judged = verdicts.filterKeys { it <= today }
+        // A frozen day keeps the streak whether or not it had reviews: short of the minimum, they
+        // did not count on their own. Today is still open, so nothing has kept it yet.
+        val kept =
+            (protectedDays + judged.filterValues { it.state.keepsStreak }.keys)
+                .filter { it < today }
+                .toSortedSet()
+        // Where the server judged a day, only its verdict says whether the day counted.
+        val counted =
+            history.keys.filter { it !in kept && (judged[it] ?: return@filter true).state == DayState.MET }.toSet() +
+                judged.filterValues { it.state == DayState.MET }.keys
         var currentStreak = 0
-        var day = if (history.containsKey(today)) today else today.minusDays(1)
-        while (history.containsKey(day) || day in kept) {
-            if (history.containsKey(day)) currentStreak++
+        var day = if (today in counted) today else today.minusDays(1)
+        while (day in counted || day in kept) {
+            if (day in counted) currentStreak++
             day = day.minusDays(1)
         }
         var longestStreak = 0
         var run = 0
         var previousDay: LocalDate? = null
-        for (studiedDay in (history.keys + kept).sorted()) {
+        for (studiedDay in (counted + kept).sorted()) {
             val continues = previousDay?.plusDays(1) == studiedDay
             if (studiedDay in kept) {
                 if (!continues) run = 0
@@ -220,6 +284,7 @@ object ReviewHeatmap {
             firstReviewDate = firstReviewDate,
             dailyAverage = if (history.isNotEmpty()) totalReviews.toDouble() / history.size else 0.0,
             protectedDays = kept,
+            verdicts = judged,
         )
     }
 }
