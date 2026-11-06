@@ -24,7 +24,9 @@ import androidx.core.view.updatePadding
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.AnkiActivity
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
@@ -51,6 +53,9 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
 
     /** The card's deck in this phone's collection, for its owner only; it is never sent to the server. */
     private var deck: String? = null
+
+    /** What this phone's collection offers as the card's label, for its owner only. */
+    private var labels: AnkiquestShare.Labels? = null
     private var loading = false
     private var busy = false
 
@@ -101,6 +106,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             account = current
             conquest = null
             deck = null
+            labels = null
             status = null
         }
         job?.cancel()
@@ -127,7 +133,10 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                 }
                 answer?.let { conquest = it }
                 if (problem == R.string.aq_conquest_missing) conquest = null
-                if (deck == null && answer?.let { owns(current, it) } == true) deck = AnkiquestShare.conqueredCardDeck(at)
+                if (answer?.let { owns(current, it) } == true) {
+                    if (deck == null) deck = AnkiquestShare.conqueredCardDeck(at)
+                    if (labels == null) labels = AnkiquestShare.conqueredCardLabels(at)
+                }
                 if (turn != generation) return@launch
                 failure = problem
                 loading = false
@@ -310,10 +319,15 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         }
     }
 
-    /** What only the card's owner can do: tell friends and say what the card was. */
+    /** What only the card's owner can do: tell friends, take that back for a while, and say what the card was. */
     private fun owner(card: AnkiquestCommunity.Conquest) {
         when {
-            card.told == true -> views.button(content, getString(R.string.aq_conquest_told)) {}.isEnabled = false
+            card.told == true -> {
+                views.button(content, getString(R.string.aq_conquest_told)) {}.isEnabled = false
+                if (card.undoable(TimeManager.time.intTimeMS())) {
+                    views.button(content, getString(CommonString.undo)) { untell(card) }.isEnabled = !busy
+                }
+            }
             (card.friends ?: 0) > 0 ->
                 views
                     .button(content, getString(R.string.aq_conquest_tell)) {
@@ -322,6 +336,17 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                             resources.getQuantityString(R.plurals.aq_conquest_told_count, told, told)
                         }
                     }.isEnabled = !busy
+        }
+        val better = labels?.better(card.label)
+        if (better != null) {
+            // A label saved from the card's first field, which can be an id; its front reads better.
+            views
+                .button(content, getString(R.string.aq_conquest_label_refresh, better)) {
+                    act(R.string.ankiquest_goal_saving) { current ->
+                        AnkiquestSharing.setConquestLabel(current, card.at, better)
+                        null
+                    }
+                }.isEnabled = !busy
         }
         if (card.label != null) {
             views
@@ -333,6 +358,19 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                 }.isEnabled = !busy
         } else {
             views.button(content, getString(R.string.aq_conquest_label_add)) { showLabel(card) }.isEnabled = !busy
+        }
+    }
+
+    /** Takes back telling friends, from those who have not read it yet; too late is said as such. */
+    private fun untell(card: AnkiquestCommunity.Conquest) {
+        act(R.string.aq_conquest_untelling) { current ->
+            try {
+                AnkiquestCommunity.untell(current, card.at)
+                getString(R.string.aq_conquest_untold)
+            } catch (e: AnkiquestHttpException) {
+                if (e.code != 409) throw e
+                getString(R.string.aq_conquest_untell_late)
+            }
         }
     }
 

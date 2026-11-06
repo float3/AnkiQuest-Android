@@ -90,6 +90,10 @@
     <string name="aq_conquest_label_explanation">Anyone who can open this card will see it, and so will friends you tell. You can take it back later.</string>
     <string name="aq_conquest_label_save">Show it on the card</string>
     <string name="aq_conquest_label_remove">Stop showing the card</string>
+    <string name="aq_conquest_untelling">Taking it back…</string>
+    <string name="aq_conquest_untold">Taken back from friends who had not seen it yet.</string>
+    <string name="aq_conquest_untell_late">It is too late to take this back.</string>
+    <string name="aq_conquest_label_refresh">Show “%1$s” instead</string>
     <string name="aq_conquest_action_failed">That did not work. Check your connection and try again.</string>
     <string name="aq_conquest_label_shown">Its owner chose to show what the card was.</string>
     <string name="aq_conquest_numbers_only">Only these numbers are shared, never the card itself.</string>

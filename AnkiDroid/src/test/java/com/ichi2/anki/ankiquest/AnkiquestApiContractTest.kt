@@ -23,6 +23,7 @@ import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -436,6 +437,16 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(6L, card.win)
             assertEquals(0, AnkiquestCommunity.tell(account, at))
             assertTrue(requests.containsAll(listOf("GET /api/conquests/hill/$at", "POST /api/conquests/hill/$at/tell")))
+            assertFalse(card.undoable(EXAMPLE_NOW), "nothing to take back before telling")
+        }
+
+    @Test
+    fun `telling friends about a conquered card can be taken back`() =
+        runBlocking {
+            // Servers before taking it back was possible have no such example.
+            assumeTrue(javaClass.classLoader?.getResource("$EXAMPLES/conquest_untell.json") != null)
+            assertEquals(0, AnkiquestCommunity.untell(account, 1_793_097_000_000L))
+            assertTrue(requests.contains("DELETE /api/conquests/hill/1793097000000/tell"))
         }
 
     @Test
@@ -546,6 +557,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             parts.size == 3 && parts[0] == "community" && parts[1] == "reminders" -> if (method == "POST") "reminders_save" else "reminders"
             parts.size == 3 && parts[0] == "conquests" && method == "GET" -> "conquest"
             parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "POST" -> "conquest_tell"
+            parts.size == 4 && parts[0] == "conquests" && parts[3] == "tell" && method == "DELETE" -> "conquest_untell"
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
@@ -638,6 +650,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "password_change",
                 "devices_sign_out",
                 "sign_in_methods",
+                // Taking back telling friends about a conquered card, read once the server has it.
+                "conquest_untell",
                 // The global leaderboard (float3/ankiquest#170) until the app shows it.
                 "leaderboard_global",
                 "leaderboard_global_hidden",
