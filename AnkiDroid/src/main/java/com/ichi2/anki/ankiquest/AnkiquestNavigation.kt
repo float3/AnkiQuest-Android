@@ -97,8 +97,7 @@ object AnkiquestNavigation {
         }
 
     /** A credential change invalidates private presentation state, including a same-user token change. */
-    fun accountFingerprint(): String {
-        val settings = AnkiDroidApp.sharedPrefs().all
+    fun accountFingerprint(settings: Map<String, *> = AnkiDroidApp.sharedPrefs().all): String {
         val player =
             (settings[Ankiquest.PREF_USER] as? String).orEmpty().trim().ifEmpty {
                 (settings["username"] as? String).orEmpty().trim()
