@@ -15,6 +15,7 @@ import android.widget.RemoteViews
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.widget.getAppWidgetManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -22,7 +23,8 @@ import java.text.NumberFormat
 
 /**
  * Your own streak as one big number with the companion, like a daily check-in.
- * It reads your row of the leaderboard the poll already downloads, so it costs no extra request.
+ * It reads your row of the leaderboard the poll already downloads, kept current between polls by the
+ * profile each upload answers with, so it costs no extra request.
  */
 class AnkiquestStreakWidget : AppWidgetProvider() {
     override fun onUpdate(
@@ -92,6 +94,62 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 else -> R.drawable.aki_at_risk
             }
 
+        /** Minutes past the server's streak minimum during which it still counts as just reached. */
+        private const val JUST_REACHED_MINUTES = 5
+        private const val DAY_MS = 86_400_000L
+
+        /**
+         * The poses that fit today for the big layouts, which have room to show more of the moment
+         * than [pose]. Artwork that is not drawn yet is aliased in ankiquest_art.xml (float3/ankiquest#88).
+         */
+        internal fun poses(
+            state: String,
+            streak: Int,
+            entry: JSONObject?,
+            goalReached: Boolean,
+            now: Long,
+        ): List<Int> {
+            val minutes = entry?.optLong("today_minutes") ?: 0L
+            val needed = entry?.optLong("streak_minutes") ?: 0L
+            val dayEndsAt = entry?.optLong("day_ends_at") ?: 0L
+            val studied = state == "studied"
+            return when {
+                state == "unknown" -> listOf(R.drawable.aki_face, R.drawable.aki_welcome)
+                state == "protected" -> listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze)
+                studied && goalReached -> listOf(R.drawable.aki_goal, R.drawable.aki_celebrate)
+                studied && streak == 1 -> listOf(R.drawable.aki_comeback)
+                studied && needed > 0 && minutes < needed + JUST_REACHED_MINUTES -> listOf(R.drawable.aki_minimum)
+                studied && streak >= 100 -> listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone)
+                studied && streak >= 30 -> listOf(R.drawable.aki_streak_blazing, R.drawable.aki_celebrate)
+                studied && streak >= 7 -> listOf(R.drawable.aki_streak_hot, R.drawable.aki_celebrate)
+                studied -> listOf(R.drawable.aki_celebrate, R.drawable.aki_streak)
+                streak == 0 -> listOf(R.drawable.aki_sleeping, R.drawable.aki_comeback)
+                dayEndsAt > 0 && dayEndsAt - now <= AnkiquestIcon.WORRY_HOURS * 3_600_000L -> listOf(R.drawable.aki_at_risk)
+                else -> listOf(R.drawable.aki_review, R.drawable.aki_welcome)
+            }
+        }
+
+        /** One of [poses] for the day, the same all day, so the big widget changes from day to day but not between redraws. */
+        @DrawableRes
+        internal fun bigPose(
+            state: String,
+            streak: Int,
+            entry: JSONObject?,
+            goalReached: Boolean,
+            now: Long,
+        ): Int {
+            val choices = poses(state, streak, entry, goalReached, now)
+            val dayEndsAt = entry?.optLong("day_ends_at")?.takeIf { it > 0 } ?: now
+            return choices[Math.floorMod(Math.floorDiv(dayEndsAt, DAY_MS), choices.size.toLong()).toInt()]
+        }
+
+        /** Whether the last own profile says today's goal is reached, for the study day of [entry]. */
+        private fun goalReached(entry: JSONObject?): Boolean {
+            val dayEndsAt = entry?.optLong("day_ends_at")?.takeIf { it > 0 } ?: return false
+            val last = runCatching { AnkiquestIcon.lastKnown() }.getOrNull() ?: return false
+            return last.optLong("day_ends_at") == dayEndsAt && last.optBoolean("goal_reached")
+        }
+
         /** Draws your row of [board] into every placed streak widget; null means not configured. */
         fun render(
             context: Context,
@@ -128,6 +186,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             board: JSONArray?,
             player: String?,
             size: Size = Size.MEDIUM,
+            now: Long = TimeManager.time.intTimeMS(),
         ): RemoteViews {
             val language = AnkiquestLanguage.context(context)
             val views = RemoteViews(context.packageName, size.layout)
@@ -138,7 +197,13 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
             views.setViewVisibility(R.id.ankiquest_streak_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
             if (AnkiquestCompanion.visible()) {
-                views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(pose(state, streak)))
+                val aki =
+                    if (size == Size.LARGE || size == Size.HUGE) {
+                        bigPose(state, streak, me, goalReached(me), now)
+                    } else {
+                        pose(state, streak)
+                    }
+                views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
             }
             views.setTextViewText(R.id.ankiquest_streak_number, if (me == null) "–" else numbers.format(streak))
             views.setTextViewText(
