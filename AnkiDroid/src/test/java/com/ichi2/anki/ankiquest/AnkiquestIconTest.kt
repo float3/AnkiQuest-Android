@@ -115,6 +115,50 @@ class AnkiquestIconTest : RobolectricTest() {
         assertEquals(listOf(Mood.DEFAULT), enabled())
     }
 
+    @Test
+    fun `a worried icon turns happy once today counts`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, true) }
+        AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
+        assertEquals(listOf(Mood.WORRIED), enabled())
+        AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+        assertEquals(listOf(Mood.HAPPY), enabled())
+        assertEquals(Mood.HAPPY, AnkiquestIcon.current(prefs))
+    }
+
+    @Test
+    fun `the launcher's components win over what the pref says`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        AnkiquestIcon.show(targetContext, Mood.HAPPY, prefs)
+        assertEquals(listOf(Mood.HAPPY), enabled())
+        // A switch the system undid or that stopped halfway: the plain icon is back and happy is off.
+        val packageManager = targetContext.packageManager
+        packageManager.setComponentEnabledSetting(component(Mood.HAPPY), PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, 0)
+        packageManager.setComponentEnabledSetting(component(Mood.DEFAULT), PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, 0)
+        assertEquals(Mood.HAPPY, AnkiquestIcon.current(prefs), "the pref still says happy")
+
+        AnkiquestIcon.show(targetContext, Mood.HAPPY, prefs)
+
+        assertEquals(listOf(Mood.HAPPY), enabled())
+    }
+
+    @Test
+    fun `a matching icon is left alone`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        AnkiquestIcon.show(targetContext, Mood.FROZEN, prefs)
+        val packageManager = targetContext.packageManager
+        // Equivalent to the manifest's own state, so nothing needs to change for the launcher.
+        packageManager.setComponentEnabledSetting(component(Mood.HAPPY), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 0)
+
+        AnkiquestIcon.show(targetContext, Mood.FROZEN, prefs)
+
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DISABLED, state(Mood.HAPPY), "an alias that is already off is not touched")
+        assertEquals(listOf(Mood.FROZEN), enabled())
+    }
+
     /** The aliases come from the quest build's manifest, which unit tests do not merge. */
     private fun registerAliases() {
         for (mood in Mood.entries) {

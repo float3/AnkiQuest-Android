@@ -18,6 +18,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
 import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
+import androidx.annotation.VisibleForTesting
 import androidx.core.app.PendingIntentCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -241,7 +242,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
         ) {
             val shown = Drawn(board, fetchedAt, offline)
             drawn = shown
-            AnkiquestStreakWidget.render(context, board)
+            renderStreaks(context, shown)
             val manager = getAppWidgetManager(context) ?: return
             for (style in styles) {
                 for (id in widgetIds(context, style)) draw(context, manager, style, id, shown)
@@ -262,7 +263,129 @@ open class AnkiquestWidget : AppWidgetProvider() {
         /** Draws the streak widgets again from the standings already shown, like [redraw]. */
         internal fun redrawStreaks(context: Context) {
             val shown = drawn ?: return AnkiquestPoll.refreshNow(context)
-            AnkiquestStreakWidget.render(context, shown.board)
+            renderStreaks(context, shown)
+        }
+
+        /** The streak widgets show [shown] with your own row as fresh as the last upload made it. */
+        private fun renderStreaks(
+            context: Context,
+            shown: Drawn,
+        ) = AnkiquestStreakWidget.render(context, shown.board?.let { withFreshRow(it, shown.fetchedAt, addMissing = true) })
+
+        /**
+         * Your own row as the profile of the last upload made in this process had it: uploads answer
+         * with the whole profile, so the widgets can follow each review without asking the server
+         * again, while the poll keeps everyone else's rows current.
+         */
+        private class Fresh(
+            val scope: String,
+            val user: String,
+            val profile: JSONObject,
+            val at: Long,
+        )
+
+        @Volatile
+        private var fresh: Fresh? = null
+
+        @Volatile
+        private var freshDrawnAt = 0L
+
+        /** How often the leaderboards are drawn again for your own row while you study; the streak widget follows every change. */
+        private const val FRESH_REDRAW_MS = 15 * 1000L
+
+        /**
+         * Draws the widgets again with your own row from [profile], the answer to an upload just made
+         * by [account]. The streak widgets are drawn whenever what they show changes, the leaderboards
+         * at most every [FRESH_REDRAW_MS]. Nothing is fetched.
+         */
+        internal fun onOwnProfile(
+            context: Context,
+            account: HomeAccount,
+            profile: JSONObject,
+            now: Long,
+        ) {
+            val before = fresh?.takeIf { it.scope == account.scope }
+            fresh = Fresh(account.scope, account.user, profile, now)
+            val known = drawn ?: cached(account)?.also { drawn = it }
+            val streakChanged = before == null || streakShown(ownRow(before.profile, null)) != streakShown(ownRow(profile, null))
+            if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false))
+            // Without standings to put the row in, the leaderboards keep what they show until the poll.
+            val shown = known ?: return
+            if (!streakChanged && now - freshDrawnAt < FRESH_REDRAW_MS) return
+            freshDrawnAt = now
+            val manager = getAppWidgetManager(context) ?: return
+            for (style in styles) {
+                for (id in widgetIds(context, style)) draw(context, manager, style, id, shown)
+            }
+        }
+
+        /** What the poll last fetched for [account], before anything was drawn in this process. */
+        private fun cached(account: HomeAccount): Drawn? {
+            val prefs = AnkiDroidApp.sharedPrefs()
+            val board =
+                prefs
+                    .getString(scopedKey(AnkiquestPoll.PREF_CACHE, account.scope), null)
+                    ?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return null
+            return Drawn(board, prefs.getLong(scopedKey(AnkiquestPoll.PREF_CACHE_AT, account.scope), 0), offline = false)
+        }
+
+        private fun streakShown(row: JSONObject): List<Any> =
+            listOf(
+                row.optLong("streak"),
+                streakState(row),
+                row.optLong("today_minutes"),
+                row.optLong("streak_minutes"),
+                row.optLong("day_ends_at"),
+            )
+
+        /** A leaderboard row for the player of [profile], keeping what [old] has that a profile does not say. */
+        internal fun ownRow(
+            profile: JSONObject,
+            old: JSONObject?,
+        ): JSONObject {
+            val row = JSONObject(old?.toString() ?: "{}")
+            for (key in listOf("display", "level", "xp_total", "week_xp", "periods", "streak", "streak_state", "day_ends_at")) {
+                if (profile.has(key)) row.put(key, profile.get(key))
+            }
+            profile.optJSONObject("today")?.let { today ->
+                row.put("today_reviews", today.optLong("reviews"))
+                row.put("today_minutes", today.optLong("minutes"))
+                row.put("streak_minutes", today.optLong("streak_minutes"))
+            }
+            val period = row.optString("period").ifEmpty { null }
+            profile.optJSONObject("periods")?.takeIf { period != null && it.has(period) }?.let { row.put("xp", it.optLong(period)) }
+            return row
+        }
+
+        /**
+         * [board] with your own row replaced by the fresher one from the last upload, when that came
+         * after [fetchedAt] and belongs to the account signed in now. A board ranked by the server,
+         * like the global one, keeps its rows. With [addMissing], a board without your row gets it,
+         * which only the streak widget wants.
+         */
+        internal fun withFreshRow(
+            board: JSONArray,
+            fetchedAt: Long,
+            addMissing: Boolean = false,
+        ): JSONArray {
+            val mine = fresh ?: return board
+            if (mine.at < fetchedAt || mine.scope != AnkiquestHomeData.account()?.scope) return board
+            val rows = board.objects()
+            if (rows.isNotEmpty() && rows.all { it.has("rank") }) return board
+            val index = rows.indexOfFirst { it.optString("user") == mine.user }
+            if (index < 0) {
+                if (!addMissing) return board
+                return JSONArray(rows).put(ownRow(mine.profile, JSONObject().put("user", mine.user)))
+            }
+            return JSONArray(rows.mapIndexed { i, row -> if (i == index) ownRow(mine.profile, row) else row })
+        }
+
+        /** Forgets the fresh row, as when the tests start again. */
+        @VisibleForTesting
+        internal fun forgetFresh() {
+            fresh = null
+            freshDrawnAt = 0L
+            drawn = null
         }
 
         private fun draw(
@@ -282,7 +405,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 } else {
                     shown
                 }
-            val ranked = source.board?.let { forPeriod(it, settings.period) }
+            val ranked = source.board?.let { forPeriod(withFreshRow(it, source.fetchedAt), settings.period) }
             val items = collection(context, ranked ?: JSONArray(), style, scale)
             val views = layout(context, ranked, source.fetchedAt, source.offline, style, settings, scale, id, source.note)
             RemoteViewsCompat.setRemoteAdapter(context, views, id, R.id.ankiquest_widget_list, items)

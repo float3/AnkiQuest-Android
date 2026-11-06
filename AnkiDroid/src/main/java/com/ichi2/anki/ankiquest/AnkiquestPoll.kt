@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -32,10 +31,8 @@ object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
     private const val NOW_NAME = "ankiquestPollNow"
 
-    @VisibleForTesting
     internal const val PREF_CACHE = "ankiquestWidgetLeaderboard"
 
-    @VisibleForTesting
     internal const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
 
     fun schedule(context: Context) {

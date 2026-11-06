@@ -128,4 +128,12 @@
     <string name="ankiquest_streak_protected">Lernserie geschützt · Heute noch nicht gelernt</string>
     <string name="ankiquest_streak_unknown">Aktualisieren, um den heutigen Lernstatus zu sehen</string>
     <string name="ankiquest_streak_description">Lernserie von %1$s Tagen · %2$s</string>
+    <string name="ankiquest_upload_all_title">Alle Wiederholungen hochladen</string>
+    <string name="ankiquest_upload_all_summary">Sende deinen gesamten Wiederholungsverlauf erneut. Der Server behält jede Wiederholung nur einmal.</string>
+    <string name="ankiquest_upload_all_progress">Wird hochgeladen… %1$d von %2$d Wiederholungen</string>
+    <string name="ankiquest_upload_all_busy">Deine Wiederholungen werden bereits hochgeladen.</string>
+    <plurals name="ankiquest_upload_all_done">
+        <item quantity="one">%d Wiederholung gesendet.</item>
+        <item quantity="other">%d Wiederholungen gesendet.</item>
+    </plurals>
 </resources>

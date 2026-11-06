@@ -13,6 +13,8 @@
     <string name="aq_goal_done_title">¡Objetivo diario logrado! 🎉</string>
     <string name="aq_goal_time_left">Te quedan ~%1$d min</string>
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
+    <string name="aq_goal_streak_syncing">Sincronizando…</string>
+    <string name="aq_goal_minimum_syncing">Tus repasos de hoy aún van camino del servidor. La racha queda asegurada cuando el servidor los cuente.</string>
     <string name="aq_goal_streak_safe">Racha a salvo</string>
     <string name="aq_goal_streak_any">Repasa una vez y salvas tu racha</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoy</string>

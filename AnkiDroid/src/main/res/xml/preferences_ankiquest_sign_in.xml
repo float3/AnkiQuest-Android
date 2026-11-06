@@ -26,6 +26,11 @@
     <PreferenceCategory
         android:title="@string/ankiquest_data_title">
         <Preference
+            android:key="@string/ankiquest_upload_all_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_upload_all_title"
+            android:summary="@string/ankiquest_upload_all_summary" />
+        <Preference
             android:key="@string/ankiquest_export_key"
             android:persistent="false"
             android:title="@string/ankiquest_export_title"

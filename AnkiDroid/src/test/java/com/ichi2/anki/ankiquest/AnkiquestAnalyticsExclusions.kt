@@ -31,6 +31,7 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_providers_key,
             R.string.ankiquest_devices_key,
             R.string.ankiquest_sign_out_others_key,
+            R.string.ankiquest_upload_all_key,
             R.string.ankiquest_export_key,
             R.string.ankiquest_delete_account_key,
             R.string.ankiquest_avatar_key,
