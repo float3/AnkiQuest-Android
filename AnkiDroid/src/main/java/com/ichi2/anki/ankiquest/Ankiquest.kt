@@ -471,7 +471,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             val (feedback, again) = refreshes.take()
             try {
                 val account = HomeAccount.current() ?: return@withLock
-                val profile = if (account.token.isEmpty()) preview(account.server, account.encodedUser) else upload(account, again)
+                val profile =
+                    if (account.token.isEmpty()) {
+                        preview(account.server, account.encodedUser)
+                    } else {
+                        recordingProblem(account) { upload(account, again) }
+                    }
                 onOwnProfile(account, profile)
                 if (!background || feedback) present(profile, feedback)
                 if (account.token.isNotEmpty()) AnkiquestDailyGoal.afterUpload(account, profile)
@@ -716,6 +721,23 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         return profile
     }
 
+    /** Runs [send], an upload for [owner], keeping why it failed until one works, for the screens that wait on it. */
+    private suspend fun <T> recordingProblem(
+        owner: HomeAccount,
+        send: suspend () -> T,
+    ): T {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val result =
+            try {
+                send()
+            } catch (e: Exception) {
+                AnkiquestUploadProblem.of(e)?.let { AnkiquestUploadProblem.remember(prefs, owner.scope, it) }
+                throw e
+            }
+        AnkiquestUploadProblem.remember(prefs, owner.scope, null)
+        return result
+    }
+
     private fun markKey(account: String) = "$PREF_MARK:$account"
 
     private fun recentKey(account: String) = "$PREF_RECENT:$account"
@@ -919,9 +941,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     if (token.isEmpty()) {
                         AnkiquestApi.json(account, AnkiquestApi.request(account, "api/profile/${account.encodedUser}").build())
                     } else {
-                        upload(account, resync = false, onlyTest = !uploadAll, everything = uploadAll) { done, total ->
-                            sent = done
-                            progress?.invoke(done, total)
+                        recordingProblem(account) {
+                            upload(account, resync = false, onlyTest = !uploadAll, everything = uploadAll) { done, total ->
+                                sent = done
+                                progress?.invoke(done, total)
+                            }
                         }
                     }
                 present(profile, showFeedback = false)
