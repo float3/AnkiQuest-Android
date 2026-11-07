@@ -108,11 +108,12 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             deck = null
             labels = null
             status = null
+            // The old account's change no longer answers here.
+            busy = false
         }
         job?.cancel()
         val turn = ++generation
         failure = null
-        busy = false
         if (current == null || user.isEmpty() || at <= 0) {
             conquest = null
             loading = false
@@ -154,7 +155,6 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         busy = true
         status = getString(working)
         render()
-        val turn = generation
         lifecycleScope.launch {
             var message: String? = null
             var refreshed: AnkiquestCommunity.Conquest? = null
@@ -163,7 +163,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
                     message = work(current)
                     refreshed = AnkiquestCommunity.conquest(current, user, at)
                 }
-            if (turn != generation) return@launch
+            if (account?.scope != current.scope) return@launch
             busy = false
             if (problem == R.string.aq_feed_account_changed) {
                 load()
@@ -454,11 +454,10 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         }
         busy = true
         render()
-        val turn = generation
         lifecycleScope.launch {
             val image = winImage(current, card)
             val chooser = withContext(Dispatchers.IO) { AnkiquestShare.cardChooser(applicationContext, text, image) }
-            if (turn != generation) return@launch
+            if (account?.scope != current.scope) return@launch
             busy = false
             render()
             openChooser(chooser)

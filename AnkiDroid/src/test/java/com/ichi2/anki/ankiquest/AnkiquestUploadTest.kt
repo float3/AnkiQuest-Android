@@ -532,7 +532,9 @@ class AnkiquestUploadTest : RobolectricTest() {
         assertFalse(prefs.contains(PREF_LEGACY_MARK))
         assertFalse(prefs.contains(PREF_LEGACY_RECENT))
         assertFalse(prefs.contains("$PREF_LEGACY_MARK:$url/cerro"))
-        assertTrue(AnkiquestCompletionPolicy.silentUpload(prefs.getLong("$PREF_LEGACY_MARK:$url/cerro", 0), false, false, false))
+        // Without a mark of its own, the account's first upload is not done.
+        val initialSyncDone = prefs.contains("$PREF_LEGACY_MARK:$url/cerro")
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(initialSyncDone, fullBatch = false, onlyTest = false))
     }
 
     private fun configureAccount(

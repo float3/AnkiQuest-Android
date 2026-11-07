@@ -19,6 +19,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -322,6 +323,24 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
         val friends = launch()
         assertTrue(friends.hasText(friends.getString(R.string.aq_friends_connect)))
         coVerify(exactly = 0) { AnkiquestSocial.overview(any()) }
+    }
+
+    @Test
+    fun `refreshing while a change is on its way keeps the change buttons waiting`() {
+        val answer = CompletableDeferred<AnkiquestSocial.Overview>()
+        coEvery { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Befriend("ana")) } coAnswers { answer.await() }
+        val friends = launch()
+        friends.click(friends.getString(R.string.aq_friends_accept))
+
+        friends.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        friends.settle()
+        val accept = friends.views<TextView>().first { it.text.toString() == friends.getString(R.string.aq_friends_accept) }
+        assertFalse(accept.isEnabled, "a second change could be sent while the first is on its way")
+
+        answer.complete(accepted)
+        friends.settle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, any()) }
+        assertTrue(friends.hasText(friends.getString(R.string.aq_friends_accepted, "Ana")))
     }
 
     private fun launch(

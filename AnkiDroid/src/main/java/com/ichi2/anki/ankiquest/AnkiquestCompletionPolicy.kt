@@ -12,12 +12,15 @@ internal object AnkiquestCompletionPolicy {
         rolloverHour: Int,
     ): Long = (now - offsetWestMinutes * 60_000L - rolloverHour * 3_600_000L).floorDiv(86_400_000L)
 
+    /**
+     * Whether an upload batch must not announce anything. The first upload sends the whole history,
+     * so it stays silent until it finishes, also when it carries on after being cut off between batches.
+     */
     fun silentUpload(
-        mark: Long,
         initialSyncDone: Boolean,
         fullBatch: Boolean,
         onlyTest: Boolean,
-    ): Boolean = (mark == 0L && !initialSyncDone) || fullBatch || onlyTest
+    ): Boolean = !initialSyncDone || fullBatch || onlyTest
 
     fun freshNotification(
         createdAt: Long,

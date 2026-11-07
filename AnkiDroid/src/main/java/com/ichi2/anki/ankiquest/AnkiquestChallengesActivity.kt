@@ -147,8 +147,9 @@ class AnkiquestChallengesActivity : AnkiActivity(R.layout.activity_ankiquest_fee
             pending = null
             status = null
             showList()
+            // The old account's change no longer answers here.
+            busy = false
         }
-        busy = false
         load()
     }
 
