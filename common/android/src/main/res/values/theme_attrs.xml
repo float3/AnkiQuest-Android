@@ -13,8 +13,6 @@
 
     <attr name="incrementerButtonBackground" format="color" />
 
-    <!-- appBarColor and customTabNavBarColor are declared in :common:android (shared activity code resolves them) -->
-    <attr name="widgetColorActivated" format="color"/>
     <!-- Deck list colors and expander -->
     <attr name="selectedRowBackgroundColor" format="color"/> <!-- Selected deck, note type, browser row and settings header -->
     <attr name="dynDeckColor" format="color"/>
@@ -37,10 +35,7 @@
     <attr name="goodButtonBackground" format="color"/>
     <attr name="easyButtonBackground" format="color"/>
     <attr name="showAnswerColor" format="color"/>
-    <attr name="againButtonRef" format="reference"/>
-    <attr name="hardButtonRef" format="reference"/>
-    <attr name="goodButtonRef" format="reference"/>
-    <attr name="easyButtonRef" format="reference"/>
+    <attr name="answerButtonRef" format="reference"/> <!-- Shared by all eases -->
     <!-- Same thing but with a ripple, shared by all eases -->
     <attr name="answerButtonRippleRef" format="reference"/>
     <!-- Study Screen button text colors-->
@@ -67,14 +62,12 @@
     <!-- Study Screen other colors -->
     <attr name="topBarColor" format="color"/>
     <attr name="maxTimerColor" format="color"/>
-    <attr name="alternativeBackgroundColor" format="color"/>
     <!-- Browser colors -->
     <attr name="suspendedColor" format="color"/>
     <attr name="buriedColor" format="color"/>
     <attr name="markedColor" format="color"/>
     <!-- Note editor colors -->
     <attr name="duplicateColor" format="color"/>
-    <attr name="editTextHighlightColor" format="color"/><!-- TODO replace this with colorOnPrimaryContainer, see #19361 -->
     <attr name="toolbarBackgroundColor" format="color"/>
     <attr name="toolbarIconColor" format="color"/>
     <attr name="buttonShadowColor" format="color"/>
@@ -93,19 +86,14 @@
     <attr name="popupBackgroundColor" format="color"/>
     <attr name="overflowAndPopupMenuIconColor" format="color"/>
 
-    <attr name="editTextDisabled" format="color"/>
 
-    <attr name="snackbarBackgroundTintColor" format="color"/>
     <attr name="dialogBackground" format="color"/>
-    <attr name="snackbarButtonTextColor" format="color"/>
 
     <attr name="clozeColor" format="color" />
 
-    <!-- Background color for Tab layout. It is essentially the color of the toolbar.
-         The latter is set by colorPrimary, but theme overlay can't use it,
-         as it itself overrides colorPrimary, which is used by the view directly. -->
-    <attr name="tabLayoutBackgroundColor" format="color"/>
-    <attr name="tabActiveIconColor" format="color"/>
+    <!-- Bottom navigation: selected item indicator and its icon -->
+    <attr name="bottomNavIndicatorColor" format="color"/>
+    <attr name="bottomNavActiveIconColor" format="color"/>
 
 
     <attr name="progressDialogButtonTextColor" format="color"/>
