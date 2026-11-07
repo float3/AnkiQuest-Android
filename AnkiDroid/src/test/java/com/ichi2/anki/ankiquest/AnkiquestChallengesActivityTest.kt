@@ -22,6 +22,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.slot
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -271,6 +272,23 @@ class AnkiquestChallengesActivityTest : RobolectricTest() {
         val goals = launch()
         assertTrue(goals.hasText(goals.getString(R.string.aq_challenges_connect)))
         coVerify(exactly = 0) { AnkiquestChallenges.overview(any()) }
+    }
+
+    @Test
+    fun `refreshing while a change is on its way keeps the change buttons waiting`() {
+        val answer = CompletableDeferred<AnkiquestChallenges.Overview>()
+        coEvery { AnkiquestChallenges.act(identity, any(), any()) } coAnswers { answer.await() }
+        val goals = launch()
+        goals.click(goals.getString(R.string.aq_challenges_accept))
+
+        goals.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        advanceRobolectricLooperUntil { !goals.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        val accept = goals.views<TextView>().first { it.text.toString() == goals.getString(R.string.aq_challenges_accept) }
+        assertFalse(accept.isEnabled, "a second change could be sent while the first is on its way")
+
+        answer.complete(accepted)
+        advanceRobolectricLooperUntil { goals.hasText(goals.getString(R.string.aq_challenges_accepted)) }
+        coVerify(exactly = 1) { AnkiquestChallenges.act(identity, any(), any()) }
     }
 
     private fun launch(
