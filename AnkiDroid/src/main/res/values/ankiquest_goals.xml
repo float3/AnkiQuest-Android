@@ -76,4 +76,10 @@
     <string name="ankiquest_mood_icon_summary">The icon smiles once today counts, worries late in the day, and shows a freeze when one protects you. Some launchers briefly drop the icon while it changes.</string>
     <string name="aq_goal_streak_safe_unsent">Streak safe · not uploaded yet</string>
     <string name="aq_goal_minimum_unsent">Your reviews reach it; AnkiQuest counts them once they are uploaded.</string>
+    <string name="aq_goal_streak_safe_offline">Streak safe · waiting for a connection</string>
+    <string name="aq_goal_streak_safe_signed_out">Streak safe · sign in again to upload</string>
+    <string name="aq_goal_streak_safe_server">Streak safe · server error, will retry</string>
+    <string name="aq_goal_streak_safe_refused">Streak safe · upload refused</string>
+    <string name="aq_goal_upload_signed_out">The server refused this device’s sign-in. Sign in again in AnkiQuest settings.</string>
+    <string name="aq_goal_upload_refused">Test connection in AnkiQuest settings says why.</string>
 </resources>

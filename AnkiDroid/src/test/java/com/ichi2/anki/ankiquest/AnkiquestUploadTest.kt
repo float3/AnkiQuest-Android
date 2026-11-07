@@ -35,6 +35,7 @@ import java.util.TimeZone
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private const val PREF_LEGACY_MARK = "ankiquestUploadedThrough"
@@ -58,6 +59,9 @@ class AnkiquestUploadTest : RobolectricTest() {
 
     @Volatile
     private var replyStatus = 200
+
+    @Volatile
+    private var reviewStatus = 200
 
     private data class UploadRequest(
         val method: String,
@@ -103,7 +107,7 @@ class AnkiquestUploadTest : RobolectricTest() {
                 when {
                     settings -> settingsStatus
                     answering -> replyStatus
-                    else -> 200
+                    else -> reviewStatus
                 }
             exchange.sendResponseHeaders(status, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
@@ -279,6 +283,20 @@ class AnkiquestUploadTest : RobolectricTest() {
             Ankiquest.uploadPending()
 
             assertEquals(0, reviewUpload().getJSONArray("reviews").length())
+        }
+
+    @Test
+    fun `why an upload failed is kept until one works`() =
+        runBlocking {
+            val prefs = AnkiDroidApp.sharedPrefs()
+            val scope = HomeAccount.current()!!.scope
+            reviewStatus = 401
+            Ankiquest.uploadPending()
+            assertEquals(AnkiquestUploadProblem.SIGNED_OUT, AnkiquestUploadProblem.last(prefs, scope))
+
+            reviewStatus = 200
+            Ankiquest.uploadPending()
+            assertNull(AnkiquestUploadProblem.last(prefs, scope), "the upload that worked forgets it")
         }
 
     @Test

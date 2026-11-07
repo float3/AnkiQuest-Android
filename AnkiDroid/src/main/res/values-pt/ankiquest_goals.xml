@@ -75,4 +75,10 @@
     <string name="ankiquest_mood_icon_summary">O ícone sorri quando hoje já conta, se preocupa no fim do dia e mostra um protetor quando ele te cobre. Alguns launchers escondem o ícone por um instante ao trocar.</string>
     <string name="aq_goal_streak_safe_unsent">Sequência garantida · ainda não enviada</string>
     <string name="aq_goal_minimum_unsent">O AnkiQuest conta suas revisões assim que forem enviadas.</string>
+    <string name="aq_goal_streak_safe_offline">Sequência garantida · à espera de ligação</string>
+    <string name="aq_goal_streak_safe_signed_out">Sequência garantida · inicia sessão de novo para enviar</string>
+    <string name="aq_goal_streak_safe_server">Sequência garantida · erro do servidor, vai tentar de novo</string>
+    <string name="aq_goal_streak_safe_refused">Sequência garantida · envio recusado</string>
+    <string name="aq_goal_upload_signed_out">O servidor recusou a sessão deste dispositivo. Inicia sessão de novo nas definições do AnkiQuest.</string>
+    <string name="aq_goal_upload_refused">«Testar ligação» nas definições do AnkiQuest indica o motivo.</string>
 </resources>
