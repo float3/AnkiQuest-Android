@@ -23,6 +23,7 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -259,6 +260,26 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         } finally {
             unmockkObject(AnkiquestBoards)
         }
+    }
+
+    @Test
+    fun `refreshing while friends are being told keeps the buttons waiting and shows the answer`() {
+        val answer = CompletableDeferred<Int>()
+        coEvery { AnkiquestCommunity.tell(identity, AT) } coAnswers { answer.await() }
+        val card = launch()
+        card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_tell) }.performClick()
+        advanceRobolectricLooper()
+
+        card.findViewById<View>(R.id.aq_board_refresh).performClick()
+        advanceRobolectricLooperUntil { card.hasText("el murciélago") }
+        val tell = card.views<TextView>().first { it.text.toString() == card.getString(R.string.aq_conquest_tell) }
+        assertFalse(tell.isEnabled, "friends could be told twice")
+
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(told = true, friends = 2)
+        answer.complete(2)
+        card.settle()
+        coVerify(exactly = 1) { AnkiquestCommunity.tell(identity, AT) }
+        assertTrue(card.hasText(card.resources.getQuantityString(R.plurals.aq_conquest_told_count, 2, 2)), "the answer is shown")
     }
 
     private fun launch(user: String = "hill"): AnkiquestConquestActivity =
