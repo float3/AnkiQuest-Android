@@ -18,10 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Compare with the server's client fixtures and day verdicts
+      - name: Compare with the server's client fixtures, day verdicts and review heatmap
         shell: bash
         run: |
           curl -fsSL https://raw.githubusercontent.com/float3/ankiquest/master/tests/fixtures/clients.json \
             | diff - AnkiDroid/src/test/resources/ankiquest/clients.json
           curl -fsSL https://raw.githubusercontent.com/float3/ankiquest/master/tests/fixtures/day_verdicts.json \
             | diff - AnkiDroid/src/test/resources/ankiquest/day_verdicts.json
+          curl -fsSL https://raw.githubusercontent.com/float3/ankiquest/master/tests/fixtures/review_heatmap.json \
+            | diff - AnkiDroid/src/test/resources/ankiquest/review_heatmap.json
