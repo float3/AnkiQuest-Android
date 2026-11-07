@@ -179,6 +179,8 @@ internal object AnkiquestDailyGoal {
         val unsent: List<AnkiquestDay.Review> = emptyList(),
         /** The account has no token, so the server stores none of its reviews and only this device can judge. */
         val deviceOnly: Boolean = false,
+        /** Why the last upload failed, while reviews wait for one that works. */
+        val uploadProblem: AnkiquestUploadProblem? = null,
     ) {
         val progress: Int get() = serverProgress ?: if (mode == Mode.MINUTES) minutes else studiedCards
 
@@ -526,6 +528,7 @@ internal object AnkiquestDailyGoal {
             streakDay = day,
             unsent = load.unsent,
             deviceOnly = account == null || account.token.isEmpty(),
+            uploadProblem = AnkiquestUploadProblem.last(prefs, account?.scope),
         )
     }
 
