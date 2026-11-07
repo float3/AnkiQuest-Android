@@ -3,7 +3,10 @@
 
 import com.ichi2.anki.gradle.VersionCodeTasks
 import com.ichi2.anki.gradle.WriteReleaseMetadata
+import com.ichi2.anki.gradle.isCoverageEnabled
 import java.io.ByteArrayOutputStream
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Locale
 import java.util.Properties
 import java.util.regex.Pattern
@@ -71,15 +74,23 @@ val gitCommitHash =
 /**
  * Epoch millis of the build. Displayed on the 'About' screen.
  *
- * CI passes the real time via -PbuildTime=<epoch> # example: 1776422957
+ * CI passes the real time via -PbuildTime=<epoch> # example: 1776422957000
  *
- * A local build uses a stale value (captured in the configuration cache) so the configuration cache
- * is not invalidated on every build.
+ * This value is captured in the configuration cache, so it can be stale when the cache is reused.
  */
 val buildTimeMillis =
     providers
         .gradleProperty("buildTime")
-        .orElse(providers.provider { System.currentTimeMillis().toString() })
+        .orElse(
+            providers.provider {
+                LocalDate
+                    .now()
+                    .atStartOfDay(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+                    .toString()
+            },
+        )
 
 android {
     namespace = "com.ichi2.anki"
@@ -132,9 +143,9 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode = 22600111
+        versionCode = 22600112
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName = "2.26.0alpha11"
+        versionName = "2.26.0alpha12"
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "com.ichi2.testutils.NewCollectionPathTestRunner"
@@ -226,8 +237,7 @@ android {
 
             // Issue 6009: allow disabling JaCoCo to speed up debug builds.
             // A Gradle property also allows the preference to be shared across worktrees.
-            isTestCoverageEnabled =
-                (providers.gradleProperty("enable_coverage").orNull ?: localProperties.getProperty("enable_coverage")) != "false"
+            isTestCoverageEnabled = project.isCoverageEnabled()
 
             // make the icon red if in debug mode
             resValue("color", "anki_foreground_icon_color_0", "#FFFF0000")

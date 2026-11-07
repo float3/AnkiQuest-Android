@@ -15,9 +15,11 @@
         <item name="colorSurfaceVariant">#EEEEEE</item>
         <item name="colorOnSurfaceVariant">#444444</item>
         <item name="colorOutlineVariant">#777777</item>
+        <item name="colorOutline">@color/black</item>
         <item name="colorTertiary">#444444</item>
         <item name="colorOnTertiary">#FFFFFF</item>
-        <item name="colorOnPrimaryContainer">@color/white</item>
+        <item name="colorPrimaryContainer">@color/material_grey_300</item>
+        <item name="colorOnPrimaryContainer">@color/black</item>
         <item name="fabNormalColor">@color/black</item>
         <item name="fabPressedColor">@color/black</item>
         <item name="colorSurfaceContainerHighest">?attr/colorSurfaceContainer</item>
@@ -25,13 +27,12 @@
         <item name="colorSurfaceContainer">#F0F0F0</item>
         <item name="colorSurfaceContainerLow">?android:attr/colorBackground</item>
 
-        <item name="widgetColorActivated">?attr/colorPrimary</item>
         <item name="appBarColor">@color/white</item>
         <item name="actionBarTextColor">@color/black</item>
         <item name="actionBarPopupTextColor">?android:attr/textColor</item>
 
-        <item name="tabLayoutBackgroundColor">?attr/colorPrimary</item>
-        <item name="tabActiveIconColor">@color/white</item>
+        <item name="bottomNavIndicatorColor">@color/black</item>
+        <item name="bottomNavActiveIconColor">@color/white</item>
 
         <item name="navDrawerImage">@drawable/nav_drawer_logo_eink</item>
         <item name="selectedRowBackgroundColor">#E0E0E0</item>
@@ -63,19 +64,16 @@
         <item name="goodBackgroundColor">@color/white</item>
         <item name="easyBackgroundColor">@color/white</item>
 
-        <item name="againButtonRef">@drawable/footer_button_all_eink</item>
-        <item name="hardButtonRef">@drawable/footer_button_all_eink</item>
-        <item name="goodButtonRef">@drawable/footer_button_all_eink</item>
-        <item name="easyButtonRef">@drawable/footer_button_all_eink</item>
+        <item name="answerButtonRef">@drawable/footer_button_all_eink</item>
 
         <item name="answerButtonRippleRef">@drawable/footer_button_all_eink_ripple</item>
 
         <item name="showAnswerButtonBackground">@color/black</item>
         <item name="showAnswerColor">@color/black</item>
 
-        <item name="alternativeBackgroundColor">@color/white</item>
+        <item name="colorSurfaceDim">@color/white</item>
         <item name="cardBrowserDivider">@color/black</item>
-        <item name="editTextHighlightColor">@color/material_grey_300</item>
+        <item name="android:textColorHighlight">@color/material_grey_300</item>
         <item name="toolbarBackgroundColor">@color/white</item>
         <item name="toolbarIconColor">@color/black</item>
         <item name="topBarColor">@color/white</item>
@@ -88,6 +86,7 @@
 
         <item name="clozeColor">@color/black</item>
         <item name="dialogBackground">@color/white</item>
+        <item name="progressDialogButtonTextColor">@color/black</item>
         <item name="navDrawerItemColor">@color/black</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.AnkiDroid.AlertDialog.Eink</item>
 
@@ -98,9 +97,11 @@
         <item name="widgetStrokeColor">@color/black</item>
         <item name="studyScreenElevation">0dp</item>
 
+        <!-- Inverse colors, used by snackbars, which have a border instead of a background -->
+        <item name="colorSurfaceInverse">@color/white</item>
+        <item name="colorOnSurfaceInverse">@color/black</item>
+        <item name="colorPrimaryInverse">@color/black</item>
         <item name="snackbarStyle">@style/SnackbarStyle.Eink</item>
-        <item name="snackbarTextViewStyle">@style/SnackbarTextStyle.Eink</item>
-        <item name="snackbarButtonStyle">@style/SnackbarButtonStyle.Eink</item>
         <item name="whiteboardToolbarCardStyle">@style/Widget.AnkiDroid.WhiteboardToolbarCard.Eink</item>
     </style>
 
@@ -117,14 +118,6 @@
         <item name="backgroundTint">@null</item>
         <item name="android:elevation">0dp</item>
         <item name="elevation">0dp</item>
-    </style>
-
-    <style name="SnackbarTextStyle.Eink" parent="Widget.MaterialComponents.Snackbar.TextView">
-        <item name="android:textColor">@color/black</item>
-    </style>
-
-    <style name="SnackbarButtonStyle.Eink" parent="Widget.Material3.Button.TextButton.Snackbar">
-        <item name="android:textColor">@color/black</item>
     </style>
 
     <style name="Theme_Light_Eink" parent="Base.Theme.Light.Eink"/>

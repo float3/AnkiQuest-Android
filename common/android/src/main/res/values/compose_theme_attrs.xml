@@ -24,12 +24,18 @@
         <attr name="colorOnSurfaceVariant" />
         <attr name="colorOutline" />
         <attr name="colorOutlineVariant" />
+        <attr name="colorSurfaceInverse" />
+        <attr name="colorOnSurfaceInverse" />
+        <attr name="colorPrimaryInverse" />
         <attr name="colorSurfaceContainer" />
         <attr name="colorSurfaceContainerHigh" />
         <attr name="colorSurfaceContainerHighest" />
         <attr name="colorSurfaceContainerLow" />
         <attr name="colorSurfaceContainerLowest" />
+        <attr name="colorSurfaceDim" />
+        <attr name="colorSurfaceBright" />
         <attr name="android:colorBackground" />
+        <attr name="colorOnBackground" />
         <attr name="fabNormalColor" />
     </declare-styleable>
 </resources>

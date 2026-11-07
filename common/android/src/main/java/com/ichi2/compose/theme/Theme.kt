@@ -76,12 +76,8 @@ internal fun Context.toMaterial3ColorScheme(): ColorScheme {
             base.copy(
                 primary = color(R.styleable.ComposeTheme_colorPrimary, base.primary),
                 onPrimary = color(R.styleable.ComposeTheme_colorOnPrimary, base.onPrimary),
-                // primaryContainer / onPrimaryContainer are intentionally NOT read from
-                // the AnkiDroid XML themes. Those XML values were chosen for legacy
-                // Material Components purposes (switch thumb, old-style FAB icon tint)
-                // and conflict with Material3's semantic (a real container background
-                // for FABs and similar). Falling back to the Material3 base colorScheme
-                // gives the right behavior for Compose components.
+                primaryContainer = color(R.styleable.ComposeTheme_colorPrimaryContainer, base.primaryContainer),
+                onPrimaryContainer = color(R.styleable.ComposeTheme_colorOnPrimaryContainer, base.onPrimaryContainer),
                 secondary = color(R.styleable.ComposeTheme_colorSecondary, base.secondary),
                 onSecondary = color(R.styleable.ComposeTheme_colorOnSecondary, base.onSecondary),
                 secondaryContainer = color(R.styleable.ComposeTheme_colorSecondaryContainer, base.secondaryContainer),
@@ -100,6 +96,9 @@ internal fun Context.toMaterial3ColorScheme(): ColorScheme {
                 onSurfaceVariant = color(R.styleable.ComposeTheme_colorOnSurfaceVariant, base.onSurfaceVariant),
                 outline = color(R.styleable.ComposeTheme_colorOutline, base.outline),
                 outlineVariant = color(R.styleable.ComposeTheme_colorOutlineVariant, base.outlineVariant),
+                inverseSurface = color(R.styleable.ComposeTheme_colorSurfaceInverse, base.inverseSurface),
+                inverseOnSurface = color(R.styleable.ComposeTheme_colorOnSurfaceInverse, base.inverseOnSurface),
+                inversePrimary = color(R.styleable.ComposeTheme_colorPrimaryInverse, base.inversePrimary),
                 // XML container colors can be overlay tints. Compose uses these as standalone
                 // surfaces (including popup windows), which must not reveal the content behind them.
                 surfaceContainer = color(R.styleable.ComposeTheme_colorSurfaceContainer, base.surfaceContainer).compositeOver(surface),
@@ -123,7 +122,10 @@ internal fun Context.toMaterial3ColorScheme(): ColorScheme {
                         R.styleable.ComposeTheme_colorSurfaceContainerLowest,
                         base.surfaceContainerLowest,
                     ).compositeOver(surface),
+                surfaceDim = color(R.styleable.ComposeTheme_colorSurfaceDim, base.surfaceDim),
+                surfaceBright = color(R.styleable.ComposeTheme_colorSurfaceBright, base.surfaceBright),
                 background = color(R.styleable.ComposeTheme_android_colorBackground, base.background),
+                onBackground = color(R.styleable.ComposeTheme_colorOnBackground, base.onBackground),
             )
     }
     return scheme
