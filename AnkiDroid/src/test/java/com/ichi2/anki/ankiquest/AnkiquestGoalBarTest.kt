@@ -186,6 +186,27 @@ class AnkiquestGoalBarTest : RobolectricTest() {
         assertEquals(targetContext.getString(R.string.aq_goal_streak_safe_unsent), unsent.label.text.toString())
         assertTrue(unsent.contentDescription.endsWith(targetContext.getString(R.string.aq_goal_minimum_unsent)))
 
+        // A failed upload says why the reviews wait, and what to do when waiting does not help.
+        val refused =
+            AnkiquestStreakChip(targetContext).apply {
+                val waiting = day(12, 10, confirmed = false)
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = waiting, uploadProblem = AnkiquestUploadProblem.SIGNED_OUT))
+            }
+        assertEquals(targetContext.getString(R.string.aq_goal_streak_safe_signed_out), refused.label.text.toString())
+        assertTrue(refused.contentDescription.endsWith(targetContext.getString(R.string.aq_goal_upload_signed_out)))
+        val offline =
+            AnkiquestStreakChip(targetContext).apply {
+                val waiting = day(12, 10, confirmed = false)
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = waiting, uploadProblem = AnkiquestUploadProblem.OFFLINE))
+            }
+        assertEquals(targetContext.getString(R.string.aq_goal_streak_safe_offline), offline.label.text.toString())
+        val confirmed =
+            AnkiquestStreakChip(targetContext).apply {
+                val problem = AnkiquestUploadProblem.OFFLINE
+                show(Status(100, 12, 10, 20, Mode.CARDS, Goal(100), streakDay = day(12, 10), uploadProblem = problem))
+            }
+        assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), confirmed.label.text.toString(), "an old failure is moot")
+
         val any = AnkiquestStreakChip(targetContext).apply { show(Status(100, 0, 0, 0, Mode.OFF, Goal(0))) }
         assertEquals(targetContext.getString(R.string.aq_goal_streak_any), any.label.text.toString())
         assertEquals(targetContext.getString(R.string.aq_goal_minimum_any), any.contentDescription)

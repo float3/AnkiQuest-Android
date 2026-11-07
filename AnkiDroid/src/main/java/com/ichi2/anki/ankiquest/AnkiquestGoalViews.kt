@@ -178,6 +178,25 @@ internal class AnkiquestStreakChip
         }
 
         companion object {
+            /** The chip's words while reviews wait because of this problem. */
+            private val AnkiquestUploadProblem.label: Int
+                get() =
+                    when (this) {
+                        AnkiquestUploadProblem.OFFLINE -> R.string.aq_goal_streak_safe_offline
+                        AnkiquestUploadProblem.SIGNED_OUT -> R.string.aq_goal_streak_safe_signed_out
+                        AnkiquestUploadProblem.SERVER -> R.string.aq_goal_streak_safe_server
+                        AnkiquestUploadProblem.REFUSED -> R.string.aq_goal_streak_safe_refused
+                    }
+
+            /** What to do about this problem, when anything helps besides waiting. */
+            private val AnkiquestUploadProblem.advice: Int?
+                get() =
+                    when (this) {
+                        AnkiquestUploadProblem.SIGNED_OUT -> R.string.aq_goal_upload_signed_out
+                        AnkiquestUploadProblem.REFUSED -> R.string.aq_goal_upload_refused
+                        else -> null
+                    }
+
             fun streak(
                 context: Context,
                 status: AnkiquestDailyGoal.Status,
@@ -191,12 +210,23 @@ internal class AnkiquestStreakChip
                             } else {
                                 context.getString(R.string.aq_goal_minimum_any_done)
                             }
-                        // Safe before the server agrees only when unsent reviews provably reach its minimum, and then says so.
+                        // Safe before the server agrees only when unsent reviews provably reach its minimum, and then
+                        // says so, and why they wait when the last upload failed.
+                        val problem = status.uploadProblem?.takeIf { status.awaitingUpload }
+                        val label =
+                            when {
+                                !status.awaitingUpload -> R.string.aq_goal_streak_safe
+                                problem != null -> problem.label
+                                else -> R.string.aq_goal_streak_safe_unsent
+                            }
+                        val waiting =
+                            listOfNotNull(
+                                context.getString(R.string.aq_goal_minimum_unsent),
+                                problem?.advice?.let { context.getString(it) },
+                            ).joinToString(" ")
                         Streak(
-                            context.getString(
-                                if (status.awaitingUpload) R.string.aq_goal_streak_safe_unsent else R.string.aq_goal_streak_safe,
-                            ),
-                            if (status.awaitingUpload) done + " " + context.getString(R.string.aq_goal_minimum_unsent) else done,
+                            context.getString(label),
+                            if (status.awaitingUpload) "$done $waiting" else done,
                             1f,
                             true,
                         )
