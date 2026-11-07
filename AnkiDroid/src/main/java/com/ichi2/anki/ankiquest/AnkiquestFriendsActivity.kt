@@ -120,8 +120,9 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             status = null
             // An invite link was opened for the account that was signed in then.
             invite = null
+            // The old account's change no longer answers here.
+            busy = false
         }
-        busy = false
         load()
     }
 

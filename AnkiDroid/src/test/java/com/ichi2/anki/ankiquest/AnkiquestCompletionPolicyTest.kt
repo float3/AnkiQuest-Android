@@ -10,25 +10,31 @@ import kotlin.test.assertTrue
 class AnkiquestCompletionPolicyTest {
     @Test
     fun `first review after an empty successful baseline is announced`() {
-        assertTrue(AnkiquestCompletionPolicy.silentUpload(0, initialSyncDone = false, fullBatch = false, onlyTest = false))
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = false, fullBatch = false, onlyTest = false))
         // The first successful upload had no reviews, so the review cursor is still zero.
-        assertFalse(AnkiquestCompletionPolicy.silentUpload(0, initialSyncDone = true, fullBatch = false, onlyTest = false))
+        assertFalse(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = true, fullBatch = false, onlyTest = false))
     }
 
     @Test
     fun `initial history stays silent through full and final batches`() {
-        assertTrue(AnkiquestCompletionPolicy.silentUpload(0, initialSyncDone = false, fullBatch = true, onlyTest = false))
-        assertTrue(AnkiquestCompletionPolicy.silentUpload(0, initialSyncDone = false, fullBatch = false, onlyTest = false))
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = false, fullBatch = true, onlyTest = false))
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = false, fullBatch = false, onlyTest = false))
     }
 
     @Test
     fun `a connection test never sends an announcement`() {
-        assertTrue(AnkiquestCompletionPolicy.silentUpload(123, initialSyncDone = true, fullBatch = false, onlyTest = true))
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = true, fullBatch = false, onlyTest = true))
     }
 
     @Test
-    fun `a normal upload after an established cursor can announce`() {
-        assertFalse(AnkiquestCompletionPolicy.silentUpload(123, initialSyncDone = false, fullBatch = false, onlyTest = false))
+    fun `a normal upload after the first one finished can announce`() {
+        assertFalse(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = true, fullBatch = false, onlyTest = false))
+    }
+
+    @Test
+    fun `a first upload cut off between batches stays silent when it carries on`() {
+        // Each batch moved the cursor, but the history is not all there yet.
+        assertTrue(AnkiquestCompletionPolicy.silentUpload(initialSyncDone = false, fullBatch = false, onlyTest = false))
     }
 
     @Test

@@ -116,11 +116,12 @@ class AnkiquestFeedActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
             account = current
             pictures.clear()
             status = null
+            // The old account's changes no longer answer here.
+            busy.clear()
+            markingAll = false
         }
         page = null
         sent = null
-        busy.clear()
-        markingAll = false
         load(more = false)
     }
 

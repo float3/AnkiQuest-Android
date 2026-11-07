@@ -17,6 +17,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -221,6 +222,23 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         assertTrue(feed.hasText(feed.getString(R.string.aq_home_account_route_changed)))
         assertTrue(feed.hasText("🎉 Cerro shared a win"))
         assertFalse(launch(identity.notificationAccount).hasText(feed.getString(R.string.aq_home_account_route_changed)))
+    }
+
+    @Test
+    fun `refreshing while marking all read keeps the button waiting`() {
+        val answer = CompletableDeferred<Unit>()
+        coEvery { AnkiquestFeed.markAllRead(identity, any()) } coAnswers { answer.await() }
+        val feed = launch()
+        feed.click(feed.getString(R.string.aq_feed_mark_all_read))
+
+        feed.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        val markAll = feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_feed_mark_all_read) }
+        assertFalse(markAll.isEnabled, "marking all read could be sent twice")
+
+        answer.complete(Unit)
+        advanceRobolectricLooperUntil { feed.hasText(feed.getString(R.string.aq_feed_all_read)) }
+        coVerify(exactly = 1) { AnkiquestFeed.markAllRead(identity, any()) }
     }
 
     private fun launch(account: String? = null): AnkiquestFeedActivity =
