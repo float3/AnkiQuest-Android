@@ -669,7 +669,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .put("clock", clock)
                     .put(
                         "silent",
-                        catalog || everything || AnkiquestCompletionPolicy.silentUpload(mark, initialSyncDone, full, onlyTest),
+                        catalog || everything || AnkiquestCompletionPolicy.silentUpload(initialSyncDone, full, onlyTest),
                     )
             if (first) {
                 restored.forEach { batch.put(it) }
