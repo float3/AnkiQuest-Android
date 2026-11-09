@@ -34,4 +34,6 @@
     <string name="aq_profile_deck_alerts_start">Volver a recibir avisos de mazos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar la protección de racha</string>
     <string name="aq_profile_freezes_resume">Reanudar la protección de racha</string>
+    <string name="ankiquest_show_global_title">Mostrarme en la clasificación global</string>
+    <string name="ankiquest_show_global_summary">Otros jugadores de este servidor pueden ver mi nombre y mi posición.</string>
 </resources>

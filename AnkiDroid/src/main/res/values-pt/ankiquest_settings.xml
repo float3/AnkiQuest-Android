@@ -34,4 +34,6 @@
     <string name="aq_profile_deck_alerts_start">Voltar a receber avisos de baralhos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar a proteção da sequência</string>
     <string name="aq_profile_freezes_resume">Retomar a proteção da sequência</string>
+    <string name="ankiquest_show_global_title">Mostrar-me na classificação global</string>
+    <string name="ankiquest_show_global_summary">Os outros jogadores deste servidor podem ver o meu nome e a minha posição.</string>
 </resources>

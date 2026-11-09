@@ -26,6 +26,7 @@ import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
+import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.SubscriptionRepository
 import io.mockk.coEvery
@@ -157,6 +158,28 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         idle()
         assertFalse(switch.isChecked)
         coVerify { AnkiquestSharing.saveSettings(any(), private, null) }
+    }
+
+    @Test
+    fun `global listing reflects the server and saves only that choice`() {
+        val field = AnkiquestWidgetSettings.GLOBAL_SETTING
+        coEvery { Ankiquest.notificationSwitches() } returns JSONObject().put(field, true)
+        coEvery { Ankiquest.setNotificationSwitch(field, false) } returns JSONObject().put(field, false)
+
+        val switch = assertNotNull(open().findPreference<SwitchPreferenceCompat>("ankiquestShowGlobal"))
+        assertTrue(switch.isVisible)
+        assertTrue(switch.isChecked)
+        switch.performClick()
+        idle()
+
+        assertFalse(switch.isChecked)
+        coVerify(exactly = 1) { Ankiquest.setNotificationSwitch(field, false) }
+    }
+
+    @Test
+    fun `global listing is hidden on an older server`() {
+        val switch = assertNotNull(open().findPreference<SwitchPreferenceCompat>("ankiquestShowGlobal"))
+        assertFalse(switch.isVisible)
     }
 
     @Test

@@ -34,4 +34,6 @@
     <string name="aq_profile_deck_alerts_start">Stapelmeldungen von %1$s wieder erhalten</string>
     <string name="aq_profile_freezes_pause">Serienschutz pausieren</string>
     <string name="aq_profile_freezes_resume">Serienschutz fortsetzen</string>
+    <string name="ankiquest_show_global_title">Mich in der globalen Rangliste zeigen</string>
+    <string name="ankiquest_show_global_summary">Andere Spieler auf diesem Server können meinen Namen und Platz sehen.</string>
 </resources>
