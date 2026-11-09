@@ -4,7 +4,9 @@ package com.ichi2.anki.ankiquest
 
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -14,6 +16,7 @@ import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
@@ -59,6 +62,35 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     fun `counts the minutes still missing for the server's minimum`() {
         val widget = render(JSONArray().put(me(9, "pending", 8, 6, 10)))
         assertEquals("6 of 10 minutes today", widget.text(R.id.ankiquest_streak_status))
+    }
+
+    @Test
+    fun `shows progress to the minimum in each size`() {
+        for (size in AnkiquestStreakWidget.Size.entries) {
+            for (minutes in listOf(0, 6, 10, 12)) {
+                val state = if (minutes >= 10) "studied" else "pending"
+                val board = JSONArray().put(me(9, state, 8, minutes, 10))
+                val widget =
+                    AnkiquestStreakWidget
+                        .views(targetContext, board, "hill", size)
+                        .apply(targetContext, FrameLayout(targetContext))
+                val progress = widget.allViews.filterIsInstance<ProgressBar>().single()
+                val expected = minutes.coerceAtMost(10)
+                assertEquals(View.VISIBLE, progress.visibility, size.name)
+                assertEquals(10, progress.max, size.name)
+                assertEquals(expected, progress.progress, size.name)
+                assertContains(widget.contentDescription.toString(), "$expected of 10 minutes today", message = size.name)
+            }
+        }
+    }
+
+    @Test
+    fun `hides the meter for stale or missing data`() {
+        val stale = me(9, "pending", 8, 6, 10).put("day_ends_at", TimeManager.time.intTimeMS())
+        for (board in listOf(null, JSONArray().put(stale), JSONArray().put(me(9, "pending", 8)))) {
+            val progress = render(board).allViews.filterIsInstance<ProgressBar>().single()
+            assertEquals(View.GONE, progress.visibility)
+        }
     }
 
     @Test

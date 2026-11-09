@@ -195,8 +195,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val state = me?.let { AnkiquestWidget.streakState(it) } ?: "unknown"
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
 
-            views.setViewVisibility(R.id.ankiquest_streak_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
-            if (AnkiquestCompanion.visible()) {
+            val companionVisible = AnkiquestCompanion.visible()
+            views.setViewVisibility(R.id.ankiquest_streak_companion, if (companionVisible) View.VISIBLE else View.GONE)
+            if (companionVisible) {
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
                         bigPose(state, streak, me, goalReached(me), now)
@@ -217,12 +218,18 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     else -> AnkiquestWidget.streakLabel(language, me, state)
                 }
             views.setTextViewText(R.id.ankiquest_streak_status, status)
+            val progress = setMinimumProgress(views, language, me, now)
+            if (size == Size.SMALL || size == Size.MEDIUM) {
+                val badgeVisible = companionVisible || progress != null
+                views.setViewVisibility(R.id.ankiquest_streak_badge, if (badgeVisible) View.VISIBLE else View.GONE)
+            }
+            val description = if (progress == null || progress == status) status else "$status · $progress"
             views.setContentDescription(
                 R.id.ankiquest_streak_root,
                 if (me == null) {
-                    status
+                    description
                 } else {
-                    language.getString(R.string.ankiquest_streak_description, numbers.format(streak), status)
+                    language.getString(R.string.ankiquest_streak_description, numbers.format(streak), description)
                 },
             )
             val open = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -238,6 +245,25 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 )
             }
             return views
+        }
+
+        /** Read the minimum from today's existing leaderboard row, without another request. */
+        private fun setMinimumProgress(
+            views: RemoteViews,
+            context: Context,
+            row: JSONObject?,
+            now: Long,
+        ): String? {
+            val minimum = row?.optInt("streak_minutes") ?: 0
+            val id = R.id.ankiquest_streak_progress
+            if (row == null || minimum <= 0 || row.isNull("today_minutes") || row.optLong("day_ends_at") <= now) {
+                views.setViewVisibility(id, View.GONE)
+                return null
+            }
+            val minutes = row.optInt("today_minutes").coerceIn(0, minimum)
+            views.setProgressBar(id, minimum, minutes, false)
+            views.setViewVisibility(id, View.VISIBLE)
+            return context.getString(R.string.ankiquest_streak_short, minutes, minimum)
         }
 
         private fun mine(
