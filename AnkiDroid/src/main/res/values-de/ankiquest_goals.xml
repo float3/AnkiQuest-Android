@@ -15,7 +15,12 @@
     <string name="aq_goal_streak_minutes">%1$d / %2$d Min.</string>
     <string name="aq_goal_streak_syncing">Wird synchronisiert…</string>
     <string name="aq_goal_minimum_syncing">Deine heutigen Wiederholungen sind noch auf dem Weg zum Server. Die Lernserie ist gesichert, sobald der Server sie zählt.</string>
-    <string name="aq_goal_streak_safe">Lernserie sicher</string>
+    <string name="aq_goal_streak_safe">Heute zählt ✓</string>
+    <string name="aq_streak_minimum_title">Lernserie für heute gesichert</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s Tag in Folge</item>
+        <item quantity="other">%s Tage in Folge</item>
+    </plurals>
     <string name="aq_goal_streak_any">Einmal wiederholen rettet deine Serie</string>
     <string name="ankiquest_streak_short">Heute %1$d von %2$d Minuten</string>
     <string name="ankiquest_goal_cards_title">Karten pro Tag</string>
@@ -73,7 +78,7 @@
     </plurals>
     <string name="ankiquest_mood_icon_title">Akis Laune im App-Symbol</string>
     <string name="ankiquest_mood_icon_summary">Das Symbol lächelt, sobald heute zählt, sorgt sich spät am Tag und zeigt einen Schutz, wenn einer dich schützt. Manche Launcher blenden das Symbol beim Wechsel kurz aus.</string>
-    <string name="aq_goal_streak_safe_unsent">Lernserie sicher · noch nicht hochgeladen</string>
+    <string name="aq_goal_streak_safe_unsent">Heute zählt ✓ · noch nicht hochgeladen</string>
     <string name="aq_goal_minimum_unsent">AnkiQuest zählt deine Wiederholungen, sobald sie hochgeladen sind.</string>
     <string name="aq_goal_streak_safe_offline">Lernserie sicher · wartet auf Verbindung</string>
     <string name="aq_goal_streak_safe_signed_out">Lernserie sicher · zum Hochladen neu anmelden</string>

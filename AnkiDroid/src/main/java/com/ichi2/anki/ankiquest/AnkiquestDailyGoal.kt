@@ -207,6 +207,9 @@ internal object AnkiquestDailyGoal {
             profile: JSONObject?,
             now: Long,
         ): Status {
+            if (profile?.optJSONObject("today") == null) {
+                return this
+            }
             val server = AnkiquestDay.Server.profile(profile) ?: return this
             val day = AnkiquestDay.judge(server, unsent, now) ?: return this
             return copy(streakDay = day, streakMinutes = day.streakMinutes)

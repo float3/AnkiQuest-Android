@@ -15,7 +15,12 @@
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
     <string name="aq_goal_streak_syncing">Sincronizando…</string>
     <string name="aq_goal_minimum_syncing">Tus repasos de hoy aún van camino del servidor. La racha queda asegurada cuando el servidor los cuente.</string>
-    <string name="aq_goal_streak_safe">Racha a salvo</string>
+    <string name="aq_goal_streak_safe">Hoy cuenta ✓</string>
+    <string name="aq_streak_minimum_title">Racha a salvo por hoy</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s día de racha</item>
+        <item quantity="other">%s días de racha</item>
+    </plurals>
     <string name="aq_goal_streak_any">Repasa una vez y salvas tu racha</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoy</string>
     <string name="ankiquest_goal_cards_title">Tarjetas por día</string>
@@ -73,7 +78,7 @@
     </plurals>
     <string name="ankiquest_mood_icon_title">El ánimo de Aki en el icono</string>
     <string name="ankiquest_mood_icon_summary">El icono sonríe cuando hoy ya cuenta, se preocupa al final del día y muestra un protector cuando te cubre. Algunos lanzadores ocultan el icono un momento al cambiar.</string>
-    <string name="aq_goal_streak_safe_unsent">Racha a salvo · sin subir aún</string>
+    <string name="aq_goal_streak_safe_unsent">Hoy cuenta ✓ · sin subir aún</string>
     <string name="aq_goal_minimum_unsent">AnkiQuest cuenta tus repasos cuando se suban.</string>
     <string name="aq_goal_streak_safe_offline">Racha a salvo · esperando conexión</string>
     <string name="aq_goal_streak_safe_signed_out">Racha a salvo · vuelve a iniciar sesión para subir</string>

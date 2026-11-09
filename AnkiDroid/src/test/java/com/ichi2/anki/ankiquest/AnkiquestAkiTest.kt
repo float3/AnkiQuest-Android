@@ -18,7 +18,10 @@ class AnkiquestAkiTest : RobolectricTest() {
     private fun profile(
         state: String,
         reviews: Int,
-    ) = JSONObject().put("streak_state", state).put("today", JSONObject().put("reviews", reviews))
+    ) = JSONObject()
+        .put("streak_state", state)
+        .put("day_ends_at", Long.MAX_VALUE)
+        .put("today", JSONObject().put("reviews", reviews).put("streak_minutes", 10))
 
     @Test
     fun `no history or empty decks never earns a celebration`() {
@@ -44,6 +47,27 @@ class AnkiquestAkiTest : RobolectricTest() {
         val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1)
         assertEquals(AnkiquestAki.Mood.CELEBRATE, AnkiquestAki.mood(local, profile("studied", 20)))
         assertEquals(AnkiquestAki.Mood.WELCOME, AnkiquestAki.mood(local, profile("pending", 0)))
+    }
+
+    @Test
+    fun `the companion celebrates unsent study that secures today`() {
+        val dayStarts = 10_000L
+        val profile =
+            profile("pending", 0)
+                .put("day_ends_at", dayStarts + 86_400_000)
+                .put("today", JSONObject().put("starts_at", dayStarts).put("reviews", 0).put("streak_minutes", 10))
+        val goal =
+            AnkiquestDailyGoal.Status(
+                day = 1,
+                minutes = 10,
+                streakMinutes = 10,
+                studiedCards = 1,
+                mode = AnkiquestDailyGoal.Mode.OFF,
+                goal = AnkiquestDailyGoal.Goal(0),
+                unsent = listOf(AnkiquestDay.Review(dayStarts + 1, 600_000)),
+            )
+        val local = HomeLocal(listOf(HomeDeck(1, "Spanish", 0, 0, 0)), 1, goal = goal)
+        assertEquals(AnkiquestAki.Mood.CELEBRATE, AnkiquestAki.mood(local, profile, now = dayStarts + 2))
     }
 
     @Test

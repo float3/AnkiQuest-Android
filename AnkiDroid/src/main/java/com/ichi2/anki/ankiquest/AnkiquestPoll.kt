@@ -121,7 +121,10 @@ object AnkiquestPoll {
             Timber.w(e, "ankiquest widget standings update failed")
         }
         try {
-            AnkiquestNotifier.onProfile(context, Ankiquest.profile())
+            val profile = Ankiquest.profile()
+            if (AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
+                AnkiquestNotifier.onProfile(context, profile)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

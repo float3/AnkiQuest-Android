@@ -36,6 +36,29 @@ import kotlin.test.assertTrue
 @Config(sdk = [32])
 class AnkiquestNotifierTest : RobolectricTest() {
     @Test
+    fun `daily minimum posts a silent notification once`() {
+        val manager = targetContext.getSystemService<NotificationManager>()!!
+        val account = replyAccount()
+        val secured =
+            message(1, 30)
+                .put("kind", "celebration")
+                .put("topic", "secured")
+                .put("moment", "secured:9")
+                .put("quiet", true)
+                .put("title", "Streak secured!")
+        val inbox = JSONArray().put(secured)
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, inbox, account.scope)
+        val posted = shadowOf(manager).getNotification(5_140_001)
+        assertEquals(Notification.GROUP_ALERT_SUMMARY, posted.groupAlertBehavior)
+        val intent = shadowOf(posted.contentIntent).savedIntent
+        assertEquals(AnkiquestHomeActivity::class.java.name, intent.component?.className)
+
+        manager.cancel(5_140_001)
+        AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, inbox, account.scope)
+        assertNull(shadowOf(manager).getNotification(5_140_001))
+    }
+
+    @Test
     fun `a reply alert shows the message it answers`() {
         val manager = targetContext.getSystemService<NotificationManager>()!!
         val account = replyAccount()

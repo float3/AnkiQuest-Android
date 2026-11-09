@@ -109,6 +109,10 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         assertTrue(fragment.switch(R.string.ankiquest_notify_friends_key).isChecked)
         assertFalse(fragment.switch(R.string.ankiquest_notify_reminders_key).isChecked, "no reminder is on")
         assertTrue(fragment.switch(R.string.ankiquest_notify_moments_key).isChecked, "celebrations are on")
+        val cue = fragment.switch(R.string.ankiquest_streak_cue_key)
+        assertTrue(cue.isChecked)
+        cue.isChecked = false
+        assertFalse(AnkiDroidApp.sharedPrefs().getBoolean(targetContext.getString(R.string.ankiquest_streak_cue_key), true))
         assertTrue(fragment.switch(R.string.ankiquest_share_moments_key).isChecked)
         val time = fragment.preference<ListPreference>(R.string.ankiquest_reminder_time_key)
         assertEquals("19", time.value)

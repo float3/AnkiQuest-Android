@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.view.MotionEvent
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -184,16 +185,101 @@ class AnkiquestMomentsTest : RobolectricTest() {
     fun `routine moments only count toward the badge on Today`() {
         assertEquals(
             Route.QUIET,
-            AnkiquestMoments.route(prefs, account, celebration(1, "secured", "secured:9", quiet = true), foreground = true),
+            AnkiquestMoments.route(prefs, account, celebration(1, "record", "record:hour:9", quiet = true), foreground = true),
         )
         assertEquals(
             Route.SEEN,
-            AnkiquestMoments.route(prefs, account, celebration(1, "secured", "secured:9", quiet = true), foreground = true),
+            AnkiquestMoments.route(prefs, account, celebration(1, "record", "record:hour:9", quiet = true), foreground = true),
         )
         assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
         assertEquals(1, AnkiquestMoments.quiet(prefs, account))
         AnkiquestMoments.clearQuiet(prefs)
         assertEquals(0, AnkiquestMoments.quiet(prefs, account))
+    }
+
+    @Test
+    fun `the daily minimum waits for the session and comes first`() {
+        val secured = celebration(1, "secured", "secured:9", quiet = true)
+        assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, secured, foreground = true))
+        AnkiquestMoments.offer(prefs, account, listOf(moment("level:4", Kind.LEVEL)))
+        assertEquals(listOf("secured:9", "level:4"), AnkiquestMoments.take(prefs, account).map { it.key })
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = false))
+    }
+
+    @Test
+    fun `a notified daily minimum does not also queue a card`() {
+        val secured = celebration(1, "secured", "secured:9", quiet = true)
+        assertEquals(Route.NOTIFY, AnkiquestMoments.route(prefs, account, secured, foreground = false))
+        AnkiquestMoments.markShown(prefs, account, listOf("secured:9"))
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = true))
+        assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
+    }
+
+    @Test
+    fun `the local minimum is claimed once and the inbox upgrades its card`() {
+        val server = AnkiquestDay.Server(12, "pending", NOW + DAY, 0, NOW - DAY, 0, 0, 10)
+        val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(NOW, 600_000)), NOW))
+        assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
+        assertFalse(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW + 1000))
+
+        val secured = celebration(1, "secured", "secured:9", quiet = true)
+        assertEquals(Route.QUEUED, AnkiquestMoments.route(prefs, account, secured, foreground = true))
+        val card = AnkiquestMoments.take(prefs, account).single()
+        assertEquals(Kind.SECURED, card.kind)
+        assertEquals(71L, card.win)
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = false))
+    }
+
+    @Test
+    fun `a milestone keeps its bigger card`() {
+        val server = AnkiquestDay.Server(6, "pending", NOW + DAY, 0, NOW - DAY, 0, 0, 10)
+        val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(NOW, 600_000)), NOW))
+        assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
+        assertTrue(AnkiquestMoments.pending(prefs, account).isEmpty())
+        AnkiquestDay.remember(server.copy(streak = 7, streakState = "studied").json(), prefs)
+
+        val secured = celebration(1, "secured", "secured:9", quiet = true)
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = true))
+        assertEquals(
+            Route.QUEUED,
+            AnkiquestMoments.route(prefs, account, celebration(2, "streak", "streak:3:7"), foreground = true),
+        )
+        assertEquals(Kind.STREAK, AnkiquestMoments.take(prefs, account).single().kind)
+    }
+
+    @Test
+    fun `the cue does not consume reviewer touches`() {
+        val host = host()
+        val cue = assertNotNull(AnkiquestStreakCue.show(host, 13, 0.9f))
+        val tap = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 8f, 8f, 0)
+        try {
+            assertFalse(cue.isFocusable)
+            assertFalse(cue.isClickable)
+            assertFalse(cue.dispatchTouchEvent(tap))
+            assertNull(AnkiquestStreakCue.show(host, 13, 0.9f))
+        } finally {
+            tap.recycle()
+        }
+    }
+
+    @Test
+    fun `tapping a notified moment opens its card without taking the queue`() {
+        val host = host()
+        val notified = moment("secured:9", Kind.SECURED)
+        AnkiquestMoments.markShown(prefs, account, listOf(notified.key))
+        AnkiquestMoments.offer(prefs, account, listOf(moment("level:4", Kind.LEVEL)))
+        host.intent = AnkiquestMoments.noticeIntent(host, account, notified)
+
+        AnkiquestMoments.present(host, prefs, resting = true)
+        advanceRobolectricLooper()
+        val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        try {
+            val pager = assertNotNull(dialog.findViewById<ViewPager2>(R.id.aq_moment_pager))
+            assertEquals(1, pager.adapter?.itemCount)
+            assertEquals(listOf("level:4"), AnkiquestMoments.pending(prefs, account).map { it.key })
+        } finally {
+            dialog.dismiss()
+        }
     }
 
     @Test
@@ -230,6 +316,7 @@ class AnkiquestMomentsTest : RobolectricTest() {
         AnkiquestMoments.offer(prefs, account, listOf(moment("level:5", Kind.LEVEL)))
         AnkiquestMoments.present(host, prefs, resting = true)
         assertEquals(1, AnkiquestMoments.pending(prefs, account).size, "one card at a time")
+        dialog.dismiss()
     }
 
     @Test

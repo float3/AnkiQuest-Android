@@ -34,4 +34,5 @@
     <string name="aq_profile_deck_alerts_start">Recevoir à nouveau les alertes de paquets de %1$s</string>
     <string name="aq_profile_freezes_pause">Suspendre la protection de série</string>
     <string name="aq_profile_freezes_resume">Reprendre la protection de série</string>
+    <string name="ankiquest_streak_cue_title">Signal de série pendant les révisions</string>
 </resources>

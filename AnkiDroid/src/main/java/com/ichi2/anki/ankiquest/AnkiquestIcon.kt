@@ -42,19 +42,32 @@ internal object AnkiquestIcon {
     fun mood(
         profile: JSONObject?,
         now: Long,
+    ): Mood = mood(AnkiquestDay.Server.profile(profile), now)
+
+    private fun mood(
+        server: AnkiquestDay.Server?,
+        now: Long,
+        prefs: SharedPreferences? = null,
     ): Mood {
-        val dayEndsAt = profile?.optLong("day_ends_at") ?: 0L
-        if (profile == null || dayEndsAt <= now) return Mood.DEFAULT
-        val streak = profile.optLong("streak")
-        return when (profile.optString("streak_state")) {
-            "studied" -> Mood.HAPPY
-            "protected" -> Mood.FROZEN
-            else ->
+        if (server == null) {
+            return Mood.DEFAULT
+        }
+        val day =
+            if (prefs == null) {
+                AnkiquestDay.judge(server, emptyList(), now)
+            } else {
+                AnkiquestDay.judgeOwn(server, now, prefs)
+            }
+        return when (day?.label) {
+            AnkiquestDay.State.STUDIED -> Mood.HAPPY
+            AnkiquestDay.State.PROTECTED -> Mood.FROZEN
+            AnkiquestDay.State.PENDING, AnkiquestDay.State.SHORT ->
                 when {
-                    streak == 0L -> Mood.SLEEPY
-                    dayEndsAt - now <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
+                    day.streak == 0 -> Mood.SLEEPY
+                    server.dayEndsAt - now <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
                     else -> Mood.DEFAULT
                 }
+            AnkiquestDay.State.UNKNOWN, null -> Mood.DEFAULT
         }
     }
 
@@ -77,7 +90,8 @@ internal object AnkiquestIcon {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
         if (profile != null) remember(profile, prefs)
-        show(context, if (enabled(prefs)) mood(profile, now) else Mood.DEFAULT, prefs)
+        val mood = if (enabled(prefs)) mood(AnkiquestDay.Server.profile(profile), now, prefs) else Mood.DEFAULT
+        show(context, mood, prefs)
     }
 
     /**
@@ -88,7 +102,10 @@ internal object AnkiquestIcon {
         context: Context,
         now: Long,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ) = show(context, mood(lastKnown(prefs), now), prefs)
+    ) {
+        val server = AnkiquestDay.last(prefs) ?: AnkiquestDay.Server.profile(lastKnown(prefs))
+        show(context, mood(server, now, prefs), prefs)
+    }
 
     /**
      * At app start the icon catches up with the last known day. Opening the app then refreshes the

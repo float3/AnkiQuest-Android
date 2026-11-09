@@ -31,6 +31,8 @@ internal object AnkiquestDay {
     /** Revlog rows the upload sends: answers, not manual rescheduling. */
     const val UPLOADED_REVIEWS = "ease > 0 and type < 4"
 
+    enum class State { STUDIED, PROTECTED, SHORT, PENDING, UNKNOWN }
+
     /** What the server last said about today. */
     data class Server(
         val streak: Int,
@@ -62,19 +64,21 @@ internal object AnkiquestDay {
                 )
 
         companion object {
-            /** From a profile, `/api/profile` or an upload's answer; null without today's numbers. */
+            /** A profile's current day, with exact review totals when available. */
             fun profile(json: JSONObject?): Server? {
-                val today = json?.optJSONObject("today") ?: return null
-                if (!json.has("streak_state") || !json.has("day_ends_at")) return null
+                if (json == null || !json.has("streak_state") || !json.has("day_ends_at")) {
+                    return null
+                }
+                val today = json.optJSONObject("today")
                 return Server(
                     streak = json.optInt("streak"),
                     streakState = json.optString("streak_state"),
                     dayEndsAt = json.optLong("day_ends_at"),
                     lastReviewId = json.optLong("last_review_id"),
-                    startsAt = today.optLong("starts_at").takeIf { today.has("starts_at") && !today.isNull("starts_at") },
-                    reviews = today.optInt("reviews"),
-                    timeMs = if (today.has("time_ms")) today.optLong("time_ms") else today.optLong("minutes") * MINUTE_MS,
-                    streakMinutes = today.optInt("streak_minutes"),
+                    startsAt = today?.optLong("starts_at")?.takeIf { today.has("starts_at") && !today.isNull("starts_at") },
+                    reviews = today?.optInt("reviews") ?: 0,
+                    timeMs = if (today?.has("time_ms") == true) today.optLong("time_ms") else (today?.optLong("minutes") ?: 0L) * MINUTE_MS,
+                    streakMinutes = today?.optInt("streak_minutes") ?: 0,
                 )
             }
 
@@ -95,6 +99,9 @@ internal object AnkiquestDay {
                     streakMinutes = json.optInt("streak_minutes"),
                 )
             }
+
+            /** Our own widgets need the same current-day evidence as the icon and Today. */
+            fun ownRow(json: JSONObject): Server? = if (json.optLong("day_ends_at") > 0) row(json) else null
         }
     }
 
@@ -125,14 +132,14 @@ internal object AnkiquestDay {
         val awaitingUpload: Boolean get() = met && !confirmed
 
         /** The words every screen uses: studied, protected, short (reviews under the minimum), pending or unknown. */
-        val label: String
+        val label: State
             get() =
                 when {
-                    met -> "studied"
-                    streakState == null -> "unknown"
-                    streakState == "protected" -> "protected"
-                    reviews > 0 -> "short"
-                    else -> "pending"
+                    met -> State.STUDIED
+                    streakState == null -> State.UNKNOWN
+                    streakState == "protected" -> State.PROTECTED
+                    reviews > 0 -> State.SHORT
+                    else -> State.PENDING
                 }
     }
 
@@ -176,6 +183,9 @@ internal object AnkiquestDay {
         profile: JSONObject,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
+        if (profile.optJSONObject("today") == null) {
+            return
+        }
         val server = Server.profile(profile) ?: return
         val key = key(prefs)
         val value = server.json().toString()
@@ -185,6 +195,50 @@ internal object AnkiquestDay {
     /** What the server last said of today for the configured account; another account's is never used. */
     fun last(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Server? =
         prefs.getString(key(prefs), null)?.let { runCatching { Server.profile(JSONObject(it)) }.getOrNull() }
+
+    private data class LocalReviews(
+        val scope: String,
+        val server: Server,
+        val reviews: List<Review>,
+    )
+
+    @Volatile
+    private var local: LocalReviews? = null
+
+    /** Keep the last collection read for the synchronous launcher and widget renderers. */
+    fun rememberLocal(
+        scope: String,
+        server: Server,
+        reviews: List<Review>,
+    ) {
+        local = LocalReviews(scope, server, reviews)
+    }
+
+    fun judgeOwn(
+        server: Server?,
+        now: Long,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+    ): Verdict? {
+        val scope = AnkiquestHomeData.account(prefs)?.scope
+        val recent =
+            local?.takeIf {
+                it.scope == scope && server != null &&
+                    it.server.dayEndsAt == server.dayEndsAt && it.server.lastReviewId <= server.lastReviewId
+            }
+        return judge(server, recent?.reviews.orEmpty(), now)
+    }
+
+    fun own(now: Long): Verdict? = judgeOwn(last(), now)
+
+    fun words(
+        context: Context,
+        verdict: Verdict,
+    ): String =
+        when {
+            verdict.awaitingUpload -> context.getString(R.string.aq_goal_streak_safe_unsent)
+            verdict.met -> context.getString(R.string.aq_goal_streak_safe)
+            else -> words(context, verdict.label, verdict.minutes.toLong(), verdict.streakMinutes.toLong())
+        }
 
     /** The collection's reviews the server may not have for [server]'s today: those after its last one. */
     fun unsent(
@@ -206,23 +260,23 @@ internal object AnkiquestDay {
     /** One status line for a streak [state] from [Verdict.label], as every screen words it. */
     fun words(
         context: Context,
-        state: String,
+        state: State,
         minutes: Long,
         streakMinutes: Long,
     ): String =
         when (state) {
-            "studied" -> context.getString(R.string.ankiquest_streak_studied)
-            "protected" -> context.getString(R.string.ankiquest_streak_protected)
-            "short" -> context.getString(R.string.ankiquest_streak_short, minOf(minutes, streakMinutes), streakMinutes)
-            "pending" -> context.getString(R.string.ankiquest_streak_pending)
-            else -> context.getString(R.string.ankiquest_streak_unknown)
+            State.STUDIED -> context.getString(R.string.ankiquest_streak_studied)
+            State.PROTECTED -> context.getString(R.string.ankiquest_streak_protected)
+            State.SHORT -> context.getString(R.string.ankiquest_streak_short, minOf(minutes, streakMinutes), streakMinutes)
+            State.PENDING -> context.getString(R.string.ankiquest_streak_pending)
+            State.UNKNOWN -> context.getString(R.string.ankiquest_streak_unknown)
         }
 
     /** [Verdict.label] for counts the server sent, with nothing unsent: a leaderboard row or a profile. */
     fun label(
         server: Server?,
         now: Long,
-    ): String = judge(server, emptyList(), now)?.label ?: "unknown"
+    ): State = judge(server, emptyList(), now)?.label ?: State.UNKNOWN
 
     private fun key(prefs: SharedPreferences) = scopedKey(PREF_SERVER_DAY, AnkiquestHomeData.account(prefs)?.scope)
 }

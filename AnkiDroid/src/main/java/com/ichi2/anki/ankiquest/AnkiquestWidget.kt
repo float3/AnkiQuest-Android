@@ -175,6 +175,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val fetchedAt: Long,
             val offline: Boolean,
             @StringRes val note: Int? = null,
+            val scope: String? = AnkiquestHomeData.account()?.scope,
         )
 
         @Volatile
@@ -243,6 +244,13 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val shown = Drawn(board, fetchedAt, offline)
             drawn = shown
             renderStreaks(context, shown)
+            renderBoards(context, shown)
+        }
+
+        private fun renderBoards(
+            context: Context,
+            shown: Drawn,
+        ) {
             val manager = getAppWidgetManager(context) ?: return
             for (style in styles) {
                 for (id in widgetIds(context, style)) draw(context, manager, style, id, shown)
@@ -306,18 +314,33 @@ open class AnkiquestWidget : AppWidgetProvider() {
         ) {
             val before = fresh?.takeIf { it.scope == account.scope }
             fresh = Fresh(account.scope, account.user, profile, now)
-            val known = drawn ?: cached(account)?.also { drawn = it }
+            val known = currentBoard(account)
             val streakChanged = before == null || streakShown(ownRow(before.profile, null)) != streakShown(ownRow(profile, null))
             if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false))
             // Without standings to put the row in, the leaderboards keep what they show until the poll.
             val shown = known ?: return
             if (!streakChanged && now - freshDrawnAt < FRESH_REDRAW_MS) return
             freshDrawnAt = now
-            val manager = getAppWidgetManager(context) ?: return
-            for (style in styles) {
-                for (id in widgetIds(context, style)) draw(context, manager, style, id, shown)
+            renderBoards(context, shown)
+        }
+
+        /** Redraw from the collection verdict without waiting for an upload or poll. */
+        internal fun onLocalDay(
+            context: Context,
+            account: HomeAccount,
+        ) {
+            if (AnkiquestHomeData.account()?.scope != account.scope) {
+                return
+            }
+            val shown = currentBoard(account)
+            renderStreaks(context, shown ?: Drawn(JSONArray(), 0, false))
+            if (shown != null) {
+                renderBoards(context, shown)
             }
         }
+
+        private fun currentBoard(account: HomeAccount): Drawn? =
+            drawn?.takeIf { it.scope == account.scope } ?: cached(account)?.also { drawn = it }
 
         /** What the poll last fetched for [account], before anything was drawn in this process. */
         private fun cached(account: HomeAccount): Drawn? {
@@ -326,7 +349,12 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 prefs
                     .getString(scopedKey(AnkiquestPoll.PREF_CACHE, account.scope), null)
                     ?.let { runCatching { JSONArray(it) }.getOrNull() } ?: return null
-            return Drawn(board, prefs.getLong(scopedKey(AnkiquestPoll.PREF_CACHE_AT, account.scope), 0), offline = false)
+            return Drawn(
+                board,
+                prefs.getLong(scopedKey(AnkiquestPoll.PREF_CACHE_AT, account.scope), 0),
+                offline = false,
+                scope = account.scope,
+            )
         }
 
         private fun streakShown(row: JSONObject): List<Any> =
@@ -687,6 +715,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
         ): RemoteCollectionItems {
             val items = RemoteCollectionItems.Builder().setViewTypeCount(1)
             val me = Ankiquest.player()
+            val ownDay = AnkiquestDay.own(TimeManager.time.intTimeMS())
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
             val languageContext = AnkiquestLanguage.context(context)
             val xpOf = { entry: JSONObject -> entry.optLong("xp", entry.optLong("week_xp")) }
@@ -694,7 +723,9 @@ open class AnkiquestWidget : AppWidgetProvider() {
             for (i in 0 until board.length()) {
                 val entry = board.getJSONObject(i)
                 val xp = xpOf(entry)
-                val streak = entry.optInt("streak")
+                val mine = entry.optString("user") == me
+                val day = ownDay?.takeIf { mine }
+                val streak = if (day == null) entry.optInt("streak") else day.streak ?: 0
                 val views = RemoteViews(context.packageName, style.rowLayout)
                 views.scaleText(R.id.ankiquest_widget_rank, 16f, scale, boxed = true)
                 views.scaleText(R.id.ankiquest_widget_initial, 16f, scale, boxed = true)
@@ -729,14 +760,19 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 views.setViewVisibility(R.id.ankiquest_widget_initial, if (photo == null) View.VISIBLE else View.GONE)
                 views.setViewVisibility(R.id.ankiquest_widget_avatar, if (photo == null) View.GONE else View.VISIBLE)
                 views.setImageViewBitmap(R.id.ankiquest_widget_avatar, photo)
-                val state = streakState(entry)
+                val state =
+                    day?.label ?: if (mine) {
+                        AnkiquestDay.label(AnkiquestDay.Server.ownRow(entry), TimeManager.time.intTimeMS())
+                    } else {
+                        streakState(entry)
+                    }
                 val icon =
                     when (state) {
-                        "studied" -> R.drawable.ankiquest_streak_studied
-                        "protected" -> R.drawable.ankiquest_streak_protected
+                        AnkiquestDay.State.STUDIED -> R.drawable.ankiquest_streak_studied
+                        AnkiquestDay.State.PROTECTED -> R.drawable.ankiquest_streak_protected
                         else -> R.drawable.ankiquest_streak_pending
                     }
-                val label = streakLabel(languageContext, entry, state)
+                val label = if (day == null) streakLabel(languageContext, entry, state) else AnkiquestDay.words(languageContext, day)
                 views.setTextViewText(R.id.ankiquest_widget_streak, if (streak > 0) numbers.format(streak) else "")
                 views.setTextViewCompoundDrawables(R.id.ankiquest_widget_streak, if (streak > 0) icon else 0, 0, 0, 0)
                 views.setContentDescription(
@@ -767,14 +803,14 @@ open class AnkiquestWidget : AppWidgetProvider() {
         internal fun streakLabel(
             languageContext: Context,
             entry: JSONObject,
-            state: String,
+            state: AnkiquestDay.State,
         ): String = AnkiquestDay.words(languageContext, state, entry.optLong("today_minutes"), entry.optLong("streak_minutes"))
 
         /**
          * studied, protected, short (under the minimum), pending, or unknown when the data is stale or missing,
          * as [AnkiquestDay] judges the row.
          */
-        internal fun streakState(entry: JSONObject): String =
+        internal fun streakState(entry: JSONObject): AnkiquestDay.State =
             AnkiquestDay.label(AnkiquestDay.Server.row(entry), TimeManager.time.intTimeMS())
     }
 }

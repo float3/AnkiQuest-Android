@@ -381,10 +381,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         if (!changes.studyQueues) return
         val reviewing = handler is Reviewer || handler is ReviewerViewModel || isReviewing(activity.get())
         if (!reviewing && handler != null) return
-        if (reviewing && HomeAccount.current() != null) {
+        val reviewOwner = if (reviewing) HomeAccount.current()?.scope else null
+        if (reviewOwner != null) {
             lastAnswerAt = TimeManager.time.intTimeMS()
             scope.launch {
                 recordAnswers()
+                refreshLocalDay(reviewOwner)
                 launchRefresh(showFeedback = true)
             }
             return
@@ -402,6 +404,80 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             Timber.w(e, "ankiquest could not record the time zone of an answer")
         }
     }
+
+    /** Collection -> day verdict -> launcher and widgets, even when the upload cannot run. */
+    private suspend fun refreshLocalDay(reviewOwner: String? = null) {
+        val context = app ?: return
+        val account = HomeAccount.current() ?: return
+        if (account.token.isEmpty()) {
+            return
+        }
+        if (reviewOwner != null && reviewOwner != account.scope) {
+            return
+        }
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val now = TimeManager.time.intTimeMS()
+        val server = AnkiquestDay.last(prefs)?.takeIf { it.dayEndsAt > now } ?: return
+        try {
+            val before = AnkiquestDay.judgeOwn(server, now, prefs) ?: return
+            // Keep collection reads ordered, and discard work from a replaced account or profile.
+            val day =
+                CollectionManager.tryWithCol {
+                    val reviews = AnkiquestDay.unsent(this, server)
+                    if (HomeAccount.current()?.scope != account.scope || AnkiquestDay.last(prefs) != server) {
+                        return@tryWithCol null
+                    }
+                    AnkiquestDay.rememberLocal(account.scope, server, reviews)
+                    AnkiquestDay.judge(server, reviews, now)
+                } ?: return
+            if (HomeAccount.current()?.scope != account.scope) {
+                return
+            }
+            if (day.label != before.label && AnkiquestIcon.enabled(prefs)) {
+                AnkiquestIcon.showLastKnown(context, now, prefs)
+            }
+            if (day.label != before.label || day.streak != before.streak || day.minutes != before.minutes) {
+                AnkiquestWidget.onLocalDay(context, account)
+            }
+            if (reviewOwner != null && !before.met && day.met) {
+                minimumReached(account, prefs, server, before, day, now)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.d(e, "ankiquest could not refresh the local streak")
+        }
+    }
+
+    private suspend fun minimumReached(
+        account: HomeAccount,
+        prefs: SharedPreferences,
+        server: AnkiquestDay.Server,
+        before: AnkiquestDay.Verdict,
+        day: AnkiquestDay.Verdict,
+        now: Long,
+    ): Unit =
+        withContext(Dispatchers.Main) {
+            val context = app ?: return@withContext
+            if (!AnkiquestMoments.claimMinimum(context, prefs, account, server, day, now)) {
+                return@withContext
+            }
+            val host = activity.get() ?: return@withContext
+            if (isReviewing(host)) {
+                if (!prefs.getBoolean(host.getString(R.string.ankiquest_streak_cue_key), true)) {
+                    return@withContext
+                }
+                val fraction = AnkiquestGoalBar.fraction(before.minutes, day.streakMinutes, before.met)
+                val root = host.findViewById<FrameLayout>(android.R.id.content)
+                root?.findViewWithTag<TextView>(BANNER_TAG)?.apply {
+                    animate().cancel()
+                    alpha = 0f
+                }
+                AnkiquestStreakCue.show(host, day.streak, fraction)
+            } else {
+                AnkiquestMoments.present(host, prefs)
+            }
+        }
 
     private fun isReviewing(host: Activity?): Boolean =
         host is Reviewer ||
@@ -1010,6 +1086,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val host = activity.get() ?: return
         if (host.isFinishing || host.isDestroyed) return
         val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return
+        if (AnkiquestStreakCue.showing(root)) {
+            return
+        }
         val density = host.resources.displayMetrics.density
         val banner =
             root.findViewWithTag<TextView>(BANNER_TAG) ?: TextView(host).apply {
@@ -1062,6 +1141,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val now = TimeManager.time.intTimeMS()
         if (now - resumeUploadAt > RESUME_UPLOAD_INTERVAL_MS) {
             resumeUploadAt = now
+            scope.launch { refreshLocalDay() }
             launchRefresh(showFeedback = false, resync = resyncDue(now))
         } else {
             // Without an upload, the icon still catches up with the clock, as when the last hours of the day begin.
