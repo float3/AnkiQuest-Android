@@ -18,6 +18,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -126,6 +127,47 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
+    fun `a failed local refresh replaces the stale deck with a failure`() {
+        val controller = launchController()
+        val home = controller.get()
+        assertTrue(home.hasText("Spanish"))
+        coEvery { AnkiquestHomeData.local() } throws IOException("collection unavailable")
+
+        controller.pause().resume()
+        advanceRobolectricLooper()
+
+        assertFalse(home.hasText("Spanish"))
+        assertTrue(home.hasText(home.getString(R.string.aq_home_local_unavailable)))
+    }
+
+    @Test
+    fun `a new account loads copies without the previous failure`() {
+        val other = HomeAccount("https://anki.example.test", "other", "another-token")
+        val waiting = CompletableDeferred<JSONObject>()
+        mockkObject(AnkiquestDeckCopies)
+        try {
+            coEvery { AnkiquestDeckCopies.inbox(identity) } throws IOException("offline")
+            coEvery { AnkiquestDeckCopies.inbox(other) } coAnswers { waiting.await() }
+            coEvery { AnkiquestHomeData.profile(other) } returns profile
+            coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+            val controller = launchController()
+            val home = controller.get()
+            val failure = home.getString(R.string.aq_copies_unavailable)
+            advanceRobolectricLooperUntil { home.hasText(failure) }
+
+            every { AnkiquestHomeData.account(any()) } returns other
+            controller.pause().resume()
+            advanceRobolectricLooper()
+
+            assertFalse(home.hasText(failure))
+            assertTrue(home.hasText(home.getString(R.string.aq_home_loading_local)))
+        } finally {
+            waiting.cancel()
+            unmockkObject(AnkiquestDeckCopies)
+        }
+    }
+
+    @Test
     fun `rejected credentials point to settings`() {
         coEvery { AnkiquestHomeData.profile(identity) } throws AnkiquestHttpException(401)
         val home = launch()
@@ -190,9 +232,15 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         }
     }
 
-    private fun launch(): AnkiquestHomeActivity =
-        startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
-            .also { home -> advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible } }
+    private fun launch(): AnkiquestHomeActivity = launchController().get()
+
+    private fun launchController() =
+        startActivityControllerNormallyOpenCollectionWithIntent(
+            AnkiquestHomeActivity::class.java,
+            AnkiquestHomeActivity.intent(targetContext),
+        ).also { controller ->
+            advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_home_loading).isVisible }
+        }
 
     private fun AnkiquestHomeActivity.hasText(value: String): Boolean =
         findViewById<View>(R.id.aq_home_content).allViews.filterIsInstance<TextView>().any { it.text.toString() == value }
