@@ -2,21 +2,43 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.app.Activity
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestUpdaterTest : RobolectricTest() {
+    @Test
+    fun `an interrupted manual check propagates cancellation`() {
+        val activity = mockk<Activity>(relaxed = true)
+        mockkObject(AnkiquestUpdater)
+        try {
+            every { AnkiquestUpdater.channel() } throws CancellationException("check cancelled")
+            runBlocking {
+                assertFailsWith<CancellationException> { AnkiquestUpdater.checkNow(activity) }
+            }
+        } finally {
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
+
     private val nightlyJson =
         JSONObject()
             .put("release", 17)

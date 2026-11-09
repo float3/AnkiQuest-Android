@@ -19,8 +19,10 @@ import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.compat.PackageInfoFlagsCompat
 import com.ichi2.anki.compat.getPackageArchiveInfoCompat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,6 +32,8 @@ import timber.log.Timber
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Offers new AnkiQuest builds from the GitHub releases of the fork.
@@ -56,8 +60,9 @@ object AnkiquestUpdater {
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
 
-    @Volatile
-    private var busy = false
+    private val checking = AtomicBoolean()
+    private val downloading = AtomicReference<Release?>()
+    private val downloadFiles = Any()
 
     internal data class Release(
         val number: Int,
@@ -83,23 +88,33 @@ object AnkiquestUpdater {
     fun maybeCheck(activity: Activity) {
         if (activity !is DeckPicker) return
         cleanOnce(activity)
-        if (BuildConfig.ANKIQUEST_RELEASE <= 0 || busy) return
+        if (BuildConfig.ANKIQUEST_RELEASE <= 0 || downloading.get() != null) {
+            return
+        }
         val prefs = AnkiDroidApp.sharedPrefs()
         val now = TimeManager.time.intTimeMS()
         if (now - prefs.getLong(PREF_CHECKED_AT, 0L) < CHECK_INTERVAL_MS) return
+        if (!checking.compareAndSet(false, true)) {
+            return
+        }
         prefs.edit { putLong(PREF_CHECKED_AT, now) }
-        busy = true
         val host = WeakReference(activity)
         scope.launch {
             try {
                 val release = available()
                 if (release != null && isNewer(release)) {
-                    withContext(Dispatchers.Main) { host.get()?.let { offer(it, release) } }
+                    withContext(Dispatchers.Main) {
+                        if (downloading.get() == null) {
+                            host.get()?.let { offer(it, release) }
+                        }
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update check failed")
             } finally {
-                busy = false
+                checking.set(false)
             }
         }
     }
@@ -123,6 +138,8 @@ object AnkiquestUpdater {
         val release =
             try {
                 withContext(Dispatchers.IO) { available() }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update check failed")
                 null
@@ -241,9 +258,6 @@ object AnkiquestUpdater {
     private var progress: Progress? = null
 
     @Volatile
-    private var downloading = false
-
-    @Volatile
     private var percent = 0
 
     @Volatile
@@ -282,19 +296,18 @@ object AnkiquestUpdater {
         release: Release,
     ) {
         if (activity.isFinishing || activity.isDestroyed) return
-        if (downloading) {
-            showProgress(activity, release)
+        if (!downloading.compareAndSet(null, release)) {
+            downloading.get()?.let { showProgress(activity, it) }
             return
         }
-        downloading = true
         percent = 0
         showProgress(activity, release)
         val app = activity.applicationContext
-        busy = true
         scope.launch {
             val file = apkFile(app)
             try {
-                deleteDownloads(file)
+                // Cleanup already in progress finishes before this owner starts writing the APK.
+                synchronized(downloadFiles) { deleteDownloads(file) }
                 fetch(release, file) { done ->
                     percent = done
                     withContext(Dispatchers.Main) {
@@ -311,6 +324,10 @@ object AnkiquestUpdater {
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                     (host ?: app).startActivity(install)
                 }
+            } catch (e: CancellationException) {
+                deleteDownloads(file)
+                withContext(NonCancellable + Dispatchers.Main) { finishProgress() }
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update download failed")
                 deleteDownloads(file)
@@ -326,8 +343,7 @@ object AnkiquestUpdater {
                     }
                 }
             } finally {
-                downloading = false
-                busy = false
+                downloading.compareAndSet(release, null)
             }
         }
     }
@@ -351,6 +367,8 @@ object AnkiquestUpdater {
         scope.launch {
             try {
                 cleanStale(app)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update cleanup failed")
             }
@@ -366,12 +384,21 @@ object AnkiquestUpdater {
         installedCode: Long = BuildConfig.VERSION_CODE.toLong(),
         versionOf: (File) -> Long? = { archiveVersionCode(context, it) },
     ) {
-        if (downloading) return
-        val file = apkFile(context)
-        File(file.path + ".part").delete()
-        if (!file.exists()) return
-        val downloaded = versionOf(file)
-        if (downloaded == null || downloaded <= installedCode) file.delete()
+        synchronized(downloadFiles) {
+            // A download claims its release before waiting for the same file guard.
+            if (downloading.get() != null) {
+                return
+            }
+            val file = apkFile(context)
+            File(file.path + ".part").delete()
+            if (!file.exists()) {
+                return
+            }
+            val downloaded = versionOf(file)
+            if (downloaded == null || downloaded <= installedCode) {
+                file.delete()
+            }
+        }
     }
 
     private fun archiveVersionCode(
