@@ -53,5 +53,5 @@
     <string name="aq_profile_deck_alerts_start">Get deck alerts from %1$s again</string>
     <string name="aq_profile_freezes_pause" maxLength="41">Pause streak protection</string>
     <string name="aq_profile_freezes_resume" maxLength="41">Resume streak protection</string>
-    <string name="ankiquest_streak_cue_title">Streak cue while reviewing</string>
+    <string name="ankiquest_streak_cue_title" maxLength="41">Streak cue while reviewing</string>
 </resources>

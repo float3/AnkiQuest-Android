@@ -10,6 +10,7 @@ import android.app.RemoteInput
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import androidx.core.app.NotificationCompat
 import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -49,7 +50,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         val inbox = JSONArray().put(secured)
         AnkiquestNotifier.onDeckCompletions(targetContext, account.notificationAccount, inbox, account.scope)
         val posted = shadowOf(manager).getNotification(5_140_001)
-        assertEquals(Notification.GROUP_ALERT_SUMMARY, posted.groupAlertBehavior)
+        assertEquals(NotificationCompat.GROUP_ALERT_SUMMARY, NotificationCompat.getGroupAlertBehavior(posted))
         val intent = shadowOf(posted.contentIntent).savedIntent
         assertEquals(AnkiquestHomeActivity::class.java.name, intent.component?.className)
 
