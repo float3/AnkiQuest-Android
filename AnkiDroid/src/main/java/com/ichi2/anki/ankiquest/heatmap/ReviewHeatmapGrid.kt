@@ -167,18 +167,6 @@ class ReviewHeatmapGrid
             }
         }
 
-        private fun intensity(
-            count: Int,
-            dailyAverage: Double,
-        ): Int =
-            when {
-                count <= 0 -> 0
-                count <= dailyAverage.coerceAtLeast(1.0) / 2 -> 1
-                count <= dailyAverage.coerceAtLeast(1.0) -> 2
-                count <= dailyAverage.coerceAtLeast(1.0) * 2 -> 3
-                else -> 4
-            }
-
         internal fun cellBounds(index: Int): RectF {
             val position = offset + index
             val x = position / 7 * pitch + 2 * density
@@ -308,6 +296,19 @@ class ReviewHeatmapGrid
                 invalidate()
             }
         }
+    }
+
+/** Colour level relative to the daily average, shared with the desktop heatmap fixture. */
+internal fun intensity(
+    count: Int,
+    dailyAverage: Double,
+): Int =
+    when {
+        count <= 0 -> 0
+        count <= dailyAverage.coerceAtLeast(1.0) / 2 -> 1
+        count <= dailyAverage.coerceAtLeast(1.0) -> 2
+        count <= dailyAverage.coerceAtLeast(1.0) * 2 -> 3
+        else -> 4
     }
 
 /** Stationary weekday labels remain visible while the year scrolls horizontally. */
