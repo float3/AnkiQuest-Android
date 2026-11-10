@@ -6,6 +6,9 @@ import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import androidx.core.content.edit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
@@ -125,6 +128,29 @@ class AnkiquestIconTest : RobolectricTest() {
         AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
         assertEquals(listOf(Mood.HAPPY), enabled())
         assertEquals(Mood.HAPPY, AnkiquestIcon.current(prefs))
+    }
+
+    @Test
+    fun `the launcher mood waits for the app to stop`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
+        val original = Mood.entries.map(::state)
+
+        lifecycle.currentState = Lifecycle.State.RESUMED
+        try {
+            AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
+            assertEquals(original, Mood.entries.map(::state), "the reviewer still owns a visible task")
+
+            lifecycle.currentState = Lifecycle.State.STARTED
+            AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+            assertEquals(original, Mood.entries.map(::state), "a paused activity can still be visible")
+
+            lifecycle.currentState = Lifecycle.State.CREATED
+            assertEquals(listOf(Mood.HAPPY), enabled(), "apply the latest mood when the app stops")
+        } finally {
+            lifecycle.currentState = Lifecycle.State.CREATED
+        }
     }
 
     @Test

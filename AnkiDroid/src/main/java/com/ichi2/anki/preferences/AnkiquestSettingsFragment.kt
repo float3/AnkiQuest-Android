@@ -471,7 +471,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         moodIcon.isVisible = AnkiquestIcon.available(requireContext())
         moodIcon.setOnPreferenceChangeListener { _, enabled ->
             if (enabled == true) {
-                // The last known day shows at once; the poll then brings it up to date.
+                // Queue the last known mood before the poll refreshes it.
                 AnkiquestIcon.showLastKnown(requireContext(), TimeManager.time.intTimeMS())
                 AnkiquestPoll.refreshNow(requireContext())
             } else {
