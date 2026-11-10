@@ -2,14 +2,11 @@
 
 package com.ichi2.anki.preferences
 
-import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import android.os.Looper
 import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.preference.ListPreference
@@ -52,6 +49,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+
+private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestSettingsFragmentTest : RobolectricTest() {
@@ -143,10 +142,8 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     @Test
     @Config(sdk = [36])
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun `notification permission waits for an alert to be enabled`() {
-        val permission = Manifest.permission.POST_NOTIFICATIONS
-        shadowOf(targetContext as Application).denyPermissions(permission)
+        shadowOf(targetContext as Application).denyPermissions(POST_NOTIFICATIONS_PERMISSION)
         AnkiquestNotifier.setStreakReminder(false)
         val enabled = reminders.copy(enabled = Reminder.entries.toSet())
         coEvery { AnkiquestCommunity.saveReminders(any(), enabled) } returns enabled
@@ -158,7 +155,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         fragment.switch(R.string.ankiquest_notify_reminders_key).performClick()
         idle()
         val request = assertNotNull(host.lastRequestedPermission)
-        assertEquals(listOf(permission), request.requestedPermissions.toList())
+        assertEquals(listOf(POST_NOTIFICATIONS_PERMISSION), request.requestedPermissions.toList())
     }
 
     @Test
@@ -198,7 +195,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     fun `the notification check shows only when alerts cannot get through, and leads to the fix`() {
         val notifications = shadowOf(targetContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
         notifications.setNotificationsEnabled(true)
-        shadowOf(targetContext as Application).grantPermissions("android.permission.POST_NOTIFICATIONS")
+        shadowOf(targetContext as Application).grantPermissions(POST_NOTIFICATIONS_PERMISSION)
         val fragment = open()
         val health = fragment.preference<Preference>(R.string.ankiquest_health_key)
         assertFalse(health.isVisible, "nothing to fix")
