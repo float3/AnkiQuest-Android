@@ -6,25 +6,138 @@ import android.app.Activity
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.shadows.ShadowDialog
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
 import java.io.File
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestUpdaterTest : RobolectricTest() {
+    @Test
+    fun `check now shares the in-flight check`() {
+        val activity = mockk<Activity>(relaxed = true)
+        val checking = CountDownLatch(1)
+        val finish = CountDownLatch(1)
+        val calls = AtomicInteger()
+        every { activity.getString(R.string.ankiquest_check_running) } returns "Checking"
+        mockkObject(AnkiquestUpdater)
+        try {
+            every { AnkiquestUpdater.channel() } answers {
+                if (calls.incrementAndGet() == 1) {
+                    checking.countDown()
+                    check(finish.await(10, TimeUnit.SECONDS))
+                }
+                throw IOException("offline")
+            }
+            runBlocking {
+                val first = async(Dispatchers.Default) { AnkiquestUpdater.checkNow(activity) }
+                try {
+                    assertTrue(checking.await(10, TimeUnit.SECONDS))
+                    assertEquals("Checking", AnkiquestUpdater.checkNow(activity))
+                    assertEquals(1, calls.get())
+                } finally {
+                    finish.countDown()
+                }
+                first.await()
+            }
+        } finally {
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
+
+    @Test
+    fun `a check that finishes during a download leaves the download claimed`() {
+        val controller = Robolectric.buildActivity(Activity::class.java)
+        controller.get().setTheme(androidx.appcompat.R.style.Theme_AppCompat)
+        val host = controller.setup().get()
+        saveControllerForCleanup(controller)
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+        val receiving = CountDownLatch(1)
+        val finishDownload = CountDownLatch(1)
+        val checking = CountDownLatch(1)
+        val finishCheck = CountDownLatch(1)
+        val checks = AtomicInteger()
+        server.createContext("/apk") { exchange ->
+            exchange.use {
+                receiving.countDown()
+                finishDownload.await(30, TimeUnit.SECONDS)
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_UNAVAILABLE, -1)
+            }
+        }
+        server.start()
+        mockkObject(AnkiquestUpdater)
+        try {
+            every { AnkiquestUpdater.channel() } answers {
+                checks.incrementAndGet()
+                checking.countDown()
+                check(finishCheck.await(30, TimeUnit.SECONDS))
+                throw IOException("offline")
+            }
+            val check = CoroutineScope(Dispatchers.Main).async { AnkiquestUpdater.checkNow(host) }
+            advanceRobolectricLooperUntil { checking.count == 0L }
+            val release = AnkiquestUpdater.Release(41, "Test release", "http://127.0.0.1:${server.address.port}/apk", 1)
+            ReflectionHelpers.callInstanceMethod<Unit>(
+                AnkiquestUpdater,
+                "download",
+                ClassParameter.from(Activity::class.java, host),
+                ClassParameter.from(AnkiquestUpdater.Release::class.java, release),
+            )
+            val progress = assertNotNull(ShadowDialog.getLatestDialog())
+            advanceRobolectricLooperUntil { receiving.count == 0L }
+
+            finishCheck.countDown()
+            advanceRobolectricLooperUntil { check.isCompleted }
+            assertNull(runBlocking { check.await() })
+            val probe = CoroutineScope(Dispatchers.Main).async { AnkiquestUpdater.checkNow(host) }
+            advanceRobolectricLooperUntil { probe.isCompleted }
+            assertNull(runBlocking { probe.await() })
+            assertEquals(1, checks.get())
+            assertTrue(progress.isShowing)
+
+            val (apk, part) = downloads()
+            AnkiquestUpdater.cleanStale(targetContext) { error("The download still owns its files") }
+            assertTrue(apk.exists())
+            assertTrue(part.exists())
+            finishDownload.countDown()
+            advanceRobolectricLooperUntil { !progress.isShowing }
+            assertFalse(apk.exists())
+            assertFalse(part.exists())
+        } finally {
+            finishCheck.countDown()
+            finishDownload.countDown()
+            server.stop(0)
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
+
     @Test
     fun `an interrupted manual check propagates cancellation`() {
         val activity = mockk<Activity>(relaxed = true)

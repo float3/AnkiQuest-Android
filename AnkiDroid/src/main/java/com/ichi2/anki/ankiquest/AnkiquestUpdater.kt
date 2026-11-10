@@ -32,8 +32,6 @@ import timber.log.Timber
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Offers new AnkiQuest builds from the GitHub releases of the fork.
@@ -60,9 +58,35 @@ object AnkiquestUpdater {
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
 
-    private val checking = AtomicBoolean()
-    private val downloading = AtomicReference<Release?>()
     private val downloadFiles = Any()
+    private var state: UpdateState = UpdateState.Idle
+
+    private sealed interface UpdateState {
+        data object Idle : UpdateState
+
+        class Checking : UpdateState
+
+        class Downloading(
+            val release: Release,
+            var percent: Int = 0,
+        ) : UpdateState
+    }
+
+    private fun beginCheck(check: UpdateState.Checking): UpdateState =
+        synchronized(downloadFiles) {
+            if (state === UpdateState.Idle) {
+                state = check
+            }
+            state
+        }
+
+    private fun endCheck(check: UpdateState.Checking) {
+        synchronized(downloadFiles) {
+            if (state === check) {
+                state = UpdateState.Idle
+            }
+        }
+    }
 
     internal data class Release(
         val number: Int,
@@ -88,23 +112,24 @@ object AnkiquestUpdater {
     fun maybeCheck(activity: Activity) {
         if (activity !is DeckPicker) return
         cleanOnce(activity)
-        if (BuildConfig.ANKIQUEST_RELEASE <= 0 || downloading.get() != null) {
+        if (BuildConfig.ANKIQUEST_RELEASE <= 0) {
             return
         }
         val prefs = AnkiDroidApp.sharedPrefs()
         val now = TimeManager.time.intTimeMS()
         if (now - prefs.getLong(PREF_CHECKED_AT, 0L) < CHECK_INTERVAL_MS) return
-        if (!checking.compareAndSet(false, true)) {
+        val check = UpdateState.Checking()
+        if (beginCheck(check) !== check) {
             return
         }
-        prefs.edit { putLong(PREF_CHECKED_AT, now) }
         val host = WeakReference(activity)
         scope.launch {
             try {
+                prefs.edit { putLong(PREF_CHECKED_AT, now) }
                 val release = available()
                 if (release != null && isNewer(release)) {
                     withContext(Dispatchers.Main) {
-                        if (downloading.get() == null) {
+                        if (synchronized(downloadFiles) { state === check }) {
                             host.get()?.let { offer(it, release) }
                         }
                     }
@@ -114,7 +139,7 @@ object AnkiquestUpdater {
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update check failed")
             } finally {
-                checking.set(false)
+                endCheck(check)
             }
         }
     }
@@ -135,20 +160,46 @@ object AnkiquestUpdater {
      * @return a message to show when nothing is offered, or null when the update dialog is shown
      */
     suspend fun checkNow(activity: Activity): String? {
-        val release =
-            try {
-                withContext(Dispatchers.IO) { available() }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Timber.w(e, "ankiquest update check failed")
-                null
-            } ?: return activity.getString(R.string.ankiquest_update_check_failed)
-        if (!isNewer(release)) {
-            return activity.getString(R.string.ankiquest_update_none, installed() ?: release.name)
+        val check = UpdateState.Checking()
+        val active = beginCheck(check)
+        if (active is UpdateState.Downloading) {
+            withContext(Dispatchers.Main) { showProgress(activity, active) }
+            return null
         }
-        offer(activity, release)
-        return null
+        if (active !== check) {
+            return activity.getString(R.string.ankiquest_check_running)
+        }
+
+        try {
+            val release =
+                try {
+                    withContext(Dispatchers.IO) { available() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "ankiquest update check failed")
+                    null
+                }
+            val current = synchronized(downloadFiles) { state }
+            if (current is UpdateState.Downloading) {
+                withContext(Dispatchers.Main) { showProgress(activity, current) }
+                return null
+            }
+            if (release == null) {
+                return activity.getString(R.string.ankiquest_update_check_failed)
+            }
+            if (!isNewer(release)) {
+                return activity.getString(R.string.ankiquest_update_none, installed() ?: release.name)
+            }
+            withContext(Dispatchers.Main) {
+                if (synchronized(downloadFiles) { state === check }) {
+                    offer(activity, release)
+                }
+            }
+            return null
+        } finally {
+            endCheck(check)
+        }
     }
 
     /** The nightly channel follows whichever build is newest, so a fresh stable release is offered too. */
@@ -222,22 +273,34 @@ object AnkiquestUpdater {
         )
     }
 
+    private var offerDialog = WeakReference<AlertDialog>(null)
+
     private fun offer(
         activity: Activity,
         release: Release,
     ) {
-        if (activity.isFinishing || activity.isDestroyed) return
-        AlertDialog
-            .Builder(activity)
-            .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
-            .setMessage(
-                activity.getString(
-                    if (release.nightly) R.string.ankiquest_update_nightly_message else R.string.ankiquest_update_message,
-                    release.apkSize / (1024 * 1024),
-                ),
-            ).setPositiveButton(R.string.ankiquest_update_install) { _, _ -> download(activity, release) }
-            .setNegativeButton(R.string.ankiquest_update_later, null)
-            .show()
+        if (activity.isFinishing || activity.isDestroyed) {
+            return
+        }
+        if (activity is LifecycleOwner && !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            return
+        }
+        if (offerDialog.get()?.isShowing == true) {
+            return
+        }
+        val dialog =
+            AlertDialog
+                .Builder(activity)
+                .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
+                .setMessage(
+                    activity.getString(
+                        if (release.nightly) R.string.ankiquest_update_nightly_message else R.string.ankiquest_update_message,
+                        release.apkSize / (1024 * 1024),
+                    ),
+                ).setPositiveButton(R.string.ankiquest_update_install) { _, _ -> download(activity, release) }
+                .setNegativeButton(R.string.ankiquest_update_later, null)
+                .show()
+        offerDialog = WeakReference(dialog)
     }
 
     private class Progress(
@@ -257,22 +320,27 @@ object AnkiquestUpdater {
 
     private var progress: Progress? = null
 
-    @Volatile
-    private var percent = 0
-
-    @Volatile
     private var cleaned = false
 
     private fun showProgress(
         activity: Activity,
-        release: Release,
+        download: UpdateState.Downloading,
     ) {
+        if (activity.isFinishing || activity.isDestroyed) {
+            return
+        }
+        val percent = synchronized(downloadFiles) { download.percent.takeIf { state === download } } ?: return
+        val message = activity.getString(R.string.ankiquest_update_downloading, percent)
+        if (progress?.attached() === activity && progress?.dialog?.isShowing == true) {
+            progress?.update(message)
+            return
+        }
         progress?.dismiss()
         val dialog =
             AlertDialog
                 .Builder(activity)
-                .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
-                .setMessage(activity.getString(R.string.ankiquest_update_downloading, percent))
+                .setTitle(activity.getString(R.string.ankiquest_update_title, download.release.name))
+                .setMessage(message)
                 .setCancelable(false)
                 .show()
         (activity as? LifecycleOwner)?.let { owner ->
@@ -296,54 +364,62 @@ object AnkiquestUpdater {
         release: Release,
     ) {
         if (activity.isFinishing || activity.isDestroyed) return
-        if (!downloading.compareAndSet(null, release)) {
-            downloading.get()?.let { showProgress(activity, it) }
+        val attempt = UpdateState.Downloading(release)
+        val active =
+            synchronized(downloadFiles) {
+                (state as? UpdateState.Downloading) ?: attempt.also { state = it }
+            }
+        showProgress(activity, active)
+        if (active !== attempt) {
             return
         }
-        percent = 0
-        showProgress(activity, release)
+
         val app = activity.applicationContext
         scope.launch {
-            val file = apkFile(app)
+            var output: File? = null
+            var installed = false
+            var failed = false
             try {
-                // Cleanup already in progress finishes before this owner starts writing the APK.
+                val file = apkFile(app).also { output = it }
+                // The file guard serializes cleanup and the download claim.
                 synchronized(downloadFiles) { deleteDownloads(file) }
                 fetch(release, file) { done ->
-                    percent = done
+                    synchronized(downloadFiles) { attempt.percent = done }
                     withContext(Dispatchers.Main) {
                         progress?.update(app.getString(R.string.ankiquest_update_downloading, done))
                     }
                 }
                 withContext(Dispatchers.Main) {
                     val host = progress?.attached()
-                    finishProgress()
                     val uri = FileProvider.getUriForFile(app, "${app.packageName}.apkgfileprovider", file)
                     val install =
                         Intent(Intent.ACTION_VIEW)
                             .setDataAndType(uri, "application/vnd.android.package-archive")
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                     (host ?: app).startActivity(install)
+                    installed = true
                 }
             } catch (e: CancellationException) {
-                deleteDownloads(file)
-                withContext(NonCancellable + Dispatchers.Main) { finishProgress() }
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest update download failed")
-                deleteDownloads(file)
-                withContext(Dispatchers.Main) {
+                failed = true
+            } finally {
+                if (!installed) {
+                    synchronized(downloadFiles) { output?.let(::deleteDownloads) }
+                }
+                withContext(NonCancellable + Dispatchers.Main) {
                     val host = progress?.attached()
                     finishProgress()
-                    host?.let {
+                    synchronized(downloadFiles) { state = UpdateState.Idle }
+                    if (failed && host != null) {
                         AlertDialog
-                            .Builder(it)
+                            .Builder(host)
                             .setMessage(R.string.ankiquest_update_failed)
                             .setPositiveButton(android.R.string.ok, null)
                             .show()
                     }
                 }
-            } finally {
-                downloading.compareAndSet(release, null)
             }
         }
     }
@@ -361,8 +437,12 @@ object AnkiquestUpdater {
     }
 
     private fun cleanOnce(context: Context) {
-        if (cleaned) return
-        cleaned = true
+        synchronized(downloadFiles) {
+            if (cleaned) {
+                return
+            }
+            cleaned = true
+        }
         val app = context.applicationContext
         scope.launch {
             try {
@@ -385,8 +465,7 @@ object AnkiquestUpdater {
         versionOf: (File) -> Long? = { archiveVersionCode(context, it) },
     ) {
         synchronized(downloadFiles) {
-            // A download claims its release before waiting for the same file guard.
-            if (downloading.get() != null) {
+            if (state is UpdateState.Downloading) {
                 return
             }
             val file = apkFile(context)
