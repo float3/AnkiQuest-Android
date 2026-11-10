@@ -10,7 +10,10 @@ import androidx.core.content.edit
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.time.TimeManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import timber.log.Timber
 
@@ -19,8 +22,9 @@ import timber.log.Timber
  * has the moods; launchers redraw the icon when it changes, and some briefly drop it from the home
  * screen while they do.
  *
- * Each mood is a launcher alias; exactly one is enabled. The aliases are part of the AnkiQuest
- * branding in src/quest, so other builds keep IntentHandler's own launcher entry.
+ * Each mood aliases AnkiquestLauncher, which forwards into DeckPicker's stable task so disabling
+ * an alias cannot finish a review. Exactly one is enabled. Builds without the aliases keep
+ * IntentHandler's launcher entry.
  */
 internal object AnkiquestIcon : DefaultLifecycleObserver {
     const val PREF_ENABLED = "ankiquestMoodIcon"
@@ -34,15 +38,13 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         data object Background : Visibility
 
         data class Visible(
-            val pending: Change?,
+            val pending: Pending?,
         ) : Visibility
     }
 
-    private data class Change(
+    private data class Pending(
         val context: Context,
-        val mood: Mood,
         val prefs: SharedPreferences,
-        val accountScope: String?,
     )
 
     /** The last hours of a study day in which a streak not yet secured counts as at risk. */
@@ -108,10 +110,15 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         context: Context,
         now: Long,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
-    ) = show(context, mood(lastKnown(prefs), now), prefs)
+    ) = show(context, lastMood(now, prefs), prefs)
+
+    private fun lastMood(
+        now: Long,
+        prefs: SharedPreferences,
+    ): Mood = mood(lastKnown(prefs), now)
 
     /**
-     * On return to the app, queue the last known mood before an upload can bring it up to date.
+     * Queue a refresh on resume. The current account and day are read again when the app stops.
      */
     fun onAppStart(
         context: Context,
@@ -156,15 +163,11 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         mood: Mood,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
-        if (!available(context)) {
-            return
-        }
         synchronized(lock) {
             when (visibility) {
                 Visibility.Background -> applyMood(context, mood, prefs)
                 is Visibility.Visible -> {
-                    val accountScope = AnkiquestHomeData.account(prefs)?.scope
-                    visibility = Visibility.Visible(Change(context.applicationContext, mood, prefs, accountScope))
+                    visibility = Visibility.Visible(Pending(context.applicationContext, prefs))
                 }
             }
         }
@@ -177,21 +180,28 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     }
 
     override fun onStop(owner: LifecycleOwner) {
+        val pending =
+            synchronized(lock) {
+                val pending = (visibility as? Visibility.Visible)?.pending
+                visibility = Visibility.Background
+                pending
+            } ?: return
+        applicationScope.launch(Dispatchers.IO) { applyPending(pending) }
+    }
+
+    private fun applyPending(pending: Pending) {
         synchronized(lock) {
-            val pending = (visibility as? Visibility.Visible)?.pending
-            visibility = Visibility.Background
-            if (pending != null) {
-                // The setting or account may have changed while the switch was waiting.
-                val prefs = pending.prefs
-                val mood =
-                    when {
-                        !enabled(prefs) -> Mood.DEFAULT
-                        pending.accountScope != AnkiquestHomeData.account(prefs)?.scope ->
-                            mood(lastKnown(prefs), TimeManager.time.intTimeMS())
-                        else -> pending.mood
-                    }
-                applyMood(pending.context, mood, prefs)
+            val visible = visibility as? Visibility.Visible
+            if (visible != null) {
+                // A quick return keeps the refresh pending until the next stop.
+                if (visible.pending == null) {
+                    visibility = Visibility.Visible(pending)
+                }
+                return
             }
+            val prefs = pending.prefs
+            val mood = if (enabled(prefs)) lastMood(TimeManager.time.intTimeMS(), prefs) else Mood.DEFAULT
+            applyMood(pending.context, mood, prefs)
         }
     }
 
@@ -201,6 +211,9 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         mood: Mood,
         prefs: SharedPreferences,
     ) {
+        if (!available(context)) {
+            return
+        }
         val packageManager = context.packageManager
         try {
             val wrong = Mood.entries.filter { enabled(packageManager, context, it) != (it == mood) }
