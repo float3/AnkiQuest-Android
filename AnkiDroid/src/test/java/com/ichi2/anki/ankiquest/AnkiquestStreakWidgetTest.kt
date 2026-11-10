@@ -18,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -91,6 +92,24 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
             val progress = render(board).allViews.filterIsInstance<ProgressBar>().single()
             assertEquals(View.GONE, progress.visibility)
         }
+    }
+
+    @Test
+    fun `studied and protected days fill the meter below the minimum`() {
+        for (state in listOf("studied", "protected")) {
+            val widget = render(JSONArray().put(me(9, state, 5, 3, 10)))
+            val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+            assertEquals(View.VISIBLE, meter.visibility, state)
+            assertEquals(10, meter.progress, state)
+            assertFalse(widget.contentDescription.toString().contains("3 of 10 minutes"), state)
+        }
+    }
+
+    @Test
+    fun `a row without today's review count hides the meter`() {
+        val row = me(9, "pending", 8, 6, 10).apply { remove("today_reviews") }
+        val meter = render(JSONArray().put(row)).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+        assertEquals(View.GONE, meter.visibility)
     }
 
     @Test
