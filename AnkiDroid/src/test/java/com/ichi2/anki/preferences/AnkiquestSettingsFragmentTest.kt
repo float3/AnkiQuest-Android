@@ -6,8 +6,10 @@ import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.os.Looper
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.preference.ListPreference
@@ -141,6 +143,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
 
     @Test
     @Config(sdk = [36])
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun `notification permission waits for an alert to be enabled`() {
         val permission = Manifest.permission.POST_NOTIFICATIONS
         shadowOf(targetContext as Application).denyPermissions(permission)
