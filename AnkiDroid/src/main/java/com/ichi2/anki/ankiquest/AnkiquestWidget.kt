@@ -175,7 +175,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val fetchedAt: Long,
             val offline: Boolean,
             @StringRes val note: Int? = null,
-            val scope: String? = AnkiquestHomeData.account()?.scope,
+            val scope: String?,
         )
 
         @Volatile
@@ -241,7 +241,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             fetchedAt: Long,
             offline: Boolean,
         ) {
-            val shown = Drawn(board, fetchedAt, offline)
+            val shown = Drawn(board, fetchedAt, offline, scope = AnkiquestHomeData.account()?.scope)
             drawn = shown
             renderStreaks(context, shown)
             renderBoards(context, shown)
@@ -316,7 +316,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             fresh = Fresh(account.scope, account.user, profile, now)
             val known = currentBoard(account)
             val streakChanged = before == null || streakShown(ownRow(before.profile, null)) != streakShown(ownRow(profile, null))
-            if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false))
+            if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false, scope = account.scope))
             // Without standings to put the row in, the leaderboards keep what they show until the poll.
             val shown = known ?: return
             if (!streakChanged && now - freshDrawnAt < FRESH_REDRAW_MS) return
@@ -333,7 +333,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                 return
             }
             val shown = currentBoard(account)
-            renderStreaks(context, shown ?: Drawn(JSONArray(), 0, false))
+            renderStreaks(context, shown ?: Drawn(JSONArray(), 0, false, scope = account.scope))
             if (shown != null) {
                 renderBoards(context, shown)
             }
@@ -429,7 +429,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             // everyone shows its own standings, or that they are still on their way.
             val source =
                 if (settings.ownBoard && shown.board != null) {
-                    ownBoard(id) ?: Drawn(null, 0, false, R.string.aq_board_loading)
+                    ownBoard(id) ?: Drawn(null, 0, false, R.string.aq_board_loading, shown.scope)
                 } else {
                     shown
                 }
@@ -445,9 +445,10 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val stored = AnkiDroidApp.sharedPrefs().getString("$BOARD_KEY:$id", null) ?: return null
             return try {
                 val json = JSONObject(stored)
-                if (json.optString("account") != AnkiquestHomeData.account()?.scope) return null
+                val scope = json.optString("account")
+                if (scope != AnkiquestHomeData.account()?.scope) return null
                 val note = OwnNote.entries.firstOrNull { it.name == json.optString("note") }?.text
-                Drawn(json.optJSONArray("board") ?: JSONArray(), json.optLong("at"), json.optBoolean("offline"), note)
+                Drawn(json.optJSONArray("board") ?: JSONArray(), json.optLong("at"), json.optBoolean("offline"), note, scope)
             } catch (_: JSONException) {
                 null
             }
@@ -527,7 +528,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
                         storeOwnBoard(id, account, last?.board ?: JSONArray(), last?.fetchedAt ?: 0, offline = true)
                     }
                 }
-                draw(context, manager, style, id, drawn ?: Drawn(circle, now, false))
+                draw(context, manager, style, id, drawn ?: Drawn(circle, now, false, scope = account.scope))
             }
         }
 

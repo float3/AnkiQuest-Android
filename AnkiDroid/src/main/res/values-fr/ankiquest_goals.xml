@@ -80,10 +80,10 @@
     <string name="ankiquest_mood_icon_summary">L’icône sourit quand la journée compte, s’inquiète tard le soir et montre une protection quand elle te couvre. Certains lanceurs masquent brièvement l’icône pendant le changement.</string>
     <string name="aq_goal_streak_safe_unsent">Aujourd’hui compte ✓ · pas encore envoyé</string>
     <string name="aq_goal_minimum_unsent">AnkiQuest compte tes révisions une fois envoyées.</string>
-    <string name="aq_goal_streak_safe_offline">Série assurée · en attente de connexion</string>
-    <string name="aq_goal_streak_safe_signed_out">Série assurée · reconnecte-toi pour envoyer</string>
-    <string name="aq_goal_streak_safe_server">Série assurée · erreur du serveur, nouvel essai prévu</string>
-    <string name="aq_goal_streak_safe_refused">Série assurée · envoi refusé</string>
+    <string name="aq_goal_streak_safe_offline">Aujourd’hui compte ✓ · en attente de connexion</string>
+    <string name="aq_goal_streak_safe_signed_out">Aujourd’hui compte ✓ · reconnecte-toi pour envoyer</string>
+    <string name="aq_goal_streak_safe_server">Aujourd’hui compte ✓ · erreur du serveur, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_refused">Aujourd’hui compte ✓ · envoi refusé</string>
     <string name="aq_goal_upload_signed_out">Le serveur a refusé la connexion de cet appareil. Reconnecte-toi dans les réglages AnkiQuest.</string>
     <string name="aq_goal_upload_refused">« Tester la connexion » dans les réglages AnkiQuest indique pourquoi.</string>
 </resources>

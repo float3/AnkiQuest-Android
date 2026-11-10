@@ -193,6 +193,7 @@ internal object AnkiquestMoments {
                 ),
             )
         }
+        markShown(prefs, owner, listOf(day.key))
         return true
     }
 
@@ -249,7 +250,7 @@ internal object AnkiquestMoments {
             return Route.SEEN
         }
 
-        val recorded = recordedDay(prefs, account)?.takeIf { moment.at in it && known(prefs, account, it.key) }
+        val recorded = recordedDay(prefs, account)?.takeIf { moment.at in it }
         if (recorded != null) {
             val queue = pending(prefs, account)
             val local = queue.firstOrNull { it.key == recorded.key }
@@ -579,6 +580,7 @@ internal object AnkiquestMoments {
     private fun notice(
         host: Activity,
         account: HomeAccount,
+        prefs: SharedPreferences,
     ): Moment? {
         val intent = host.intent ?: return null
         val payload = intent.getStringExtra(EXTRA_MOMENT) ?: return null
@@ -588,7 +590,17 @@ internal object AnkiquestMoments {
         if (owner != account.notificationAccount || account.token.isEmpty()) {
             return null
         }
-        return runCatching { Moment.parse(JSONObject(payload)) }.getOrNull()
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) {
+            return null
+        }
+        val moment = runCatching { Moment.parse(JSONObject(payload)) }.getOrNull() ?: return null
+        // Android can restore the original intent, including the removed extras.
+        val key = "opened:${moment.key}"
+        if (known(prefs, account.notificationAccount, key)) {
+            return null
+        }
+        markShown(prefs, account.notificationAccount, listOf(key))
+        return moment
     }
 
     /**
@@ -614,7 +626,7 @@ internal object AnkiquestMoments {
     ) {
         if (!resting || host.isFinishing || host.isDestroyed) return
         val account = AnkiquestHomeData.account(prefs) ?: return
-        val tapped = notice(host, account)
+        val tapped = notice(host, account, prefs)
         val current = showing.get()?.takeIf { it.isShowing }
         if (current != null) {
             if (tapped == null) {

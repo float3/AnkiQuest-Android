@@ -42,34 +42,35 @@ internal object AnkiquestIcon {
     fun mood(
         profile: JSONObject?,
         now: Long,
-    ): Mood = mood(AnkiquestDay.Server.profile(profile), now)
+    ): Mood {
+        val server = AnkiquestDay.Server.profile(profile) ?: return Mood.DEFAULT
+        return mood(AnkiquestDay.judge(server, emptyList(), now), server.dayEndsAt - now)
+    }
 
-    private fun mood(
+    private fun ownMood(
         server: AnkiquestDay.Server?,
         now: Long,
-        prefs: SharedPreferences? = null,
+        prefs: SharedPreferences,
     ): Mood {
-        if (server == null) {
-            return Mood.DEFAULT
-        }
-        val day =
-            if (prefs == null) {
-                AnkiquestDay.judge(server, emptyList(), now)
-            } else {
-                AnkiquestDay.judgeOwn(server, now, prefs)
-            }
-        return when (day?.label) {
+        if (server == null) return Mood.DEFAULT
+        return mood(AnkiquestDay.judgeOwn(server, now, prefs), server.dayEndsAt - now)
+    }
+
+    private fun mood(
+        day: AnkiquestDay.Verdict?,
+        remainingMs: Long,
+    ): Mood =
+        when (day?.label) {
             AnkiquestDay.State.STUDIED -> Mood.HAPPY
             AnkiquestDay.State.PROTECTED -> Mood.FROZEN
             AnkiquestDay.State.PENDING, AnkiquestDay.State.SHORT ->
                 when {
                     day.streak == 0 -> Mood.SLEEPY
-                    server.dayEndsAt - now <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
+                    remainingMs <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
                     else -> Mood.DEFAULT
                 }
             AnkiquestDay.State.UNKNOWN, null -> Mood.DEFAULT
         }
-    }
 
     fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, true)
 
@@ -90,7 +91,7 @@ internal object AnkiquestIcon {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
         if (profile != null) remember(profile, prefs)
-        val mood = if (enabled(prefs)) mood(AnkiquestDay.Server.profile(profile), now, prefs) else Mood.DEFAULT
+        val mood = if (enabled(prefs)) ownMood(AnkiquestDay.Server.profile(profile), now, prefs) else Mood.DEFAULT
         show(context, mood, prefs)
     }
 
@@ -104,7 +105,7 @@ internal object AnkiquestIcon {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
         val server = AnkiquestDay.last(prefs) ?: AnkiquestDay.Server.profile(lastKnown(prefs))
-        show(context, mood(server, now, prefs), prefs)
+        show(context, ownMood(server, now, prefs), prefs)
     }
 
     /**

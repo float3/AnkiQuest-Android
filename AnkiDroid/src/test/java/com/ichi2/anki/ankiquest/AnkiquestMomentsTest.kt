@@ -3,8 +3,11 @@
 package com.ichi2.anki.ankiquest
 
 import android.view.MotionEvent
+import android.view.View
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.viewpager2.widget.ViewPager2
 import com.ichi2.anki.R
@@ -236,8 +239,8 @@ class AnkiquestMomentsTest : RobolectricTest() {
         val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(NOW, 600_000)), NOW))
         assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
         assertTrue(AnkiquestMoments.pending(prefs, account).isEmpty())
-        AnkiquestDay.remember(server.copy(streak = 7, streakState = "studied").json(), prefs)
 
+        // The notice can arrive before the updated profile does.
         val secured = celebration(1, "secured", "secured:9", quiet = true)
         assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = true))
         assertEquals(
@@ -245,6 +248,20 @@ class AnkiquestMomentsTest : RobolectricTest() {
             AnkiquestMoments.route(prefs, account, celebration(2, "streak", "streak:3:7"), foreground = true),
         )
         assertEquals(Kind.STREAK, AnkiquestMoments.take(prefs, account).single().kind)
+    }
+
+    @Test
+    fun `a local minimum with unknown streak length also consumes the server cue`() {
+        val start = NOW - DAY
+        val server = AnkiquestDay.Server(6, "pending", NOW + DAY, start - DAY, start, 0, 0, 10)
+        val reviews = listOf(AnkiquestDay.Review(start - 1, 10_000), AnkiquestDay.Review(NOW, 600_000))
+        val met = assertNotNull(AnkiquestDay.judge(server, reviews, NOW))
+        assertNull(met.streak)
+        assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
+
+        val secured = celebration(1, "secured", "secured:9", quiet = true)
+        assertEquals(Route.SEEN, AnkiquestMoments.route(prefs, account, secured, foreground = false))
+        assertTrue(AnkiquestMoments.pending(prefs, account).isEmpty())
     }
 
     @Test
@@ -260,6 +277,30 @@ class AnkiquestMomentsTest : RobolectricTest() {
         } finally {
             tap.recycle()
         }
+    }
+
+    @Test
+    fun `reduce motion fills the ring at once and announces the cue politely`() {
+        val host = host()
+        mockkObject(AnkiquestGoalBar.Companion)
+        try {
+            every { AnkiquestGoalBar.animationsEnabled(host) } returns false
+            val cue = assertNotNull(AnkiquestStreakCue.show(host, 13, 0.4f, prefs) as? LinearLayout)
+            val ring = cue.getChildAt(0) as AnkiquestStreakRing
+            val label = cue.getChildAt(cue.childCount - 1) as TextView
+            assertEquals(1f, ring.fraction)
+            assertTrue(ring.safe)
+            assertEquals(View.ACCESSIBILITY_LIVE_REGION_POLITE, label.accessibilityLiveRegion)
+        } finally {
+            unmockkObject(AnkiquestGoalBar.Companion)
+        }
+    }
+
+    @Test
+    fun `the cue switch leaves the review screen alone`() {
+        val host = host()
+        prefs.edit { putBoolean(host.getString(R.string.ankiquest_streak_cue_key), false) }
+        assertNull(AnkiquestStreakCue.show(host, 13, 0.4f, prefs))
     }
 
     @Test
@@ -279,6 +320,27 @@ class AnkiquestMomentsTest : RobolectricTest() {
             assertEquals(listOf("level:4"), AnkiquestMoments.pending(prefs, account).map { it.key })
         } finally {
             dialog.dismiss()
+        }
+    }
+
+    @Test
+    fun `a restored notification does not open its card twice`() {
+        val host = host()
+        val notice = AnkiquestMoments.noticeIntent(host, account, moment("secured:9", Kind.SECURED))
+        host.intent = android.content.Intent(notice)
+        AnkiquestMoments.present(host, prefs, resting = true)
+        advanceRobolectricLooper()
+        val first = assertNotNull(ShadowDialog.getLatestDialog())
+        first.dismiss()
+
+        try {
+            host.intent = notice
+            AnkiquestMoments.present(host, prefs, resting = true)
+            advanceRobolectricLooper()
+            assertEquals(first, ShadowDialog.getLatestDialog())
+            assertFalse(first.isShowing)
+        } finally {
+            ShadowDialog.getLatestDialog()?.dismiss()
         }
     }
 

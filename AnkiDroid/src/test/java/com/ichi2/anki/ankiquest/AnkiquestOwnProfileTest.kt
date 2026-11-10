@@ -118,7 +118,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         }
 
     @Test
-    fun `offline reviews update the icon and widget for their own account`() {
+    fun `offline reviews survive a restart and update their own icon and widget`() {
         registerAliases()
         val now = TimeManager.time.intTimeMS()
         val pending = profile("pending", 12, 2).put("last_review_id", now - 10)
@@ -128,6 +128,11 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         val day = checkNotNull(AnkiquestDay.Server.profile(pending))
         AnkiquestDay.rememberLocal(scope, day, listOf(AnkiquestDay.Review(now, 600_000)))
 
+        // Drop the old process cache before the launcher and widget read the day.
+        AnkiquestDay::class.java.declaredFields.firstOrNull { it.name == "local" }?.let {
+            it.isAccessible = true
+            it.set(null, null)
+        }
         AnkiquestIcon.showLastKnown(targetContext, now)
         assertEquals(listOf(Mood.HAPPY), enabled())
         val widget =

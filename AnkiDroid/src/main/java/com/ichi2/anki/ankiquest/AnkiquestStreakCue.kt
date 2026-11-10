@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.SharedPreferences
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -11,6 +12,7 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import kotlin.math.roundToInt
 
@@ -32,8 +34,13 @@ internal object AnkiquestStreakCue {
         host: Activity,
         streak: Int?,
         fraction: Float,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
+        finished: () -> Unit = {},
     ): View? {
         if (host.isFinishing || host.isDestroyed) {
+            return null
+        }
+        if (!prefs.getBoolean(host.getString(R.string.ankiquest_streak_cue_key), true)) {
             return null
         }
         val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return null
@@ -49,6 +56,14 @@ internal object AnkiquestStreakCue {
             AnkiquestStreakRing(host).apply {
                 this.fraction = if (animate) fraction else 1f
                 safe = !animate
+            }
+        val title = language.getString(R.string.aq_goal_streak_safe)
+        val announcement = if (streak == null) title else "$title · ${AnkiquestMoments.streakDays(language, streak)}"
+        val label =
+            TextView(host).apply {
+                accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+                setTextColor(host.getColor(R.color.aq_home_text))
+                setPadding(pad, 0, 0, 0)
             }
 
         // Overlay the reviewer without changing the toolbar or intercepting answers.
@@ -69,20 +84,20 @@ internal object AnkiquestStreakCue {
                 if (AnkiquestCompanion.visible()) {
                     addView(AnkiquestAki.image(host, R.drawable.aki_minimum, ICON_DP))
                 }
-                addView(
-                    TextView(host).apply {
-                        val title = language.getString(R.string.aq_goal_streak_safe)
-                        text = if (streak == null) title else "$title · ${AnkiquestMoments.streakDays(language, streak)}"
-                        setTextColor(host.getColor(R.color.aq_home_text))
-                        setPadding(pad, 0, 0, 0)
-                    },
-                )
+                addView(label)
             }
         val placement =
             FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
                 topMargin = (TOP_DP * density).roundToInt()
             }
         root.addView(banner, placement)
+        // Updating the attached live region gives TalkBack a polite announcement.
+        label.text = announcement
+        val remove =
+            Runnable {
+                root.removeView(banner)
+                finished()
+            }
 
         // Reduced motion shows a filled ring and removes it after the same pause.
         if (animate) {
@@ -99,10 +114,10 @@ internal object AnkiquestStreakCue {
                 .alpha(0f)
                 .setStartDelay(HOLD_MS)
                 .setDuration(FADE_MS)
-                .withEndAction { root.removeView(banner) }
+                .withEndAction(remove)
                 .start()
         } else {
-            banner.postDelayed({ root.removeView(banner) }, HOLD_MS)
+            banner.postDelayed(remove, HOLD_MS)
         }
         return banner
     }

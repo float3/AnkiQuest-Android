@@ -427,7 +427,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     if (HomeAccount.current()?.scope != account.scope || AnkiquestDay.last(prefs) != server) {
                         return@tryWithCol null
                     }
-                    AnkiquestDay.rememberLocal(account.scope, server, reviews)
+                    AnkiquestDay.rememberLocal(account.scope, server, reviews, prefs)
                     AnkiquestDay.judge(server, reviews, now)
                 } ?: return
             if (HomeAccount.current()?.scope != account.scope) {
@@ -464,16 +464,16 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             }
             val host = activity.get() ?: return@withContext
             if (isReviewing(host)) {
-                if (!prefs.getBoolean(host.getString(R.string.ankiquest_streak_cue_key), true)) {
-                    return@withContext
-                }
                 val fraction = AnkiquestGoalBar.fraction(before.minutes, day.streakMinutes, before.met)
-                val root = host.findViewById<FrameLayout>(android.R.id.content)
-                root?.findViewWithTag<TextView>(BANNER_TAG)?.apply {
-                    animate().cancel()
-                    alpha = 0f
+                val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return@withContext
+                val cue = AnkiquestStreakCue.show(host, day.streak, fraction, prefs) { showDeferredBanner(host, root) }
+                if (cue != null) {
+                    root.findViewWithTag<ReviewBannerView>(BANNER_TAG)?.takeIf { it.alpha > 0f }?.apply {
+                        message?.let { defer(it) }
+                        animate().cancel()
+                        alpha = 0f
+                    }
                 }
-                AnkiquestStreakCue.show(host, day.streak, fraction)
             } else {
                 AnkiquestMoments.present(host, prefs)
             }
@@ -511,6 +511,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      */
     internal suspend fun uploadAfterSync() {
         if (HomeAccount.current()?.token.isNullOrEmpty() || !collectionAvailable()) return
+        refreshLocalDay()
         if (!refreshes.offer(showFeedback = false, resync = true)) return
         refresh(background = true)
     }
@@ -1079,6 +1080,37 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      * Shows [text] briefly over the current screen. It is discoverable with accessibility services
      * but not announced, because the session recap carries the same feedback without interrupting every answer.
      */
+    private data class ReviewBanner(
+        val text: String,
+        val important: Boolean,
+        val owner: String?,
+    )
+
+    private class ReviewBannerView(
+        host: Activity,
+    ) : TextView(host) {
+        var message: ReviewBanner? = null
+        var pending: ReviewBanner? = null
+
+        fun defer(next: ReviewBanner) {
+            if (next.important || pending?.important != true) {
+                pending = next
+            }
+        }
+    }
+
+    private fun showDeferredBanner(
+        host: Activity,
+        root: FrameLayout,
+    ) {
+        val banner = root.findViewWithTag<ReviewBannerView>(BANNER_TAG) ?: return
+        val pending = banner.pending ?: return
+        banner.pending = null
+        if (activity.get() === host && HomeAccount.current()?.scope == pending.owner) {
+            showBanner(pending.text, pending.important)
+        }
+    }
+
     private fun showBanner(
         text: String,
         important: Boolean,
@@ -1086,13 +1118,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val host = activity.get() ?: return
         if (host.isFinishing || host.isDestroyed) return
         val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return
-        if (AnkiquestStreakCue.showing(root)) {
-            return
-        }
         val density = host.resources.displayMetrics.density
         val banner =
-            root.findViewWithTag<TextView>(BANNER_TAG) ?: TextView(host).apply {
+            root.findViewWithTag<ReviewBannerView>(BANNER_TAG) ?: ReviewBannerView(host).apply {
                 tag = BANNER_TAG
+                alpha = 0f
                 setTextColor(Color.WHITE)
                 textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD
@@ -1113,6 +1143,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                         ).apply { topMargin = (72 * density).toInt() },
                 )
             }
+        val message = ReviewBanner(text, important, HomeAccount.current()?.scope)
+        if (AnkiquestStreakCue.showing(root)) {
+            banner.defer(message)
+            return
+        }
+        banner.message = message
         banner.background =
             GradientDrawable().apply {
                 cornerRadius = 20 * density

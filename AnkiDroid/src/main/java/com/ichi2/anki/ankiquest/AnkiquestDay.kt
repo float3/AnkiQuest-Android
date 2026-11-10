@@ -26,6 +26,7 @@ import org.json.JSONObject
  */
 internal object AnkiquestDay {
     private const val PREF_SERVER_DAY = "ankiquestServerToday"
+    private const val PREF_LOCAL_DAY = "ankiquestLocalToday"
     private const val MINUTE_MS = 60_000L
 
     /** Revlog rows the upload sends: answers, not manual rescheduling. */
@@ -153,12 +154,31 @@ internal object AnkiquestDay {
         now: Long,
     ): Verdict? {
         if (server == null || now >= server.dayEndsAt) return null
+        return verdict(server, evidence(server, reviews))
+    }
+
+    private data class Evidence(
+        val count: Int = 0,
+        val timeMs: Long = 0,
+        val earlier: Boolean = false,
+    )
+
+    private fun evidence(
+        server: Server,
+        reviews: List<Review>,
+    ): Evidence {
+        val starts = server.startsAt ?: return Evidence()
         val unsent = reviews.filter { it.id > server.lastReviewId }
-        val starts = server.startsAt
-        val counted = if (starts == null) emptyList() else unsent.filter { it.id >= starts && it.id < server.dayEndsAt }
-        val earlier = starts != null && unsent.any { it.id < starts }
-        val count = server.reviews + counted.size
-        val time = server.timeMs + counted.sumOf { it.timeMs }
+        val counted = unsent.filter { it.id in starts until server.dayEndsAt }
+        return Evidence(counted.size, counted.sumOf { it.timeMs }, unsent.any { it.id < starts })
+    }
+
+    private fun verdict(
+        server: Server,
+        local: Evidence,
+    ): Verdict {
+        val count = server.reviews + local.count
+        val time = server.timeMs + local.timeMs
         val confirmed = server.streakState == "studied"
         val met = confirmed || (count > 0 && time >= server.streakMinutes * MINUTE_MS)
         return Verdict(
@@ -166,14 +186,14 @@ internal object AnkiquestDay {
             streakState =
                 when {
                     met -> "studied"
-                    earlier -> null
+                    local.earlier -> null
                     else -> server.streakState
                 },
-            streak = if (earlier) null else server.streak + if (met && !confirmed) 1 else 0,
+            streak = if (local.earlier) null else server.streak + if (met && !confirmed) 1 else 0,
             reviews = count,
             timeMs = time,
             streakMinutes = server.streakMinutes,
-            unsent = counted.size,
+            unsent = local.count,
             confirmed = confirmed,
         )
     }
@@ -196,22 +216,28 @@ internal object AnkiquestDay {
     fun last(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Server? =
         prefs.getString(key(prefs), null)?.let { runCatching { Server.profile(JSONObject(it)) }.getOrNull() }
 
-    private data class LocalReviews(
-        val scope: String,
-        val server: Server,
-        val reviews: List<Review>,
-    )
-
-    @Volatile
-    private var local: LocalReviews? = null
-
-    /** Keep the last collection read for the synchronous launcher and widget renderers. */
+    /** Keep the collection's unsent totals for renders that start in a new process. */
     fun rememberLocal(
         scope: String,
         server: Server,
         reviews: List<Review>,
+        prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
-        local = LocalReviews(scope, server, reviews)
+        val start = server.startsAt ?: return
+        val local = evidence(server, reviews)
+        val key = scopedKey(PREF_LOCAL_DAY, scope)
+        val value =
+            JSONObject()
+                .put("start", start)
+                .put("end", server.dayEndsAt)
+                .put("last", server.lastReviewId)
+                .put("count", local.count)
+                .put("time", local.timeMs)
+                .put("earlier", local.earlier)
+                .toString()
+        if (prefs.getString(key, null) != value) {
+            prefs.edit { putString(key, value) }
+        }
     }
 
     fun judgeOwn(
@@ -219,13 +245,25 @@ internal object AnkiquestDay {
         now: Long,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ): Verdict? {
+        if (server == null || now >= server.dayEndsAt) return null
         val scope = AnkiquestHomeData.account(prefs)?.scope
-        val recent =
-            local?.takeIf {
-                it.scope == scope && server != null &&
-                    it.server.dayEndsAt == server.dayEndsAt && it.server.lastReviewId <= server.lastReviewId
-            }
-        return judge(server, recent?.reviews.orEmpty(), now)
+        val saved = scope?.let { prefs.getString(scopedKey(PREF_LOCAL_DAY, it), null) }
+        val local = saved?.let { savedEvidence(it, server) } ?: Evidence()
+        return verdict(server, local)
+    }
+
+    private fun savedEvidence(
+        value: String,
+        server: Server,
+    ): Evidence? {
+        val saved = runCatching { JSONObject(value) }.getOrNull() ?: return null
+        // A different watermark can already include some of these reviews.
+        if (server.startsAt == null || saved.optLong("start") != server.startsAt ||
+            saved.optLong("end") != server.dayEndsAt || saved.optLong("last") != server.lastReviewId
+        ) {
+            return null
+        }
+        return Evidence(saved.optInt("count"), saved.optLong("time"), saved.optBoolean("earlier"))
     }
 
     fun own(now: Long): Verdict? = judgeOwn(last(), now)

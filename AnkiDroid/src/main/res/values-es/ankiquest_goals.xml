@@ -80,10 +80,10 @@
     <string name="ankiquest_mood_icon_summary">El icono sonríe cuando hoy ya cuenta, se preocupa al final del día y muestra un protector cuando te cubre. Algunos lanzadores ocultan el icono un momento al cambiar.</string>
     <string name="aq_goal_streak_safe_unsent">Hoy cuenta ✓ · sin subir aún</string>
     <string name="aq_goal_minimum_unsent">AnkiQuest cuenta tus repasos cuando se suban.</string>
-    <string name="aq_goal_streak_safe_offline">Racha a salvo · esperando conexión</string>
-    <string name="aq_goal_streak_safe_signed_out">Racha a salvo · vuelve a iniciar sesión para subir</string>
-    <string name="aq_goal_streak_safe_server">Racha a salvo · error del servidor, se reintentará</string>
-    <string name="aq_goal_streak_safe_refused">Racha a salvo · subida rechazada</string>
+    <string name="aq_goal_streak_safe_offline">Hoy cuenta ✓ · esperando conexión</string>
+    <string name="aq_goal_streak_safe_signed_out">Hoy cuenta ✓ · vuelve a iniciar sesión para subir</string>
+    <string name="aq_goal_streak_safe_server">Hoy cuenta ✓ · error del servidor, se reintentará</string>
+    <string name="aq_goal_streak_safe_refused">Hoy cuenta ✓ · subida rechazada</string>
     <string name="aq_goal_upload_signed_out">El servidor rechazó el inicio de sesión de este dispositivo. Vuelve a iniciar sesión en los ajustes de AnkiQuest.</string>
     <string name="aq_goal_upload_refused">«Probar conexión» en los ajustes de AnkiQuest indica el motivo.</string>
 </resources>
