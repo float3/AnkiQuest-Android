@@ -217,7 +217,7 @@ internal object AnkiquestDay {
         prefs.getString(key(prefs), null)?.let { runCatching { Server.profile(JSONObject(it)) }.getOrNull() }
 
     /** Keep the collection's unsent totals for renders that start in a new process. */
-    fun rememberLocal(
+    internal fun rememberLocal(
         scope: String,
         server: Server,
         reviews: List<Review>,
@@ -240,7 +240,7 @@ internal object AnkiquestDay {
         }
     }
 
-    fun judgeOwn(
+    internal fun judgeOwn(
         server: Server?,
         now: Long,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
@@ -266,9 +266,9 @@ internal object AnkiquestDay {
         return Evidence(saved.optInt("count"), saved.optLong("time"), saved.optBoolean("earlier"))
     }
 
-    fun own(now: Long): Verdict? = judgeOwn(last(), now)
+    internal fun own(now: Long): Verdict? = judgeOwn(last(), now)
 
-    fun words(
+    internal fun words(
         context: Context,
         verdict: Verdict,
     ): String =

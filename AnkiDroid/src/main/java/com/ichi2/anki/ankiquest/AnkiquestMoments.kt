@@ -157,7 +157,7 @@ internal object AnkiquestMoments {
 
     /** Local crossing -> queued card -> confirmation from the server inbox. */
     @Synchronized
-    fun claimMinimum(
+    internal fun claimMinimum(
         context: Context,
         prefs: SharedPreferences,
         account: HomeAccount,
@@ -197,7 +197,7 @@ internal object AnkiquestMoments {
         return true
     }
 
-    fun streakDays(
+    internal fun streakDays(
         context: Context,
         streak: Int,
     ): String {
@@ -278,7 +278,7 @@ internal object AnkiquestMoments {
 
     /** Records a quiet notification or queued server card against the same window as a local crossing. */
     @Synchronized
-    fun rememberMinimum(
+    internal fun rememberMinimum(
         prefs: SharedPreferences,
         account: String,
         moment: Moment,
@@ -566,7 +566,7 @@ internal object AnkiquestMoments {
 
     // ---- Showing ----------------------------------------------------------------------------
 
-    fun noticeIntent(
+    internal fun noticeIntent(
         context: Context,
         account: String,
         moment: Moment,
