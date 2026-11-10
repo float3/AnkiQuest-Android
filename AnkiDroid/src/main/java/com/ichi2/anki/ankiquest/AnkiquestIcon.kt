@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.core.content.edit
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONObject
@@ -17,13 +19,31 @@ import timber.log.Timber
  * has the moods; launchers redraw the icon when it changes, and some briefly drop it from the home
  * screen while they do.
  *
- * Each mood is a launcher alias of IntentHandler; exactly one is enabled. The aliases are part of
- * the AnkiQuest branding in src/quest, so other builds keep IntentHandler's own launcher entry.
+ * Each mood is a launcher alias; exactly one is enabled. The aliases are part of the AnkiQuest
+ * branding in src/quest, so other builds keep IntentHandler's own launcher entry.
  */
-internal object AnkiquestIcon {
+internal object AnkiquestIcon : DefaultLifecycleObserver {
     const val PREF_ENABLED = "ankiquestMoodIcon"
     private const val PREF_CURRENT = "ankiquestMoodIconCurrent"
     private const val PREF_LAST_PROFILE = "ankiquestMoodIconProfile"
+
+    private val lock = Any()
+    private var visibility: Visibility = Visibility.Background
+
+    private sealed interface Visibility {
+        data object Background : Visibility
+
+        data class Visible(
+            val pending: Change?,
+        ) : Visibility
+    }
+
+    private data class Change(
+        val context: Context,
+        val mood: Mood,
+        val prefs: SharedPreferences,
+        val accountScope: String?,
+    )
 
     /** The last hours of a study day in which a streak not yet secured counts as at risk. */
     const val WORRY_HOURS = 6
@@ -69,7 +89,7 @@ internal object AnkiquestIcon {
             false
         }
 
-    /** Shows the mood for [profile], or the plain icon when the setting is off, and remembers [profile] for [showLastKnown]. */
+    /** Requests the mood for [profile], or the plain icon when off, and remembers [profile] for [showLastKnown]. */
     fun update(
         context: Context,
         profile: JSONObject?,
@@ -81,8 +101,8 @@ internal object AnkiquestIcon {
     }
 
     /**
-     * Shows the mood for the last profile the poll saw, without waiting for the next poll, as when the
-     * setting is turned on. Until a poll has seen a profile that is the plain icon.
+     * Requests the mood for the last profile without waiting for the next poll, as when the setting
+     * is turned on. Until a profile has been seen that is the plain icon.
      */
     fun showLastKnown(
         context: Context,
@@ -91,15 +111,16 @@ internal object AnkiquestIcon {
     ) = show(context, mood(lastKnown(prefs), now), prefs)
 
     /**
-     * At app start the icon catches up with the last known day. Opening the app then refreshes the
-     * profile, which brings in today, also for whoever an update just turned the setting on for.
+     * On return to the app, queue the last known mood before an upload can bring it up to date.
      */
     fun onAppStart(
         context: Context,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
         try {
-            if (enabled(prefs) && available(context)) showLastKnown(context, TimeManager.time.intTimeMS(), prefs)
+            if (enabled(prefs)) {
+                showLastKnown(context, TimeManager.time.intTimeMS(), prefs)
+            }
         } catch (e: Exception) {
             Timber.w(e, "AnkiQuest icon could not catch up")
         }
@@ -129,17 +150,57 @@ internal object AnkiquestIcon {
 
     private fun lastProfileKey(prefs: SharedPreferences) = scopedKey(PREF_LAST_PROFILE, AnkiquestHomeData.account(prefs)?.scope)
 
-    /**
-     * Enables [mood]'s alias and disables the others. The pref only says what was last asked for:
-     * a switch can fail or be undone halfway, so the launcher's actual components are checked too,
-     * and only those that differ are changed, since every change makes some launchers redraw.
-     */
+    /** Android can finish tasks when an alias is disabled. Wait until the last activity stops. */
     fun show(
         context: Context,
         mood: Mood,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
-        if (!available(context)) return
+        if (!available(context)) {
+            return
+        }
+        synchronized(lock) {
+            when (visibility) {
+                Visibility.Background -> applyMood(context, mood, prefs)
+                is Visibility.Visible -> {
+                    val accountScope = AnkiquestHomeData.account(prefs)?.scope
+                    visibility = Visibility.Visible(Change(context.applicationContext, mood, prefs, accountScope))
+                }
+            }
+        }
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        synchronized(lock) {
+            visibility = Visibility.Visible(null)
+        }
+    }
+
+    override fun onStop(owner: LifecycleOwner) {
+        synchronized(lock) {
+            val pending = (visibility as? Visibility.Visible)?.pending
+            visibility = Visibility.Background
+            if (pending != null) {
+                // The setting or account may have changed while the switch was waiting.
+                val prefs = pending.prefs
+                val mood =
+                    when {
+                        !enabled(prefs) -> Mood.DEFAULT
+                        pending.accountScope != AnkiquestHomeData.account(prefs)?.scope ->
+                            mood(lastKnown(prefs), TimeManager.time.intTimeMS())
+                        else -> pending.mood
+                    }
+                applyMood(pending.context, mood, prefs)
+            }
+        }
+    }
+
+    /** Check the actual components so a failed or partial switch can be retried. */
+    private fun applyMood(
+        context: Context,
+        mood: Mood,
+        prefs: SharedPreferences,
+    ) {
         val packageManager = context.packageManager
         try {
             val wrong = Mood.entries.filter { enabled(packageManager, context, it) != (it == mood) }
