@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.time.TimeManager
 import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
@@ -120,6 +121,19 @@ class AnkiquestUpdaterTest : RobolectricTest() {
             advanceRobolectricLooperUntil { probe.isCompleted }
             assertNull(runBlocking { probe.await() })
             assertEquals(1, checks.get())
+            assertTrue(progress.isShowing)
+
+            val prefs = AnkiDroidApp.sharedPrefs()
+            val checkedAt = "ankiquestUpdateCheckedAt"
+            val lastCheck = TimeManager.time.intTimeMS() - TimeUnit.DAYS.toMillis(1)
+            prefs.edit { putLong(checkedAt, lastCheck) }
+            ReflectionHelpers.callInstanceMethod<Unit>(
+                AnkiquestUpdater,
+                "checkOnResume",
+                ClassParameter.from(Activity::class.java, host),
+                ClassParameter.from(Integer.TYPE, 40),
+            )
+            assertEquals(lastCheck, prefs.getLong(checkedAt, 0))
             assertTrue(progress.isShowing)
 
             val (apk, part) = downloads()

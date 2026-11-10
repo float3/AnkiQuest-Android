@@ -112,7 +112,14 @@ object AnkiquestUpdater {
     fun maybeCheck(activity: Activity) {
         if (activity !is DeckPicker) return
         cleanOnce(activity)
-        if (BuildConfig.ANKIQUEST_RELEASE <= 0) {
+        checkOnResume(activity, BuildConfig.ANKIQUEST_RELEASE)
+    }
+
+    private fun checkOnResume(
+        activity: Activity,
+        installedRelease: Int,
+    ) {
+        if (installedRelease <= 0) {
             return
         }
         val prefs = AnkiDroidApp.sharedPrefs()
@@ -122,12 +129,12 @@ object AnkiquestUpdater {
         if (beginCheck(check) !== check) {
             return
         }
+        prefs.edit { putLong(PREF_CHECKED_AT, now) }
         val host = WeakReference(activity)
         scope.launch {
             try {
-                prefs.edit { putLong(PREF_CHECKED_AT, now) }
                 val release = available()
-                if (release != null && isNewer(release)) {
+                if (release != null && isNewer(release, installedRelease)) {
                     withContext(Dispatchers.Main) {
                         if (synchronized(downloadFiles) { state === check }) {
                             host.get()?.let { offer(it, release) }
