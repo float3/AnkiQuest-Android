@@ -55,6 +55,8 @@ import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.launchCatchingTask
+import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.utils.Permissions.openAppSettingsScreen
 import kotlinx.coroutines.CancellationException
@@ -485,6 +487,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 AnkiquestUpdater.installed() ?: getString(R.string.ankiquest_local_build),
             )
         bindAction(R.string.ankiquest_check_updates_key) { AnkiquestUpdater.checkNow(requireActivity()) }
+        requirePreference<Preference>(R.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
+            launchCatchingTask { DebugInfoService.copyReport(requireContext()) }
+            true
+        }
         requirePreference<Preference>(R.string.ankiquest_update_channel_key).setOnPreferenceChangeListener { _, _ ->
             AnkiquestUpdater.checkSoon()
             true

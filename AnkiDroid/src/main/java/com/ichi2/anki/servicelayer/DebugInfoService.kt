@@ -6,12 +6,18 @@ import android.content.Context
 import android.os.Build
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.CommonString
+import com.ichi2.anki.ankiquest.AnkiquestDiagnostics
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.utils.ext.fsrsEnabled
 import com.ichi2.utils.LanguageUtil
+import com.ichi2.utils.TruncatedString
 import com.ichi2.utils.VersionUtils.pkgVersionName
+import com.ichi2.utils.copyToClipboard
 import com.ichi2.utils.getLanguageDebugInfo
 import com.ichi2.utils.getWebViewInfo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.acra.util.Installation
 import timber.log.Timber
 import net.ankiweb.rsdroid.BuildConfig as BackendBuildConfig
@@ -33,7 +39,8 @@ object DebugInfoService {
                 null -> "Error"
                 else -> languageInfo.appLocale
             }
-        return """
+        val ankidroid =
+            """
             AnkiDroid Version = $pkgVersionName (${BuildConfig.GIT_COMMIT_HASH})
             Backend Version = ${BuildConfig.BACKEND_VERSION} (${BackendBuildConfig.ANKI_DESKTOP_VERSION} ${BackendBuildConfig.ANKI_COMMIT_HASH})
             Android Version = ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})
@@ -45,9 +52,16 @@ object DebugInfoService {
             Crash Reports Enabled = ${isSendingCrashReports(info)}
             Language = System: ${languageInfo.systemLocale} | App: $appLocale | Backend: ${languageInfo.backendLocales?.joinToString()}
             """.trimIndent()
-            // A Markdown newline is two spaces followed by '\n', this avoids the need for
-            // code fences
-            .replace("\n", "  \n")
+        // A Markdown newline is two spaces followed by '\n', this avoids the need for code fences.
+        return (ankidroid + "\n\n" + AnkiquestDiagnostics.describe(info)).replace("\n", "  \n")
+    }
+
+    internal suspend fun copyReport(context: Context) {
+        val debugInfo = withContext(Dispatchers.IO) { getDebugInfo(context) }
+        context.copyToClipboard(
+            TruncatedString.from(debugInfo),
+            failureMessageId = CommonString.about_ankidroid_error_copy_debug_info,
+        )
     }
 
     private fun isSendingCrashReports(context: Context): Boolean = CrashReportService.isEnabled(context, false)

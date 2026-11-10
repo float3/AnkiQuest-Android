@@ -33,6 +33,13 @@ internal object AnkiquestCapabilities {
         val features: Set<String>,
         val fetchedAt: Long,
         val scope: String,
+        val apiVersion: Int?,
+    )
+
+    private data class Reply(
+        val features: Set<String>,
+        val mainAddress: String?,
+        val apiVersion: Int?,
     )
 
     private val known = ConcurrentHashMap<String, Known>()
@@ -45,6 +52,9 @@ internal object AnkiquestCapabilities {
 
     /** The features [account]'s server last reported, without asking it again. */
     fun features(account: HomeAccount): Set<String> = lookup(account.server)?.features.orEmpty()
+
+    /** Only the cached numeric version is suitable for a diagnostic report. */
+    internal fun apiVersion(account: HomeAccount): Int? = lookup(account.server)?.apiVersion
 
     /**
      * The features of [account]'s server, asked again when they were last fetched over [MAX_AGE_MS]
@@ -63,7 +73,7 @@ internal object AnkiquestCapabilities {
      */
     suspend fun refresh(account: HomeAccount): Set<String> =
         withContext(Dispatchers.IO) {
-            val (fetched, main) =
+            val reply =
                 try {
                     fetch(account)
                 } catch (e: CancellationException) {
@@ -72,9 +82,9 @@ internal object AnkiquestCapabilities {
                     Timber.d(e, "ankiquest capabilities unavailable")
                     return@withContext features(account)
                 }
-            store(account, fetched)
-            AnkiquestServerMove.consider(account, main)
-            fetched
+            store(account, reply)
+            AnkiquestServerMove.consider(account, reply.mainAddress)
+            reply.features
         }
 
     /** The features in a `/api/capabilities` answer; anything unreadable counts as none. */
@@ -91,7 +101,7 @@ internal object AnkiquestCapabilities {
     }
 
     /** The features and the main address ([AnkiquestServerMove.mainAddress]) [account]'s server reports. */
-    private fun fetch(account: HomeAccount): Pair<Set<String>, String?> {
+    private fun fetch(account: HomeAccount): Reply {
         val request = AnkiquestApi.request(account.url("api/capabilities"), "", account.language).build()
         return try {
             AnkiquestApi.call(request, AnkiquestApi.Timeout.QUICK) { response ->
@@ -101,10 +111,10 @@ internal object AnkiquestCapabilities {
                     } catch (_: JSONException) {
                         JSONObject()
                     }
-                parse(answer) to AnkiquestServerMove.mainAddress(answer)
+                Reply(parse(answer), AnkiquestServerMove.mainAddress(answer), version(answer))
             }
         } catch (e: AnkiquestHttpException) {
-            if (e.code == 404) emptySet<String>() to null else throw e
+            if (e.code == 404) Reply(emptySet(), null, null) else throw e
         }
     }
 
@@ -114,12 +124,14 @@ internal object AnkiquestCapabilities {
 
     private fun key(server: String) = scopedKey(PREF_CAPABILITIES, server)
 
+    private fun version(answer: JSONObject): Int? = (answer.opt("version") as? Int)?.takeIf { it > 0 }
+
     private fun lookup(server: String): Known? = known[server] ?: stored(server)?.also { known[server] = it }
 
     private fun stored(server: String): Known? =
         try {
             val value = JSONObject(preferences().getString(key(server), null) ?: return null)
-            Known(parse(value), value.optLong("at"), value.optString("scope"))
+            Known(parse(value), value.optLong("at"), value.optString("scope"), version(value))
         } catch (_: JSONException) {
             null
         } catch (_: ClassCastException) {
@@ -128,17 +140,18 @@ internal object AnkiquestCapabilities {
 
     private fun store(
         account: HomeAccount,
-        features: Set<String>,
+        reply: Reply,
     ) {
-        val entry = Known(features, TimeManager.time.intTimeMS(), account.scope)
+        val entry = Known(reply.features, TimeManager.time.intTimeMS(), account.scope, reply.apiVersion)
         known[account.server] = entry
         preferences().edit {
             putString(
                 key(account.server),
                 JSONObject()
-                    .put("features", JSONArray(features.sorted()))
+                    .put("features", JSONArray(entry.features.sorted()))
                     .put("at", entry.fetchedAt)
                     .put("scope", entry.scope)
+                    .put("version", entry.apiVersion)
                     .toString(),
             )
         }

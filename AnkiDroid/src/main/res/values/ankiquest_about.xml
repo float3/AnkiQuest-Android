@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_about_name" translatable="false">AnkiQuest</string>
+    <string name="ankiquest_debug_info_key" translatable="false">ankiquestCopyDebugInfo</string>
+    <string name="ankiquest_about_channel">Update channel: %1$s</string>
+    <string name="ankiquest_about_based_on">Based on AnkiDroid %1$s</string>
+    <string name="ankiquest_about_credits"><![CDATA[Built on <a href=\"%1$s\">AnkiDroid and the work of its contributors</a>. Maintained by float3 and the contributors to <a href=\"%2$s\">AnkiQuest for Android</a> and the <a href=\"%3$s\">AnkiQuest server and desktop add-on</a>.]]></string>
+    <string name="ankiquest_about_license"><![CDATA[AnkiDroid is licensed under <a href=\"%1$s\">GPL-3.0</a>. AnkiQuest additions are under <a href=\"%2$s\">AGPL-3.0</a>, whose network-use terms apply to the combined app. <a href=\"%3$s\">Source code for this build</a>.]]></string>
+    <string name="ankiquest_about_report_bug">Report a bug</string>
+    <string name="ankiquest_debug_info_title">Copy debug info</string>
+</resources>
