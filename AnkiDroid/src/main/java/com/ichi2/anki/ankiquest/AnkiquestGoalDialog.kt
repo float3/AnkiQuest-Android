@@ -8,7 +8,6 @@ import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentActivity
@@ -17,7 +16,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
@@ -28,7 +26,6 @@ import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
 /**
@@ -36,9 +33,6 @@ import kotlin.math.roundToInt
  * asks for today and when the backlog would be gone. Saving stores the goal on the server.
  */
 internal object AnkiquestGoalDialog {
-    private const val PREF_SETUP_SHOWN = "ankiquestGoalSetupShown"
-    private val offering = AtomicBoolean(false)
-
     /** Opens the dialog for [account], starting from [initial]; [onSaved] gets the goal the server keeps. */
     fun show(
         activity: FragmentActivity,
@@ -258,40 +252,6 @@ internal object AnkiquestGoalDialog {
                 Timber.w(e, "AnkiQuest goal could not be read")
                 val reason = (e as? AnkiquestHttpException)?.explanation ?: e.message ?: e.javaClass.simpleName
                 showThemedToast(activity, activity.getString(R.string.ankiquest_check_failed, reason), shortLength = false)
-            }
-        }
-    }
-
-    /**
-     * Opens the dialog once per player while the server says no goal was ever chosen: after signing in,
-     * or on the next start for players who were already signed in. Closing it without saving still
-     * counts, so it never asks again. [onSaved] gets the goal the server keeps once one is saved.
-     */
-    fun offerSetup(
-        activity: FragmentActivity,
-        onSaved: (ServerGoal) -> Unit = {},
-    ) {
-        val prefs = AnkiDroidApp.sharedPrefs()
-        val account = AnkiquestHomeData.account(prefs)?.takeIf { it.token.isNotEmpty() } ?: return
-        val key = scopedKey(PREF_SETUP_SHOWN, sha256(account.server, account.user))
-        if (prefs.getBoolean(key, false) || !offering.compareAndSet(false, true)) return
-        activity.lifecycleScope.launch {
-            try {
-                val goal = AnkiquestDailyGoal.fetch(account, prefs)
-                if (goal.chosen != false) {
-                    prefs.edit { putBoolean(key, true) }
-                    return@launch
-                }
-                if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
-                if (AnkiquestHomeData.account(prefs)?.scope != account.scope) return@launch
-                prefs.edit { putBoolean(key, true) }
-                show(activity, account, goal.choice, R.string.ankiquest_goal_setup_title, onSaved)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Timber.w(e, "AnkiQuest goal setup could not ask the server")
-            } finally {
-                offering.set(false)
             }
         }
     }

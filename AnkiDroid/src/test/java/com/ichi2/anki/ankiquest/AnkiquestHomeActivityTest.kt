@@ -10,6 +10,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -160,6 +161,29 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
         assertFalse(decks.hasExtra(AnkiquestHomeActivity.EXTRA_STUDY_DECK))
         assertTrue(decks.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
+    }
+
+    @Test
+    fun `Today offers the server's suggested goal without saving it automatically`() {
+        val choice = AnkiquestDailyGoal.Choice(AnkiquestDailyGoal.Mode.BACKLOG, 21)
+        val suggested = choice.json().put("chosen", false)
+        coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject(profile.toString()).put("goal", suggested)
+        mockkObject(AnkiquestDailyGoal)
+        try {
+            coEvery { AnkiquestDailyGoal.save(identity, choice, restart = true, prefs = any()) } returns
+                AnkiquestDailyGoal.ServerGoal(choice, chosen = true)
+            val home = launch()
+            assertTrue(home.hasText(home.getString(R.string.ankiquest_goal_setup_title)))
+            assertTrue(home.hasText(AnkiquestDailyGoal.describe(home, choice)))
+            coVerify(exactly = 0) { AnkiquestDailyGoal.save(any(), any(), any(), any()) }
+
+            home.click(home.getString(CommonString.save))
+            advanceRobolectricLooper()
+            coVerify(exactly = 1) { AnkiquestDailyGoal.save(identity, choice, restart = true, prefs = any()) }
+            assertFalse(home.hasText(home.getString(R.string.ankiquest_goal_setup_title)))
+        } finally {
+            unmockkObject(AnkiquestDailyGoal)
+        }
     }
 
     @Test

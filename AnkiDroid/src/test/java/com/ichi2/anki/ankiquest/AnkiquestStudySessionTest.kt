@@ -2,16 +2,24 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.content.Intent
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
+import io.mockk.coEvery
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.shadows.ShadowDialog
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -85,4 +93,32 @@ class AnkiquestStudySessionTest : RobolectricTest() {
             AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
             assertNull(AnkiquestStudySession.latest())
         }
+
+    @Test
+    fun `a recap cannot attach to the stopped deck picker`() {
+        val result = CompletableDeferred<AnkiquestStudySession.Summary>()
+        val reading = CompletableDeferred<Unit>()
+        mockkObject(AnkiquestStudySession)
+        try {
+            coEvery { AnkiquestStudySession.finish() } coAnswers {
+                reading.complete(Unit)
+                result.await()
+            }
+            val intent = Intent().putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
+            val controller = startActivityControllerNormallyOpenCollectionWithIntent(DeckPicker::class.java, intent)
+            val deckPicker = controller.get()
+            val before = ShadowDialog.getLatestDialog()
+            AnkiquestDeckPickerHooks.onReviewResult(deckPicker, AbstractFlashcardViewer.RESULT_DEFAULT) {}
+            advanceRobolectricLooperUntil { reading.isCompleted }
+
+            controller.pause().stop()
+            result.complete(AnkiquestStudySession.Summary(6, 1, 3, clock.intTimeMS()))
+            advanceRobolectricLooper()
+
+            assertEquals(before, ShadowDialog.getLatestDialog())
+        } finally {
+            result.cancel()
+            unmockkObject(AnkiquestStudySession)
+        }
+    }
 }

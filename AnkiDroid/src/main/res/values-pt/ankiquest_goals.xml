@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_goal_setup_failed">Não foi possível guardar o objetivo diário. Tenta novamente.</string>
     <string name="aq_goal_today">Meta de hoje</string>
     <string name="aq_goal_minimum_minutes">Mínimo para a sequência: %1$d minutos de revisão hoje</string>
     <string name="aq_goal_minimum_any">Qualquer revisão hoje mantém sua sequência.</string>

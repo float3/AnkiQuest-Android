@@ -209,18 +209,22 @@ object AnkiquestUpdater {
         activity: Activity,
         release: Release,
     ) {
-        if (activity.isFinishing || activity.isDestroyed) return
-        AlertDialog
-            .Builder(activity)
-            .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
-            .setMessage(
-                activity.getString(
-                    if (release.nightly) R.string.ankiquest_update_nightly_message else R.string.ankiquest_update_message,
-                    release.apkSize / (1024 * 1024),
-                ),
-            ).setPositiveButton(R.string.ankiquest_update_install) { _, _ -> download(activity, release) }
-            .setNegativeButton(R.string.ankiquest_update_later, null)
-            .show()
+        if (!AnkiquestPostStudyPrompts.ready(activity)) {
+            return
+        }
+        val dialog =
+            AlertDialog
+                .Builder(activity)
+                .setTitle(activity.getString(R.string.ankiquest_update_title, release.name))
+                .setMessage(
+                    activity.getString(
+                        if (release.nightly) R.string.ankiquest_update_nightly_message else R.string.ankiquest_update_message,
+                        release.apkSize / (1024 * 1024),
+                    ),
+                ).setPositiveButton(R.string.ankiquest_update_install) { _, _ -> download(activity, release) }
+                .setNegativeButton(R.string.ankiquest_update_later, null)
+                .show()
+        AnkiquestPostStudyPrompts.track(activity, dialog)
     }
 
     private class Progress(

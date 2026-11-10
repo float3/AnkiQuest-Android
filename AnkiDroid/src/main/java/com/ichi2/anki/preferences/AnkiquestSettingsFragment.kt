@@ -42,7 +42,6 @@ import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
-import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
@@ -271,7 +270,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
                     AnkiquestPoll.refreshNow(requireContext())
-                    AnkiquestGoalDialog.offerSetup(requireActivity())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

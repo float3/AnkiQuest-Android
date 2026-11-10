@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_goal_setup_failed">No se pudo guardar la meta diaria. Inténtalo de nuevo.</string>
     <string name="aq_goal_today">Objetivo de hoy</string>
     <string name="aq_goal_minimum_minutes">Mínimo para la racha: %1$d minutos de repaso hoy</string>
     <string name="aq_goal_minimum_any">Cualquier repaso hoy mantiene tu racha.</string>

@@ -102,7 +102,6 @@ import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.android.view.locationInWindow
 import com.ichi2.anki.ankiquest.AnkiquestDeckPickerHooks
 import com.ichi2.anki.ankiquest.AnkiquestDeckShare
-import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestNavigation
 import com.ichi2.anki.ankiquest.AnkiquestStudySession
 import com.ichi2.anki.common.android.AdaptionUtil
@@ -1945,7 +1944,6 @@ open class DeckPicker :
             if (!automaticSync()) {
                 BackupPromptDialog.showIfAvailable(this@DeckPicker)
             }
-            AnkiquestGoalDialog.offerSetup(this@DeckPicker)
         }
     }
 

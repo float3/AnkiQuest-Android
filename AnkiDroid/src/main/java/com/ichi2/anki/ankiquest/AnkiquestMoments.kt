@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.app.Activity
-import android.app.Dialog
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
@@ -15,7 +14,6 @@ import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.pages.CongratsPage
 import org.json.JSONArray
 import org.json.JSONObject
-import java.lang.ref.WeakReference
 
 /**
  * The player's big moments (a card conquered, a level, a streak milestone, an achievement, a climb
@@ -135,8 +133,6 @@ internal object AnkiquestMoments {
         /** Routine: only the quiet badge. */
         QUIET,
     }
-
-    private var showing = WeakReference<Dialog>(null)
 
     // ---- Sources ----------------------------------------------------------------------------
 
@@ -422,11 +418,12 @@ internal object AnkiquestMoments {
         prefs: SharedPreferences,
         resting: Boolean = resting(host),
     ) {
-        if (!resting || host.isFinishing || host.isDestroyed) return
-        if (showing.get()?.isShowing == true) return
+        if (!resting || !AnkiquestPostStudyPrompts.ready(host)) {
+            return
+        }
         val account = AnkiquestHomeData.account(prefs) ?: return
         val moments = take(prefs, account.notificationAccount)
         if (moments.isEmpty()) return
-        showing = WeakReference(AnkiquestMomentCard.show(host, account, moments))
+        AnkiquestPostStudyPrompts.track(host, AnkiquestMomentCard.show(host, account, moments))
     }
 }

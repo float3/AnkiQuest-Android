@@ -91,6 +91,9 @@ object AnkiquestDeckPickerHooks {
         }
         activity.launchCatchingTask {
             val summary = AnkiquestStudySession.finish()
+            if (!AnkiquestPostStudyPrompts.resumed(activity)) {
+                return@launchCatchingTask
+            }
             if (summary != null && activity.sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
                 showSummary(activity, summary, openReviewer) { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } }
             } else {
@@ -108,6 +111,9 @@ object AnkiquestDeckPickerHooks {
         onContinue: () -> Unit,
         then: () -> Unit,
     ) {
+        if (!AnkiquestPostStudyPrompts.ready(activity)) {
+            return
+        }
         var elsewhere = false
         val neverAgain =
             AppCompatCheckBox(activity).apply {
@@ -157,11 +163,13 @@ object AnkiquestDeckPickerHooks {
                 onContinue()
             }
         }
-        builder.show().setOnDismissListener {
+        val dialog = builder.show()
+        AnkiquestPostStudyPrompts.track(activity, dialog)
+        dialog.setOnDismissListener {
             if (neverAgain.isChecked) {
                 activity.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
             }
-            if (!elsewhere) then()
+            if (!elsewhere && AnkiquestPostStudyPrompts.ready(activity)) then()
         }
     }
 
