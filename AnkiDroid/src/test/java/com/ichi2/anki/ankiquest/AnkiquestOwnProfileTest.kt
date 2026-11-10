@@ -6,6 +6,8 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.widget.FrameLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -117,6 +119,42 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         }
 
     @Test
+    fun `offline reviews survive a restart and update their own icon and widget`() {
+        registerAliases()
+        val now = TimeManager.time.intTimeMS()
+        val pending = profile("pending", 12, 2).put("last_review_id", now - 10)
+        pending.getJSONObject("today").put("starts_at", now - hour).put("streak_minutes", 10)
+        val scope = checkNotNull(HomeAccount.current()).scope
+        AnkiquestDay.remember(pending)
+        val day = checkNotNull(AnkiquestDay.Server.profile(pending))
+        AnkiquestDay.rememberLocal(scope, day, listOf(AnkiquestDay.Review(now, 600_000)))
+
+        // Drop the old process cache before the launcher and widget read the day.
+        AnkiquestDay::class.java.declaredFields.firstOrNull { it.name == "local" }?.let {
+            it.isAccessible = true
+            it.set(null, null)
+        }
+        AnkiquestIcon.showLastKnown(targetContext, now)
+        assertEquals(listOf(Mood.HAPPY), enabled())
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, JSONArray(), "hill", now = now)
+                .apply(targetContext, FrameLayout(targetContext))
+        assertEquals("13", widget.findViewById<TextView>(R.id.ankiquest_streak_number).text.toString())
+        assertEquals(10, widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress).progress)
+        assertEquals(
+            targetContext.getString(R.string.aq_goal_streak_safe_unsent),
+            widget.findViewById<TextView>(R.id.ankiquest_streak_status).text.toString(),
+        )
+
+        // A new token for the same player cannot reuse the previous session's offline verdict.
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        AnkiquestDay.remember(pending)
+        AnkiquestIcon.showLastKnown(targetContext, now)
+        assertEquals(listOf(Mood.WORRIED), enabled())
+    }
+
+    @Test
     fun `the streak widget is drawn again right after an upload`() =
         runBlocking {
             val manager = AppWidgetManager.getInstance(targetContext)
@@ -147,7 +185,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             Ankiquest.uploadPending()
 
             assertEquals("13", text(R.id.ankiquest_streak_number))
-            assertEquals("Studied today", text(R.id.ankiquest_streak_status))
+            assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), text(R.id.ankiquest_streak_status))
             assertEquals(
                 1,
                 synchronized(paths) { paths.count { it.startsWith("/api/") && !it.startsWith("/api/decks/") } },

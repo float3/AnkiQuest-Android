@@ -15,7 +15,12 @@
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
     <string name="aq_goal_streak_syncing">Synchronisation…</string>
     <string name="aq_goal_minimum_syncing">Tes révisions du jour sont encore en route vers le serveur. La série est assurée dès que le serveur les compte.</string>
-    <string name="aq_goal_streak_safe">Série assurée</string>
+    <string name="aq_goal_streak_safe">Aujourd’hui compte ✓</string>
+    <string name="aq_streak_minimum_title">Série assurée pour aujourd’hui</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s jour de série</item>
+        <item quantity="other">%s jours de série</item>
+    </plurals>
     <string name="aq_goal_streak_any">Une révision et ta série est sauvée</string>
     <string name="ankiquest_streak_short">%1$d minutes sur %2$d aujourd’hui</string>
     <string name="ankiquest_goal_cards_title">Cartes par jour</string>
@@ -73,12 +78,12 @@
     </plurals>
     <string name="ankiquest_mood_icon_title">L’humeur d’Aki sur l’icône</string>
     <string name="ankiquest_mood_icon_summary">L’icône sourit quand la journée compte, s’inquiète tard le soir et montre une protection quand elle te couvre. Certains lanceurs masquent brièvement l’icône pendant le changement.</string>
-    <string name="aq_goal_streak_safe_unsent">Série assurée · pas encore envoyée</string>
+    <string name="aq_goal_streak_safe_unsent">Aujourd’hui compte ✓ · pas encore envoyé</string>
     <string name="aq_goal_minimum_unsent">AnkiQuest compte tes révisions une fois envoyées.</string>
-    <string name="aq_goal_streak_safe_offline">Série assurée · en attente de connexion</string>
-    <string name="aq_goal_streak_safe_signed_out">Série assurée · reconnecte-toi pour envoyer</string>
-    <string name="aq_goal_streak_safe_server">Série assurée · erreur du serveur, nouvel essai prévu</string>
-    <string name="aq_goal_streak_safe_refused">Série assurée · envoi refusé</string>
+    <string name="aq_goal_streak_safe_offline">Aujourd’hui compte ✓ · en attente de connexion</string>
+    <string name="aq_goal_streak_safe_signed_out">Aujourd’hui compte ✓ · reconnecte-toi pour envoyer</string>
+    <string name="aq_goal_streak_safe_server">Aujourd’hui compte ✓ · erreur du serveur, nouvel essai prévu</string>
+    <string name="aq_goal_streak_safe_refused">Aujourd’hui compte ✓ · envoi refusé</string>
     <string name="aq_goal_upload_signed_out">Le serveur a refusé la connexion de cet appareil. Reconnecte-toi dans les réglages AnkiQuest.</string>
     <string name="aq_goal_upload_refused">« Tester la connexion » dans les réglages AnkiQuest indique pourquoi.</string>
 </resources>

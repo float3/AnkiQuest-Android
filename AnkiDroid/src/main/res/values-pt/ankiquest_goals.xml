@@ -15,7 +15,12 @@
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
     <string name="aq_goal_streak_syncing">A sincronizar…</string>
     <string name="aq_goal_minimum_syncing">As revisões de hoje ainda estão a caminho do servidor. A sequência fica garantida quando o servidor as contar.</string>
-    <string name="aq_goal_streak_safe">Sequência garantida</string>
+    <string name="aq_goal_streak_safe">Hoje conta ✓</string>
+    <string name="aq_streak_minimum_title">Sequência garantida por hoje</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s dia de sequência</item>
+        <item quantity="other">%s dias de sequência</item>
+    </plurals>
     <string name="aq_goal_streak_any">Revise uma vez para manter sua sequência</string>
     <string name="ankiquest_streak_short">%1$d de %2$d minutos hoje</string>
     <string name="ankiquest_goal_cards_title">Cartões por dia</string>
@@ -73,12 +78,12 @@
     </plurals>
     <string name="ankiquest_mood_icon_title">O humor da Aki no ícone</string>
     <string name="ankiquest_mood_icon_summary">O ícone sorri quando hoje já conta, se preocupa no fim do dia e mostra um protetor quando ele te cobre. Alguns launchers escondem o ícone por um instante ao trocar.</string>
-    <string name="aq_goal_streak_safe_unsent">Sequência garantida · ainda não enviada</string>
+    <string name="aq_goal_streak_safe_unsent">Hoje conta ✓ · ainda não enviado</string>
     <string name="aq_goal_minimum_unsent">O AnkiQuest conta suas revisões assim que forem enviadas.</string>
-    <string name="aq_goal_streak_safe_offline">Sequência garantida · à espera de ligação</string>
-    <string name="aq_goal_streak_safe_signed_out">Sequência garantida · inicia sessão de novo para enviar</string>
-    <string name="aq_goal_streak_safe_server">Sequência garantida · erro do servidor, vai tentar de novo</string>
-    <string name="aq_goal_streak_safe_refused">Sequência garantida · envio recusado</string>
+    <string name="aq_goal_streak_safe_offline">Hoje conta ✓ · à espera de ligação</string>
+    <string name="aq_goal_streak_safe_signed_out">Hoje conta ✓ · inicia sessão de novo para enviar</string>
+    <string name="aq_goal_streak_safe_server">Hoje conta ✓ · erro do servidor, vai tentar de novo</string>
+    <string name="aq_goal_streak_safe_refused">Hoje conta ✓ · envio recusado</string>
     <string name="aq_goal_upload_signed_out">O servidor recusou a sessão deste dispositivo. Inicia sessão de novo nas definições do AnkiQuest.</string>
     <string name="aq_goal_upload_refused">«Testar ligação» nas definições do AnkiQuest indica o motivo.</string>
 </resources>

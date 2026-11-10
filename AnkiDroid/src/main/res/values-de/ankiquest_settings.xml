@@ -34,4 +34,5 @@
     <string name="aq_profile_deck_alerts_start">Stapelmeldungen von %1$s wieder erhalten</string>
     <string name="aq_profile_freezes_pause">Serienschutz pausieren</string>
     <string name="aq_profile_freezes_resume">Serienschutz fortsetzen</string>
+    <string name="ankiquest_streak_cue_title">Serienhinweis beim Wiederholen</string>
 </resources>

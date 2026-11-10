@@ -34,4 +34,5 @@
     <string name="aq_profile_deck_alerts_start">Voltar a receber avisos de baralhos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar a proteção da sequência</string>
     <string name="aq_profile_freezes_resume">Retomar a proteção da sequência</string>
+    <string name="ankiquest_streak_cue_title">Aviso de sequência ao rever</string>
 </resources>

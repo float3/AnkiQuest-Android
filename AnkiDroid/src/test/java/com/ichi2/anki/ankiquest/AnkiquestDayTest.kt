@@ -72,27 +72,42 @@ class AnkiquestDayTest {
         val verdict =
             checkNotNull(AnkiquestDay.judge(AnkiquestDay.Server.profile(profile), listOf(AnkiquestDay.Review(500, 600_000)), 1000))
         assertFalse(verdict.met, "without starts_at the unsent review cannot be placed in today")
-        assertEquals("short", verdict.label)
+        assertEquals(AnkiquestDay.State.SHORT, verdict.label)
         assertEquals(540_000, verdict.timeMs)
     }
 
     @Test
     fun `a leaderboard row reads as the server judged it`() {
         fun row(json: String) = AnkiquestDay.label(AnkiquestDay.Server.row(JSONObject(json)), 1000)
-        assertEquals("studied", row("""{"streak_state": "studied", "today_reviews": 3, "day_ends_at": 2000}"""))
+        assertEquals(AnkiquestDay.State.STUDIED, row("""{"streak_state": "studied", "today_reviews": 3, "day_ends_at": 2000}"""))
         assertEquals(
-            "short",
+            AnkiquestDay.State.SHORT,
             row("""{"streak_state": "pending", "today_reviews": 3, "today_minutes": 4, "streak_minutes": 10, "day_ends_at": 2000}"""),
         )
         assertEquals(
-            "protected",
+            AnkiquestDay.State.PROTECTED,
             row("""{"streak_state": "protected", "today_reviews": 3, "today_minutes": 2, "streak_minutes": 10, "day_ends_at": 2000}"""),
         )
-        assertEquals("studied", row("""{"today_reviews": 1}"""), "an older server without a state or minimum counts any review")
-        assertEquals("pending", row("""{"streak_state": "pending", "today_reviews": 0, "day_ends_at": 2000}"""))
-        assertEquals("unknown", row("""{"streak_state": "studied", "today_reviews": 3, "day_ends_at": 1000}"""), "the row's day ended")
-        assertEquals("unknown", row("""{"streak_state": "studied"}"""), "no counts")
-        assertEquals("pending", row("""{"today_reviews": 0}"""))
+        assertEquals(
+            AnkiquestDay.State.STUDIED,
+            row("""{"today_reviews": 1}"""),
+            "an older server without a state or minimum counts any review",
+        )
+        assertEquals(AnkiquestDay.State.PENDING, row("""{"streak_state": "pending", "today_reviews": 0, "day_ends_at": 2000}"""))
+        assertEquals(
+            AnkiquestDay.State.UNKNOWN,
+            row("""{"streak_state": "studied", "today_reviews": 3, "day_ends_at": 1000}"""),
+            "the row's day ended",
+        )
+        assertEquals(AnkiquestDay.State.UNKNOWN, row("""{"streak_state": "studied"}"""), "no counts")
+        assertEquals(AnkiquestDay.State.PENDING, row("""{"today_reviews": 0}"""))
+    }
+
+    @Test
+    fun `our own row needs a cutoff just like a profile`() {
+        val profile = JSONObject("""{"streak_state": "studied", "today_reviews": 3}""")
+        assertEquals(AnkiquestDay.State.UNKNOWN, AnkiquestDay.label(AnkiquestDay.Server.profile(profile), 1000))
+        assertEquals(AnkiquestDay.State.UNKNOWN, AnkiquestDay.label(AnkiquestDay.Server.ownRow(profile), 1000))
     }
 
     @Test

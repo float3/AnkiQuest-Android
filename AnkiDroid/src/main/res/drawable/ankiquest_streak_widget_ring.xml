@@ -11,12 +11,16 @@
         </shape>
     </item>
     <item android:id="@android:id/progress">
-        <shape
-            android:shape="ring"
-            android:innerRadiusRatio="2.55"
-            android:thickness="2dp"
-            android:useLevel="true">
-            <solid android:color="@color/ankiquest_widget_gold" />
-        </shape>
+        <rotate
+            android:fromDegrees="270"
+            android:toDegrees="270">
+            <shape
+                android:shape="ring"
+                android:innerRadiusRatio="2.55"
+                android:thickness="2dp"
+                android:useLevel="true">
+                <solid android:color="@color/ankiquest_widget_gold" />
+            </shape>
+        </rotate>
     </item>
 </layer-list>

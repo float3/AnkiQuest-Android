@@ -4,6 +4,8 @@ package com.ichi2.anki.ankiquest
 
 import android.app.Activity
 import android.app.Dialog
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
@@ -11,11 +13,14 @@ import androidx.fragment.app.FragmentActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
+import com.ichi2.anki.Reviewer
 import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.pages.CongratsPage
+import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import org.json.JSONArray
 import org.json.JSONObject
 import java.lang.ref.WeakReference
+import java.text.NumberFormat
 
 /**
  * The player's big moments (a card conquered, a level, a streak milestone, an achievement, a climb
@@ -25,13 +30,16 @@ import java.lang.ref.WeakReference
  * before the app was closed, is still there when the deck list, the congrats screen or Today next
  * shows. Every moment is shown once: its key, the server's event key such as `conquered:{at}` or
  * `level:4`, is remembered, and the inbox poll uses the same memory so a moment seen in the app
- * never comes back as a system notification, nor one already notified as a pop-up. Routine moments,
- * such as securing the streak on an ordinary day, never pop up: they only add to a quiet badge on Today.
+ * never comes back as a system notification, nor one already notified as a pop-up.
  */
 internal object AnkiquestMoments {
     private const val PREF_PENDING = "ankiquestMomentsPending"
     private const val PREF_SHOWN = "ankiquestMomentsShown"
     private const val PREF_QUIET = "ankiquestMomentsQuiet"
+    private const val PREF_MINIMUM_DAY = "ankiquestMinimumMomentDay"
+    private const val EXTRA_MOMENT = "ankiquest.moment"
+    private const val EXTRA_OWNER = "ankiquest.moment_owner"
+    private val milestoneDays = setOf(7, 30, 100, 365)
 
     /** Kept for continuity with the conquest pop-up this replaces: the review ids of conquests already seen. */
     private const val PREF_CONQUESTS_SEEN = "ankiquestConquestsShown"
@@ -46,6 +54,7 @@ internal object AnkiquestMoments {
     enum class Kind(
         val priority: Int,
     ) {
+        SECURED(110),
         STREAK(100),
         LEVEL(90),
         RANK(80),
@@ -55,7 +64,6 @@ internal object AnkiquestMoments {
         CONQUERED(50),
         GOAL(40),
         UNLOCKS(30),
-        SECURED(20),
     }
 
     /**
@@ -137,6 +145,152 @@ internal object AnkiquestMoments {
     }
 
     private var showing = WeakReference<Dialog>(null)
+
+    private data class StudyDay(
+        val start: Long,
+        val end: Long,
+    ) {
+        val key: String get() = "minimum:$start"
+
+        operator fun contains(at: Long): Boolean = at in start until end
+    }
+
+    /** Local crossing -> queued card -> confirmation from the server inbox. */
+    @Synchronized
+    fun claimMinimum(
+        context: Context,
+        prefs: SharedPreferences,
+        account: HomeAccount,
+        server: AnkiquestDay.Server,
+        verdict: AnkiquestDay.Verdict,
+        now: Long,
+    ): Boolean {
+        if (AnkiquestHomeData.account(prefs)?.scope != account.scope || !verdict.met) {
+            return false
+        }
+        val owner = account.notificationAccount
+        val day = StudyDay(server.startsAt ?: return false, server.dayEndsAt)
+        if (now !in day || recordedDay(prefs, owner)?.contains(now) == true) {
+            return false
+        }
+        rememberDay(prefs, owner, day)
+
+        // A milestone keeps its server card. An uncertain count waits for confirmation.
+        val streak = verdict.streak
+        if (streak != null && streak !in milestoneDays) {
+            val language = AnkiquestLanguage.context(context)
+            offer(
+                prefs,
+                owner,
+                listOf(
+                    Moment(
+                        key = day.key,
+                        kind = Kind.SECURED,
+                        title = language.getString(R.string.aq_streak_minimum_title),
+                        detail = streakDays(language, streak),
+                        at = now,
+                    ),
+                ),
+            )
+        }
+        markShown(prefs, owner, listOf(day.key))
+        return true
+    }
+
+    fun streakDays(
+        context: Context,
+        streak: Int,
+    ): String {
+        val count = NumberFormat.getIntegerInstance(context.resources.configuration.locales[0]).format(streak)
+        return context.resources.getQuantityString(R.plurals.aq_streak_minimum_days, streak, count)
+    }
+
+    private fun recordedDay(
+        prefs: SharedPreferences,
+        account: String,
+    ): StudyDay? {
+        val parts = prefs.getString("$PREF_MINIMUM_DAY:$account", null)?.split(':', limit = 2) ?: return null
+        val start = parts.firstOrNull()?.toLongOrNull() ?: return null
+        val end = parts.getOrNull(1)?.toLongOrNull() ?: return null
+        return StudyDay(start, end)
+    }
+
+    private fun rememberDay(
+        prefs: SharedPreferences,
+        account: String,
+        day: StudyDay,
+    ) {
+        prefs.edit { putString("$PREF_MINIMUM_DAY:$account", "${day.start}:${day.end}") }
+    }
+
+    private fun ownServer(
+        prefs: SharedPreferences,
+        account: String,
+    ): AnkiquestDay.Server? {
+        if (AnkiquestHomeData.account(prefs)?.notificationAccount != account) {
+            return null
+        }
+        return AnkiquestDay.last(prefs)
+    }
+
+    private fun routeMinimum(
+        prefs: SharedPreferences,
+        account: String,
+        moment: Moment,
+        foreground: Boolean,
+    ): Route {
+        val server = ownServer(prefs, account)
+        val day = server?.let { snapshot -> snapshot.startsAt?.let { StudyDay(it, snapshot.dayEndsAt) } }
+        if (day != null && moment.at < day.start) {
+            return Route.SEEN
+        }
+        if (day != null && moment.at in day &&
+            AnkiquestDay.judge(server, emptyList(), moment.at)?.let { it.confirmed && it.streak in milestoneDays } == true
+        ) {
+            return Route.SEEN
+        }
+
+        val recorded = recordedDay(prefs, account)?.takeIf { moment.at in it }
+        if (recorded != null) {
+            val queue = pending(prefs, account)
+            val local = queue.firstOrNull { it.key == recorded.key }
+            if (local != null) {
+                val confirmed =
+                    local.copy(
+                        win = moment.win,
+                        notification = moment.notification,
+                        shareTitle = moment.shareTitle,
+                        shareBody = moment.shareBody,
+                    )
+                save(prefs, account, queue.map { if (it.key == recorded.key) confirmed else it })
+            }
+            markShown(prefs, account, listOf(moment.key))
+            return if (local == null) Route.SEEN else Route.QUEUED
+        }
+
+        if (!foreground) {
+            return Route.NOTIFY
+        }
+        offer(prefs, account, listOf(moment))
+        rememberMinimum(prefs, account, moment)
+        return Route.QUEUED
+    }
+
+    /** Records a quiet notification or queued server card against the same window as a local crossing. */
+    @Synchronized
+    fun rememberMinimum(
+        prefs: SharedPreferences,
+        account: String,
+        moment: Moment,
+    ) {
+        val server = ownServer(prefs, account) ?: return
+        val day = StudyDay(server.startsAt ?: return, server.dayEndsAt)
+        if (moment.at !in day) {
+            return
+        }
+        rememberDay(prefs, account, day)
+        markShown(prefs, account, listOf(day.key))
+    }
 
     // ---- Sources ----------------------------------------------------------------------------
 
@@ -251,6 +405,7 @@ internal object AnkiquestMoments {
      * [foreground], counted quietly when routine, or skipped when already seen. Anything else is left
      * to a system notification; call [markShown] once that is posted.
      */
+    @Synchronized
     fun route(
         prefs: SharedPreferences,
         account: String,
@@ -259,11 +414,16 @@ internal object AnkiquestMoments {
     ): Route {
         val moment = fromNotice(entry) ?: return Route.NOTIFY
         if (known(prefs, account, moment.key)) return Route.SEEN
+        if (moment.kind == Kind.SECURED) {
+            return routeMinimum(prefs, account, moment, foreground)
+        }
         if (entry.optBoolean("quiet")) {
             quietly(prefs, account, moment)
             return Route.QUIET
         }
-        if (!foreground) return Route.NOTIFY
+        if (!foreground) {
+            return Route.NOTIFY
+        }
         // An older server does not say which card a conquest row is about, and the upload already queued it.
         if (moment.kind == Kind.CONQUERED && moment.key.startsWith("notice:")) return Route.SEEN
         offer(prefs, account, listOf(moment))
@@ -271,6 +431,7 @@ internal object AnkiquestMoments {
     }
 
     /** Adds [moments] to [account]'s queue, leaving out any already shown or waiting. */
+    @Synchronized
     fun offer(
         prefs: SharedPreferences,
         account: String,
@@ -293,6 +454,7 @@ internal object AnkiquestMoments {
     ): Boolean = key in shown(prefs, account) || pending(prefs, account).any { it.key == key }
 
     /** Remembers [keys] as shown, so neither the app nor the poll shows them again. */
+    @Synchronized
     fun markShown(
         prefs: SharedPreferences,
         account: String,
@@ -307,6 +469,7 @@ internal object AnkiquestMoments {
      * Takes everything waiting for [account], most important first and newest first within a kind,
      * and remembers it as shown. Empty when nothing waits.
      */
+    @Synchronized
     fun take(
         prefs: SharedPreferences,
         account: String,
@@ -403,15 +566,54 @@ internal object AnkiquestMoments {
 
     // ---- Showing ----------------------------------------------------------------------------
 
+    fun noticeIntent(
+        context: Context,
+        account: String,
+        moment: Moment,
+    ): Intent =
+        AnkiquestHomeActivity
+            .intent(context)
+            .putExtra(EXTRA_OWNER, account)
+            .putExtra(EXTRA_MOMENT, moment.json().toString())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    private fun notice(
+        host: Activity,
+        account: HomeAccount,
+        prefs: SharedPreferences,
+    ): Moment? {
+        val intent = host.intent ?: return null
+        val payload = intent.getStringExtra(EXTRA_MOMENT) ?: return null
+        val owner = intent.getStringExtra(EXTRA_OWNER)
+        intent.removeExtra(EXTRA_MOMENT)
+        intent.removeExtra(EXTRA_OWNER)
+        if (owner != account.notificationAccount || account.token.isEmpty()) {
+            return null
+        }
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) {
+            return null
+        }
+        val moment = runCatching { Moment.parse(JSONObject(payload)) }.getOrNull() ?: return null
+        // Android can restore the original intent, including the removed extras.
+        val key = "opened:${moment.key}"
+        if (known(prefs, account.notificationAccount, key)) {
+            return null
+        }
+        markShown(prefs, account.notificationAccount, listOf(key))
+        return moment
+    }
+
     /**
      * Whether [host] is a screen where studying has stopped: the deck list, the deck overview or
      * congrats screen, or Today. Moments never show anywhere else, above all not over a review.
      */
-    fun resting(host: Activity): Boolean =
-        host is DeckPicker ||
-            host is StudyOptionsActivity ||
-            host is AnkiquestHomeActivity ||
-            (host as? FragmentActivity)?.supportFragmentManager?.fragments?.any { it is CongratsPage } == true
+    fun resting(host: Activity): Boolean {
+        val fragments = (host as? FragmentActivity)?.supportFragmentManager?.fragments.orEmpty()
+        if (host is Reviewer || fragments.any { it is ReviewerFragment && it.isVisible }) {
+            return false
+        }
+        return host is DeckPicker || host is StudyOptionsActivity || host is AnkiquestHomeActivity || fragments.any { it is CongratsPage }
+    }
 
     /**
      * Shows what waits for the signed-in account over [host], when it is [resting] and no moment is
@@ -423,9 +625,16 @@ internal object AnkiquestMoments {
         resting: Boolean = resting(host),
     ) {
         if (!resting || host.isFinishing || host.isDestroyed) return
-        if (showing.get()?.isShowing == true) return
         val account = AnkiquestHomeData.account(prefs) ?: return
-        val moments = take(prefs, account.notificationAccount)
+        val tapped = notice(host, account, prefs)
+        val current = showing.get()?.takeIf { it.isShowing }
+        if (current != null) {
+            if (tapped == null) {
+                return
+            }
+            current.dismiss()
+        }
+        val moments = if (tapped == null) take(prefs, account.notificationAccount) else listOf(tapped)
         if (moments.isEmpty()) return
         showing = WeakReference(AnkiquestMomentCard.show(host, account, moments))
     }
