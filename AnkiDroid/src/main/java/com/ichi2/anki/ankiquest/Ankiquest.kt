@@ -1173,7 +1173,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     override fun onActivityResumed(activity: Activity) {
         this.activity = WeakReference(activity)
-        AnkiquestIcon.onAppStart(activity.applicationContext)
+        val context = activity.applicationContext
+        scope.launch { AnkiquestIcon.onAppStart(context) }
         AnkiquestUpdater.maybeCheck(activity)
         val now = TimeManager.time.intTimeMS()
         if (now - resumeUploadAt > RESUME_UPLOAD_INTERVAL_MS) {
