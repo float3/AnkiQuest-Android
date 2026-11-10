@@ -16,21 +16,28 @@ import java.time.Instant
 
 /** Share only local diagnostic fields that are safe to put in a public report. */
 internal object AnkiquestDiagnostics {
-    suspend fun describe(context: Context): String {
-        val prefs = AnkiDroidApp.sharedPrefs()
-        val account = HomeAccount.current(prefs)
-        val host = prefs.getString(Ankiquest.PREF_URL, null)?.toHttpUrlOrNull()?.host
-        val tokenPresent = !prefs.getString(Ankiquest.PREF_TOKEN, null).isNullOrBlank()
-        val signedIn = account != null && tokenPresent
-        val upload = account?.takeIf { signedIn }?.let { Ankiquest.uploadDiagnostics(it) }
-        val version = account?.let(AnkiquestCapabilities::apiVersion)
-        val poll = account?.let { AnkiquestPoll.lastSuccessfulPoll(prefs, it.scope) }
-
-        // Print derived values only. Server responses and exceptions can contain account fields.
-        return buildString {
+    suspend fun describe(context: Context): String =
+        buildString {
             appendLine("AnkiQuest Release = ${BuildConfig.ANKIQUEST_RELEASE}")
             appendLine("AnkiQuest Nightly = ${BuildConfig.ANKIQUEST_NIGHTLY}")
             appendLine("AnkiQuest Commit = ${BuildConfig.GIT_COMMIT_HASH}")
+
+            // Android can request the crash report before application startup during backup recovery.
+            val prefs = AnkiDroidApp.sharedPrefsOrNull()
+            if (prefs == null) {
+                append("AnkiQuest settings = unavailable before startup")
+                return@buildString
+            }
+
+            // Print derived values only. Server responses and exceptions can contain account fields.
+            val account = HomeAccount.current(prefs)
+            val host = prefs.getString(Ankiquest.PREF_URL, null)?.toHttpUrlOrNull()?.host
+            val tokenPresent = !prefs.getString(Ankiquest.PREF_TOKEN, null).isNullOrBlank()
+            val signedIn = account != null && tokenPresent
+            val upload = account?.takeIf { signedIn }?.let { Ankiquest.uploadDiagnostics(it) }
+            val version = account?.let(AnkiquestCapabilities::apiVersion)
+            val poll = account?.let { AnkiquestPoll.lastSuccessfulPoll(prefs, it.scope) }
+
             appendLine("Update channel = ${AnkiquestUpdater.channel().name.lowercase()}")
             appendLine("Server host = ${host ?: "not configured"}")
             appendLine("Signed in = $signedIn")
@@ -50,7 +57,6 @@ internal object AnkiquestDiagnostics {
             appendLine("Widgets = ${widgets(context)}")
             append("Companion = ${AnkiquestCompanion.selected()}")
         }
-    }
 
     private fun timestamp(at: Long?): String = at?.let { Instant.ofEpochMilli(it).toString() } ?: "not recorded"
 
