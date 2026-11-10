@@ -734,7 +734,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
                     preference.isChecked = enabled
                     preference.isEnabled = true
-                    if (enabled && notify) askForNotifications()
+                    if (wanted && enabled && notify) {
+                        askForNotifications()
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -940,15 +942,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        val prefs = preferenceManager.sharedPreferences ?: return
-        if (signedIn() != null && !prefs.getBoolean(PREF_ASKED, false)) {
-            prefs.edit { putBoolean(PREF_ASKED, true) }
-            askForNotifications()
-        }
-    }
-
     private fun askForNotifications() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         val granted =
@@ -968,9 +961,5 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         pictureEditor?.dismiss()
         pictureEditor = null
         super.onDestroyView()
-    }
-
-    companion object {
-        private const val PREF_ASKED = "ankiquestAskedNotifications"
     }
 }
