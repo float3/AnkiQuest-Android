@@ -35,5 +35,5 @@
     <string name="aq_profile_freezes_pause">Serienschutz pausieren</string>
     <string name="aq_profile_freezes_resume">Serienschutz fortsetzen</string>
     <string name="ankiquest_show_global_title">Mich in der globalen Rangliste zeigen</string>
-    <string name="ankiquest_show_global_summary">Andere Spieler auf diesem Server können meinen Namen und Platz sehen.</string>
+    <string name="ankiquest_show_global_summary">Angemeldete Spieler sehen deinen Namen, Avatar, Level, EP und deine Lernserie. Öffentliche Profile sind auch ohne Anmeldung sichtbar. Freunde und Gruppenmitglieder sehen mehr. Dieser Schalter gilt nur für die Rangliste.</string>
 </resources>

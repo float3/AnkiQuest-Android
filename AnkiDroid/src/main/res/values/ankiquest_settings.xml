@@ -40,7 +40,7 @@
     <string name="ankiquest_share_moments_title" maxLength="41">Share my moments with friends</string>
     <string name="ankiquest_share_moments_summary">Friends can hear about your goals, streaks and achievements. Turn off to keep them to yourself.</string>
     <string name="ankiquest_show_global_title" maxLength="41">Show me on the global leaderboard</string>
-    <string name="ankiquest_show_global_summary">Other players on this server can see my name and standing.</string>
+    <string name="ankiquest_show_global_summary">Signed-in players see your name, avatar, level, XP and streak. Public profiles are visible to signed-out visitors too. Friends and group members see more. This switch controls the leaderboard only.</string>
 
     <string name="ankiquest_health_problem_title" maxLength="41">AnkiQuest can’t alert you</string>
     <string name="ankiquest_health_problem_summary">Notifications are turned off on this phone. Tap to fix it.</string>
