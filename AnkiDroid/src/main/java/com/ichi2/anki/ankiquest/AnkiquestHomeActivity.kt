@@ -199,7 +199,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     } catch (_: JSONException) {
                         R.string.aq_home_server_error
                     }
-                if (turn == generation) {
+                if (isCurrent(turn, current.scope)) {
                     profileFailure = failure
                     if (failure == R.string.aq_home_auth) profile = null
                     loading = false
@@ -211,7 +211,9 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun isCurrent(
         turn: Int,
         scope: String?,
-    ): Boolean = turn == generation && account?.scope == scope && AnkiquestHomeData.account()?.scope == scope
+    ): Boolean = turn == generation && ownsScope(scope)
+
+    private fun ownsScope(scope: String?): Boolean = account?.scope == scope && AnkiquestHomeData.account()?.scope == scope
 
     private fun applyLocal(value: HomeLocal?) {
         local = value
@@ -514,13 +516,12 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
 
     private fun chooseDeck() {
         val rows = local?.decks.orEmpty()
-        val turn = generation
         val owner = account?.scope
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.aq_home_change_deck)
             .setItems(rows.map { "${it.name} · ${it.daily.label(this)}" }.toTypedArray()) { _, index ->
-                if (isCurrent(turn, owner)) {
-                    selectDeck(rows[index].id, turn, owner)
+                if (ownsScope(owner)) {
+                    selectDeck(rows[index].id, owner)
                 }
             }.setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -528,27 +529,23 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
 
     private fun selectDeck(
         deck: Long,
-        turn: Int,
         owner: String?,
     ) {
         lifecycleScope.launch {
-            // Deck choice -> collection -> local result, owned by the dialog's generation.
-            val result =
-                try {
-                    CollectionManager.withCol {
-                        if (AnkiquestHomeData.account()?.scope == owner && decks.get(deck) != null) {
-                            decks.select(deck)
-                        }
+            // Commit the choice first, then replace any refresh that saw the previous deck.
+            try {
+                CollectionManager.withCol {
+                    if (AnkiquestHomeData.account()?.scope == owner && decks.get(deck) != null) {
+                        decks.select(deck)
                     }
-                    AnkiquestHomeData.local()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.w(e, "AnkiQuest selected deck could not be loaded")
-                    null
                 }
-            if (isCurrent(turn, owner)) {
-                applyLocal(result)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "AnkiQuest focus deck could not be selected")
+            }
+            if (ownsScope(owner)) {
+                refresh()
             }
         }
     }

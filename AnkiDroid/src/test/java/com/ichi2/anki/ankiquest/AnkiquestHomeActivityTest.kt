@@ -5,6 +5,7 @@ package com.ichi2.anki.ankiquest
 import android.content.Intent
 import android.view.View
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.core.view.size
@@ -27,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -138,6 +140,49 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
         assertFalse(home.hasText("Spanish"))
         assertTrue(home.hasText(home.getString(R.string.aq_home_local_unavailable)))
+    }
+
+    @Test
+    fun `a deck choice survives a refresh while the picker is open`() {
+        val spanish = col.decks.id("Spanish")
+        val geography = col.decks.id("Geography")
+        val decks = listOf(HomeDeck(spanish, "Spanish", 1, 0, 0), HomeDeck(geography, "Geography", 2, 0, 0))
+        col.decks.select(spanish)
+        coEvery { AnkiquestHomeData.local() } coAnswers { HomeLocal(decks, col.decks.selected()) }
+        val controller = launchController()
+        val home = controller.get()
+        home.click(home.getString(R.string.aq_home_change_deck))
+        val picker = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        val choices = assertNotNull(picker.listView)
+        controller.pause().resume()
+        advanceRobolectricLooper()
+
+        assertTrue(choices.performItemClick(choices.getChildAt(1), 1, choices.adapter.getItemId(1)))
+        advanceRobolectricLooperUntil { home.hasText("Geography") }
+        assertEquals(geography, col.decks.selected())
+    }
+
+    @Test
+    fun `a pending local result for an old account is ignored`() {
+        val other = HomeAccount("https://anki.example.test", "other", "another-token")
+        val waiting = CompletableDeferred<HomeLocal>()
+        var switched = false
+        coEvery { AnkiquestHomeData.local() } coAnswers {
+            if (switched) HomeLocal(listOf(HomeDeck(19, "Geography", 1, 0, 0)), 19) else waiting.await()
+        }
+        coEvery { AnkiquestHomeData.profile(other) } returns profile
+        coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+        val controller = launchController()
+        val home = controller.get()
+        switched = true
+        every { AnkiquestHomeData.account(any()) } returns other
+        controller.pause().resume()
+        advanceRobolectricLooperUntil { home.hasText("Geography") }
+
+        waiting.complete(HomeLocal(listOf(HomeDeck(12, "Spanish", 1, 0, 0)), 12))
+        advanceRobolectricLooper()
+        assertTrue(home.hasText("Geography"))
+        assertFalse(home.hasText("Spanish"))
     }
 
     @Test
