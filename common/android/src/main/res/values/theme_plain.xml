@@ -10,7 +10,7 @@
         <!-- Android colors -->
         <item name="colorPrimary">@color/theme_plain_primary</item>
         <item name="colorSecondary">@color/theme_plain_accent</item>
-        <item name="colorSurfaceContainer">#0F9E9E9E</item>
+        <item name="colorSurfaceContainer">#F9F9F9</item>
         <item name="colorPrimaryContainer">@color/material_grey_300</item>
         <item name="colorOnPrimaryContainer">@color/material_grey_900</item>
         <item name="colorSecondaryContainer">#DDDDDD</item>
@@ -19,6 +19,8 @@
         <item name="colorOutlineVariant">#BBBBBB</item>
         <item name="colorTertiary">#555555</item>
         <item name="colorOnTertiary">#FFFFFF</item>
+        <item name="colorTertiaryContainer">@color/material_grey_300</item>
+        <item name="colorOnTertiaryContainer">@color/material_grey_900</item>
         <item name="colorSurfaceContainerHigh">#F4F4F4</item>
         <item name="preferenceCategoryTitleTextColor">?attr/colorSecondary</item>
         <!-- Action bar styles -->
