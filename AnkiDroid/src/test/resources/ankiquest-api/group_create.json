@@ -1,41 +1,41 @@
 {
-    "friends": [
+  "friends": [
+    {
+      "display": "Friend",
+      "user": "friend"
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "invite": "example-invite-1",
+      "members": [
         {
-            "display": "Friend",
-            "user": "friend"
+          "display": "Hill",
+          "user": "hill"
         }
-    ],
-    "groups": [
-        {
-            "id": 1,
-            "invite": "example-invite-1",
-            "members": [
-                {
-                    "display": "Hill",
-                    "user": "hill"
-                }
-            ],
-            "name": "Spanish club",
-            "owner": true
-        }
-    ],
-    "incoming": [
-        {
-            "display": "Ana",
-            "user": "ana"
-        }
-    ],
-    "muted": [
-        {
-            "display": "Cerro",
-            "user": "cerro"
-        }
-    ],
-    "outgoing": [
-        {
-            "display": "Cerro",
-            "user": "cerro"
-        }
-    ],
-    "public": true
+      ],
+      "name": "Spanish club",
+      "owner": true
+    }
+  ],
+  "incoming": [
+    {
+      "display": "Ana",
+      "user": "ana"
+    }
+  ],
+  "muted": [
+    {
+      "display": "Cerro",
+      "user": "cerro"
+    }
+  ],
+  "outgoing": [
+    {
+      "display": "Cerro",
+      "user": "cerro"
+    }
+  ],
+  "public": true
 }
