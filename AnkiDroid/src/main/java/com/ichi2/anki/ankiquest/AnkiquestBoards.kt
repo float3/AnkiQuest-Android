@@ -48,7 +48,7 @@ internal object AnkiquestBoards {
         val xpTotal: Long,
         val streak: Int,
         /** How today stands for the streak, as [AnkiquestWidget.streakState] says it. */
-        val state: String,
+        val state: AnkiquestDay.State,
         val todayReviews: Long,
         val todayMinutes: Long,
         val streakMinutes: Long,

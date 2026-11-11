@@ -68,6 +68,10 @@
             android:persistent="false"
             android:title="@string/ankiquest_notify_moments_title"
             android:summary="@string/ankiquest_notify_moments_summary" />
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_streak_cue_key"
+            android:defaultValue="true"
+            android:title="@string/ankiquest_streak_cue_title" />
     </PreferenceCategory>
     <PreferenceCategory
         android:key="@string/ankiquest_sharing_group_key"

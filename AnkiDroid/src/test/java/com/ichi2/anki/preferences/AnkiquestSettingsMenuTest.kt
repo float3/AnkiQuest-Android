@@ -58,6 +58,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                         R.string.ankiquest_reminder_time_key,
                         R.string.ankiquest_quiet_hours_key,
                         R.string.ankiquest_notify_moments_key,
+                        R.string.ankiquest_streak_cue_key,
                     ),
                 targetContext.getString(R.string.ankiquest_sharing_group_key) to
                     keys(

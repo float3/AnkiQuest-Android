@@ -15,6 +15,7 @@ import android.widget.RemoteViews
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import com.ichi2.anki.R
+import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.widget.getAppWidgetManager
 import org.json.JSONArray
@@ -78,18 +79,18 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         /** The companion's pose for a streak state. New artwork for these moments is requested in float3/ankiquest#88. */
         @DrawableRes
         internal fun pose(
-            state: String,
+            state: State,
             streak: Int,
         ): Int =
             when {
-                state == "unknown" -> R.drawable.aki_face
-                state == "protected" -> R.drawable.aki_freeze_used
-                state == "studied" && streak >= 100 -> R.drawable.aki_streak_legend
-                state == "studied" && streak >= 30 -> R.drawable.aki_streak_blazing
-                state == "studied" && streak >= 7 -> R.drawable.aki_streak_hot
+                state == State.UNKNOWN -> R.drawable.aki_face
+                state == State.PROTECTED -> R.drawable.aki_freeze_used
+                state == State.STUDIED && streak >= 100 -> R.drawable.aki_streak_legend
+                state == State.STUDIED && streak >= 30 -> R.drawable.aki_streak_blazing
+                state == State.STUDIED && streak >= 7 -> R.drawable.aki_streak_hot
                 // Day one of a streak is starting again; the leaderboard row does not say whether one was lost.
-                state == "studied" && streak == 1 -> R.drawable.aki_comeback
-                state == "studied" -> R.drawable.aki_streak
+                state == State.STUDIED && streak == 1 -> R.drawable.aki_comeback
+                state == State.STUDIED -> R.drawable.aki_streak
                 streak == 0 -> R.drawable.aki_sleeping
                 else -> R.drawable.aki_at_risk
             }
@@ -103,7 +104,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
          * than [pose]. The drawables are committed exports of the server masters (float3/ankiquest#88).
          */
         internal fun poses(
-            state: String,
+            state: State,
             streak: Int,
             entry: JSONObject?,
             goalReached: Boolean,
@@ -112,10 +113,10 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val minutes = entry?.optLong("today_minutes") ?: 0L
             val needed = entry?.optLong("streak_minutes") ?: 0L
             val dayEndsAt = entry?.optLong("day_ends_at") ?: 0L
-            val studied = state == "studied"
+            val studied = state == State.STUDIED
             return when {
-                state == "unknown" -> listOf(R.drawable.aki_face, R.drawable.aki_welcome)
-                state == "protected" -> listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze)
+                state == State.UNKNOWN -> listOf(R.drawable.aki_face, R.drawable.aki_welcome)
+                state == State.PROTECTED -> listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze)
                 studied && goalReached -> listOf(R.drawable.aki_goal, R.drawable.aki_celebrate)
                 studied && streak == 1 -> listOf(R.drawable.aki_comeback)
                 studied && needed > 0 && minutes < needed + JUST_REACHED_MINUTES -> listOf(R.drawable.aki_minimum)
@@ -132,7 +133,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         /** One of [poses] for the day, the same all day, so the big widget changes from day to day but not between redraws. */
         @DrawableRes
         internal fun bigPose(
-            state: String,
+            state: State,
             streak: Int,
             entry: JSONObject?,
             goalReached: Boolean,
@@ -191,38 +192,59 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val language = AnkiquestLanguage.context(context)
             val views = RemoteViews(context.packageName, size.layout)
             val me = board?.let { mine(it, player) }
-            val streak = me?.optInt("streak") ?: 0
-            val state = me?.let { AnkiquestWidget.streakState(it) } ?: "unknown"
+            // The collection can secure today before the board reflects it.
+            val ownDay = if (player != null && player == Ankiquest.player()) AnkiquestDay.own(now) else null
+            val day = ownDay ?: AnkiquestDay.judge(me?.let(AnkiquestDay.Server::ownRow), emptyList(), now)
+            val streak = if (ownDay == null) me?.optInt("streak") else ownDay.streak
+            val state = day?.label ?: AnkiquestDay.State.UNKNOWN
             val numbers = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale())
+            val number = streak?.let { numbers.format(it) } ?: "–"
 
-            views.setViewVisibility(R.id.ankiquest_streak_companion, if (AnkiquestCompanion.visible()) View.VISIBLE else View.GONE)
-            if (AnkiquestCompanion.visible()) {
+            val companionVisible = AnkiquestCompanion.visible()
+            views.setViewVisibility(R.id.ankiquest_streak_companion, if (companionVisible) View.VISIBLE else View.GONE)
+            if (companionVisible) {
                 val aki =
                     if (size == Size.LARGE || size == Size.HUGE) {
-                        bigPose(state, streak, me, goalReached(me), now)
+                        val artDay =
+                            if (ownDay == null) {
+                                me
+                            } else {
+                                JSONObject()
+                                    .put("today_minutes", ownDay.minutes)
+                                    .put("streak_minutes", ownDay.streakMinutes)
+                                    .put("day_ends_at", me?.optLong("day_ends_at") ?: now)
+                            }
+                        bigPose(state, streak ?: 0, artDay, goalReached(me), now)
                     } else {
-                        pose(state, streak)
+                        pose(state, streak ?: 0)
                     }
                 views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
             }
-            views.setTextViewText(R.id.ankiquest_streak_number, if (me == null) "–" else numbers.format(streak))
+            views.setTextViewText(R.id.ankiquest_streak_number, number)
             views.setTextViewText(
                 R.id.ankiquest_streak_label,
-                language.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak),
+                language.resources.getQuantityString(R.plurals.ankiquest_streak_widget_days, streak ?: 0),
             )
             val status =
                 when {
+                    ownDay != null -> AnkiquestDay.words(language, ownDay)
                     board == null -> language.getString(R.string.ankiquest_widget_unconfigured)
                     me == null -> language.getString(R.string.ankiquest_streak_unknown)
                     else -> AnkiquestWidget.streakLabel(language, me, state)
                 }
             views.setTextViewText(R.id.ankiquest_streak_status, status)
+            val progress = setMinimumProgress(views, language, day, status)
+            if (size == Size.SMALL || size == Size.MEDIUM) {
+                val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
+                views.setViewVisibility(R.id.ankiquest_streak_badge, badge)
+            }
+            val description = if (progress == null || progress == status) status else "$status · $progress"
             views.setContentDescription(
                 R.id.ankiquest_streak_root,
-                if (me == null) {
-                    status
+                if (streak == null) {
+                    description
                 } else {
-                    language.getString(R.string.ankiquest_streak_description, numbers.format(streak), status)
+                    language.getString(R.string.ankiquest_streak_description, number, description)
                 },
             )
             val open = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -238,6 +260,25 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 )
             }
             return views
+        }
+
+        /** Use the same current day that supplies the widget's status. */
+        private fun setMinimumProgress(
+            views: RemoteViews,
+            context: Context,
+            day: AnkiquestDay.Verdict?,
+            status: String,
+        ): String? {
+            val id = R.id.ankiquest_streak_progress
+            if (day == null || day.label == AnkiquestDay.State.UNKNOWN || day.streakMinutes <= 0) {
+                views.setViewVisibility(id, View.GONE)
+                return null
+            }
+            val reached = day.met || day.label == AnkiquestDay.State.PROTECTED
+            val minutes = if (reached) day.streakMinutes else day.minutes.coerceIn(0, day.streakMinutes)
+            views.setProgressBar(id, day.streakMinutes, minutes, false)
+            views.setViewVisibility(id, View.VISIBLE)
+            return if (reached) status else context.getString(R.string.ankiquest_streak_short, minutes, day.streakMinutes)
         }
 
         private fun mine(

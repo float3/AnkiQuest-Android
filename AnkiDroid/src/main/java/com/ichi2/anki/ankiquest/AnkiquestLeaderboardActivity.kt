@@ -337,10 +337,10 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
         return "${views.number(row.streak.toLong())} · $status"
     }
 
-    private fun streakIcon(state: String): Int =
+    private fun streakIcon(state: AnkiquestDay.State): Int =
         when (state) {
-            "studied" -> R.drawable.ankiquest_streak_studied
-            "protected" -> R.drawable.ankiquest_streak_protected
+            AnkiquestDay.State.STUDIED -> R.drawable.ankiquest_streak_studied
+            AnkiquestDay.State.PROTECTED -> R.drawable.ankiquest_streak_protected
             else -> R.drawable.ankiquest_streak_pending
         }
 

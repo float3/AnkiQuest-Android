@@ -129,11 +129,13 @@ object AnkiquestPoll {
         }
         try {
             val profile = Ankiquest.profile()
-            // A fresh board and profile confirm a background poll for this account.
-            if (photoBoard != null && !photoOffline && cacheScope != null && AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
-                prefs.edit { putLong(scopedKey(LAST_SUCCESS, cacheScope), TimeManager.time.intTimeMS()) }
+            if (AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
+                // A fresh board and profile confirm a background poll for this account.
+                if (photoBoard != null && !photoOffline && cacheScope != null) {
+                    prefs.edit { putLong(scopedKey(LAST_SUCCESS, cacheScope), TimeManager.time.intTimeMS()) }
+                }
+                AnkiquestNotifier.onProfile(context, profile)
             }
-            AnkiquestNotifier.onProfile(context, profile)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
