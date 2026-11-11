@@ -5,20 +5,34 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - '.github/workflows/ankiquest_workflow_tests.yml'
-      - '.github/workflows/ankiquest_screenshot_*.yml'
-      - '.github/ankiquest_screenshot_baseline.js'
-      - '.github/tests/screenshots.test.cjs'
-      - '.github/tests/screenshot-storage.test.cjs'
+      - ".github/workflows/ankiquest_workflow_tests.yml"
+      - ".github/workflows/ankiquest_screenshot_*.yml"
+      - ".github/ankiquest_screenshot_baseline.js"
+      - ".github/tests/screenshots.test.cjs"
+      - ".github/tests/screenshot-storage.test.cjs"
+      - ".github/workflows/ankiquest_api_contract.yml"
+      - ".github/workflows/ankiquest_fixtures.yml"
+      - ".github/workflows/ankiquest_bump_server.yml"
+      - ".github/ankiquest_server_*.cjs"
+      - ".github/tests/server-*.test.cjs"
+      - "AnkiDroid/src/test/resources/ankiquest-server.sha"
+      - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
   push:
     branches: [main]
     paths:
-      - '.github/workflows/ankiquest_workflow_tests.yml'
-      - '.github/workflows/ankiquest_screenshot_*.yml'
-      - '.github/ankiquest_screenshot_baseline.js'
-      - '.github/tests/screenshots.test.cjs'
-      - '.github/tests/screenshot-storage.test.cjs'
+      - ".github/workflows/ankiquest_workflow_tests.yml"
+      - ".github/workflows/ankiquest_screenshot_*.yml"
+      - ".github/ankiquest_screenshot_baseline.js"
+      - ".github/tests/screenshots.test.cjs"
+      - ".github/tests/screenshot-storage.test.cjs"
+      - ".github/workflows/ankiquest_api_contract.yml"
+      - ".github/workflows/ankiquest_fixtures.yml"
+      - ".github/workflows/ankiquest_bump_server.yml"
+      - ".github/ankiquest_server_*.cjs"
+      - ".github/tests/server-*.test.cjs"
+      - "AnkiDroid/src/test/resources/ankiquest-server.sha"
+      - "AnkiDroid/src/test/resources/ankiquest-api/names.json"
 
 permissions:
   contents: read

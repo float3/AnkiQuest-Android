@@ -125,14 +125,27 @@ class AnkiquestApiContractTest : RobolectricTest() {
     @Test
     fun `every example is either read by the app or known to be unused`() {
         val directory = File(assertNotNull(javaClass.classLoader?.getResource(EXAMPLES)).toURI())
-        val examples = assertNotNull(directory.list()).filter { it.endsWith(".json") }.map { it.removeSuffix(".json") }.toSet()
+        val examples =
+            assertNotNull(directory.list())
+                .filter { it.endsWith(".json") && it != "names.json" }
+                .map { it.removeSuffix(".json") }
+                .toSet()
+        val catalog = JSONObject(example("names"))
+        val groups = setOf("consumed", "unused", "boards", "challenges", "not_yet")
+        assertEquals(groups, catalog.keys().asSequence().toSet())
+        val owned =
+            groups.flatMap { group ->
+                val names = catalog.getJSONArray(group)
+                (0 until names.length()).map { names.getString(it) }
+            }
+        assertEquals(owned.size, owned.toSet().size, "an example must belong to exactly one group")
         assertEquals(
-            CONSUMED + UNUSED + BOARDS + CHALLENGES + (NOT_YET intersect examples),
+            owned.toSet(),
             examples,
-            "a new or removed example needs a check here",
+            "a new or removed example needs a reviewed entry in names.json",
         )
-        assertTrue((CONSUMED intersect UNUSED).isEmpty())
-        assertTrue(((CONSUMED + UNUSED) intersect BOARDS).isEmpty())
+        val consumed = catalog.getJSONArray("consumed")
+        assertTrue((0 until consumed.length()).map { consumed.getString(it) }.containsAll(ROUTES.values))
     }
 
     @Test
@@ -628,73 +641,5 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "streak-freezes" to "streak_freezes",
                 "study" to "study",
             )
-
-        val CONSUMED =
-            ROUTES.values.toSet() +
-                setOf(
-                    "capabilities",
-                    "sign_up",
-                    "sign_in",
-                    "leaderboard",
-                    "share_to_link",
-                    "deck_share",
-                    "social",
-                    "group_create",
-                    "invite",
-                    "social_change",
-                    "mute",
-                    "challenges",
-                    "challenge_create",
-                    "challenge_action",
-                    "community",
-                    "reminders",
-                    "reminders_save",
-                    "conquest",
-                    "conquest_tell",
-                    "sign_in_methods",
-                    "password_change",
-                    "sign_in_browser",
-                    "devices",
-                    "devices_sign_out",
-                    "account",
-                    "records",
-                    "activity",
-                    "activity_older",
-                )
-
-        val UNUSED = emptySet<String>()
-
-        /** What the native leaderboard and profiles read. */
-        val BOARDS = setOf("leaderboard_day", "week", "player_profile", "wins")
-
-        /** The friend goals' examples, read by the native challenges screen; none once it has landed and lists them in [CONSUMED]. */
-        val CHALLENGES = setOf("challenges", "challenge_create", "challenge_action") - CONSUMED
-
-        /**
-         * Examples the server already keeps for app screens still in review (records and history,
-         * friends and groups, account settings), counted only once the server has them. Each screen's
-         * pull request moves its names into [CONSUMED].
-         */
-        val NOT_YET =
-            setOf(
-                "records",
-                "study",
-                "social",
-                "group_create",
-                "invite",
-                "social_change",
-                "account",
-                "password_change",
-                "devices_sign_out",
-                "sign_in_methods",
-                // Taking back telling friends about a conquered card, read once the server has it.
-                "conquest_untell",
-                // The global leaderboard (float3/ankiquest#170) until the app shows it.
-                "leaderboard_global",
-                "leaderboard_global_hidden",
-                "global_leaderboard_on",
-                // Hiding a stranger on Global (float3/ankiquest#218) until the app offers it.
-                "leaderboard_hide",
-            ) - CONSUMED - UNUSED
     }
 }
