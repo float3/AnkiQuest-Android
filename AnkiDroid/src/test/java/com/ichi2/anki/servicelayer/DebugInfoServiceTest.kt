@@ -5,10 +5,10 @@ package com.ichi2.anki.servicelayer
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
 import com.ichi2.anki.ankiquest.AnkiquestCapabilities
@@ -27,7 +27,7 @@ import kotlin.test.assertFalse
 @RunWith(AndroidJUnit4::class)
 class DebugInfoServiceTest : RobolectricTest() {
     @Test
-    @RequiresApi(Build.VERSION_CODES.S_V2)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Config(sdk = [Build.VERSION_CODES.S_V2])
     fun `debug reports leave notification channels unchanged`() =
         runTest {
