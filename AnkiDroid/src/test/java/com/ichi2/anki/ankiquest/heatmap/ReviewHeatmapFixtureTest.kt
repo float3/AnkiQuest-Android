@@ -39,7 +39,7 @@ class ReviewHeatmapFixtureTest {
             val counts = case.getJSONArray("counts")
             val levels = case.getJSONArray("levels")
             val expected = (0 until levels.length()).map { levels.getInt(it) }
-            val actual = (0 until counts.length()).map { intensity(counts.getInt(it), average) }
+            val actual = (0 until counts.length()).map { ReviewHeatmap.intensity(counts.getInt(it), average) }
             assertEquals(expected, actual, "daily average $average")
         }
     }
