@@ -37,7 +37,8 @@ jobs:
   compare-screenshot-test:
     name: compare
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Allow the matching store job to finish before building the comparison.
+    timeout-minutes: 60
 
     permissions:
       contents: read # for clone
@@ -58,51 +59,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Pick the baseline workflow
+      - name: Wait for matching base screenshots
         id: source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          # Stacked PRs target feature branches that never store a baseline, so
-          # fall back to the default branch when the base branch has none.
-          candidates="$BRANCH"
-          [ "$BRANCH" = "$DEFAULT_BRANCH" ] || candidates="$candidates $DEFAULT_BRANCH"
-          for branch in $candidates; do
-            for workflow in ankiquest_screenshot_store.yml screenshot_store.yml; do
-              # PR runs verify the store workflow without uploading a baseline.
-              runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=${branch}&status=success&per_page=50"                 --jq '[.workflow_runs[] | select(.event != "pull_request")] | length' 2>/dev/null || echo 0)
-              if [ "${runs:-0}" -gt 0 ]; then
-                if [ "$branch" != "$BRANCH" ]; then
-                  echo "::notice::No screenshot baseline on ${BRANCH}; comparing against ${branch} instead."
-                fi
-                echo "workflow=${workflow}" >> "$GITHUB_OUTPUT"
-                echo "branch=${branch}" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-            done
-          done
-          echo "workflow=ankiquest_screenshot_store.yml" >> "$GITHUB_OUTPUT"
-          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const waitForBaseline = require('./.github/ankiquest_screenshot_baseline.js');
+            return await waitForBaseline({ github, context, core });
 
       - name: Download base branch screenshots
         id: baseline
         uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         with:
           name: screenshot
-          workflow: ${{ steps.source.outputs.workflow }}
-          workflow_conclusion: success
-          search_artifacts: true
+          run_id: ${{ steps.source.outputs.result }}
           allow_forks: false
           if_no_artifact_found: fail
-          branch: ${{ steps.source.outputs.branch }}
 
       - name: Explain unavailable baseline
-        if: ${{ failure() && steps.baseline.outcome == 'failure' }}
+        if: ${{ failure() && (steps.source.outcome == 'failure' || steps.baseline.outcome == 'failure') }}
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.sha }}
         run: |
-          echo '::error::Screenshot comparison did not run. Neither the base branch nor the default branch has a baseline. Run the ankiquest Screenshots: Store Baseline workflow on the default branch, then rerun this check.'
-          echo 'Screenshot comparison did not run because no baseline could be downloaded from the base branch or the default branch. Run **ankiquest Screenshots: Store Baseline** on the default branch, then rerun this check.' >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::Screenshot comparison did not run: no downloadable baseline for ${BASE_SHA}. Run ankiquest Screenshots: Store Baseline on a branch at that commit, then rerun this check."
+          echo "Screenshot comparison needs a successful, unexpired baseline for commit ${BASE_SHA}. Run **ankiquest Screenshots: Store Baseline** on a branch at that commit, then rerun this check. A different commit is never used as a fallback." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
