@@ -3,20 +3,36 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import androidx.core.content.edit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -126,6 +142,177 @@ class AnkiquestIconTest : RobolectricTest() {
         assertEquals(listOf(Mood.HAPPY), enabled())
         assertEquals(Mood.HAPPY, AnkiquestIcon.current(prefs))
     }
+
+    @Test
+    fun `the launcher mood waits for the app to stop`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
+        val original = Mood.entries.map(::state)
+
+        lifecycle.currentState = Lifecycle.State.RESUMED
+        try {
+            AnkiquestIcon.update(targetContext, profile("pending", 12, 2), now, prefs)
+            assertEquals(original, Mood.entries.map(::state), "the reviewer still owns a visible task")
+
+            lifecycle.currentState = Lifecycle.State.STARTED
+            AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+            assertEquals(original, Mood.entries.map(::state), "a paused activity can still be visible")
+
+            lifecycle.currentState = Lifecycle.State.CREATED
+            assertEquals(Mood.HAPPY, switchedFrom(prefs, Mood.DEFAULT))
+            assertEquals(listOf(Mood.HAPPY), enabled(), "apply the latest mood when the app stops")
+        } finally {
+            lifecycle.currentState = Lifecycle.State.CREATED
+        }
+    }
+
+    @Test
+    fun `a queued mood is resolved again after the study day ends`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        val clock = MockTime(now)
+        TimeManager.resetWith(clock)
+        AnkiquestIcon.show(targetContext, Mood.WORRIED, prefs)
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
+        lifecycle.currentState = Lifecycle.State.RESUMED
+        try {
+            AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+            clock.addM(121)
+
+            lifecycle.currentState = Lifecycle.State.CREATED
+
+            assertEquals(Mood.DEFAULT, switchedFrom(prefs, Mood.WORRIED))
+            assertEquals(listOf(Mood.DEFAULT), enabled())
+        } finally {
+            lifecycle.currentState = Lifecycle.State.CREATED
+        }
+    }
+
+    @Test
+    fun `turning the icon off while a mood is queued restores the default`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        AnkiquestIcon.show(targetContext, Mood.WORRIED, prefs)
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
+        lifecycle.currentState = Lifecycle.State.RESUMED
+        try {
+            AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+            prefs.edit { putBoolean(AnkiquestIcon.PREF_ENABLED, false) }
+
+            lifecycle.currentState = Lifecycle.State.CREATED
+
+            assertEquals(Mood.DEFAULT, switchedFrom(prefs, Mood.WORRIED))
+            assertEquals(listOf(Mood.DEFAULT), enabled())
+        } finally {
+            lifecycle.currentState = Lifecycle.State.CREATED
+        }
+    }
+
+    @Test
+    fun `a queued change uses the account selected when the app stops`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        selectAccount(prefs, "second")
+        AnkiquestIcon.update(targetContext, profile("protected", 12, 2), now, prefs)
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        selectAccount(prefs, "first")
+        val lifecycle = ProcessLifecycleOwner.get().lifecycle as LifecycleRegistry
+        lifecycle.currentState = Lifecycle.State.RESUMED
+        try {
+            AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+            selectAccount(prefs, "second")
+
+            lifecycle.currentState = Lifecycle.State.CREATED
+
+            assertEquals(Mood.FROZEN, switchedFrom(prefs, Mood.DEFAULT))
+            assertEquals(listOf(Mood.FROZEN), enabled())
+        } finally {
+            lifecycle.currentState = Lifecycle.State.CREATED
+        }
+    }
+
+    @Test
+    fun `resuming does not wait for a slow launcher update`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val context =
+            object : ContextWrapper(targetContext) {
+                override fun getApplicationContext(): Context = this
+
+                override fun getPackageManager(): PackageManager {
+                    entered.countDown()
+                    check(release.await(5, TimeUnit.SECONDS))
+                    return targetContext.packageManager
+                }
+            }
+        val owner = ProcessLifecycleOwner.get()
+        AnkiquestIcon.onStart(owner)
+        AnkiquestIcon.update(context, profile("studied", 13, 2), now, prefs)
+        AnkiquestIcon.onStop(owner)
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS), "the background change reached PackageManager")
+            // A slow binder call must not hold the lock needed by the main-thread lifecycle callback.
+            CompletableFuture.runAsync { AnkiquestIcon.onStart(owner) }.get(1, TimeUnit.SECONDS)
+        } finally {
+            release.countDown()
+            switchedFrom(prefs, Mood.DEFAULT)
+            AnkiquestIcon.onStop(owner)
+        }
+    }
+
+    @Test
+    fun `a quick return requeues the launcher change until the next stop`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        val owner = ProcessLifecycleOwner.get()
+        AnkiquestIcon.onStart(owner)
+        AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+        val visibility = ReflectionHelpers.getField<Any>(AnkiquestIcon, "visibility")
+        val pending = ReflectionHelpers.getField<Any>(visibility, "pending")
+        AnkiquestIcon.onStart(owner)
+
+        ReflectionHelpers.callInstanceMethod<Unit>(AnkiquestIcon, "applyPending", ClassParameter.from(pending.javaClass, pending))
+
+        assertEquals(listOf(Mood.DEFAULT), enabled(), "the resumed task leaves the aliases alone")
+        AnkiquestIcon.onStop(owner)
+        assertEquals(Mood.HAPPY, switchedFrom(prefs, Mood.DEFAULT))
+        assertEquals(listOf(Mood.HAPPY), enabled())
+    }
+
+    private fun selectAccount(
+        prefs: SharedPreferences,
+        player: String,
+    ) {
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://study.example.test")
+            putString(Ankiquest.PREF_USER, player)
+            putString(Ankiquest.PREF_TOKEN, "test-$player")
+        }
+    }
+
+    private fun switchedFrom(
+        prefs: SharedPreferences,
+        previous: Mood,
+    ): Mood =
+        runBlocking {
+            withTimeout(5000) {
+                while (AnkiquestIcon.current(prefs) == previous) {
+                    delay(10)
+                }
+                assertNotNull(AnkiquestIcon.current(prefs))
+            }
+        }
 
     @Test
     fun `the launcher's components win over what the pref says`() {
