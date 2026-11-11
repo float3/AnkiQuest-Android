@@ -6,6 +6,7 @@ import android.os.Looper
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.ScreenshotTest.DeviceConfig.TABLET
+import com.ichi2.anki.ankiquest.heatmap.DeckHeatmapScreenshotTest
 import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog
 import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
 import com.ichi2.anki.utils.ext.DIALOG_FRAGMENT_TAG
@@ -21,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 @ScreenshotTest.IncludeDevices(TABLET)
-class CustomStudyScreenshotTest : ScreenshotTest() {
+class CustomStudyScreenshotTest : DeckHeatmapScreenshotTest() {
     @After
     fun resetBackups() {
         BackupManagerTestUtilities.reset()

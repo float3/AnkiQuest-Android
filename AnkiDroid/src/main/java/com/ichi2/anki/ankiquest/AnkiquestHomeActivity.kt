@@ -61,8 +61,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var loading = false
     private var networkJob: Job? = null
     private var copyJob: Job? = null
-    private var copyInbox: JSONObject? = null
-    private var copyFailed = false
+    private var copyInbox: CopyInbox = CopyInbox.Loading
     private var copyBusy = false
     private var copyStatus: String? = null
     private var importedCopyFile: File? = null
@@ -75,6 +74,16 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private var generation = 0
     private var focus: String? = null
     private var questsHeading: View? = null
+
+    private sealed interface CopyInbox {
+        data object Loading : CopyInbox
+
+        data object Unavailable : CopyInbox
+
+        data class Ready(
+            val data: JSONObject,
+        ) : CopyInbox
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
@@ -120,10 +129,14 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     private fun refresh() {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
+            // A new owner starts with empty caches and a fresh loading state.
             account = current
+            local = null
+            localFailed = false
+            scheduleLocalRefresh(null)
             profile = null
             profileFailure = null
-            copyInbox = null
+            copyInbox = CopyInbox.Loading
             copyStatus = null
             copyBusy = false
         }
@@ -131,19 +144,15 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         lifecycleScope.launch {
             try {
                 val result = AnkiquestHomeData.local()
-                if (turn == generation) {
-                    local = result
-                    scheduleLocalRefresh(result.nextUpdateAt)
-                    localFailed = false
-                    render()
+                if (isCurrent(turn, current?.scope)) {
+                    applyLocal(result)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "AnkiQuest local study could not be loaded")
-                if (turn == generation) {
-                    localFailed = true
-                    render()
+                if (isCurrent(turn, current?.scope)) {
+                    applyLocal(null)
                 }
             }
         }
@@ -190,13 +199,27 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                     } catch (_: JSONException) {
                         R.string.aq_home_server_error
                     }
-                if (turn == generation) {
+                if (isCurrent(turn, current.scope)) {
                     profileFailure = failure
                     if (failure == R.string.aq_home_auth) profile = null
                     loading = false
                     render()
                 }
             }
+    }
+
+    private fun isCurrent(
+        turn: Int,
+        scope: String?,
+    ): Boolean = turn == generation && ownsScope(scope)
+
+    private fun ownsScope(scope: String?): Boolean = account?.scope == scope && AnkiquestHomeData.account()?.scope == scope
+
+    private fun applyLocal(value: HomeLocal?) {
+        local = value
+        localFailed = value == null
+        scheduleLocalRefresh(value?.nextUpdateAt)
+        render()
     }
 
     private fun refreshCopies(
@@ -208,16 +231,15 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             lifecycleScope.launch {
                 val result =
                     try {
-                        AnkiquestDeckCopies.inbox(current)
+                        CopyInbox.Ready(AnkiquestDeckCopies.inbox(current))
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
                         Timber.w(error, "AnkiQuest deck copies could not be loaded")
-                        null
+                        CopyInbox.Unavailable
                     }
-                if (turn == generation && account?.scope == current.scope) {
+                if (isCurrent(turn, current.scope)) {
                     copyInbox = result
-                    copyFailed = result == null
                     render()
                 }
             }
@@ -344,11 +366,13 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         text(panel, getString(R.string.aq_copies_title), heading = true)
         text(panel, getString(R.string.aq_copies_description), small = true)
         copyStatus?.let { text(panel, it, small = true) }
-        val data = copyInbox
-        if (data == null) {
-            text(panel, getString(if (copyFailed) R.string.aq_copies_unavailable else R.string.aq_home_loading_local), small = true)
+        val inbox = copyInbox
+        if (inbox !is CopyInbox.Ready) {
+            val label = if (inbox == CopyInbox.Unavailable) R.string.aq_copies_unavailable else R.string.aq_home_loading_local
+            text(panel, getString(label), small = true)
             return
         }
+        val data = inbox.data
         val friends = data.optJSONArray("friends")?.objects().orEmpty()
         val decks = local?.decks.orEmpty()
         button(panel, R.string.aq_copies_share, enabled = !copyBusy && friends.isNotEmpty() && decks.isNotEmpty()) {
@@ -492,28 +516,38 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
 
     private fun chooseDeck() {
         val rows = local?.decks.orEmpty()
+        val owner = account?.scope
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.aq_home_change_deck)
             .setItems(rows.map { "${it.name} · ${it.daily.label(this)}" }.toTypedArray()) { _, index ->
-                lifecycleScope.launch {
-                    try {
-                        CollectionManager.withCol {
-                            if (decks.get(rows[index].id) != null) decks.select(rows[index].id)
-                        }
-                        local = AnkiquestHomeData.local()
-                        scheduleLocalRefresh(local?.nextUpdateAt)
-                        localFailed = false
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Timber.w(e, "AnkiQuest selected deck could not be loaded")
-                        localFailed = true
-                        local = null
-                    }
-                    render()
+                if (ownsScope(owner)) {
+                    selectDeck(rows[index].id, owner)
                 }
             }.setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun selectDeck(
+        deck: Long,
+        owner: String?,
+    ) {
+        lifecycleScope.launch {
+            // Commit the choice first, then replace any refresh that saw the previous deck.
+            try {
+                CollectionManager.withCol {
+                    if (AnkiquestHomeData.account()?.scope == owner && decks.get(deck) != null) {
+                        decks.select(deck)
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "AnkiQuest focus deck could not be selected")
+            }
+            if (ownsScope(owner)) {
+                refresh()
+            }
+        }
     }
 
     private fun openDecks(deck: Long? = null) {
