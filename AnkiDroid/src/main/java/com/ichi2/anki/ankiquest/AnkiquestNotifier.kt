@@ -75,6 +75,9 @@ object AnkiquestNotifier {
             }
         var queued = false
         for (entry in entries) {
+            if (scope != null && AnkiquestHomeData.account()?.scope != scope) {
+                break
+            }
             val id = entry.getLong("id")
             if (id <= previous) continue
             val fresh = AnkiquestCompletionPolicy.freshNotification(entry.optLong("created_at"), firstPoll)
@@ -112,6 +115,11 @@ object AnkiquestNotifier {
             val friendsWin = kind == "share" && win != null
             val cheerable = friendsWin && !entry.optBoolean("reacted")
             val card = entry.optString("image").takeIf { fresh && kind == "share" && it.isNotEmpty() }
+            val picture = card?.let { AnkiquestShare.picture(it) }
+            // The image request can finish after sign-out. Leave this entry and the rest for its owner.
+            if (scope != null && AnkiquestHomeData.account()?.scope != scope) {
+                break
+            }
             if (fresh &&
                 notify(
                     context,
@@ -152,7 +160,7 @@ object AnkiquestNotifier {
                         emptyList()
                     },
                     kind == "nudge",
-                    picture = card?.let { AnkiquestShare.picture(it) },
+                    picture = picture,
                     art = AnkiquestArt.forNotice(kind, entry.optString("topic").ifEmpty { null }),
                 ) == Delivery.DISABLED
             ) {
