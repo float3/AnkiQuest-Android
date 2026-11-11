@@ -11,6 +11,7 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Choice
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.Mode
 import com.ichi2.anki.ankiquest.AnkiquestDailyGoal.ServerGoal
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
@@ -59,7 +60,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
 
     @Before
     fun startServer() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
             val text = exchange.requestBody.bufferedReader().use { it.readText() }
@@ -108,7 +109,7 @@ class AnkiquestServerGoalTest : RobolectricTest() {
     @After
     fun stopServer() {
         if (::server.isInitialized) server.stop(0)
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     private fun account() = AnkiquestHomeData.account()!!

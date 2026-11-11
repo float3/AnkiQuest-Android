@@ -12,6 +12,7 @@ import androidx.test.filters.SdkSuppress
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.testutils.EmptyApplication
@@ -50,7 +51,7 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Before
     fun startServer() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/api/share/hill") { exchange ->
             val body = exchange.requestBody.bufferedReader().use { it.readText() }
@@ -116,7 +117,7 @@ class AnkiquestShareTest : RobolectricTest() {
     @After
     fun stopServer() {
         if (::server.isInitialized) server.stop(0)
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     @Test

@@ -7,6 +7,7 @@ import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.contextmenu.DeckPickerMenuContentProvider
 import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
 import io.mockk.every
@@ -33,7 +34,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
     @Test
     fun `the account comes from one snapshot when settings change while it is read`() {
         val preferences = AnkiDroidApp.sharedPrefs()
-        val previousOverride = AnkiDroidApp.sharedPreferencesTestingOverride
+        val previousOverride = SharedPreferencesTestHook.override
         val changingPreferences = mockk<SharedPreferences>()
         every { changingPreferences.getString(any(), any()) } answers { preferences.getString(firstArg(), secondArg()) }
         every { changingPreferences.all } answers {
@@ -45,7 +46,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
             }
             captured
         }
-        AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
+        SharedPreferencesTestHook.override = changingPreferences
         try {
             val account = assertNotNull(HomeAccount.current())
             val consistent =
@@ -53,7 +54,7 @@ class AnkiquestSettingsTest : RobolectricTest() {
                     (account.server == "https://different.example" && account.user == "hill" && account.token == "different-server-secret")
             assertTrue(consistent, "server, player and token never mix two accounts: $account")
         } finally {
-            AnkiDroidApp.sharedPreferencesTestingOverride = previousOverride
+            SharedPreferencesTestHook.override = previousOverride
         }
     }
 
