@@ -17,6 +17,7 @@ import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
+import androidx.appcompat.content.res.AppCompatResources
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.common.time.TimeManager
@@ -332,7 +333,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
                     textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSp, metrics)
                 }
-            val flameWidth = tier?.let { context.getDrawable(it.flame)?.intrinsicWidth } ?: 0
+            val flameWidth = tier?.let { AppCompatResources.getDrawable(context, it.flame)?.intrinsicWidth } ?: 0
             val available = widthDp * metrics.density - flameWidth
             val scale = minOf(1f, available / paint.measureText(number), heightDp * metrics.density / paint.fontSpacing)
             views.setTextViewTextSize(R.id.ankiquest_streak_number, TypedValue.COMPLEX_UNIT_PX, paint.textSize * scale)
