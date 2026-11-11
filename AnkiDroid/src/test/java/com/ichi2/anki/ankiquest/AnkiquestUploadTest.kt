@@ -12,6 +12,7 @@ import com.ichi2.anki.CollectionOperation
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.testutils.EmptyApplication
@@ -76,7 +77,7 @@ class AnkiquestUploadTest : RobolectricTest() {
         // HTTP server or WorkManager database when an upload requests a widget refresh.
         mockkObject(AnkiquestWidget)
         every { AnkiquestWidget.requestUpdate(any()) } just Runs
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.reset()
         addBasicNote()
         col.sched.answerCard(col.sched.card!!, Rating.EASY)
@@ -127,7 +128,7 @@ class AnkiquestUploadTest : RobolectricTest() {
             if (::server.isInitialized) server.stop(0)
         } finally {
             unmockkObject(AnkiquestWidget)
-            AnkiDroidApp.sharedPreferencesTestingOverride = null
+            SharedPreferencesTestHook.override = null
         }
     }
 

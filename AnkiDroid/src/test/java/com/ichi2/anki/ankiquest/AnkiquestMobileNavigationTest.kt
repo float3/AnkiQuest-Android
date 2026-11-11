@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import io.mockk.every
 import io.mockk.mockk
 import org.json.JSONObject
@@ -81,12 +82,12 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
             preferences.edit { putString("username", "different-member") }
             snapshot
         }
-        val previousOverride = AnkiDroidApp.sharedPreferencesTestingOverride
+        val previousOverride = SharedPreferencesTestHook.override
         try {
-            AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
+            SharedPreferencesTestHook.override = changingPreferences
             assertEquals(before, AnkiquestNavigation.accountFingerprint())
         } finally {
-            AnkiDroidApp.sharedPreferencesTestingOverride = previousOverride
+            SharedPreferencesTestHook.override = previousOverride
         }
         assertNotEquals(before, AnkiquestNavigation.accountFingerprint())
     }

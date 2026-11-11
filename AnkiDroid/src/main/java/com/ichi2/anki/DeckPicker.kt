@@ -186,6 +186,7 @@ import com.ichi2.anki.reviewreminders.ScheduleRemindersFragment
 import com.ichi2.anki.servicelayer.ScopedStorageService
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.settings.enums.DayTheme
+import com.ichi2.anki.settings.uiConfigPrefs
 import com.ichi2.anki.shareddeck.SharedDecksActivity
 import com.ichi2.anki.snackbar.BaseSnackbarBuilderProvider
 import com.ichi2.anki.snackbar.SnackbarBuilder
@@ -977,7 +978,7 @@ open class DeckPicker :
                             divider = requireNotNull(binding.resizingDivider) { "resizingDivider" },
                             startPane = deckPickerBinding.root,
                             endPane = requireNotNull(binding.studyoptionsFragment) { "studyoptionsFragment" },
-                            sharedPrefs = Prefs.getUiConfig(this),
+                            sharedPrefs = uiConfigPrefs(),
                             startPaneWeightKey = PREF_DECK_PICKER_PANE_WEIGHT,
                             endPaneWeightKey = PREF_STUDY_OPTIONS_PANE_WEIGHT,
                             onResizingChanged = { isResizing -> fragment?.onResizingChanged(isResizing) },

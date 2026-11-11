@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
@@ -38,7 +39,7 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
 
     @Before
     fun startServer() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
             requests.add(
@@ -63,7 +64,7 @@ class AnkiquestStreakProtectionTest : RobolectricTest() {
     @After
     fun stopServer() {
         server.stop(0)
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     @Test
