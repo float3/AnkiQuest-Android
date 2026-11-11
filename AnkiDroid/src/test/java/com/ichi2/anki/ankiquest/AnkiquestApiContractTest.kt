@@ -660,6 +660,9 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "global_leaderboard_on",
                 // Hiding a stranger on Global (float3/ankiquest#218) until the app offers it.
                 "leaderboard_hide",
+                // The activity inbox (float3/ankiquest b731bc2) until the app shows it.
+                "activity",
+                "activity_older",
             ) - CONSUMED - UNUSED
     }
 }
