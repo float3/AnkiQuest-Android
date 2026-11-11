@@ -147,7 +147,7 @@ class ReviewHeatmapGrid
                         DayState.SHORT -> shortColor
                         DayState.FROZEN, DayState.SKIPPED -> frozenColor
                         DayState.NONE -> reviewColors[0]
-                        else -> (if (future) forecastColors else reviewColors)[intensity(count, currentData.dailyAverage)]
+                        else -> (if (future) forecastColors else reviewColors)[ReviewHeatmap.intensity(count, currentData.dailyAverage)]
                     }
                 cellPaint.alpha = if (date > currentData.forecastEndDate) 70 else 255
                 canvas.drawRoundRect(bounds, 3 * density, 3 * density, cellPaint)
@@ -166,18 +166,6 @@ class ReviewHeatmapGrid
                 }
             }
         }
-
-        private fun intensity(
-            count: Int,
-            dailyAverage: Double,
-        ): Int =
-            when {
-                count <= 0 -> 0
-                count <= dailyAverage.coerceAtLeast(1.0) / 2 -> 1
-                count <= dailyAverage.coerceAtLeast(1.0) -> 2
-                count <= dailyAverage.coerceAtLeast(1.0) * 2 -> 3
-                else -> 4
-            }
 
         internal fun cellBounds(index: Int): RectF {
             val position = offset + index
