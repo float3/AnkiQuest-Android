@@ -96,6 +96,33 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private val account: HomeAccount get() = assertNotNull(AnkiquestHomeData.account())
 
     @Test
+    fun `activity pages keep global counts and invitation actions`() =
+        runBlocking {
+            val first = AnkiquestFeed.page(account)
+            assertFalse(first.legacy)
+            assertEquals(7, first.unread)
+            assertEquals(1, first.actionCount)
+            assertEquals(17L, first.latestId)
+            assertEquals(15L, first.nextBefore)
+            assertEquals(listOf(17L, 15L), first.items.map { it.id })
+            val invitation = first.attention.single()
+            assertEquals(4L, invitation.challengeId)
+            assertTrue(invitation.actionRequired)
+            assertTrue(invitation.unread)
+            assertFalse(invitation.answerable)
+
+            val older = AnkiquestFeed.page(account, before = first.nextBefore)
+            assertEquals(first.unread, older.unread)
+            assertEquals(first.actionCount, older.actionCount)
+            assertEquals(first.latestId, older.latestId)
+            assertEquals(9L, older.nextBefore)
+            assertEquals(listOf(12L, 9L), older.items.map { it.id })
+            assertTrue(older.items.all { it.id < assertNotNull(first.nextBefore) })
+            assertTrue("GET /api/activity/hill" in requests)
+            assertFalse("GET /api/notifications/hill" in requests)
+        }
+
+    @Test
     fun `every example is either read by the app or known to be unused`() {
         val directory = File(assertNotNull(javaClass.classLoader?.getResource(EXAMPLES)).toURI())
         val examples = assertNotNull(directory.list()).filter { it.endsWith(".json") }.map { it.removeSuffix(".json") }.toSet()
@@ -529,6 +556,12 @@ class AnkiquestApiContractTest : RobolectricTest() {
     ): String? {
         val parts = path.removePrefix("/api/").split('/')
         return when {
+            path == "/api/activity/hill" && method == "GET" ->
+                when (query.orEmpty().split('&').firstOrNull { it.startsWith("before=") }) {
+                    null -> "activity"
+                    "before=15" -> "activity_older"
+                    else -> null
+                }
             path == "/api/leaderboard" && query.orEmpty().split('&').contains("period=day") -> "leaderboard_day"
             path == "/api/week" -> "week"
             path == "/api/profile/cerro" -> "player_profile"
@@ -625,6 +658,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
                     "devices_sign_out",
                     "account",
                     "records",
+                    "activity",
+                    "activity_older",
                 )
 
         val UNUSED = emptySet<String>()
