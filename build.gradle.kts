@@ -73,6 +73,9 @@ val backendTempLibraryService =
  */
 val unitTestForkMaxHeapGb = 2
 
+// Extra Rust backend copies one test fork may make (rsdroid default: 5): one per classloader that loads it.
+val RUST_BACKEND_MAX_COPIES = 12
+
 // Here we extract per-module "best practices" settings to a single top-level evaluation
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
@@ -120,6 +123,9 @@ subprojects {
                 it.minHeapSize = "1g"
                 it.configureRobolectricJvm()
 
+                // A fork's Robolectric sandboxes each hold a copy of the Rust backend; the default 6 copies
+                // ran out on macOS, failing CardBrowserColumnTest setup. Copies are made only when needed.
+                it.systemProperty("net.ankiweb.rsdroid.testing.maxCopies", RUST_BACKEND_MAX_COPIES)
                 it.maxParallelForks = gradleTestMaxParallelForks
                 it.forkEvery = 40
                 it.systemProperties["junit.jupiter.execution.parallel.enabled"] = true
