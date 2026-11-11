@@ -175,7 +175,7 @@ internal object AnkiquestMoments {
         }
         rememberDay(prefs, owner, day)
 
-        // A milestone keeps its server card. An uncertain count waits for confirmation.
+        // Milestones keep their server cards. An uncertain streak gets the cue without a numbered card.
         val streak = verdict.streak
         if (streak != null && streak !in milestoneDays) {
             val language = AnkiquestLanguage.context(context)
@@ -404,6 +404,7 @@ internal object AnkiquestMoments {
      * Decides what becomes of an inbox [entry] for [account]: its moment is queued when the app is in
      * [foreground], counted quietly when routine, or skipped when already seen. Anything else is left
      * to a system notification; call [markShown] once that is posted.
+     * SECURED notices use the daily claim before the quiet flag so a routine minimum still gets its once-daily moment.
      */
     @Synchronized
     fun route(
