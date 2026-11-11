@@ -34,4 +34,6 @@
     <string name="aq_profile_deck_alerts_start">Recevoir à nouveau les alertes de paquets de %1$s</string>
     <string name="aq_profile_freezes_pause">Suspendre la protection de série</string>
     <string name="aq_profile_freezes_resume">Reprendre la protection de série</string>
+    <string name="ankiquest_show_global_title">M’afficher au classement mondial</string>
+    <string name="ankiquest_show_global_summary">Les joueurs connectés voient ton nom, ton avatar, ton niveau, tes XP et ta série. Les profils publics sont aussi visibles sans connexion. Tes amis et les membres de tes groupes en voient plus. Ce réglage concerne uniquement le classement.</string>
 </resources>
