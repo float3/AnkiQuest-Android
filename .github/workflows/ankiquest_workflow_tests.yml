@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/ankiquest_workflow_tests.yml'
       - '.github/workflows/ankiquest_screenshot_*.yml'
+      - '.github/ankiquest_screenshot_baseline.js'
       - '.github/tests/screenshots.test.cjs'
       - '.github/tests/screenshot-storage.test.cjs'
   # Pull requests run from pull_request; pushing their branch would run the same tests again.
@@ -15,6 +16,7 @@ on:
     paths:
       - '.github/workflows/ankiquest_workflow_tests.yml'
       - '.github/workflows/ankiquest_screenshot_*.yml'
+      - '.github/ankiquest_screenshot_baseline.js'
       - '.github/tests/screenshots.test.cjs'
       - '.github/tests/screenshot-storage.test.cjs'
 
