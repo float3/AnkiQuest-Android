@@ -22,6 +22,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
@@ -93,7 +94,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
 
     @Before
     fun startServer() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         photo = png()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
@@ -146,7 +147,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
     @After
     fun stopServer() {
         server.stop(0)
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     @Test
@@ -171,7 +172,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
             switchServer()
             captured
         }
-        AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
+        SharedPreferencesTestHook.override = changingPreferences
 
         val account = assertNotNull(AnkiquestAvatars.account())
         assertEquals("$url/", account.base.toString())
@@ -227,7 +228,7 @@ class AnkiquestAvatarsTest : RobolectricTest() {
             }
             value
         }
-        AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
+        SharedPreferencesTestHook.override = changingPreferences
         assertEquals("different-fallback", assertNotNull(AnkiquestAvatars.account()).user)
     }
 

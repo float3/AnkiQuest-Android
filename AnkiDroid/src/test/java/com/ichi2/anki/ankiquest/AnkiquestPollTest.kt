@@ -9,6 +9,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
@@ -71,7 +72,7 @@ class AnkiquestPollTest : RobolectricTest() {
 
     @Before
     fun startPollingServer() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         mockkObject(AnkiquestWidget, AnkiquestNotifier)
         every { AnkiquestWidget.render(any(), any(), any(), any()) } just Runs
         coEvery { AnkiquestNotifier.onLeaderboard(any()) } just Runs
@@ -130,7 +131,7 @@ class AnkiquestPollTest : RobolectricTest() {
     fun stopPollingServer() {
         if (::server.isInitialized) server.stop(0)
         unmockkObject(AnkiquestWidget, AnkiquestNotifier)
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     @Test

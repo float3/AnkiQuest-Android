@@ -3,9 +3,9 @@
 package com.ichi2.anki.ankiquest
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -39,7 +39,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.resetWith(clock)
         AnkiquestCapabilities.forgetMemory()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -58,7 +58,7 @@ class AnkiquestCapabilitiesTest : RobolectricTest() {
     fun stop() {
         runCatching { server.stop(0) }
         AnkiquestCapabilities.forgetMemory()
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     @Test

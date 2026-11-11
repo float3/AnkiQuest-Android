@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -57,7 +58,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
         mockkObject(AnkiquestWidget, AnkiquestShare)
         every { AnkiquestWidget.requestUpdate(any()) } just Runs
         every { AnkiquestShare.picture(any()) } returns null
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.resetWith(MockTime(EXAMPLE_NOW))
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
@@ -89,7 +90,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             if (::server.isInitialized) server.stop(0)
         } finally {
             unmockkObject(AnkiquestWidget, AnkiquestShare)
-            AnkiDroidApp.sharedPreferencesTestingOverride = null
+            SharedPreferencesTestHook.override = null
         }
     }
 

@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -47,7 +48,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         TimeManager.resetWith(MockTime(1_750_000_000_000))
         AnkiquestCapabilities.forgetMemory()
         // The stand-in servers speak plain http; only the address check is relaxed for them.
@@ -86,7 +87,7 @@ class AnkiquestServerMoveTest : RobolectricTest() {
         runCatching { main.stop(0) }
         AnkiquestServerMove.acceptable = { it.isHttps }
         AnkiquestCapabilities.forgetMemory()
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     private fun serve(answer: (String, String?) -> Pair<Int, String>): HttpServer =
