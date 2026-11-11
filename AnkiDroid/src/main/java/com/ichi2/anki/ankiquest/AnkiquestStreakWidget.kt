@@ -101,7 +101,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
 
         /**
          * The poses that fit today for the big layouts, which have room to show more of the moment
-         * than [pose]. Artwork that is not drawn yet is aliased in ankiquest_art.xml (float3/ankiquest#88).
+         * than [pose]. The drawables are committed exports of the server masters (float3/ankiquest#88).
          */
         internal fun poses(
             state: State,

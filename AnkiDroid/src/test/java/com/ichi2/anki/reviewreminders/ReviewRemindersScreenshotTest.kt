@@ -13,8 +13,8 @@ import androidx.test.core.app.ActivityScenario
 import com.google.android.material.appbar.AppBarLayout
 import com.ichi2.anki.OptionalPermissionSet
 import com.ichi2.anki.R
-import com.ichi2.anki.ScreenshotTest
 import com.ichi2.anki.StudyOptionsActivity
+import com.ichi2.anki.ankiquest.heatmap.DeckHeatmapScreenshotTest
 import com.ichi2.anki.common.destinations.StudyOptionsDestination
 import com.ichi2.anki.common.destinations.launchActivity
 import com.ichi2.anki.common.utils.dp
@@ -41,7 +41,7 @@ import org.robolectric.Shadows.shadowOf
 /**
  * Covers all [FragmentHost] configurations of the fragment.
  */
-class ReviewRemindersScreenshotTest : ScreenshotTest() {
+class ReviewRemindersScreenshotTest : DeckHeatmapScreenshotTest() {
     @Before
     @After
     fun clearReminders() {

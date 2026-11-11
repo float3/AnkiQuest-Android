@@ -81,6 +81,12 @@
             android:persistent="false"
             android:title="@string/ankiquest_share_moments_title"
             android:summary="@string/ankiquest_share_moments_summary" />
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_show_global_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_show_global_title"
+            android:summary="@string/ankiquest_show_global_summary"
+            app:isPreferenceVisible="false" />
         <Preference
             android:key="@string/ankiquest_moments_decks_key"
             android:persistent="false"
