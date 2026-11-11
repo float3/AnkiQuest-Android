@@ -30,6 +30,21 @@ class ReviewHeatmapFixtureTest {
         }
 
     @Test
+    fun `shared colour levels`() {
+        val cases = fixture.getJSONArray("intensity_cases")
+        assertTrue(cases.length() > 0)
+        for (i in 0 until cases.length()) {
+            val case = cases.getJSONObject(i)
+            val average = case.getDouble("daily_average")
+            val counts = case.getJSONArray("counts")
+            val levels = case.getJSONArray("levels")
+            val expected = (0 until levels.length()).map { levels.getInt(it) }
+            val actual = (0 until counts.length()).map { ReviewHeatmap.intensity(counts.getInt(it), average) }
+            assertEquals(expected, actual, "daily average $average")
+        }
+    }
+
+    @Test
     fun `every shared case`() {
         val zone = ZoneId.of(fixture.getString("zone"))
         val cases = fixture.getJSONArray("cases")
