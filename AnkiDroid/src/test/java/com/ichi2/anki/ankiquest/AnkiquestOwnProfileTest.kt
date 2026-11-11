@@ -16,6 +16,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
@@ -54,7 +55,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
     fun startServer() {
         mockkObject(AnkiquestPoll)
         every { AnkiquestPoll.refreshNow(any()) } just Runs
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         AnkiquestWidget.forgetFresh()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
@@ -83,7 +84,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         } finally {
             AnkiquestWidget.forgetFresh()
             unmockkObject(AnkiquestPoll)
-            AnkiDroidApp.sharedPreferencesTestingOverride = null
+            SharedPreferencesTestHook.override = null
         }
     }
 
