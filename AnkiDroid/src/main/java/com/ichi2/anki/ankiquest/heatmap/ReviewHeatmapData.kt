@@ -82,6 +82,19 @@ data class DayVerdict(
 }
 
 object ReviewHeatmap {
+    /** Colour level relative to the daily average, shared with the desktop heatmap fixture. */
+    internal fun intensity(
+        count: Int,
+        dailyAverage: Double,
+    ): Int =
+        when {
+            count <= 0 -> 0
+            count <= dailyAverage.coerceAtLeast(1.0) / 2 -> 1
+            count <= dailyAverage.coerceAtLeast(1.0) -> 2
+            count <= dailyAverage.coerceAtLeast(1.0) * 2 -> 3
+            else -> 4
+        }
+
     const val FORECAST_DAYS = 90L
     private const val DAY_MILLIS = 86_400_000L
 

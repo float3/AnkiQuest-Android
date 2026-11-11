@@ -26,6 +26,7 @@ import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
+import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.SubscriptionRepository
 import io.mockk.coEvery
@@ -35,6 +36,7 @@ import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -161,6 +163,63 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         idle()
         assertFalse(switch.isChecked)
         coVerify { AnkiquestSharing.saveSettings(any(), private, null) }
+    }
+
+    @Test
+    fun `global listing reflects the server and saves only that choice`() {
+        val field = AnkiquestWidgetSettings.GLOBAL_SETTING
+        coEvery { Ankiquest.notificationSwitches() } returns JSONObject().put(field, true)
+        coEvery { Ankiquest.setNotificationSwitch(field, false) } returns JSONObject().put(field, false)
+
+        val switch = assertNotNull(open().findPreference<SwitchPreferenceCompat>("ankiquestShowGlobal"))
+        assertTrue(switch.isVisible)
+        assertTrue(switch.isChecked)
+        switch.performClick()
+        idle()
+
+        assertFalse(switch.isChecked)
+        coVerify(exactly = 1) { Ankiquest.setNotificationSwitch(field, false) }
+    }
+
+    @Test
+    fun `global listing is hidden on an older server`() {
+        val switch = assertNotNull(open().findPreference<SwitchPreferenceCompat>("ankiquestShowGlobal"))
+        assertFalse(switch.isVisible)
+    }
+
+    @Test
+    fun `switches read the new account while the old read is suspended`() {
+        AnkiquestNotifier.setRankAlerts(false)
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val old = CompletableDeferred<JSONObject>()
+        val field = AnkiquestWidgetSettings.GLOBAL_SETTING
+        val current = JSONObject().put(Ankiquest.NUDGES, false).put(Ankiquest.CELEBRATIONS, false).put(field, true)
+        coEvery { Ankiquest.notificationSwitches() } coAnswers {
+            if (prefs.getString(Ankiquest.PREF_USER, null) == "member") old.await() else current
+        }
+        try {
+            val fragment = open()
+            val moments = fragment.switch(R.string.ankiquest_notify_moments_key)
+            val listing = fragment.switch(R.string.ankiquest_show_global_key)
+            assertFalse(moments.isEnabled)
+
+            prefs.edit {
+                putString(Ankiquest.PREF_USER, "other")
+                putString(Ankiquest.PREF_TOKEN, "other-token")
+            }
+            fragment.onResume()
+            idle()
+            assertTrue(moments.isEnabled)
+            assertFalse(moments.isChecked)
+            assertTrue(listing.isChecked)
+
+            old.complete(JSONObject().put(Ankiquest.NUDGES, true).put(Ankiquest.CELEBRATIONS, true).put(field, false))
+            idle()
+            assertFalse(moments.isChecked)
+            assertTrue(listing.isChecked)
+        } finally {
+            old.cancel()
+        }
     }
 
     @Test

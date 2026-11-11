@@ -43,6 +43,7 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_notify_moments_key,
             R.string.ankiquest_streak_cue_key,
             R.string.ankiquest_share_moments_key,
+            R.string.ankiquest_show_global_key,
             R.string.ankiquest_moments_decks_key,
             R.string.ankiquest_deck_share_ask_key,
             R.string.ankiquest_mood_icon_key,

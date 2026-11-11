@@ -52,6 +52,7 @@ import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
+import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
 import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
@@ -117,9 +118,10 @@ class AnkiquestSettingsFragment : SettingsFragment() {
 
     override fun initSubscreen() {
         refreshServerSettings.clear()
+        val deckSettings = sharedRead { Ankiquest.notificationSwitches() }
         bindAccount()
-        bindNotifications()
-        bindSharing()
+        bindNotifications(deckSettings)
+        bindSharing(deckSettings)
         bindApp()
         showAccount()
     }
@@ -287,7 +289,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
      * Three switches and the reminder timing. Each switch stands for a few underlying settings, on
      * the server and on this phone, and shows on while any of them is on.
      */
-    private fun bindNotifications() {
+    private fun bindNotifications(switches: suspend () -> JSONObject) {
         bindServerToggle(
             R.string.ankiquest_notify_friends_key,
             read = { AnkiquestSubscriptions.repository.load(requireSignedIn()).enabled },
@@ -306,7 +308,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             notify = true,
         )
         bindReminderTiming(reminders)
-        val switches = sharedRead { Ankiquest.notificationSwitches() }
         bindServerToggle(
             R.string.ankiquest_notify_moments_key,
             read = {
@@ -443,7 +444,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             .apply { timeZone = TimeZone.getTimeZone("UTC") }
             .format(Date(hour * 3_600_000L))
 
-    private fun bindSharing() {
+    private fun bindSharing(switches: suspend () -> JSONObject) {
         bindServerToggle(
             R.string.ankiquest_share_moments_key,
             read = { AnkiquestSharing.settings(requireSignedIn()).shared },
@@ -453,6 +454,13 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     AnkiquestSharing.saveSettings(account, AnkiquestSharing.settings(account).switched(on), dailyCap = null).shared
                 }
             },
+        )
+        // Older servers omit the global listing field.
+        val global = AnkiquestWidgetSettings.GLOBAL_SETTING
+        bindServerToggle(
+            R.string.ankiquest_show_global_key,
+            read = { switches().opt(global) as? Boolean },
+            save = { Ankiquest.setNotificationSwitch(global, it).getBoolean(global) },
         )
         bindAction(R.string.ankiquest_moments_decks_key) {
             try {
@@ -676,9 +684,12 @@ class AnkiquestSettingsFragment : SettingsFragment() {
 
     /** Lets settings refreshed together share one in-flight [read] instead of each asking the server. */
     private fun <T> sharedRead(read: suspend () -> T): suspend () -> T {
-        var running: Deferred<T>? = null
+        var running: Pair<HomeAccount?, Deferred<T>>? = null
         return {
-            val shared = running?.takeIf { it.isActive } ?: lifecycleScope.async { read() }.also { running = it }
+            val account = signedIn()
+            val shared =
+                running?.takeIf { it.first == account && it.second.isActive }?.second
+                    ?: lifecycleScope.async { read() }.also { running = account to it }
             shared.await()
         }
     }
@@ -686,7 +697,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     /** Server switches are refreshed for the current account and change only after the server confirms. */
     private fun bindServerToggle(
         key: Int,
-        read: suspend () -> Boolean,
+        read: suspend () -> Boolean?,
         save: suspend (Boolean) -> Boolean,
         notify: Boolean = false,
     ) {
@@ -711,8 +722,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 try {
                     val enabled = read()
                     if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
-                    preference.isChecked = enabled
-                    preference.isEnabled = true
+                    preference.isVisible = enabled != null
+                    preference.isChecked = enabled == true
+                    preference.isEnabled = enabled != null
                     preference.summary = summary
                 } catch (e: CancellationException) {
                     throw e
