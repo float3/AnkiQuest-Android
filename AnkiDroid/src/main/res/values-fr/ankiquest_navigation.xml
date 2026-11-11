@@ -4,7 +4,6 @@
     <string name="ankiquest_me">Moi</string>
     <string name="ankiquest_nav_today">Aujourd’hui</string>
     <string name="ankiquest_nav_friends">Amis</string>
-    <string name="ankiquest_nav_progress">Progression</string>
     <string name="ankiquest_nav_decks">Paquets</string>
     <string name="ankiquest_open_today_title">Ouvrir Aujourd’hui au lancement</string>
     <string name="ankiquest_open_today_summary">Commence avec les études et les objectifs entre amis. Désactive pour ouvrir ta liste de paquets.</string>

@@ -4,7 +4,6 @@
     <string name="ankiquest_me">Yo</string>
     <string name="ankiquest_nav_today">Hoy</string>
     <string name="ankiquest_nav_friends">Amigos</string>
-    <string name="ankiquest_nav_progress">Progreso</string>
     <string name="ankiquest_nav_decks">Mazos</string>
     <string name="ankiquest_open_today_title">Abrir Hoy al iniciar</string>
     <string name="ankiquest_open_today_summary">Empieza con el estudio y los objetivos con amigos. Desactívalo para abrir tus mazos.</string>
