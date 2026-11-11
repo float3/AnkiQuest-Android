@@ -131,11 +131,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         val day = checkNotNull(AnkiquestDay.Server.profile(pending))
         AnkiquestDay.rememberLocal(scope, day, listOf(AnkiquestDay.Review(now, 600_000)))
 
-        // Drop the old process cache before the launcher and widget read the day.
-        AnkiquestDay::class.java.declaredFields.firstOrNull { it.name == "local" }?.let {
-            it.isAccessible = true
-            it.set(null, null)
-        }
+        // Launcher and widget read the persisted unsent totals.
         AnkiquestIcon.showLastKnown(targetContext, now)
         assertEquals(listOf(Mood.HAPPY), enabled())
         val widget =

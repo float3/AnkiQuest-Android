@@ -406,7 +406,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
-    /** Collection -> day verdict -> launcher and widgets, even when the upload cannot run. */
+    /**
+     * Collection -> day verdict -> launcher and widgets, even when the upload cannot run.
+     * A new study day stays unknown offline until a poll supplies its server window.
+     */
     private suspend fun refreshLocalDay(reviewOwner: String? = null) {
         val context = app ?: return
         val account = HomeAccount.current() ?: return
@@ -1076,10 +1079,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
-    /**
-     * Shows [text] briefly over the current screen. It is discoverable with accessibility services
-     * but not announced, because the session recap carries the same feedback without interrupting every answer.
-     */
+    /** Feedback kept with the account that produced it while the streak cue has priority. */
     private data class ReviewBanner(
         val text: String,
         val important: Boolean,
@@ -1111,6 +1111,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
+    /**
+     * Shows [text] briefly over the current screen. It is discoverable with accessibility services
+     * but not announced, because the session recap carries the same feedback without interrupting every answer.
+     */
     private fun showBanner(
         text: String,
         important: Boolean,

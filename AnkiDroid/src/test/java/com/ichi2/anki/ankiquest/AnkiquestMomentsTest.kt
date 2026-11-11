@@ -2,8 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.app.Activity
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -25,7 +28,12 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
+import java.lang.ref.WeakReference
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -293,6 +301,53 @@ class AnkiquestMomentsTest : RobolectricTest() {
             assertEquals(View.ACCESSIBILITY_LIVE_REGION_POLITE, label.accessibilityLiveRegion)
         } finally {
             unmockkObject(AnkiquestGoalBar.Companion)
+        }
+    }
+
+    @Test
+    fun `an important banner waits for the streak cue to finish`() {
+        val host = host()
+        val root = host.findViewById<FrameLayout>(android.R.id.content)
+        ReflectionHelpers.setField(Ankiquest, "activity", WeakReference<Activity>(host))
+        mockkObject(AnkiquestGoalBar.Companion)
+        try {
+            every { AnkiquestGoalBar.animationsEnabled(host) } returns false
+            assertNotNull(
+                AnkiquestStreakCue.show(host, 13, 0.4f, prefs) {
+                    ReflectionHelpers.callInstanceMethod<Unit>(
+                        Ankiquest,
+                        "showDeferredBanner",
+                        ClassParameter.from(Activity::class.java, host),
+                        ClassParameter.from(FrameLayout::class.java, root),
+                    )
+                },
+            )
+
+            fun banner(
+                text: String,
+                important: Boolean,
+            ) {
+                ReflectionHelpers.callInstanceMethod<Unit>(
+                    Ankiquest,
+                    "showBanner",
+                    ClassParameter.from(String::class.java, text),
+                    ClassParameter.from(Boolean::class.javaPrimitiveType, important),
+                )
+            }
+            banner("important", true)
+            banner("routine", false)
+            val deferred = root.findViewWithTag<TextView>("ankiquest_banner")
+            assertEquals(0f, deferred.alpha)
+            assertEquals("", deferred.text.toString())
+
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2_401))
+
+            assertFalse(AnkiquestStreakCue.showing(root))
+            assertEquals("important", deferred.text.toString())
+            assertNull(ReflectionHelpers.getField<Any?>(deferred, "pending"))
+        } finally {
+            unmockkObject(AnkiquestGoalBar.Companion)
+            ReflectionHelpers.setField(Ankiquest, "activity", WeakReference<Activity>(null))
         }
     }
 
