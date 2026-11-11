@@ -5,19 +5,26 @@ package com.ichi2.anki.ankiquest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.edit
+import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
@@ -30,6 +37,8 @@ import com.ichi2.anki.common.utils.android.showThemedToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -42,33 +51,302 @@ import timber.log.Timber
  */
 internal object AnkiquestMomentCard {
     private const val ART_DP = 128
+    private const val RECAP_ART_DP = 112
+    private const val MAX_PAGE_HEIGHT_DP = 400
 
-    /** Shows [moments] (at least one) of [account] over [host]; answers the dialog. */
+    /** Leave room for all dialog actions on short screens; each page scrolls within this height. */
+    private class Content(
+        context: Context,
+    ) : LinearLayout(context) {
+        init {
+            orientation = VERTICAL
+            setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, 0)
+            LayoutInflater.from(context).inflate(R.layout.dialog_ankiquest_moment, this, true)
+        }
+
+        override fun onMeasure(
+            widthMeasureSpec: Int,
+            heightMeasureSpec: Int,
+        ) {
+            // Dialogs first offer a maximum width; a pager needs its final width before laying out pages.
+            val width =
+                if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.AT_MOST) {
+                    MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY)
+                } else {
+                    widthMeasureSpec
+                }
+            val pager = findViewById<ViewPager2>(R.id.aq_moment_pager)
+            val more = findViewById<TextView>(R.id.aq_moment_more)
+            measureChild(more, width, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            val maximum = (MAX_PAGE_HEIGHT_DP * resources.displayMetrics.density).toInt()
+            // AlertDialog reserves only the first stacked action. Reserve the rest before growing the pager.
+            val actions = rootView.findViewById<View>(androidx.appcompat.R.id.buttonPanel)
+            val extraActions =
+                if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.AT_MOST && actions != null) {
+                    (actions.measuredHeight - minimumHeight(actions)).coerceAtLeast(0)
+                } else {
+                    0
+                }
+            val available =
+                if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED) {
+                    maximum
+                } else {
+                    MeasureSpec.getSize(heightMeasureSpec) - paddingTop - paddingBottom - extraActions -
+                        if (more.isVisible) more.measuredHeight else 0
+                }
+            pager.layoutParams.height = minOf(maximum, available.coerceAtLeast(0))
+            super.onMeasure(width, heightMeasureSpec)
+        }
+
+        private fun minimumHeight(view: View): Int =
+            when {
+                view.minimumHeight > 0 -> view.minimumHeight
+                view is ViewGroup && view.childCount == 1 -> minimumHeight(view.getChildAt(0))
+                else -> 0
+            }
+    }
+
+    /** Review result -> recap and moment pages -> optional deck-sharing handoff. */
+    data class Session(
+        val summary: AnkiquestStudySession.Summary?,
+        val onContinue: () -> Unit,
+        val onClose: () -> Unit,
+    )
+
+    /** One owner and lifetime for the recap and any moments that arrive while it is open. */
+    class Card(
+        private val host: Activity,
+        private val account: HomeAccount?,
+        initial: List<Moment>,
+        private val prefs: SharedPreferences,
+    ) {
+        private enum class Exit { DONE, CONTINUE, PROGRESS, REPLACED, CLOSED }
+
+        private val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
+        private val lifecycle = (host as LifecycleOwner).lifecycle
+        private val parentScope = (host as LifecycleOwner).lifecycleScope
+        private val jobs = SupervisorJob(parentScope.coroutineContext[Job])
+        private val scope = CoroutineScope(parentScope.coroutineContext + jobs)
+        private val content = Content(host)
+        private val pager = content.findViewById<ViewPager2>(R.id.aq_moment_pager)
+        private val more = content.findViewById<TextView>(R.id.aq_moment_more)
+        private val recap = RecapPage(host)
+        private val moments = initial.toMutableList()
+        private val pages = account?.let { Pages(host, it, moments, scope) }
+        private val adapter = ConcatAdapter(recap).apply { pages?.let(::addAdapter) }
+        private var session: Session? = null
+        private var exit = Exit.DONE
+
+        val dialog: AlertDialog =
+            AlertDialog
+                .Builder(host)
+                .setView(content)
+                .setNegativeButton(CommonString.close, null)
+                .setNeutralButton(R.string.ankiquest_summary_progress, null)
+                .setPositiveButton(R.string.ankiquest_summary_continue, null)
+                .create()
+
+        private val accountListener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+                if (!ownsAccount()) {
+                    abandon()
+                }
+            }
+        private val observer =
+            object : DefaultLifecycleObserver {
+                override fun onDestroy(owner: LifecycleOwner) {
+                    abandon()
+                }
+
+                override fun onResume(owner: LifecycleOwner) {
+                    if (!ownsAccount()) {
+                        abandon()
+                    }
+                }
+            }
+
+        fun show(session: Session?) {
+            pager.adapter = adapter
+            more.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+            pager.registerOnPageChangeCallback(
+                object : ViewPager2.OnPageChangeCallback() {
+                    override fun onPageSelected(position: Int) {
+                        describePage()
+                    }
+                },
+            )
+            dialog.setOnDismissListener {
+                val reason = exit
+                exit = Exit.CLOSED
+                lifecycle.removeObserver(observer)
+                prefs.unregisterOnSharedPreferenceChangeListener(accountListener)
+                jobs.cancel()
+                if (reason == Exit.CLOSED || reason == Exit.REPLACED || !ownsAccount()) {
+                    return@setOnDismissListener
+                }
+                if (recap.neverAgain) {
+                    prefs.edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
+                }
+                if (reason == Exit.DONE && AnkiquestPostStudyPrompts.ready(host)) {
+                    this.session?.onClose?.invoke()
+                }
+            }
+            dialog.show()
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener { close(Exit.DONE) }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { close(Exit.PROGRESS) }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { close(Exit.CONTINUE) }
+            attach(session)
+            lifecycle.addObserver(observer)
+            prefs.registerOnSharedPreferenceChangeListener(accountListener)
+            describePage()
+        }
+
+        fun owns(host: Activity): Boolean = this.host === host && ownsAccount()
+
+        fun hasSession(): Boolean = session != null
+
+        /** A summary may finish loading after the first moment has already opened the card. */
+        fun attach(session: Session?) {
+            if (session != null) {
+                this.session = session
+                session.summary?.let {
+                    recap.bind(it)
+                    pager.setCurrentItem(0, false)
+                }
+            }
+            val summary = this.session?.summary
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setText(
+                if (summary == null) CommonString.close else CommonString.multimedia_editor_field_editing_done,
+            )
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isVisible = summary != null
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isVisible = summary != null && summary.remaining > 0
+            describePage()
+        }
+
+        /** Keep the current page stable when an upload adds another moment. */
+        fun append(added: List<Moment>) {
+            val pages = pages ?: return
+            val first = moments.size
+            moments += added.filter { candidate -> moments.none { it.key == candidate.key } }.distinctBy { it.key }
+            if (moments.size > first) {
+                pages.notifyItemRangeInserted(first, moments.size - first)
+                describePage()
+            }
+        }
+
+        /** A notification can select its moment without throwing away the session recap. */
+        fun select(moment: Moment) {
+            append(listOf(moment))
+            val position = moments.indexOfFirst { it.key == moment.key }
+            if (position >= 0) {
+                pager.setCurrentItem(recap.itemCount + position, true)
+            }
+        }
+
+        fun abandon() {
+            exit = Exit.REPLACED
+            dialog.dismiss()
+        }
+
+        private fun ownsAccount(): Boolean = owner == AnkiquestNavigation.accountFingerprint(prefs.all)
+
+        private fun close(destination: Exit) {
+            if (!dialog.isShowing) {
+                return
+            }
+            if (!ownsAccount()) {
+                abandon()
+                return
+            }
+            if (!AnkiquestPostStudyPrompts.resumed(host)) {
+                return
+            }
+            exit = destination
+            dialog.dismiss()
+            when (destination) {
+                Exit.CONTINUE -> session?.onContinue?.invoke()
+                Exit.PROGRESS -> host.startActivity(AnkiquestProfileActivity.intent(host))
+                else -> Unit
+            }
+        }
+
+        private fun describePage() {
+            val count = adapter.itemCount
+            more.isVisible = count > 1
+            if (count == 0) {
+                return
+            }
+            val position = pager.currentItem.coerceAtMost(count - 1)
+            more.text = foldLine(host, position, count)
+            val title =
+                if (recap.itemCount > 0 && position == 0) {
+                    host.getString(R.string.ankiquest_summary_title)
+                } else {
+                    moments.getOrNull(position - recap.itemCount)?.title
+                }
+            ViewCompat.setAccessibilityPaneTitle(content, title)
+            dialog.window?.setTitle(title.orEmpty())
+        }
+    }
+
+    private class RecapPage(
+        private val host: Activity,
+    ) : RecyclerView.Adapter<RecapPage.Holder>() {
+        private var summary: AnkiquestStudySession.Summary? = null
+        var neverAgain = false
+            private set
+
+        class Holder(
+            view: View,
+        ) : RecyclerView.ViewHolder(view)
+
+        override fun getItemCount(): Int = if (summary == null) 0 else 1
+
+        fun bind(summary: AnkiquestStudySession.Summary) {
+            val inserted = this.summary == null
+            this.summary = summary
+            if (inserted) {
+                notifyItemInserted(0)
+            } else {
+                notifyItemChanged(0)
+            }
+        }
+
+        override fun onCreateViewHolder(
+            parent: ViewGroup,
+            viewType: Int,
+        ): Holder = Holder(LayoutInflater.from(parent.context).inflate(R.layout.item_ankiquest_recap, parent, false))
+
+        override fun onBindViewHolder(
+            holder: Holder,
+            position: Int,
+        ) {
+            val summary = summary ?: return
+            val view = holder.itemView
+            AnkiquestCompanion.show(
+                view.findViewById(R.id.aq_recap_art),
+                if (summary.remaining == 0) R.drawable.aki_celebrate else R.drawable.aki_streak,
+                (RECAP_ART_DP * host.resources.displayMetrics.density).toInt(),
+            )
+            view.findViewById<TextView>(R.id.aq_recap_body).text =
+                host.getString(R.string.ankiquest_summary_body, summary.reviews, summary.duration(host), summary.remaining)
+            ViewCompat.setAccessibilityHeading(view.findViewById(R.id.aq_recap_title), true)
+            view.findViewById<CheckBox>(R.id.aq_recap_opt_out).apply {
+                setOnCheckedChangeListener(null)
+                isChecked = neverAgain
+                setOnCheckedChangeListener { _, checked -> neverAgain = checked }
+            }
+        }
+    }
+
+    /** Shows a session, moments, or both in one scrollable, swipeable card. */
     fun show(
         host: Activity,
-        account: HomeAccount,
+        account: HomeAccount?,
         moments: List<Moment>,
-    ): AlertDialog {
-        val content = LayoutInflater.from(host).inflate(R.layout.dialog_ankiquest_moment, null)
-        val pager = content.findViewById<ViewPager2>(R.id.aq_moment_pager)
-        val more = content.findViewById<TextView>(R.id.aq_moment_more)
-        val scope = (host as? LifecycleOwner)?.lifecycleScope
-        pager.adapter = Pages(host, account, moments, scope)
-        more.isVisible = moments.size > 1
-        pager.registerOnPageChangeCallback(
-            object : ViewPager2.OnPageChangeCallback() {
-                override fun onPageSelected(position: Int) {
-                    more.text = foldLine(host, position, moments.size)
-                }
-            },
-        )
-        more.text = foldLine(host, 0, moments.size)
-        return AlertDialog
-            .Builder(host)
-            .setView(content)
-            .setNegativeButton(CommonString.close, null)
-            .show()
-    }
+        prefs: SharedPreferences,
+        session: Session? = null,
+    ): Card = Card(host, account, moments, prefs).apply { show(session) }
 
     /** "And 2 more" on the first card, "2 of 3" once swiping. */
     @VisibleForTesting
