@@ -197,7 +197,7 @@ internal object AnkiquestAccountSettings {
                     .build()
             AnkiquestApi.call(account, request) { }
         }
-        signOut(account)
+        clearAccount(account, rememberUsername = false)
     }
 
     /**
@@ -215,10 +215,28 @@ internal object AnkiquestAccountSettings {
         signOut(account)
     }
 
-    /** Forgets [account]'s player and token on this device, when it is still the signed-in one. */
-    fun signOut(account: HomeAccount) {
+    /** Keeps a username hint for the server, but forgets the active player and token. */
+    fun signOut(account: HomeAccount) = clearAccount(account, rememberUsername = true)
+
+    /** The last username for this server is only a suggestion; it never restores a session. */
+    fun signInUsername(server: String): String? {
+        val normalized = server.trim().trimEnd('/')
+        val prefs = AnkiDroidApp.sharedPrefs()
+        if (prefs.getString(Ankiquest.PREF_URL, null)?.trim()?.trimEnd('/') == normalized) {
+            prefs.getString(Ankiquest.PREF_USER, null)?.takeIf { it.isNotBlank() }?.let { return it }
+        }
+        return prefs.getString(usernameKey(normalized), null)
+    }
+
+    private fun usernameKey(server: String) = scopedKey("ankiquestLastUsername", sha256(server.trim().trimEnd('/')))
+
+    private fun clearAccount(
+        account: HomeAccount,
+        rememberUsername: Boolean,
+    ) {
         if (AnkiquestHomeData.account()?.scope != account.scope) return
         AnkiDroidApp.sharedPrefs().edit {
+            if (rememberUsername) putString(usernameKey(account.server), account.user) else remove(usernameKey(account.server))
             remove(Ankiquest.PREF_TOKEN)
             remove(Ankiquest.PREF_USER)
         }

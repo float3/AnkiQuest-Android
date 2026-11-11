@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
@@ -225,6 +226,17 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val status = view.findViewById<TextView>(R.id.ankiquest_sign_in_status)
         val prefs = AnkiDroidApp.sharedPrefs()
         server.setText(prefs.getString(Ankiquest.PREF_URL, null)?.takeIf { it.isNotBlank() } ?: AnkiquestAccount.DEFAULT_SERVER)
+        user.setText(AnkiquestAccountSettings.signInUsername(server.text.toString()))
+        var usernameEdited = false
+        var updatingSuggestion = false
+        user.doAfterTextChanged { if (!updatingSuggestion) usernameEdited = true }
+        server.doAfterTextChanged {
+            if (!usernameEdited) {
+                updatingSuggestion = true
+                user.setText(AnkiquestAccountSettings.signInUsername(it.toString()))
+                updatingSuggestion = false
+            }
+        }
         val dialog =
             AlertDialog
                 .Builder(requireContext())
