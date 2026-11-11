@@ -159,6 +159,20 @@ internal object AnkiquestDeckShare {
         }
     }
 
+    private fun askedKey(
+        account: String,
+        deck: Long,
+        day: Long,
+    ): String = "$account:$day:$deck"
+
+    // Check before fetching recipients without consuming the day's question.
+    private fun asked(
+        prefs: SharedPreferences,
+        account: String,
+        deck: Long,
+        day: Long,
+    ): Boolean = askedKey(account, deck, day) in prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()
+
     /** True the first time it is asked for [account], [deck] and Anki [day]; it keeps only the current day's answers. */
     fun firstAsk(
         prefs: SharedPreferences,
@@ -166,10 +180,12 @@ internal object AnkiquestDeckShare {
         deck: Long,
         day: Long,
     ): Boolean {
-        val asked = prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()
-        val entry = "$account:$day:$deck"
-        if (entry in asked) return false
-        prefs.edit { putStringSet(PREF_ASKED, asked.filter { it.contains(":$day:") }.toSet() + entry) }
+        if (asked(prefs, account, deck, day)) {
+            return false
+        }
+        val earlier = prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()
+        val entry = askedKey(account, deck, day)
+        prefs.edit { putStringSet(PREF_ASKED, earlier.filter { it.contains(":$day:") }.toSet() + entry) }
         return true
     }
 
@@ -177,7 +193,7 @@ internal object AnkiquestDeckShare {
      * Asks about the selected deck when it was just finished for the day, once per deck and day.
      * Every failure only means no question: the study session itself is already done.
      */
-    suspend fun offer(context: Context) {
+    suspend fun offer(context: FragmentActivity) {
         try {
             val prefs = AnkiDroidApp.sharedPrefs()
             if (!enabled(prefs)) return
@@ -194,13 +210,25 @@ internal object AnkiquestDeckShare {
                     }
                 } ?: return
             val (deck, name, day) = finished
-            if (!firstAsk(prefs, account.scope, deck, day)) return
+            if (!AnkiquestPostStudyPrompts.ready(context)) {
+                return
+            }
+            if (asked(prefs, account.scope, deck, day)) {
+                return
+            }
             val settings =
                 withContext(Dispatchers.IO) {
                     AnkiquestApi.json(account, AnkiquestApi.request(account, "api/decks/${account.encodedUser}").build())
                 }
             val prompt = prompt(deck, name, settings) ?: return
-            withContext(Dispatchers.Main) { show(context, account, prompt) }
+            withContext(Dispatchers.Main) {
+                if (!AnkiquestPostStudyPrompts.ready(context) || AnkiquestHomeData.account()?.scope != account.scope) {
+                    return@withContext
+                }
+                if (firstAsk(prefs, account.scope, deck, day)) {
+                    AnkiquestPostStudyPrompts.track(show(context, account, prompt))
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -212,10 +240,10 @@ internal object AnkiquestDeckShare {
         context: Context,
         account: HomeAccount,
         prompt: Prompt,
-    ) {
+    ): AlertDialog {
         val language = AnkiquestLanguage.context(context)
         val picked = BooleanArray(prompt.recipients.size)
-        AlertDialog
+        return AlertDialog
             .Builder(context)
             .setTitle(language.getString(R.string.ankiquest_deck_share_title, prompt.name))
             .setMultiChoiceItems(prompt.recipients.map { it.display }.toTypedArray(), picked) { _, which, checked ->

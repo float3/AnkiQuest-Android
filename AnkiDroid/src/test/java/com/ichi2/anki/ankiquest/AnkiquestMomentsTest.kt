@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.lifecycle.LifecycleRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.viewpager2.widget.ViewPager2
 import com.ichi2.anki.R
@@ -38,6 +39,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -96,11 +98,51 @@ class AnkiquestMomentsTest : RobolectricTest() {
         .put("quiet", quiet)
 
     /** A screen that is not a resting one; it opens signed out, so it asks the server nothing. */
-    private fun host(): AnkiquestConquestActivity {
+    private fun host() = hostController().get()
+
+    private fun hostController(): org.robolectric.android.controller.ActivityController<AnkiquestConquestActivity> {
         every { AnkiquestHomeData.account(any()) } returns null
-        val host = startRegularActivity<AnkiquestConquestActivity>(AnkiquestConquestActivity.intent(targetContext, "hill", 1))
+        val controller =
+            startActivityControllerNormallyOpenCollectionWithIntent(
+                AnkiquestConquestActivity::class.java,
+                AnkiquestConquestActivity.intent(targetContext, "hill", 1),
+            )
         every { AnkiquestHomeData.account(any()) } returns identity
-        return host
+        return controller
+    }
+
+    @Test
+    fun `pausing preserves the displayed moment until the player dismisses it`() {
+        val controller = hostController()
+        val host = controller.get()
+        val moment = moment("level:4", Kind.LEVEL)
+        AnkiquestMoments.offer(prefs, account, listOf(moment))
+        AnkiquestMoments.present(host, prefs, resting = true)
+        advanceRobolectricLooper()
+        val dialog = assertNotNull(ShadowDialog.getLatestDialog())
+        assertTrue(AnkiquestMoments.pending(prefs, account).isEmpty())
+
+        controller.pause()
+        assertTrue(dialog.isShowing, "A pause must not discard a moment already consumed from the queue")
+        controller.resume()
+        AnkiquestMoments.present(host, prefs, resting = true)
+        assertSame(dialog, ShadowDialog.getLatestDialog())
+        dialog.dismiss()
+        assertTrue(AnkiquestPostStudyPrompts.ready(host))
+    }
+
+    @Test
+    fun `dismissed prompts do not retain lifecycle observers`() {
+        val host = host()
+        val lifecycle = host.lifecycle as LifecycleRegistry
+        val before = lifecycle.observerCount
+        repeat(3) {
+            val dialog = AlertDialog.Builder(host).setMessage("Prompt").show()
+            AnkiquestPostStudyPrompts.track(dialog)
+            dialog.dismiss()
+            advanceRobolectricLooper()
+        }
+        assertEquals(before, lifecycle.observerCount)
     }
 
     @Test
@@ -394,6 +436,25 @@ class AnkiquestMomentsTest : RobolectricTest() {
             advanceRobolectricLooper()
             assertEquals(first, ShadowDialog.getLatestDialog())
             assertFalse(first.isShowing)
+        } finally {
+            ShadowDialog.getLatestDialog()?.dismiss()
+        }
+    }
+
+    @Test
+    fun `a notification replaces the open moment card`() {
+        val host = host()
+        AnkiquestMoments.offer(prefs, account, listOf(moment("level:4", Kind.LEVEL)))
+        AnkiquestMoments.present(host, prefs, resting = true)
+        val first = assertNotNull(ShadowDialog.getLatestDialog())
+        assertTrue(first.isShowing)
+
+        host.intent = AnkiquestMoments.noticeIntent(host, account, moment("secured:9", Kind.SECURED))
+        AnkiquestMoments.present(host, prefs, resting = true)
+        advanceRobolectricLooper()
+        try {
+            assertFalse(first.isShowing)
+            assertTrue(assertNotNull(ShadowDialog.getLatestDialog()).isShowing)
         } finally {
             ShadowDialog.getLatestDialog()?.dismiss()
         }

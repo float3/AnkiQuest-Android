@@ -3,6 +3,12 @@
 package com.ichi2.anki.ankiquest
 
 import android.provider.Settings
+import android.view.View
+import android.widget.TextView
+import androidx.core.view.allViews
+import androidx.core.view.isVisible
+import androidx.core.widget.NestedScrollView
+import com.ichi2.anki.R
 import com.ichi2.anki.ScreenshotTest
 import io.mockk.coEvery
 import io.mockk.every
@@ -60,6 +66,33 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
 
     @Test
     fun todayLargeText() = captureToday(largeText = true)
+
+    @Test
+    fun suggestedGoal() = captureSuggestedGoal(1f)
+
+    @Test
+    fun suggestedGoalLargeText() = captureSuggestedGoal(2f)
+
+    private fun captureSuggestedGoal(fontScale: Float) {
+        RuntimeEnvironment.setFontScale(fontScale)
+        coEvery { AnkiquestHomeData.profile(any()) } returns
+            JSONObject().put(
+                "goal",
+                AnkiquestDailyGoal.Choice.DEFAULT
+                    .json()
+                    .put("chosen", false),
+            )
+        val home =
+            startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
+        advanceRobolectricLooperUntil { !home.findViewById<View>(R.id.aq_home_loading).isVisible }
+        val heading =
+            home.window.decorView.allViews
+                .filterIsInstance<TextView>()
+                .single { it.text == home.getString(R.string.ankiquest_goal_setup_title) }
+        home.findViewById<NestedScrollView>(R.id.aq_home_scroll).scrollTo(0, (heading.parent as View).top)
+        advanceRobolectricLooper()
+        captureScreen("suggested_goal_${(fontScale * 100).toInt()}percent")
+    }
 
     @Test
     fun todayGoal() {

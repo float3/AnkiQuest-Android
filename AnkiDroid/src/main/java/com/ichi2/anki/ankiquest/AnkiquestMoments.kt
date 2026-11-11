@@ -625,10 +625,16 @@ internal object AnkiquestMoments {
         prefs: SharedPreferences,
         resting: Boolean = resting(host),
     ) {
-        if (!resting || host.isFinishing || host.isDestroyed) return
+        if (!resting || !AnkiquestPostStudyPrompts.resumed(host)) {
+            return
+        }
         val account = AnkiquestHomeData.account(prefs) ?: return
-        val tapped = notice(host, account, prefs)
         val current = showing.get()?.takeIf { it.isShowing }
+        // A notification may replace our card, but must wait for another prompt.
+        if (current == null && !AnkiquestPostStudyPrompts.ready(host)) {
+            return
+        }
+        val tapped = notice(host, account, prefs)
         if (current != null) {
             if (tapped == null) {
                 return
@@ -637,6 +643,8 @@ internal object AnkiquestMoments {
         }
         val moments = if (tapped == null) take(prefs, account.notificationAccount) else listOf(tapped)
         if (moments.isEmpty()) return
-        showing = WeakReference(AnkiquestMomentCard.show(host, account, moments))
+        val dialog = AnkiquestMomentCard.show(host, account, moments)
+        showing = WeakReference(dialog)
+        AnkiquestPostStudyPrompts.track(dialog)
     }
 }

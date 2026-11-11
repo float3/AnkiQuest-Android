@@ -280,19 +280,11 @@ object AnkiquestUpdater {
         )
     }
 
-    private var offerDialog = WeakReference<AlertDialog>(null)
-
     private fun offer(
         activity: Activity,
         release: Release,
     ) {
-        if (activity.isFinishing || activity.isDestroyed) {
-            return
-        }
-        if (activity is LifecycleOwner && !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            return
-        }
-        if (offerDialog.get()?.isShowing == true) {
+        if (!AnkiquestPostStudyPrompts.ready(activity)) {
             return
         }
         val dialog =
@@ -307,7 +299,7 @@ object AnkiquestUpdater {
                 ).setPositiveButton(R.string.ankiquest_update_install) { _, _ -> download(activity, release) }
                 .setNegativeButton(R.string.ankiquest_update_later, null)
                 .show()
-        offerDialog = WeakReference(dialog)
+        AnkiquestPostStudyPrompts.track(dialog)
     }
 
     private class Progress(
