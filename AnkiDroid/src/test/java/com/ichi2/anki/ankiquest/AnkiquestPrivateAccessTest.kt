@@ -9,6 +9,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
 import com.sun.net.httpserver.HttpServer
@@ -47,7 +48,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
 
     @Before
     fun startServer() {
-        AnkiDroidApp.sharedPreferencesTestingOverride = targetContext.sharedPrefs()
+        SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/") { exchange ->
             val path = exchange.requestURI.toString()
@@ -77,7 +78,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
     @After
     fun stopServer() {
         if (::server.isInitialized) server.stop(0)
-        AnkiDroidApp.sharedPreferencesTestingOverride = null
+        SharedPreferencesTestHook.override = null
     }
 
     @Test
@@ -124,7 +125,7 @@ class AnkiquestPrivateAccessTest : RobolectricTest() {
             switchServerAfter { preferences.getString(Ankiquest.PREF_URL, secondArg()) }
         }
         every { changingPreferences.all } answers { switchServerAfter { preferences.all } }
-        AnkiDroidApp.sharedPreferencesTestingOverride = changingPreferences
+        SharedPreferencesTestHook.override = changingPreferences
     }
 
     private suspend fun <T> readingSettings(block: suspend () -> T): T = withContext(readingUnderTest.asContextElement(true)) { block() }
