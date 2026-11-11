@@ -32,6 +32,7 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     private const val PREF_LAST_PROFILE = "ankiquestMoodIconProfile"
 
     private val lock = Any()
+    private val changes = Any()
     private var visibility: Visibility = Visibility.Background
 
     private sealed interface Visibility {
@@ -163,13 +164,18 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         mood: Mood,
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
-        synchronized(lock) {
-            when (visibility) {
-                Visibility.Background -> applyMood(context, mood, prefs)
-                is Visibility.Visible -> {
-                    visibility = Visibility.Visible(Pending(context.applicationContext, prefs))
+        val apply =
+            synchronized(lock) {
+                when (visibility) {
+                    Visibility.Background -> true
+                    is Visibility.Visible -> {
+                        visibility = Visibility.Visible(Pending(context.applicationContext, prefs))
+                        false
+                    }
                 }
             }
+        if (apply) {
+            synchronized(changes) { applyMood(context, mood, prefs) }
         }
     }
 
@@ -190,15 +196,19 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     }
 
     private fun applyPending(pending: Pending) {
-        synchronized(lock) {
-            val visible = visibility as? Visibility.Visible
-            if (visible != null) {
-                // A quick return keeps the refresh pending until the next stop.
-                if (visible.pending == null) {
-                    visibility = Visibility.Visible(pending)
+        synchronized(changes) {
+            synchronized(lock) {
+                val visible = visibility as? Visibility.Visible
+                if (visible != null) {
+                    // A quick return keeps the refresh pending until the next stop.
+                    if (visible.pending == null) {
+                        visibility = Visibility.Visible(pending)
+                    }
+                    return
                 }
-                return
             }
+            // Serialize launcher writes without blocking lifecycle callbacks on binder calls.
+            // A switch already started can finish safely because the task uses the stable launcher.
             val prefs = pending.prefs
             val mood = if (enabled(prefs)) lastMood(TimeManager.time.intTimeMS(), prefs) else Mood.DEFAULT
             applyMood(pending.context, mood, prefs)
