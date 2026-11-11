@@ -43,7 +43,7 @@ body:
     id: debug-info
     attributes:
       label: Debug info
-      description: In the app, open Settings → ankiquest → Copy debug info and paste the report here.
+      description: In the app, open Settings → AnkiQuest → Copy debug info and paste the report here.
       placeholder: Include the AnkiQuest section after the AnkiDroid version and device details.
       render: text
     validations:

@@ -48,6 +48,7 @@ class DebugInfoServiceTest : RobolectricTest() {
         }
 
     @Test
+    @Suppress("AuthLeak") // Deliberate fake credentials exercise report redaction.
     fun `AnkiQuest debug info keeps only the host of an invalid connection URL`() =
         runTest {
             targetContext.sharedPrefs().edit {

@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.Manifest
-import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -11,6 +10,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
+import com.ichi2.widget.getAppWidgetManager
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.time.Instant
 
@@ -65,7 +65,7 @@ internal object AnkiquestDiagnostics {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     private fun widgets(context: Context): String {
-        val manager = AppWidgetManager.getInstance(context) ?: return "unavailable"
+        val manager = getAppWidgetManager(context) ?: return "unavailable"
         val providers =
             mapOf(
                 "streak" to AnkiquestStreakWidget::class.java,

@@ -5,13 +5,13 @@ package com.ichi2.anki.preferences
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
 import android.view.View
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
+import androidx.core.net.toUri
 import androidx.core.text.parseAsHtml
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -72,14 +72,14 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         binding.appLogo.setOnClickListener(DeveloperOptionsSecretClickListener(this))
 
         // Contributors text
-        val repository = getString(R.string.link_source)
+        val repository = getString(R.string.ankiquest_link_source)
         binding.contributorsDescription.apply {
             text =
                 getString(
                     R.string.ankiquest_about_credits,
                     getString(R.string.link_contributors),
                     repository,
-                    "https://github.com/float3/ankiquest",
+                    getString(R.string.ankiquest_link_server_source),
                 ).parseAsHtml()
             movementMethod = LinkMovementMethod.getInstance()
         }
@@ -119,7 +119,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         }
 
         binding.reportBug.setOnClickListener {
-            val form = Uri.parse("$repository/issues/new?template=bug_report_form.yml")
+            val form = "$repository/issues/new?template=bug_report_form.yml".toUri()
             IntentUtil.tryOpenIntent(requireAnkiActivity(), Intent(Intent.ACTION_VIEW, form))
         }
 
