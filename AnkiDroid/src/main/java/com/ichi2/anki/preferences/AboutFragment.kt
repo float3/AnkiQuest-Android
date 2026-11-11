@@ -120,7 +120,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
 
         binding.reportBug.setOnClickListener {
             val form = "$repository/issues/new?template=bug_report_form.yml".toUri()
-            IntentUtil.tryOpenIntent(requireAnkiActivity(), Intent(Intent.ACTION_VIEW, form))
+            IntentUtil.tryOpenIntent(requireActivity(), Intent(Intent.ACTION_VIEW, form))
         }
 
         binding.copyDebugInfo.text = TR.sentenceCase.copyDebugInfo
