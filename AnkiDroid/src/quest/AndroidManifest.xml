@@ -19,13 +19,19 @@
                 <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.ichi2.anki.ankiquest.AnkiquestLauncher"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
         <activity-alias
             android:name="com.ichi2.anki.ankiquest.AnkiquestIconDefault"
             android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ankiquest_launcher"
             android:roundIcon="@mipmap/ankiquest_launcher"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -38,7 +44,7 @@
             android:exported="true"
             android:icon="@mipmap/ankiquest_launcher_happy"
             android:roundIcon="@mipmap/ankiquest_launcher_happy"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -51,7 +57,7 @@
             android:exported="true"
             android:icon="@mipmap/ankiquest_launcher_worried"
             android:roundIcon="@mipmap/ankiquest_launcher_worried"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -64,7 +70,7 @@
             android:exported="true"
             android:icon="@mipmap/ankiquest_launcher_frozen"
             android:roundIcon="@mipmap/ankiquest_launcher_frozen"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -77,7 +83,7 @@
             android:exported="true"
             android:icon="@mipmap/ankiquest_launcher_sleepy"
             android:roundIcon="@mipmap/ankiquest_launcher_sleepy"
-            android:targetActivity="com.ichi2.anki.IntentHandler">
+            android:targetActivity="com.ichi2.anki.ankiquest.AnkiquestLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
