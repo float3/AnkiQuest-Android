@@ -4,6 +4,7 @@
 package com.ichi2.anki.dialogs
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
@@ -152,7 +153,7 @@ class DatabaseErrorDialog : AsyncDialogFragment() {
                 // to the previous dialog
                 val options = ArrayList<String>(8)
                 val values = ArrayList<ErrorHandlingEntries>(8)
-                if (!requireAnkiActivity().colIsOpenUnsafe()) {
+                if (!CollectionManager.isOpenUnsafe()) {
                     // retry
                     options.add(res.getString(CommonString.backup_retry_opening))
                     values.add(ErrorHandlingEntries.RETRY)
@@ -759,7 +760,7 @@ class DatabaseErrorDialog : AsyncDialogFragment() {
     }
 }
 
-fun AnkiActivity.showDatabaseErrorDialogInDeckPicker(
+fun Activity.showDatabaseErrorDialogInDeckPicker(
     errorDialogType: DatabaseErrorDialogType,
     exceptionData: CustomExceptionData? = null,
 ) {
