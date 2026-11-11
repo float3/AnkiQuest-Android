@@ -62,6 +62,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                 targetContext.getString(R.string.ankiquest_sharing_group_key) to
                     keys(
                         R.string.ankiquest_share_moments_key,
+                        R.string.ankiquest_show_global_key,
                         R.string.ankiquest_moments_decks_key,
                         R.string.ankiquest_deck_share_ask_key,
                     ),
