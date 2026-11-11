@@ -12,6 +12,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type.navigationBars
 import androidx.core.view.WindowInsetsCompat.Type.statusBars
+import com.ichi2.anki.ankiquest.heatmap.DeckHeatmapScreenshotTest
 import com.ichi2.anki.common.utils.dp
 import com.ichi2.testutils.insetsOf
 import org.junit.Test
@@ -25,7 +26,7 @@ import com.ichi2.anki.common.android.R as CommonR
  *
  * `./gradlew :AnkiDroid:verifyRoborazziPlayDebug -Pscreenshot --tests "com.ichi2.anki.NavigationDrawerScreenshotTest"`
  */
-class NavigationDrawerScreenshotTest : ScreenshotTest() {
+class NavigationDrawerScreenshotTest : DeckHeatmapScreenshotTest() {
     @Test
     fun navigationDrawer_edgeToEdge() =
         withDeckPicker(deckCount = 5) { deckPicker ->
