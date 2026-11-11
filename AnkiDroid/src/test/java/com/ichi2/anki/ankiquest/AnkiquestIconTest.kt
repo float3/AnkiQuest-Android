@@ -3,6 +3,8 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -23,6 +25,11 @@ import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.util.ReflectionHelpers
+import org.robolectric.util.ReflectionHelpers.ClassParameter
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -227,6 +234,60 @@ class AnkiquestIconTest : RobolectricTest() {
         } finally {
             lifecycle.currentState = Lifecycle.State.CREATED
         }
+    }
+
+    @Test
+    fun `resuming does not wait for a slow launcher update`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val context =
+            object : ContextWrapper(targetContext) {
+                override fun getApplicationContext(): Context = this
+
+                override fun getPackageManager(): PackageManager {
+                    entered.countDown()
+                    check(release.await(5, TimeUnit.SECONDS))
+                    return targetContext.packageManager
+                }
+            }
+        val owner = ProcessLifecycleOwner.get()
+        AnkiquestIcon.onStart(owner)
+        AnkiquestIcon.update(context, profile("studied", 13, 2), now, prefs)
+        AnkiquestIcon.onStop(owner)
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS), "the background change reached PackageManager")
+            // A slow binder call must not hold the lock needed by the main-thread lifecycle callback.
+            CompletableFuture.runAsync { AnkiquestIcon.onStart(owner) }.get(1, TimeUnit.SECONDS)
+        } finally {
+            release.countDown()
+            switchedFrom(prefs, Mood.DEFAULT)
+            AnkiquestIcon.onStop(owner)
+        }
+    }
+
+    @Test
+    fun `a quick return requeues the launcher change until the next stop`() {
+        registerAliases()
+        val prefs = targetContext.sharedPrefs()
+        TimeManager.resetWith(MockTime(now))
+        AnkiquestIcon.show(targetContext, Mood.DEFAULT, prefs)
+        val owner = ProcessLifecycleOwner.get()
+        AnkiquestIcon.onStart(owner)
+        AnkiquestIcon.update(targetContext, profile("studied", 13, 2), now, prefs)
+        val visibility = ReflectionHelpers.getField<Any>(AnkiquestIcon, "visibility")
+        val pending = ReflectionHelpers.getField<Any>(visibility, "pending")
+        AnkiquestIcon.onStart(owner)
+
+        ReflectionHelpers.callInstanceMethod<Unit>(AnkiquestIcon, "applyPending", ClassParameter.from(pending.javaClass, pending))
+
+        assertEquals(listOf(Mood.DEFAULT), enabled(), "the resumed task leaves the aliases alone")
+        AnkiquestIcon.onStop(owner)
+        assertEquals(Mood.HAPPY, switchedFrom(prefs, Mood.DEFAULT))
+        assertEquals(listOf(Mood.HAPPY), enabled())
     }
 
     private fun selectAccount(
