@@ -2,6 +2,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <!-- 4x5 and up, such as a tablet's spare corner: the companion fills the card above a giant number. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/ankiquest_streak_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -26,11 +27,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:autoSizeMaxTextSize="120sp"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeStepGranularity="1sp"
+        android:autoSizeTextType="uniform"
         android:fontFamily="sans-serif-black"
+        android:gravity="center"
         android:includeFontPadding="false"
         android:maxLines="1"
         android:textColor="@color/ankiquest_widget_text"
-        android:textSize="120sp" />
+        android:textSize="120sp"
+        tools:targetApi="o" />
 
     <ProgressBar
         android:id="@+id/ankiquest_streak_progress"
@@ -50,6 +57,17 @@
         android:fontFamily="sans-serif-medium"
         android:textColor="@color/ankiquest_widget_text"
         android:textSize="28sp" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_milestone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/ankiquest_widget_text"
+        android:textSize="18sp"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/ankiquest_streak_status"

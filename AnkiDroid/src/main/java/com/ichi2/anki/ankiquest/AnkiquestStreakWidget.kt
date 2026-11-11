@@ -7,9 +7,12 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.DrawableRes
@@ -98,6 +101,18 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         /** Minutes past the server's streak minimum during which it still counts as just reached. */
         private const val JUST_REACHED_MINUTES = 5
         private const val DAY_MS = 86_400_000L
+
+        /** The next milestone and flame come from the same tier boundaries. */
+        private enum class StreakTier(
+            val days: Int,
+            @DrawableRes val flame: Int,
+        ) {
+            START(1, R.drawable.ankiquest_streak_tier_1),
+            WEEK(7, R.drawable.ankiquest_streak_tier_7),
+            MONTH(30, R.drawable.ankiquest_streak_tier_30),
+            HUNDRED(100, R.drawable.ankiquest_streak_tier_100),
+            YEAR(365, R.drawable.ankiquest_streak_tier_365),
+        }
 
         /**
          * The poses that fit today for the big layouts, which have room to show more of the moment
@@ -234,11 +249,12 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 }
             views.setTextViewText(R.id.ankiquest_streak_status, status)
             val progress = setMinimumProgress(views, language, day, status)
+            val milestone = setStreakTier(views, language, state, streak, size, number)
             if (size == Size.SMALL || size == Size.MEDIUM) {
                 val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
                 views.setViewVisibility(R.id.ankiquest_streak_badge, badge)
             }
-            val description = if (progress == null || progress == status) status else "$status · $progress"
+            val description = listOfNotNull(status, progress, milestone).distinct().joinToString(" · ")
             views.setContentDescription(
                 R.id.ankiquest_streak_root,
                 if (streak == null) {
@@ -260,6 +276,66 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 )
             }
             return views
+        }
+
+        /** Clear optional details on reapply when the cached day is no longer trustworthy. */
+        private fun setStreakTier(
+            views: RemoteViews,
+            context: Context,
+            state: State,
+            streak: Int?,
+            size: Size,
+            number: String,
+        ): String? {
+            val current = streak?.takeIf { state != State.UNKNOWN && it > 0 }
+            val tier = current?.let { days -> StreakTier.entries.lastOrNull { it.days <= days } }
+            views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, tier?.flame ?: 0, 0)
+            fitLegacyNumber(views, context, size, number, tier)
+            if (size == Size.SMALL || size == Size.MEDIUM) {
+                return null
+            }
+
+            val next = current?.let { days -> StreakTier.entries.firstOrNull { it.days > days } }
+            val label =
+                if (next == null) {
+                    null
+                } else {
+                    val remaining = next.days - current
+                    context.resources.getQuantityString(R.plurals.ankiquest_streak_milestone, remaining, remaining, next.days)
+                }
+            views.setTextViewText(R.id.ankiquest_streak_milestone, label.orEmpty())
+            views.setViewVisibility(R.id.ankiquest_streak_milestone, if (label == null) View.GONE else View.VISIBLE)
+            return label
+        }
+
+        /** Android 7 lacks native autosizing; fit the guaranteed minimum widget width there. */
+        private fun fitLegacyNumber(
+            views: RemoteViews,
+            context: Context,
+            size: Size,
+            number: String,
+            tier: StreakTier?,
+        ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                return
+            }
+            val (widthDp, heightDp, textSp) =
+                when (size) {
+                    Size.SMALL -> Triple(49f, 20f, 20f)
+                    Size.MEDIUM -> Triple(56f, 28f, 44f)
+                    Size.LARGE -> Triple(168f, 84f, 72f)
+                    Size.HUGE -> Triple(252f, 140f, 120f)
+                }
+            val metrics = context.resources.displayMetrics
+            val paint =
+                Paint().apply {
+                    typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
+                    textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSp, metrics)
+                }
+            val flameWidth = tier?.let { context.getDrawable(it.flame)?.intrinsicWidth } ?: 0
+            val available = widthDp * metrics.density - flameWidth
+            val scale = minOf(1f, available / paint.measureText(number), heightDp * metrics.density / paint.fontSpacing)
+            views.setTextViewTextSize(R.id.ankiquest_streak_number, TypedValue.COMPLEX_UNIT_PX, paint.textSize * scale)
         }
 
         /** Use the same current day that supplies the widget's status. */
