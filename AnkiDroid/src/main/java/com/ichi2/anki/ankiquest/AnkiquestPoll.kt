@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -30,10 +31,16 @@ import java.util.concurrent.TimeUnit
 object AnkiquestPoll {
     private const val PERIODIC_NAME = "ankiquestPoll"
     private const val NOW_NAME = "ankiquestPollNow"
+    private const val LAST_SUCCESS = "ankiquestLastSuccessfulPoll"
 
     internal const val PREF_CACHE = "ankiquestWidgetLeaderboard"
 
     internal const val PREF_CACHE_AT = "ankiquestWidgetLeaderboardAt"
+
+    internal fun lastSuccessfulPoll(
+        prefs: SharedPreferences,
+        scope: String,
+    ): Long? = prefs.getLong(scopedKey(LAST_SUCCESS, scope), 0L).takeIf { it > 0 }
 
     fun schedule(context: Context) {
         try {
@@ -123,6 +130,10 @@ object AnkiquestPoll {
         try {
             val profile = Ankiquest.profile()
             if (AnkiquestHomeData.account(prefs)?.scope == cacheScope) {
+                // A fresh board and profile confirm a background poll for this account.
+                if (photoBoard != null && !photoOffline && cacheScope != null) {
+                    prefs.edit { putLong(scopedKey(LAST_SUCCESS, cacheScope), TimeManager.time.intTimeMS()) }
+                }
                 AnkiquestNotifier.onProfile(context, profile)
             }
         } catch (e: CancellationException) {

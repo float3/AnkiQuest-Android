@@ -22,6 +22,7 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_user_key,
             R.string.ankiquest_token_key,
             R.string.ankiquest_test_key,
+            R.string.ankiquest_debug_info_key,
             R.string.ankiquest_connection_key,
             R.string.ankiquest_sign_in_key,
             R.string.ankiquest_sign_out_key,

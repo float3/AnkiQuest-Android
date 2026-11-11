@@ -39,6 +39,8 @@ import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.HomeAccountChanged
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.launchCatchingTask
+import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.preferences.VersatileTextPreference
 import kotlinx.coroutines.CancellationException
@@ -162,6 +164,10 @@ class AnkiquestSignInFragment : SettingsFragment() {
                 val typed = preference.text.orEmpty()
                 if (AnkiquestHosts.insecure(typed)) "$summary\n${getString(R.string.ankiquest_check_insecure, typed.trim())}" else summary
             }
+        requirePreference<Preference>(R.string.ankiquest_debug_info_key).setOnPreferenceClickListener {
+            launchCatchingTask { DebugInfoService.copyReport(requireContext()) }
+            true
+        }
         val test = requirePreference<Preference>(R.string.ankiquest_test_key)
         val idle = test.summary
         test.setOnPreferenceClickListener {

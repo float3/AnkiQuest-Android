@@ -26,6 +26,7 @@ import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
@@ -59,6 +60,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     const val PREF_USER = "ankiquestUser"
     const val PREF_TOKEN = "ankiquestToken"
     private const val PREF_MARK = "ankiquestUploadedThrough"
+    private const val PREF_UPLOAD_AT = "ankiquestLastUploadAt"
     private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
     private const val PREF_RESYNCED_AT = "ankiquestResyncedAt"
@@ -722,6 +724,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val initialSyncKey = initialSyncKey(account)
         val initialSyncDone = prefs.contains(markKey) && prefs.getBoolean(initialSyncKey, false)
         val startedAt = TimeManager.time.intTimeMS()
+        if (!onlyTest) {
+            prefs.edit { putLong(scopedKey(PREF_UPLOAD_AT, owner.scope), startedAt) }
+        }
         var known =
             when {
                 everything -> 0L
@@ -954,10 +959,36 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         return gone
     }
 
-    private suspend fun countReviews(afterId: Long): Int =
-        CollectionManager.withCol {
-            db.queryScalar("select count() from revlog where id > ? and ease > 0 and type < 4", afterId)
-        }
+    private suspend fun countReviews(afterId: Long): Int = CollectionManager.withCol { countPending(afterId) }
+
+    private fun Collection.countPending(afterId: Long): Int =
+        db.queryScalar("select count() from revlog where id > ? and ease > 0 and type < 4", afterId)
+
+    internal data class UploadDiagnostics(
+        val at: Long?,
+        val problem: AnkiquestUploadProblem?,
+        val pending: Int?,
+    )
+
+    /** Read the upload status without contacting the server or opening a closed collection. */
+    internal suspend fun uploadDiagnostics(account: HomeAccount): UploadDiagnostics {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val cursor = prefs.getLong(markKey(account.notificationAccount), 0L)
+        val count =
+            try {
+                CollectionManager.withOpenColOrNull { countPending(cursor) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "AnkiQuest could not count pending reviews for debug info")
+                null
+            }
+        return UploadDiagnostics(
+            prefs.getLong(scopedKey(PREF_UPLOAD_AT, account.scope), 0L).takeIf { it > 0 },
+            AnkiquestUploadProblem.last(prefs, account.scope),
+            count,
+        )
+    }
 
     private suspend fun deckSnapshots(clock: JSONObject): JSONArray =
         CollectionManager.withCol {
