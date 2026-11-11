@@ -452,9 +452,9 @@ object AnkiquestNotifier {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
-        return manager.getNotificationChannel(ensureChannel(context, nudge))?.importance?.let {
-            it != NotificationManagerCompat.IMPORTANCE_NONE
-        } ?: false
+        // Health checks only read settings. A new channel uses defaults when a notification is posted.
+        val channel = if (nudge) NUDGE_CHANNEL else CHANNEL
+        return manager.getNotificationChannel(channel)?.importance != NotificationManagerCompat.IMPORTANCE_NONE
     }
 
     private fun ensureChannel(

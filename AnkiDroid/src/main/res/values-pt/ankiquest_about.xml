@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="ankiquest_about_channel">Canal de atualização: %1$s</string>
+    <string name="ankiquest_about_based_on">Baseado no AnkiDroid %1$s</string>
+    <string name="ankiquest_about_credits"><![CDATA[Baseado no <a href=\"%1$s\">AnkiDroid e no trabalho dos seus colaboradores</a>. Mantido por float3 e pelos colaboradores do <a href=\"%2$s\">AnkiQuest para Android</a> e do <a href=\"%3$s\">servidor e complemento AnkiQuest para computador</a>.]]></string>
+    <string name="ankiquest_about_license"><![CDATA[O AnkiDroid é licenciado sob a <a href=\"%1$s\">GPL-3.0</a>. As adições do AnkiQuest estão sob a <a href=\"%2$s\">AGPL-3.0</a>. A aplicação combinada é distribuída sob a AGPL-3.0. <a href=\"%3$s\">Código-fonte desta compilação</a>.]]></string>
+    <string name="ankiquest_about_report_bug">Comunicar um erro</string>
+    <string name="ankiquest_debug_info_title">Copiar informações de depuração</string>
+</resources>
