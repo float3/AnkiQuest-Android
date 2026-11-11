@@ -202,7 +202,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(listOf("hill", "cerro"), week.map { it.user })
             assertEquals(listOf("Hill", "Cerro"), week.map { it.display })
             assertEquals(listOf(101L, 31L), week.map { it.xp })
-            assertEquals(listOf("studied", "studied"), week.map { it.state })
+            assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.STUDIED), week.map { it.state })
             assertEquals(listOf(5L, 3L), week.map { it.todayReviews })
             val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY)
             assertEquals(listOf(101L, 31L), day.map { it.xp })
@@ -658,6 +658,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
                 "leaderboard_global",
                 "leaderboard_global_hidden",
                 "global_leaderboard_on",
+                // Hiding a stranger on Global (float3/ankiquest#218) until the app offers it.
+                "leaderboard_hide",
             ) - CONSUMED - UNUSED
     }
 }

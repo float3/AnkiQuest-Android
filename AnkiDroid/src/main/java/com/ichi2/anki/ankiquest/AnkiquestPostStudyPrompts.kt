@@ -4,7 +4,6 @@ package com.ichi2.anki.ankiquest
 
 import android.app.Activity
 import android.app.Dialog
-import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import java.lang.ref.WeakReference
@@ -19,19 +18,8 @@ internal object AnkiquestPostStudyPrompts {
 
     fun ready(host: Activity): Boolean = resumed(host) && showing.get()?.isShowing != true
 
-    fun track(
-        host: Activity,
-        dialog: Dialog,
-    ) {
+    fun track(dialog: Dialog) {
+        // A pause must not discard a moment already consumed from its queue.
         showing = WeakReference(dialog)
-        val watched = WeakReference(dialog)
-        (host as? LifecycleOwner)?.lifecycle?.addObserver(
-            object : DefaultLifecycleObserver {
-                override fun onPause(owner: LifecycleOwner) {
-                    watched.get()?.dismiss()
-                    owner.lifecycle.removeObserver(this)
-                }
-            },
-        )
     }
 }

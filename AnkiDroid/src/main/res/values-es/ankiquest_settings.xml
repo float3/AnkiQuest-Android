@@ -34,4 +34,7 @@
     <string name="aq_profile_deck_alerts_start">Volver a recibir avisos de mazos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar la protección de racha</string>
     <string name="aq_profile_freezes_resume">Reanudar la protección de racha</string>
+    <string name="ankiquest_streak_cue_title">Aviso de racha al repasar</string>
+    <string name="ankiquest_show_global_title">Mostrarme en la clasificación global</string>
+    <string name="ankiquest_show_global_summary">Los jugadores que han iniciado sesión ven tu nombre, avatar, nivel, XP y racha. Los perfiles públicos también se ven sin iniciar sesión. Tus amigos y los miembros de tus grupos ven más. Este ajuste solo afecta a la clasificación.</string>
 </resources>

@@ -164,7 +164,7 @@ object AnkiquestDeckPickerHooks {
             }
         }
         val dialog = builder.show()
-        AnkiquestPostStudyPrompts.track(activity, dialog)
+        AnkiquestPostStudyPrompts.track(dialog)
         dialog.setOnDismissListener {
             if (neverAgain.isChecked) {
                 activity.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }

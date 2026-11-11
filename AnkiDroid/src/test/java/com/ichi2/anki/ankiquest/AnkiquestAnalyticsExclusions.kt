@@ -7,7 +7,7 @@ import com.ichi2.anki.R
 
 /**
  * AnkiQuest preference keys that analytics must not report, for upstream's `PreferencesAnalyticsTest`.
- * Server, player and token are personal; the rest are actions, groups or screens.
+ * Includes personal details, screens and local AnkiQuest controls.
  */
 object AnkiquestAnalyticsExclusions {
     private val resources =
@@ -22,6 +22,7 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_user_key,
             R.string.ankiquest_token_key,
             R.string.ankiquest_test_key,
+            R.string.ankiquest_debug_info_key,
             R.string.ankiquest_connection_key,
             R.string.ankiquest_sign_in_key,
             R.string.ankiquest_sign_out_key,
@@ -41,7 +42,9 @@ object AnkiquestAnalyticsExclusions {
             R.string.ankiquest_reminder_time_key,
             R.string.ankiquest_quiet_hours_key,
             R.string.ankiquest_notify_moments_key,
+            R.string.ankiquest_streak_cue_key,
             R.string.ankiquest_share_moments_key,
+            R.string.ankiquest_show_global_key,
             R.string.ankiquest_moments_decks_key,
             R.string.ankiquest_deck_share_ask_key,
             R.string.ankiquest_mood_icon_key,

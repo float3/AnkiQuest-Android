@@ -11,7 +11,9 @@
     <string name="ankiquest_reminder_time_key" translatable="false">ankiquestReminderTime</string>
     <string name="ankiquest_quiet_hours_key" translatable="false">ankiquestQuietHours</string>
     <string name="ankiquest_notify_moments_key" translatable="false">ankiquestNotifyMoments</string>
+    <string name="ankiquest_streak_cue_key" translatable="false">ankiquestStreakCue</string>
     <string name="ankiquest_share_moments_key" translatable="false">ankiquestShareMoments</string>
+    <string name="ankiquest_show_global_key" translatable="false">ankiquestShowGlobal</string>
     <string name="ankiquest_connection_key" translatable="false">ankiquestConnection</string>
 
     <string name="ankiquest_group_account" maxLength="41">Account</string>
@@ -38,6 +40,8 @@
 
     <string name="ankiquest_share_moments_title" maxLength="41">Share my moments with friends</string>
     <string name="ankiquest_share_moments_summary">Friends can hear about your goals, streaks and achievements. Turn off to keep them to yourself.</string>
+    <string name="ankiquest_show_global_title" maxLength="41">Show me on the global leaderboard</string>
+    <string name="ankiquest_show_global_summary">Signed-in players see your name, avatar, level, XP and streak. Public profiles are visible to signed-out visitors too. Friends and group members see more. This switch controls the leaderboard only.</string>
 
     <string name="ankiquest_health_problem_title" maxLength="41">AnkiQuest can’t alert you</string>
     <string name="ankiquest_health_problem_summary">Notifications are turned off on this phone. Tap to fix it.</string>
@@ -52,4 +56,5 @@
     <string name="aq_profile_deck_alerts_start">Get deck alerts from %1$s again</string>
     <string name="aq_profile_freezes_pause" maxLength="41">Pause streak protection</string>
     <string name="aq_profile_freezes_resume" maxLength="41">Resume streak protection</string>
+    <string name="ankiquest_streak_cue_title" maxLength="41">Streak cue while reviewing</string>
 </resources>

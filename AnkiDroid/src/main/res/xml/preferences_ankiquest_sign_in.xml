@@ -65,5 +65,9 @@
             android:persistent="false"
             android:title="@string/ankiquest_test_title"
             android:summary="@string/ankiquest_test_summary" />
+        <Preference
+            android:key="@string/ankiquest_debug_info_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_debug_info_title" />
     </PreferenceCategory>
 </PreferenceScreen>

@@ -19,12 +19,14 @@ import android.widget.TextView
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.ProcessLifecycleOwner
 import anki.collection.OpChanges
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
@@ -58,6 +60,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     const val PREF_USER = "ankiquestUser"
     const val PREF_TOKEN = "ankiquestToken"
     private const val PREF_MARK = "ankiquestUploadedThrough"
+    private const val PREF_UPLOAD_AT = "ankiquestLastUploadAt"
     private const val PREF_RECENT = "ankiquestRecentUploads"
     private const val INITIAL_SYNC_KEY = "ankiquestInitialSyncDone"
     private const val PREF_RESYNCED_AT = "ankiquestResyncedAt"
@@ -109,8 +112,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         app.registerActivityLifecycleCallbacks(this)
         ChangeManager.unsubscribe(this)
         ChangeManager.subscribe(this, owner = null)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(AnkiquestIcon)
         AnkiquestPoll.schedule(app)
-        AnkiquestIcon.onAppStart(app)
     }
 
     /** The player's profile, as served by `/api/profile/<user>`. */
@@ -381,10 +384,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         if (!changes.studyQueues) return
         val reviewing = handler is Reviewer || handler is ReviewerViewModel || isReviewing(activity.get())
         if (!reviewing && handler != null) return
-        if (reviewing && HomeAccount.current() != null) {
+        val reviewOwner = if (reviewing) HomeAccount.current()?.scope else null
+        if (reviewOwner != null) {
             lastAnswerAt = TimeManager.time.intTimeMS()
             scope.launch {
                 recordAnswers()
+                refreshLocalDay(reviewOwner)
                 launchRefresh(showFeedback = true)
             }
             return
@@ -402,6 +407,83 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             Timber.w(e, "ankiquest could not record the time zone of an answer")
         }
     }
+
+    /**
+     * Collection -> day verdict -> launcher and widgets, even when the upload cannot run.
+     * A new study day stays unknown offline until a poll supplies its server window.
+     */
+    private suspend fun refreshLocalDay(reviewOwner: String? = null) {
+        val context = app ?: return
+        val account = HomeAccount.current() ?: return
+        if (account.token.isEmpty()) {
+            return
+        }
+        if (reviewOwner != null && reviewOwner != account.scope) {
+            return
+        }
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val now = TimeManager.time.intTimeMS()
+        val server = AnkiquestDay.last(prefs)?.takeIf { it.dayEndsAt > now } ?: return
+        try {
+            val before = AnkiquestDay.judgeOwn(server, now, prefs) ?: return
+            // Keep collection reads ordered, and discard work from a replaced account or profile.
+            val day =
+                CollectionManager.tryWithCol {
+                    val reviews = AnkiquestDay.unsent(this, server)
+                    if (HomeAccount.current()?.scope != account.scope || AnkiquestDay.last(prefs) != server) {
+                        return@tryWithCol null
+                    }
+                    AnkiquestDay.rememberLocal(account.scope, server, reviews, prefs)
+                    AnkiquestDay.judge(server, reviews, now)
+                } ?: return
+            if (HomeAccount.current()?.scope != account.scope) {
+                return
+            }
+            if (day.label != before.label && AnkiquestIcon.enabled(prefs)) {
+                AnkiquestIcon.showLastKnown(context, now, prefs)
+            }
+            if (day.label != before.label || day.streak != before.streak || day.minutes != before.minutes) {
+                AnkiquestWidget.onLocalDay(context, account)
+            }
+            if (reviewOwner != null && !before.met && day.met) {
+                minimumReached(account, prefs, server, before, day, now)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.d(e, "ankiquest could not refresh the local streak")
+        }
+    }
+
+    private suspend fun minimumReached(
+        account: HomeAccount,
+        prefs: SharedPreferences,
+        server: AnkiquestDay.Server,
+        before: AnkiquestDay.Verdict,
+        day: AnkiquestDay.Verdict,
+        now: Long,
+    ): Unit =
+        withContext(Dispatchers.Main) {
+            val context = app ?: return@withContext
+            if (!AnkiquestMoments.claimMinimum(context, prefs, account, server, day, now)) {
+                return@withContext
+            }
+            val host = activity.get() ?: return@withContext
+            if (isReviewing(host)) {
+                val fraction = AnkiquestGoalBar.fraction(before.minutes, day.streakMinutes, before.met)
+                val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return@withContext
+                val cue = AnkiquestStreakCue.show(host, day.streak, fraction, prefs) { showDeferredBanner(host, root) }
+                if (cue != null) {
+                    root.findViewWithTag<ReviewBannerView>(BANNER_TAG)?.takeIf { it.alpha > 0f }?.apply {
+                        message?.let { defer(it) }
+                        animate().cancel()
+                        alpha = 0f
+                    }
+                }
+            } else {
+                AnkiquestMoments.present(host, prefs)
+            }
+        }
 
     private fun isReviewing(host: Activity?): Boolean =
         host is Reviewer ||
@@ -435,6 +517,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      */
     internal suspend fun uploadAfterSync() {
         if (HomeAccount.current()?.token.isNullOrEmpty() || !collectionAvailable()) return
+        refreshLocalDay()
         if (!refreshes.offer(showFeedback = false, resync = true)) return
         refresh(background = true)
     }
@@ -491,9 +574,8 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     /**
      * Brings the app icon and the widgets up to date with [profile], the player's own as an upload or
-     * preview just answered, as the poll does with the profile it fetches. Uploads follow every answer
-     * and the app opening, while the poll may wait hours for the phone, so the icon turns happy as soon
-     * as today counts. [account] must still be the one signed in.
+     * preview just answered, as the poll does with the profile it fetches. The launcher icon waits
+     * until the app is hidden. [account] must still be the one signed in.
      */
     private fun onOwnProfile(
         account: HomeAccount,
@@ -642,6 +724,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val initialSyncKey = initialSyncKey(account)
         val initialSyncDone = prefs.contains(markKey) && prefs.getBoolean(initialSyncKey, false)
         val startedAt = TimeManager.time.intTimeMS()
+        if (!onlyTest) {
+            prefs.edit { putLong(scopedKey(PREF_UPLOAD_AT, owner.scope), startedAt) }
+        }
         var known =
             when {
                 everything -> 0L
@@ -874,10 +959,36 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         return gone
     }
 
-    private suspend fun countReviews(afterId: Long): Int =
-        CollectionManager.withCol {
-            db.queryScalar("select count() from revlog where id > ? and ease > 0 and type < 4", afterId)
-        }
+    private suspend fun countReviews(afterId: Long): Int = CollectionManager.withCol { countPending(afterId) }
+
+    private fun Collection.countPending(afterId: Long): Int =
+        db.queryScalar("select count() from revlog where id > ? and ease > 0 and type < 4", afterId)
+
+    internal data class UploadDiagnostics(
+        val at: Long?,
+        val problem: AnkiquestUploadProblem?,
+        val pending: Int?,
+    )
+
+    /** Read the upload status without contacting the server or opening a closed collection. */
+    internal suspend fun uploadDiagnostics(account: HomeAccount): UploadDiagnostics {
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val cursor = prefs.getLong(markKey(account.notificationAccount), 0L)
+        val count =
+            try {
+                CollectionManager.withOpenColOrNull { countPending(cursor) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "AnkiQuest could not count pending reviews for debug info")
+                null
+            }
+        return UploadDiagnostics(
+            prefs.getLong(scopedKey(PREF_UPLOAD_AT, account.scope), 0L).takeIf { it > 0 },
+            AnkiquestUploadProblem.last(prefs, account.scope),
+            count,
+        )
+    }
 
     private suspend fun deckSnapshots(clock: JSONObject): JSONArray =
         CollectionManager.withCol {
@@ -999,6 +1110,38 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
     }
 
+    /** Feedback kept with the account that produced it while the streak cue has priority. */
+    private data class ReviewBanner(
+        val text: String,
+        val important: Boolean,
+        val owner: String?,
+    )
+
+    private class ReviewBannerView(
+        host: Activity,
+    ) : TextView(host) {
+        var message: ReviewBanner? = null
+        var pending: ReviewBanner? = null
+
+        fun defer(next: ReviewBanner) {
+            if (next.important || pending?.important != true) {
+                pending = next
+            }
+        }
+    }
+
+    private fun showDeferredBanner(
+        host: Activity,
+        root: FrameLayout,
+    ) {
+        val banner = root.findViewWithTag<ReviewBannerView>(BANNER_TAG) ?: return
+        val pending = banner.pending ?: return
+        banner.pending = null
+        if (activity.get() === host && HomeAccount.current()?.scope == pending.owner) {
+            showBanner(pending.text, pending.important)
+        }
+    }
+
     /**
      * Shows [text] briefly over the current screen. It is discoverable with accessibility services
      * but not announced, because the session recap carries the same feedback without interrupting every answer.
@@ -1012,8 +1155,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         val root = host.findViewById<FrameLayout>(android.R.id.content) ?: return
         val density = host.resources.displayMetrics.density
         val banner =
-            root.findViewWithTag<TextView>(BANNER_TAG) ?: TextView(host).apply {
+            root.findViewWithTag<ReviewBannerView>(BANNER_TAG) ?: ReviewBannerView(host).apply {
                 tag = BANNER_TAG
+                alpha = 0f
                 setTextColor(Color.WHITE)
                 textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD
@@ -1034,6 +1178,12 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                         ).apply { topMargin = (72 * density).toInt() },
                 )
             }
+        val message = ReviewBanner(text, important, HomeAccount.current()?.scope)
+        if (AnkiquestStreakCue.showing(root)) {
+            banner.defer(message)
+            return
+        }
+        banner.message = message
         banner.background =
             GradientDrawable().apply {
                 cornerRadius = 20 * density
@@ -1058,15 +1208,14 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
 
     override fun onActivityResumed(activity: Activity) {
         this.activity = WeakReference(activity)
+        val context = activity.applicationContext
+        scope.launch { AnkiquestIcon.onAppStart(context) }
         AnkiquestUpdater.maybeCheck(activity)
         val now = TimeManager.time.intTimeMS()
         if (now - resumeUploadAt > RESUME_UPLOAD_INTERVAL_MS) {
             resumeUploadAt = now
+            scope.launch { refreshLocalDay() }
             launchRefresh(showFeedback = false, resync = resyncDue(now))
-        } else {
-            // Without an upload, the icon still catches up with the clock, as when the last hours of the day begin.
-            val context = activity.applicationContext
-            scope.launch { AnkiquestIcon.onAppStart(context) }
         }
         // The activity callback can run before AndroidX dispatches ON_RESUME.
         activity.window.decorView.post {

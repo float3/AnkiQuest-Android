@@ -9,19 +9,19 @@ body:
     id: contact
     attributes:
       label: Checked for duplicates?
-      description: Quickly search our [issues](https://github.com/ankidroid/Anki-Android/issues?q=is%3Aissue) to see if a similar issue exists
+      description: Search [AnkiQuest Android issues](https://github.com/float3/AnkiQuest-Android/issues?q=is%3Aissue) for a similar issue.
       options:
         - label: This issue is not a duplicate
           required: true
 
-  - type: checkboxes
+  - type: dropdown
     id: desktop-check
     attributes:
-      label: Does it also happen in the desktop version?
-      description: If so, please report it in [Anki Forums](https://forums.ankiweb.net) instead
+      label: Does it also happen in the AnkiQuest desktop add-on?
       options:
-        - label: This bug does not occur in the latest version of Anki Desktop
-          required: false
+        - "Yes"
+        - "No"
+        - I haven't checked
 
   - type: textarea
     id: steps
@@ -43,8 +43,8 @@ body:
     id: debug-info
     attributes:
       label: Debug info
-      description: Settings - About (bottom of the list) - Copy debug info
-      placeholder: AnkiDroid Debug Info (Starts with "AnkiDroid Version")
+      description: In the app, open Settings → AnkiQuest → Copy debug info and paste the report here.
+      placeholder: Include the AnkiQuest section after the AnkiDroid version and device details.
       render: text
     validations:
       required: true
@@ -61,7 +61,7 @@ body:
       label: Research
       description: Confirm the points below
       options:
-        - label: I have checked the [manual](https://docs.ankidroid.org/) and the [FAQ](https://github.com/ankidroid/Anki-Android/wiki/FAQ) and could not find a solution to my issue
+        - label: I checked the [AnkiQuest Android README](https://github.com/float3/AnkiQuest-Android#readme) and did not find a solution.
           required: true
-        - label: (Optional) I have confirmed the issue is not resolved in the latest alpha release ([instructions](https://docs.ankidroid.org/manual.html#betaTesting))
+        - label: (Optional) I confirmed the issue still happens on the [latest AnkiQuest nightly](https://github.com/float3/AnkiQuest-Android/releases/tag/nightly).
           required: false

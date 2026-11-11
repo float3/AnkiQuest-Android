@@ -58,10 +58,12 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                         R.string.ankiquest_reminder_time_key,
                         R.string.ankiquest_quiet_hours_key,
                         R.string.ankiquest_notify_moments_key,
+                        R.string.ankiquest_streak_cue_key,
                     ),
                 targetContext.getString(R.string.ankiquest_sharing_group_key) to
                     keys(
                         R.string.ankiquest_share_moments_key,
+                        R.string.ankiquest_show_global_key,
                         R.string.ankiquest_moments_decks_key,
                         R.string.ankiquest_deck_share_ask_key,
                     ),
@@ -71,6 +73,7 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
                         R.string.ankiquest_open_today_key,
                         R.string.ankiquest_update_channel_key,
                         R.string.ankiquest_check_updates_key,
+                        R.string.ankiquest_debug_info_key,
                         R.string.aq_privacy_key,
                     ),
             ),
@@ -91,7 +94,13 @@ class AnkiquestSettingsMenuTest : RobolectricTest() {
     fun `manage account holds the account's devices, data and connection`() {
         val groups = layout(R.xml.preferences_ankiquest_sign_in).toMap()
         assertEquals(
-            keys(R.string.ankiquest_url_key, R.string.ankiquest_user_key, R.string.ankiquest_token_key, R.string.ankiquest_test_key),
+            keys(
+                R.string.ankiquest_url_key,
+                R.string.ankiquest_user_key,
+                R.string.ankiquest_token_key,
+                R.string.ankiquest_test_key,
+                R.string.ankiquest_debug_info_key,
+            ),
             groups[targetContext.getString(R.string.ankiquest_connection_key)],
         )
         assertEquals(keys(R.string.ankiquest_sign_out_others_key), groups[targetContext.getString(R.string.ankiquest_devices_key)])

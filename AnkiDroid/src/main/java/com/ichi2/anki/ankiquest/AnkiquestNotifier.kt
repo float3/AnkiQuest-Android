@@ -78,6 +78,14 @@ object AnkiquestNotifier {
             val id = entry.getLong("id")
             if (id <= previous) continue
             val fresh = AnkiquestCompletionPolicy.freshNotification(entry.optLong("created_at"), firstPoll)
+            val minimum = if (fresh) AnkiquestMoments.fromNotice(entry)?.takeIf { it.kind == AnkiquestMoments.Kind.SECURED } else null
+            if (minimum != null) {
+                val route = deliverMinimum(context, prefs, account, entry, minimum) ?: break
+                queued = queued || route == AnkiquestMoments.Route.QUEUED
+                previous = id
+                prefs.edit { putLong(key, previous) }
+                continue
+            }
             // The player's own moments wait for the app while it is open, and are never shown twice.
             val route =
                 if (fresh) {
@@ -157,6 +165,37 @@ object AnkiquestNotifier {
         if (queued) Ankiquest.presentMomentsSoon()
     }
 
+    /** Reserve the daily moment through delivery so a local crossing cannot also queue it. */
+    private fun deliverMinimum(
+        context: Context,
+        prefs: SharedPreferences,
+        account: String,
+        entry: JSONObject,
+        moment: AnkiquestMoments.Moment,
+    ): AnkiquestMoments.Route? =
+        synchronized(AnkiquestMoments) {
+            val route = AnkiquestMoments.route(prefs, account, entry, Ankiquest.inForeground())
+            if (route != AnkiquestMoments.Route.NOTIFY) {
+                return@synchronized route
+            }
+            val delivery =
+                notify(
+                    context,
+                    5_140_000 + (entry.getLong("id") % 1_000_000).toInt(),
+                    moment.title,
+                    moment.detail,
+                    AnkiquestMoments.noticeIntent(context, account, moment),
+                    silent = true,
+                    art = AnkiquestMomentCard.art(moment),
+                )
+            if (delivery == Delivery.DISABLED) {
+                return@synchronized null
+            }
+            AnkiquestMoments.markShown(prefs, account, listOf(moment.key))
+            AnkiquestMoments.rememberMinimum(prefs, account, moment)
+            route
+        }
+
     /** Asks the server how this player moved since the order stored here, and says so when they did. */
     suspend fun onLeaderboard(context: Context) {
         val prefs = AnkiDroidApp.sharedPrefs()
@@ -178,10 +217,13 @@ object AnkiquestNotifier {
         val climbed = climbedTo(previous, order, Ankiquest.player())
         val place = climbed?.takeIf { it <= 3 }
         val account = AnkiquestHomeData.account(prefs)?.notificationAccount
-        if (climbed != null && account != null && Ankiquest.inForeground()) {
+        val moment =
+            climbed?.let {
+                AnkiquestMoments.rank(change, it, result.optLong("week"), TimeManager.time.intTimeMS())
+            }
+        if (moment != null && account != null && Ankiquest.inForeground()) {
             // A climb while the app is open waits for the session to end, like every other moment.
-            val now = TimeManager.time.intTimeMS()
-            AnkiquestMoments.offer(prefs, account, listOf(AnkiquestMoments.rank(change, climbed, result.optLong("week"), now)))
+            AnkiquestMoments.offer(prefs, account, listOf(moment))
             Ankiquest.presentMomentsSoon()
             return
         }
@@ -191,9 +233,11 @@ object AnkiquestNotifier {
             RANK_ID,
             title,
             body,
-            AnkiquestLeaderboardActivity
-                .intent(context, account = AnkiquestHomeData.account(prefs)?.notificationAccount)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            if (account != null && moment != null) {
+                AnkiquestMoments.noticeIntent(context, account, moment)
+            } else {
+                AnkiquestLeaderboardActivity.intent(context, account = account).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
             listOfNotNull(place?.let { AnkiquestShare.action(context, RANK_ID, shareTitle, shareBody, null, null, it, scope) }),
             art = place?.let(AnkiquestArt::place) ?: R.drawable.aki_face,
         )
@@ -337,6 +381,7 @@ object AnkiquestNotifier {
         entry: JSONObject,
         account: String,
     ): Intent {
+        AnkiquestMoments.fromNotice(entry)?.let { return AnkiquestMoments.noticeIntent(context, account, it) }
         val destination =
             AnkiquestNavigation.notificationDestination(
                 entry.optString("kind", "completion"),
@@ -407,9 +452,9 @@ object AnkiquestNotifier {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return false
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
-        return manager.getNotificationChannel(ensureChannel(context, nudge))?.importance?.let {
-            it != NotificationManagerCompat.IMPORTANCE_NONE
-        } ?: false
+        // Health checks only read settings. A new channel uses defaults when a notification is posted.
+        val channel = if (nudge) NUDGE_CHANNEL else CHANNEL
+        return manager.getNotificationChannel(channel)?.importance != NotificationManagerCompat.IMPORTANCE_NONE
     }
 
     private fun ensureChannel(

@@ -4,17 +4,24 @@ package com.ichi2.anki.ankiquest
 
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.content.edit
+import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -62,6 +69,98 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     }
 
     @Test
+    fun `shows progress to the minimum in each size`() {
+        for (size in AnkiquestStreakWidget.Size.entries) {
+            for (minutes in listOf(0, 6, 10, 12)) {
+                val state = if (minutes >= 10) "studied" else "pending"
+                val board = JSONArray().put(me(9, state, 8, minutes, 10))
+                val widget =
+                    AnkiquestStreakWidget
+                        .views(targetContext, board, "hill", size)
+                        .apply(targetContext, FrameLayout(targetContext))
+                val progress = widget.allViews.filterIsInstance<ProgressBar>().single()
+                val expected = minutes.coerceAtMost(10)
+                assertEquals(View.VISIBLE, progress.visibility, size.name)
+                assertEquals(10, progress.max, size.name)
+                assertEquals(expected, progress.progress, size.name)
+                val description = widget.contentDescription.toString()
+                if (minutes < 10) {
+                    assertContains(description, "$minutes of 10 minutes today", message = size.name)
+                } else {
+                    assertContains(description, "Studied today", message = size.name)
+                    assertFalse(description.contains("10 of 10 minutes today"), size.name)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `hides the meter for stale or missing data`() {
+        val stale = me(9, "pending", 8, 6, 10).put("day_ends_at", TimeManager.time.intTimeMS())
+        for (board in listOf(null, JSONArray().put(stale), JSONArray().put(me(9, "pending", 8)))) {
+            val progress = render(board).allViews.filterIsInstance<ProgressBar>().single()
+            assertEquals(View.GONE, progress.visibility)
+        }
+    }
+
+    @Test
+    fun `studied and protected days fill the meter below the minimum`() {
+        for (state in listOf("studied", "protected")) {
+            val widget = render(JSONArray().put(me(9, state, 5, 3, 10)))
+            val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+            assertEquals(View.VISIBLE, meter.visibility, state)
+            assertEquals(10, meter.progress, state)
+            assertFalse(widget.contentDescription.toString().contains("3 of 10 minutes"), state)
+        }
+    }
+
+    @Test
+    fun `a row without today's review count hides the meter`() {
+        val row = me(9, "pending", 8, 6, 10).apply { remove("today_reviews") }
+        val meter = render(JSONArray().put(row)).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
+        assertEquals(View.GONE, meter.visibility)
+    }
+
+    @Test
+    fun `an unsent earlier day hides the own meter despite a current row`() {
+        val now = TimeManager.time.intTimeMS()
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://study.example.test")
+            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_TOKEN, "test-token")
+        }
+        val server =
+            AnkiquestDay.Server(
+                streak = 9,
+                streakState = "pending",
+                dayEndsAt = now + 3_600_000,
+                lastReviewId = now - 7_200_000,
+                startsAt = now - 3_600_000,
+                reviews = 8,
+                timeMs = 360_000,
+                streakMinutes = 10,
+            )
+        AnkiquestDay.remember(server.json(), prefs)
+        AnkiquestDay.rememberLocal(
+            assertNotNull(HomeAccount.current(prefs)).scope,
+            server,
+            listOf(AnkiquestDay.Review(now - 3_600_001, 60_000)),
+            prefs,
+        )
+        assertEquals(AnkiquestDay.State.UNKNOWN, assertNotNull(AnkiquestDay.own(now)).label)
+
+        for (size in AnkiquestStreakWidget.Size.entries) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, JSONArray().put(me(9, "pending", 8, 6, 10)), "hill", size)
+                    .apply(targetContext, FrameLayout(targetContext))
+            val meter = widget.allViews.filterIsInstance<ProgressBar>().single()
+            assertEquals(View.GONE, meter.visibility, size.name)
+        }
+    }
+
+    @Test
     fun `asks to set up the account when there is no board`() {
         val widget = render(null)
         assertEquals("–", widget.text(R.id.ankiquest_streak_number))
@@ -97,21 +196,21 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
 
     @Test
     fun `the companion's pose follows the streak`() {
-        assertEquals(R.drawable.aki_comeback, AnkiquestStreakWidget.pose("studied", 1))
-        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose("studied", 3))
-        assertEquals(R.drawable.aki_streak_hot, AnkiquestStreakWidget.pose("studied", 10))
-        assertEquals(R.drawable.aki_streak_blazing, AnkiquestStreakWidget.pose("studied", 45))
-        assertEquals(R.drawable.aki_streak_legend, AnkiquestStreakWidget.pose("studied", 365))
-        assertEquals(R.drawable.aki_freeze_used, AnkiquestStreakWidget.pose("protected", 10))
-        assertEquals(R.drawable.aki_at_risk, AnkiquestStreakWidget.pose("short", 10))
-        assertEquals(R.drawable.aki_sleeping, AnkiquestStreakWidget.pose("pending", 0))
-        assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose("unknown", 10))
+        assertEquals(R.drawable.aki_comeback, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 1))
+        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 3))
+        assertEquals(R.drawable.aki_streak_hot, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 10))
+        assertEquals(R.drawable.aki_streak_blazing, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 45))
+        assertEquals(R.drawable.aki_streak_legend, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 365))
+        assertEquals(R.drawable.aki_freeze_used, AnkiquestStreakWidget.pose(AnkiquestDay.State.PROTECTED, 10))
+        assertEquals(R.drawable.aki_at_risk, AnkiquestStreakWidget.pose(AnkiquestDay.State.SHORT, 10))
+        assertEquals(R.drawable.aki_sleeping, AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 0))
+        assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose(AnkiquestDay.State.UNKNOWN, 10))
     }
 
     @Test
     fun `the big companion fits today's state and streak`() {
         val now = TimeManager.time.intTimeMS()
-        val poses = { state: String, streak: Int, entry: JSONObject?, goal: Boolean ->
+        val poses = { state: AnkiquestDay.State, streak: Int, entry: JSONObject?, goal: Boolean ->
             AnkiquestStreakWidget.poses(state, streak, entry, goal, now)
         }
         val day = { minutes: Int, needed: Int, hoursLeft: Long ->
@@ -120,27 +219,47 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                 .put("streak_minutes", needed)
                 .put("day_ends_at", now + hoursLeft * 3_600_000)
         }
-        assertEquals(listOf(R.drawable.aki_celebrate, R.drawable.aki_streak), poses("studied", 3, day(20, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_goal, R.drawable.aki_celebrate), poses("studied", 3, day(20, 0, 10), true))
-        assertEquals(listOf(R.drawable.aki_minimum), poses("studied", 40, day(11, 10, 10), false), "the minimum was just reached")
-        assertEquals(listOf(R.drawable.aki_streak_hot, R.drawable.aki_celebrate), poses("studied", 10, day(30, 10, 10), false))
-        assertEquals(listOf(R.drawable.aki_streak_blazing, R.drawable.aki_celebrate), poses("studied", 45, day(30, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone), poses("studied", 365, day(30, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_comeback), poses("studied", 1, day(30, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze), poses("protected", 10, day(0, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_at_risk), poses("pending", 10, day(0, 0, 3), false), "the last hours of the day")
-        assertEquals(listOf(R.drawable.aki_review, R.drawable.aki_welcome), poses("short", 10, day(4, 10, 10), false))
-        assertEquals(listOf(R.drawable.aki_sleeping, R.drawable.aki_comeback), poses("pending", 0, day(0, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_welcome), poses("unknown", 10, null, false))
+        assertEquals(listOf(R.drawable.aki_celebrate, R.drawable.aki_streak), poses(AnkiquestDay.State.STUDIED, 3, day(20, 0, 10), false))
+        assertEquals(listOf(R.drawable.aki_goal, R.drawable.aki_celebrate), poses(AnkiquestDay.State.STUDIED, 3, day(20, 0, 10), true))
+        assertEquals(
+            listOf(R.drawable.aki_minimum),
+            poses(AnkiquestDay.State.STUDIED, 40, day(11, 10, 10), false),
+            "the minimum was just reached",
+        )
+        assertEquals(
+            listOf(R.drawable.aki_streak_hot, R.drawable.aki_celebrate),
+            poses(AnkiquestDay.State.STUDIED, 10, day(30, 10, 10), false),
+        )
+        assertEquals(
+            listOf(R.drawable.aki_streak_blazing, R.drawable.aki_celebrate),
+            poses(AnkiquestDay.State.STUDIED, 45, day(30, 0, 10), false),
+        )
+        assertEquals(
+            listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone),
+            poses(AnkiquestDay.State.STUDIED, 365, day(30, 0, 10), false),
+        )
+        assertEquals(listOf(R.drawable.aki_comeback), poses(AnkiquestDay.State.STUDIED, 1, day(30, 0, 10), false))
+        assertEquals(
+            listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze),
+            poses(AnkiquestDay.State.PROTECTED, 10, day(0, 0, 10), false),
+        )
+        assertEquals(
+            listOf(R.drawable.aki_at_risk),
+            poses(AnkiquestDay.State.PENDING, 10, day(0, 0, 3), false),
+            "the last hours of the day",
+        )
+        assertEquals(listOf(R.drawable.aki_review, R.drawable.aki_welcome), poses(AnkiquestDay.State.SHORT, 10, day(4, 10, 10), false))
+        assertEquals(listOf(R.drawable.aki_sleeping, R.drawable.aki_comeback), poses(AnkiquestDay.State.PENDING, 0, day(0, 0, 10), false))
+        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_welcome), poses(AnkiquestDay.State.UNKNOWN, 10, null, false))
     }
 
     @Test
     fun `the big companion keeps its pose all day and changes between days`() {
         val day = 86_400_000L
         val entry = { endsAt: Long -> JSONObject().put("day_ends_at", endsAt) }
-        val pose = { endsAt: Long -> AnkiquestStreakWidget.bigPose("studied", 3, entry(endsAt), false, endsAt - 1) }
+        val pose = { endsAt: Long -> AnkiquestStreakWidget.bigPose(AnkiquestDay.State.STUDIED, 3, entry(endsAt), false, endsAt - 1) }
         val today = 20_000 * day + 5 * 3_600_000
-        assertEquals(pose(today), AnkiquestStreakWidget.bigPose("studied", 3, entry(today), false, today - 10 * 3_600_000))
+        assertEquals(pose(today), AnkiquestStreakWidget.bigPose(AnkiquestDay.State.STUDIED, 3, entry(today), false, today - 10 * 3_600_000))
         assertEquals(
             setOf(R.drawable.aki_celebrate, R.drawable.aki_streak),
             setOf(pose(today), pose(today + day)),

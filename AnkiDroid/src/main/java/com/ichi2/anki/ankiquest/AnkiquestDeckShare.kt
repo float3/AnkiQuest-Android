@@ -159,6 +159,20 @@ internal object AnkiquestDeckShare {
         }
     }
 
+    private fun askedKey(
+        account: String,
+        deck: Long,
+        day: Long,
+    ): String = "$account:$day:$deck"
+
+    // Check before fetching recipients without consuming the day's question.
+    private fun asked(
+        prefs: SharedPreferences,
+        account: String,
+        deck: Long,
+        day: Long,
+    ): Boolean = askedKey(account, deck, day) in prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()
+
     /** True the first time it is asked for [account], [deck] and Anki [day]; it keeps only the current day's answers. */
     fun firstAsk(
         prefs: SharedPreferences,
@@ -166,10 +180,12 @@ internal object AnkiquestDeckShare {
         deck: Long,
         day: Long,
     ): Boolean {
-        val asked = prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()
-        val entry = "$account:$day:$deck"
-        if (entry in asked) return false
-        prefs.edit { putStringSet(PREF_ASKED, asked.filter { it.contains(":$day:") }.toSet() + entry) }
+        if (asked(prefs, account, deck, day)) {
+            return false
+        }
+        val earlier = prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()
+        val entry = askedKey(account, deck, day)
+        prefs.edit { putStringSet(PREF_ASKED, earlier.filter { it.contains(":$day:") }.toSet() + entry) }
         return true
     }
 
@@ -197,8 +213,7 @@ internal object AnkiquestDeckShare {
             if (!AnkiquestPostStudyPrompts.ready(context)) {
                 return
             }
-            val key = "${account.scope}:$day:$deck"
-            if (key in prefs.getStringSet(PREF_ASKED, emptySet()).orEmpty()) {
+            if (asked(prefs, account.scope, deck, day)) {
                 return
             }
             val settings =
@@ -211,7 +226,7 @@ internal object AnkiquestDeckShare {
                     return@withContext
                 }
                 if (firstAsk(prefs, account.scope, deck, day)) {
-                    AnkiquestPostStudyPrompts.track(context, show(context, account, prompt))
+                    AnkiquestPostStudyPrompts.track(show(context, account, prompt))
                 }
             }
         } catch (e: CancellationException) {

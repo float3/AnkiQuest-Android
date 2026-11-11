@@ -68,6 +68,10 @@
             android:persistent="false"
             android:title="@string/ankiquest_notify_moments_title"
             android:summary="@string/ankiquest_notify_moments_summary" />
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_streak_cue_key"
+            android:defaultValue="true"
+            android:title="@string/ankiquest_streak_cue_title" />
     </PreferenceCategory>
     <PreferenceCategory
         android:key="@string/ankiquest_sharing_group_key"
@@ -77,6 +81,12 @@
             android:persistent="false"
             android:title="@string/ankiquest_share_moments_title"
             android:summary="@string/ankiquest_share_moments_summary" />
+        <SwitchPreferenceCompat
+            android:key="@string/ankiquest_show_global_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_show_global_title"
+            android:summary="@string/ankiquest_show_global_summary"
+            app:isPreferenceVisible="false" />
         <Preference
             android:key="@string/ankiquest_moments_decks_key"
             android:persistent="false"
@@ -111,6 +121,10 @@
         <Preference
             android:key="@string/ankiquest_check_updates_key"
             android:title="@string/ankiquest_check_updates_title" />
+        <Preference
+            android:key="@string/ankiquest_debug_info_key"
+            android:persistent="false"
+            android:title="@string/ankiquest_debug_info_title" />
         <Preference
             android:key="@string/aq_privacy_key"
             android:persistent="false"

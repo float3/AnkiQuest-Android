@@ -3,3 +3,4 @@ AnkiDroid/src/main/assets/jquery.min.js
 AnkiDroid/build/
 AnkiDroid/src/test/resources/ankiquest/clients.json
 AnkiDroid/src/test/resources/ankiquest/day_verdicts.json
+AnkiDroid/src/test/resources/ankiquest/review_heatmap.json
