@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="ankiquest_me">Eu</string>
     <string name="ankiquest_nav_today">Hoje</string>
     <string name="ankiquest_nav_friends">Amigos</string>
-    <string name="ankiquest_nav_progress">Progresso</string>
     <string name="ankiquest_nav_decks">Baralhos</string>
     <string name="ankiquest_open_today_title">Abrir Hoje ao iniciar</string>
     <string name="ankiquest_open_today_summary">Começa com o estudo e os objetivos dos amigos. Desativa para abrir a biblioteca de baralhos.</string>

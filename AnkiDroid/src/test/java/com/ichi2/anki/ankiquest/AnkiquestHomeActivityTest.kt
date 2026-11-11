@@ -224,19 +224,19 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `navigation keeps Today, Activity, friend goals and Progress native and opens other community pages on the website`() {
+    fun `three tabs and the avatar keep the native destinations`() {
         val home = launch()
         val nav = home.findViewById<BottomNavigationView>(R.id.ankiquest_tab_bar)
-        assertEquals(4, nav.menu.size)
+        assertEquals(3, nav.menu.size)
 
         nav.selectedItemId = R.id.ankiquest_nav_friends
         val friends = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(AnkiquestFriendsActivity::class.java.name, friends.component?.className)
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
 
-        nav.selectedItemId = R.id.ankiquest_nav_progress
+        home.findViewById<View>(R.id.aq_home_account).performClick()
         val progress = assertNotNull(shadowOf(home).nextStartedActivity)
-        assertEquals(AnkiquestProfileActivity::class.java.name, progress.component?.className, "progress is the native profile")
+        assertEquals(AnkiquestProfileActivity::class.java.name, progress.component?.className, "Me is the native profile")
         assertEquals(R.id.ankiquest_nav_today, nav.selectedItemId)
 
         home.findViewById<View>(R.id.aq_home_activity).performClick()
