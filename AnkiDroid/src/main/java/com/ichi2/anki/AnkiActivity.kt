@@ -57,7 +57,8 @@ import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.viewbinding.ViewBinding
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
-import com.ichi2.anim.ActivityTransitionAnimation
+import com.ichi2.anim.enableActivityAnimation
+import com.ichi2.anim.enableIntentAnimation
 import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.ShortcutGroupProvider
 import com.ichi2.anki.android.input.shortcut
@@ -72,10 +73,8 @@ import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.ui.TransitionDirection
 import com.ichi2.anki.common.ui.TransitionDirection.DEFAULT
-import com.ichi2.anki.common.ui.TransitionDirection.NONE
 import com.ichi2.anki.common.utils.android.getColorFromAttr
 import com.ichi2.anki.common.utils.android.showThemedToast
-import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.compat.CompatHelper
 import com.ichi2.anki.compat.CompatHelper.Companion.registerReceiverCompat
 import com.ichi2.anki.dialogs.AsyncDialogFragment
@@ -239,31 +238,6 @@ open class AnkiActivity(
         setContentView(binding.root)
     }
 
-    /**
-     * Sets the title (and possibly subtitle) of the toolbar (support action bar) for the activity.
-     *
-     * @param title The new title to be set for the toolbar.
-     * @param subtitle The new subtitle to be set for the toolbar. If `null`, the subtitle is removed.
-     */
-    open fun setToolbarText(
-        title: String,
-        subtitle: String? = null,
-    ) {
-        supportActionBar?.title = title
-        supportActionBar?.subtitle = subtitle
-    }
-
-    /**
-     * Sets the title (and possibly subtitle) of the toolbar (support action bar) for the activity.
-     *
-     * @param titleRes The new title to be set for the toolbar.
-     * @param subtitleRes The new subtitle to be set for the toolbar. If `null`, the subtitle is removed.
-     */
-    open fun setToolbarText(
-        @StringRes titleRes: Int,
-        @StringRes subtitleRes: Int? = null,
-    ) = setToolbarText(getString(titleRes), subtitleRes?.let { getString(it) })
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
             Timber.i("Home button pressed")
@@ -377,40 +351,6 @@ open class AnkiActivity(
         Timber.i("finishWithAnimation %s", animation)
         super.finish()
         enableActivityAnimation(animation, open = false)
-    }
-
-    private fun disableIntentAnimation(intent: Intent) {
-        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
-    }
-
-    /**
-     * @param open when `true`, overrides the animation for entering this activity.
-     * When `false`, overrides the animation for closing this activity
-     */
-    private fun disableActivityAnimation(open: Boolean) {
-        ActivityTransitionAnimation.slide(this, NONE, open)
-    }
-
-    @KotlinCleanup("Maybe rename this? This only disables the animation conditionally")
-    private fun enableIntentAnimation(intent: Intent) {
-        if (animationDisabled()) {
-            disableIntentAnimation(intent)
-        }
-    }
-
-    /**
-     * @param open when `true`, overrides the animation for entering this activity.
-     * When `false`, overrides the animation for closing this activity
-     */
-    private fun enableActivityAnimation(
-        animation: TransitionDirection,
-        open: Boolean,
-    ) {
-        if (animationDisabled()) {
-            disableActivityAnimation(open)
-        } else {
-            ActivityTransitionAnimation.slide(this, animation, open)
-        }
     }
 
     /** Method for loading the collection which is inherited by every [AnkiActivity]  */
@@ -676,7 +616,10 @@ open class AnkiActivity(
     protected fun showedActivityFailedScreen(savedInstanceState: Bundle?) =
         showedActivityFailedScreen(
             savedInstanceState = savedInstanceState,
-            activitySuperOnCreate = { state -> super.onCreate(state) },
+            activitySuperOnCreate = { state ->
+                Themes.setTheme(this, state)
+                super.onCreate(state)
+            },
         )
 
     /** @see Window.setNavigationBarColor */
