@@ -6,19 +6,23 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import anki.collection.OpChanges
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.AnkiquestIcon.Mood
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
 import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
+import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -117,6 +121,65 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         }
 
     @Test
+    fun `offline reviews survive a restart and update their own icon and widget`() {
+        registerAliases()
+        val now = TimeManager.time.intTimeMS()
+        val pending = profile("pending", 12, 2).put("last_review_id", now - 10)
+        pending.getJSONObject("today").put("starts_at", now - hour).put("streak_minutes", 10)
+        val scope = checkNotNull(HomeAccount.current()).scope
+        AnkiquestDay.remember(pending)
+        val day = checkNotNull(AnkiquestDay.Server.profile(pending))
+        AnkiquestDay.rememberLocal(scope, day, listOf(AnkiquestDay.Review(now, 600_000)))
+
+        // Launcher and widget read the persisted unsent totals.
+        AnkiquestIcon.showLastKnown(targetContext, now)
+        assertEquals(listOf(Mood.HAPPY), enabled())
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, JSONArray(), "hill", now = now)
+                .apply(targetContext, FrameLayout(targetContext))
+        assertEquals("13", widget.findViewById<TextView>(R.id.ankiquest_streak_number).text.toString())
+        assertEquals(
+            targetContext.getString(R.string.aq_goal_streak_safe_unsent),
+            widget.findViewById<TextView>(R.id.ankiquest_streak_status).text.toString(),
+        )
+
+        // A new token for the same player cannot reuse the previous session's offline verdict.
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        AnkiquestDay.remember(pending)
+        AnkiquestIcon.showLastKnown(targetContext, now)
+        assertEquals(listOf(Mood.WORRIED), enabled())
+    }
+
+    @Test
+    fun `two review answers only claim the local daily moment once`() {
+        val now = TimeManager.time.intTimeMS()
+        val pending = profile("pending", 12, 2).put("last_review_id", now - 1000)
+        pending.getJSONObject("today").put("starts_at", now - hour).put("streak_minutes", 10)
+        AnkiquestDay.remember(pending)
+        val account = checkNotNull(HomeAccount.current()).notificationAccount
+        val prefs = AnkiDroidApp.sharedPrefs()
+        val reviewer = mockk<ReviewerViewModel>()
+        val changes = OpChanges.newBuilder().setStudyQueues(true).build()
+
+        fun answer(id: Long) {
+            col.db.execute(
+                "insert into revlog (id, cid, usn, ease, ivl, lastIvl, factor, time, type) values (?, 1, 0, 3, 1, 1, 2500, 600000, 1)",
+                id,
+            )
+            Ankiquest.opExecuted(changes, reviewer)
+        }
+
+        answer(now - 100)
+        advanceRobolectricLooperUntil { AnkiquestMoments.pending(prefs, account).isNotEmpty() }
+        assertEquals(1, AnkiquestMoments.take(prefs, account).size)
+        answer(now - 50)
+        advanceRobolectricLooperUntil { AnkiquestDay.own(now)?.unsent == 2 }
+        advanceRobolectricLooper()
+        assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
+    }
+
+    @Test
     fun `the streak widget is drawn again right after an upload`() =
         runBlocking {
             val manager = AppWidgetManager.getInstance(targetContext)
@@ -147,7 +210,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
             Ankiquest.uploadPending()
 
             assertEquals("13", text(R.id.ankiquest_streak_number))
-            assertEquals("Studied today", text(R.id.ankiquest_streak_status))
+            assertEquals(targetContext.getString(R.string.aq_goal_streak_safe), text(R.id.ankiquest_streak_status))
             assertEquals(
                 1,
                 synchronized(paths) { paths.count { it.startsWith("/api/") && !it.startsWith("/api/decks/") } },

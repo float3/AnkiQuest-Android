@@ -97,21 +97,21 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
 
     @Test
     fun `the companion's pose follows the streak`() {
-        assertEquals(R.drawable.aki_comeback, AnkiquestStreakWidget.pose("studied", 1))
-        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose("studied", 3))
-        assertEquals(R.drawable.aki_streak_hot, AnkiquestStreakWidget.pose("studied", 10))
-        assertEquals(R.drawable.aki_streak_blazing, AnkiquestStreakWidget.pose("studied", 45))
-        assertEquals(R.drawable.aki_streak_legend, AnkiquestStreakWidget.pose("studied", 365))
-        assertEquals(R.drawable.aki_freeze_used, AnkiquestStreakWidget.pose("protected", 10))
-        assertEquals(R.drawable.aki_at_risk, AnkiquestStreakWidget.pose("short", 10))
-        assertEquals(R.drawable.aki_sleeping, AnkiquestStreakWidget.pose("pending", 0))
-        assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose("unknown", 10))
+        assertEquals(R.drawable.aki_comeback, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 1))
+        assertEquals(R.drawable.aki_streak, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 3))
+        assertEquals(R.drawable.aki_streak_hot, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 10))
+        assertEquals(R.drawable.aki_streak_blazing, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 45))
+        assertEquals(R.drawable.aki_streak_legend, AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 365))
+        assertEquals(R.drawable.aki_freeze_used, AnkiquestStreakWidget.pose(AnkiquestDay.State.PROTECTED, 10))
+        assertEquals(R.drawable.aki_at_risk, AnkiquestStreakWidget.pose(AnkiquestDay.State.SHORT, 10))
+        assertEquals(R.drawable.aki_sleeping, AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 0))
+        assertEquals(R.drawable.aki_face, AnkiquestStreakWidget.pose(AnkiquestDay.State.UNKNOWN, 10))
     }
 
     @Test
     fun `the big companion fits today's state and streak`() {
         val now = TimeManager.time.intTimeMS()
-        val poses = { state: String, streak: Int, entry: JSONObject?, goal: Boolean ->
+        val poses = { state: AnkiquestDay.State, streak: Int, entry: JSONObject?, goal: Boolean ->
             AnkiquestStreakWidget.poses(state, streak, entry, goal, now)
         }
         val day = { minutes: Int, needed: Int, hoursLeft: Long ->
@@ -120,27 +120,47 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                 .put("streak_minutes", needed)
                 .put("day_ends_at", now + hoursLeft * 3_600_000)
         }
-        assertEquals(listOf(R.drawable.aki_celebrate, R.drawable.aki_streak), poses("studied", 3, day(20, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_goal, R.drawable.aki_celebrate), poses("studied", 3, day(20, 0, 10), true))
-        assertEquals(listOf(R.drawable.aki_minimum), poses("studied", 40, day(11, 10, 10), false), "the minimum was just reached")
-        assertEquals(listOf(R.drawable.aki_streak_hot, R.drawable.aki_celebrate), poses("studied", 10, day(30, 10, 10), false))
-        assertEquals(listOf(R.drawable.aki_streak_blazing, R.drawable.aki_celebrate), poses("studied", 45, day(30, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone), poses("studied", 365, day(30, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_comeback), poses("studied", 1, day(30, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze), poses("protected", 10, day(0, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_at_risk), poses("pending", 10, day(0, 0, 3), false), "the last hours of the day")
-        assertEquals(listOf(R.drawable.aki_review, R.drawable.aki_welcome), poses("short", 10, day(4, 10, 10), false))
-        assertEquals(listOf(R.drawable.aki_sleeping, R.drawable.aki_comeback), poses("pending", 0, day(0, 0, 10), false))
-        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_welcome), poses("unknown", 10, null, false))
+        assertEquals(listOf(R.drawable.aki_celebrate, R.drawable.aki_streak), poses(AnkiquestDay.State.STUDIED, 3, day(20, 0, 10), false))
+        assertEquals(listOf(R.drawable.aki_goal, R.drawable.aki_celebrate), poses(AnkiquestDay.State.STUDIED, 3, day(20, 0, 10), true))
+        assertEquals(
+            listOf(R.drawable.aki_minimum),
+            poses(AnkiquestDay.State.STUDIED, 40, day(11, 10, 10), false),
+            "the minimum was just reached",
+        )
+        assertEquals(
+            listOf(R.drawable.aki_streak_hot, R.drawable.aki_celebrate),
+            poses(AnkiquestDay.State.STUDIED, 10, day(30, 10, 10), false),
+        )
+        assertEquals(
+            listOf(R.drawable.aki_streak_blazing, R.drawable.aki_celebrate),
+            poses(AnkiquestDay.State.STUDIED, 45, day(30, 0, 10), false),
+        )
+        assertEquals(
+            listOf(R.drawable.aki_streak_legend, R.drawable.aki_streak_milestone),
+            poses(AnkiquestDay.State.STUDIED, 365, day(30, 0, 10), false),
+        )
+        assertEquals(listOf(R.drawable.aki_comeback), poses(AnkiquestDay.State.STUDIED, 1, day(30, 0, 10), false))
+        assertEquals(
+            listOf(R.drawable.aki_freeze_used, R.drawable.aki_freeze),
+            poses(AnkiquestDay.State.PROTECTED, 10, day(0, 0, 10), false),
+        )
+        assertEquals(
+            listOf(R.drawable.aki_at_risk),
+            poses(AnkiquestDay.State.PENDING, 10, day(0, 0, 3), false),
+            "the last hours of the day",
+        )
+        assertEquals(listOf(R.drawable.aki_review, R.drawable.aki_welcome), poses(AnkiquestDay.State.SHORT, 10, day(4, 10, 10), false))
+        assertEquals(listOf(R.drawable.aki_sleeping, R.drawable.aki_comeback), poses(AnkiquestDay.State.PENDING, 0, day(0, 0, 10), false))
+        assertEquals(listOf(R.drawable.aki_face, R.drawable.aki_welcome), poses(AnkiquestDay.State.UNKNOWN, 10, null, false))
     }
 
     @Test
     fun `the big companion keeps its pose all day and changes between days`() {
         val day = 86_400_000L
         val entry = { endsAt: Long -> JSONObject().put("day_ends_at", endsAt) }
-        val pose = { endsAt: Long -> AnkiquestStreakWidget.bigPose("studied", 3, entry(endsAt), false, endsAt - 1) }
+        val pose = { endsAt: Long -> AnkiquestStreakWidget.bigPose(AnkiquestDay.State.STUDIED, 3, entry(endsAt), false, endsAt - 1) }
         val today = 20_000 * day + 5 * 3_600_000
-        assertEquals(pose(today), AnkiquestStreakWidget.bigPose("studied", 3, entry(today), false, today - 10 * 3_600_000))
+        assertEquals(pose(today), AnkiquestStreakWidget.bigPose(AnkiquestDay.State.STUDIED, 3, entry(today), false, today - 10 * 3_600_000))
         assertEquals(
             setOf(R.drawable.aki_celebrate, R.drawable.aki_streak),
             setOf(pose(today), pose(today + day)),

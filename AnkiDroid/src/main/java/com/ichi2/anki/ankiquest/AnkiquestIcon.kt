@@ -66,20 +66,34 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         profile: JSONObject?,
         now: Long,
     ): Mood {
-        val dayEndsAt = profile?.optLong("day_ends_at") ?: 0L
-        if (profile == null || dayEndsAt <= now) return Mood.DEFAULT
-        val streak = profile.optLong("streak")
-        return when (profile.optString("streak_state")) {
-            "studied" -> Mood.HAPPY
-            "protected" -> Mood.FROZEN
-            else ->
+        val server = AnkiquestDay.Server.profile(profile) ?: return Mood.DEFAULT
+        return mood(AnkiquestDay.judge(server, emptyList(), now), server.dayEndsAt - now)
+    }
+
+    private fun ownMood(
+        server: AnkiquestDay.Server?,
+        now: Long,
+        prefs: SharedPreferences,
+    ): Mood {
+        if (server == null) return Mood.DEFAULT
+        return mood(AnkiquestDay.judgeOwn(server, now, prefs), server.dayEndsAt - now)
+    }
+
+    private fun mood(
+        day: AnkiquestDay.Verdict?,
+        remainingMs: Long,
+    ): Mood =
+        when (day?.label) {
+            AnkiquestDay.State.STUDIED -> Mood.HAPPY
+            AnkiquestDay.State.PROTECTED -> Mood.FROZEN
+            AnkiquestDay.State.PENDING, AnkiquestDay.State.SHORT ->
                 when {
-                    streak == 0L -> Mood.SLEEPY
-                    dayEndsAt - now <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
+                    day.streak == 0 -> Mood.SLEEPY
+                    remainingMs <= WORRY_HOURS * 3_600_000L -> Mood.WORRIED
                     else -> Mood.DEFAULT
                 }
+            AnkiquestDay.State.UNKNOWN, null -> Mood.DEFAULT
         }
-    }
 
     fun enabled(prefs: SharedPreferences = AnkiDroidApp.sharedPrefs()): Boolean = prefs.getBoolean(PREF_ENABLED, true)
 
@@ -100,7 +114,8 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
         prefs: SharedPreferences = AnkiDroidApp.sharedPrefs(),
     ) {
         if (profile != null) remember(profile, prefs)
-        show(context, if (enabled(prefs)) mood(profile, now) else Mood.DEFAULT, prefs)
+        val mood = if (enabled(prefs)) ownMood(AnkiquestDay.Server.profile(profile), now, prefs) else Mood.DEFAULT
+        show(context, mood, prefs)
     }
 
     /**
@@ -116,7 +131,10 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
     private fun lastMood(
         now: Long,
         prefs: SharedPreferences,
-    ): Mood = mood(lastKnown(prefs), now)
+    ): Mood {
+        val server = AnkiquestDay.last(prefs) ?: AnkiquestDay.Server.profile(lastKnown(prefs))
+        return ownMood(server, now, prefs)
+    }
 
     /**
      * Queue a refresh on resume. The current account and day are read again when the app stops.

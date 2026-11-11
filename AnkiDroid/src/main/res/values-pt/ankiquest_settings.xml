@@ -34,6 +34,7 @@
     <string name="aq_profile_deck_alerts_start">Voltar a receber avisos de baralhos de %1$s</string>
     <string name="aq_profile_freezes_pause">Pausar a proteção da sequência</string>
     <string name="aq_profile_freezes_resume">Retomar a proteção da sequência</string>
+    <string name="ankiquest_streak_cue_title">Aviso de sequência ao rever</string>
     <string name="ankiquest_show_global_title">Mostrar-me na classificação global</string>
     <string name="ankiquest_show_global_summary">Os jogadores com sessão iniciada veem o teu nome, avatar, nível, XP e sequência. Os perfis públicos também são visíveis sem iniciar sessão. Os teus amigos e membros dos teus grupos veem mais. Esta opção só afeta a classificação.</string>
 </resources>

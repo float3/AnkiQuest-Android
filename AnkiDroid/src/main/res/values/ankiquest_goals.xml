@@ -15,7 +15,12 @@
     <string name="aq_goal_streak_minutes">%1$d / %2$d min</string>
     <string name="aq_goal_streak_syncing">Syncing…</string>
     <string name="aq_goal_minimum_syncing">Your reviews today are still on their way to the server. The streak is secured once the server counts them.</string>
-    <string name="aq_goal_streak_safe">Streak safe</string>
+    <string name="aq_goal_streak_safe">Today counts ✓</string>
+    <string name="aq_streak_minimum_title">Streak safe for today</string>
+    <plurals name="aq_streak_minimum_days">
+        <item quantity="one">%s day streak</item>
+        <item quantity="other">%s day streak</item>
+    </plurals>
     <string name="aq_goal_streak_any">Review once to keep your streak</string>
     <string name="ankiquest_streak_short">%1$d of %2$d minutes today</string>
     <string name="ankiquest_goal_cards_title" maxLength="41">Cards per day</string>
@@ -74,12 +79,12 @@
     <string name="ankiquest_mood_icon_key" translatable="false">ankiquestMoodIcon</string>
     <string name="ankiquest_mood_icon_title" maxLength="41">Aki’s mood on the app icon</string>
     <string name="ankiquest_mood_icon_summary">The icon smiles once today counts, worries late in the day, and shows a freeze when one protects you. The icon changes after you leave the app. Some launchers briefly drop the icon while it changes.</string>
-    <string name="aq_goal_streak_safe_unsent">Streak safe · not uploaded yet</string>
+    <string name="aq_goal_streak_safe_unsent">Today counts ✓ · not uploaded yet</string>
     <string name="aq_goal_minimum_unsent">Your reviews reach it; AnkiQuest counts them once they are uploaded.</string>
-    <string name="aq_goal_streak_safe_offline">Streak safe · waiting for a connection</string>
-    <string name="aq_goal_streak_safe_signed_out">Streak safe · sign in again to upload</string>
-    <string name="aq_goal_streak_safe_server">Streak safe · server error, will retry</string>
-    <string name="aq_goal_streak_safe_refused">Streak safe · upload refused</string>
+    <string name="aq_goal_streak_safe_offline">Today counts ✓ · waiting for a connection</string>
+    <string name="aq_goal_streak_safe_signed_out">Today counts ✓ · sign in again to upload</string>
+    <string name="aq_goal_streak_safe_server">Today counts ✓ · server error, will retry</string>
+    <string name="aq_goal_streak_safe_refused">Today counts ✓ · upload refused</string>
     <string name="aq_goal_upload_signed_out">The server refused this device’s sign-in. Sign in again in AnkiQuest settings.</string>
     <string name="aq_goal_upload_refused">Test connection in AnkiQuest settings says why.</string>
 </resources>
