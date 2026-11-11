@@ -22,6 +22,11 @@ Alternately, you may run the actions on your fork of `Anki-Android`.
 
 ## Other Workflows
 
+The fork's [pinned AnkiQuest server snapshot](../../docs/ankiquest-server-snapshot.md)
+documents `ankiquest_api_contract.yml`, `ankiquest_fixtures.yml` and the daily
+`ankiquest_bump_server.yml`. Normal builds use committed data; server updates
+arrive on `bot/server-bump` pull requests.
+
 These are typically run by maintainers. See the [Maintenance guide](https://github.com/ankidroid/Anki-Android/wiki/Maintenance-guide)
 
 ### Merge queue cancellation

@@ -5,14 +5,11 @@ on:
   pull_request:
   push:
     branches: [main]
-  schedule:
-    - cron: "17 5 * * *"
   workflow_dispatch:
     inputs:
       server_ref:
-        description: "float3/ankiquest branch, tag or commit whose API examples to check against"
-        required: true
-        default: master
+        description: "Optional server branch, tag or commit for an ad-hoc check; blank uses the committed pin"
+        required: false
         type: string
 
 permissions:
@@ -29,11 +26,10 @@ env:
   GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=7 -Dorg.gradle.internal.repository.initial.backoff=2000
 
 jobs:
-  # Everything from the server checkout runs here, in a job with no cache, so it
-  # can never reach the shared Gradle cache. The contract job gets the examples as data.
+  # The exact pin is checked as data in an isolated job, without a Gradle cache.
+  # Only an explicit manual server_ref sends replacement data to the contract job.
   server:
     name: Server examples
-    if: github.event_name != 'schedule' || github.repository == 'float3/AnkiQuest-Android'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -41,19 +37,33 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Read the immutable server pin or manual override
+        id: server-ref
+        env:
+          SERVER_REF: ${{ inputs.server_ref }}
+        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: float3/ankiquest
-          ref: ${{ inputs.server_ref || 'master' }}
+          ref: ${{ steps.server-ref.outputs.ref }}
           path: server
           persist-credentials: false
+          sparse-checkout: |
+            docs/api/examples
+            tests/fixtures
 
-      - name: Keep the server's current examples
+      - name: Verify the committed snapshot against its exact server commit
+        if: inputs.server_ref == ''
+        run: node .github/ankiquest_server_snapshot.cjs verify server
+
+      - name: Keep manually requested server examples
+        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: server-api-examples
           path: server/docs/api/examples/*.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 1
 
   contract:
@@ -64,25 +74,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Download the server's current examples
+      - name: Download manually requested server examples
+        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        continue-on-error: true
         with:
           name: server-api-examples
           path: ${{ runner.temp }}/server-api-examples
 
-      - name: Use the server's current examples
+      - name: Use manually requested examples, preserving the ownership catalog
+        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
         shell: bash
         run: |
-          examples="$RUNNER_TEMP/server-api-examples"
-          resources=AnkiDroid/src/test/resources/ankiquest-api
-          if compgen -G "$examples/*.json" > /dev/null; then
-            find "$resources" -name '*.json' -delete
-            cp "$examples"/*.json "$resources"/
-            git status --short -- "$resources"
-          else
-            echo "The server at this ref has no docs/api/examples; checking the committed snapshot"
-          fi
+          node .github/ankiquest_server_snapshot.cjs examples "$RUNNER_TEMP/server-api-examples"
 
       - name: Configure JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1

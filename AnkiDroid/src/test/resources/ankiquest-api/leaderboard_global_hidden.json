@@ -1,0 +1,46 @@
+[
+  {
+    "display": "Hill",
+    "level": 3,
+    "period": "week",
+    "rank": 1,
+    "streak": 12,
+    "user": "hill",
+    "xp": 246
+  },
+  {
+    "display": "Cerro",
+    "level": 1,
+    "period": "week",
+    "rank": 2,
+    "streak": 1,
+    "user": "cerro",
+    "xp": 31
+  },
+  {
+    "day_ends_at": 1793246400000,
+    "display": "Ana",
+    "level": 1,
+    "me": true,
+    "period": "week",
+    "periods": {
+      "all": 20,
+      "day": 20,
+      "hour": 20,
+      "month": 20,
+      "week": 20,
+      "year": 20
+    },
+    "rank": 3,
+    "shown": false,
+    "streak": 1,
+    "streak_minutes": 0,
+    "streak_state": "studied",
+    "today_minutes": 0,
+    "today_reviews": 2,
+    "user": "ana",
+    "week_xp": 20,
+    "xp": 20,
+    "xp_total": 20
+  }
+]

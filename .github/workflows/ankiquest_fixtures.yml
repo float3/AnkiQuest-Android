@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      server_ref:
+        description: "Optional server branch, tag or commit to compare; blank checks the committed pin"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -17,13 +22,30 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Compare with the server's client fixtures, day verdicts and review heatmap
+      - name: Read the immutable server pin or manual override
+        id: server-ref
+        env:
+          SERVER_REF: ${{ inputs.server_ref }}
+        run: echo "ref=$(node .github/ankiquest_server_snapshot.cjs ref)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: float3/ankiquest
+          ref: ${{ steps.server-ref.outputs.ref }}
+          path: server
+          persist-credentials: false
+          sparse-checkout: |
+            docs/api/examples
+            tests/fixtures
+
+      - name: Verify committed examples and shared fixtures
+        if: inputs.server_ref == ''
+        run: node .github/ankiquest_server_snapshot.cjs verify server
+
+      - name: Compare with the manually requested server data
+        if: github.event_name == 'workflow_dispatch' && inputs.server_ref != ''
         shell: bash
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/float3/ankiquest/master/tests/fixtures/clients.json \
-            | diff - AnkiDroid/src/test/resources/ankiquest/clients.json
-          curl -fsSL https://raw.githubusercontent.com/float3/ankiquest/master/tests/fixtures/day_verdicts.json \
-            | diff - AnkiDroid/src/test/resources/ankiquest/day_verdicts.json
-          curl -fsSL https://raw.githubusercontent.com/float3/ankiquest/master/tests/fixtures/review_heatmap.json \
-            | diff - AnkiDroid/src/test/resources/ankiquest/review_heatmap.json
+        run: node .github/ankiquest_server_snapshot.cjs compare server
