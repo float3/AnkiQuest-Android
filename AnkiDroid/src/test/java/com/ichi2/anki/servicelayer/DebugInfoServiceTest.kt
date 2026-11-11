@@ -2,7 +2,10 @@
 
 package com.ichi2.anki.servicelayer
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import androidx.core.content.edit
+import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
@@ -13,11 +16,38 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 @RunWith(AndroidJUnit4::class)
 class DebugInfoServiceTest : RobolectricTest() {
+    @Test
+    @Config(sdk = [32])
+    fun `debug reports leave notification channels unchanged`() =
+        runTest {
+            val manager = targetContext.getSystemService<NotificationManager>()!!
+            shadowOf(manager).setNotificationsEnabled(true)
+            val before = manager.notificationChannels.map { it.id }.toSet()
+
+            val report = DebugInfoService.getDebugInfo(targetContext)
+
+            assertEquals(before, manager.notificationChannels.map { it.id }.toSet())
+            assertContains(report, "Notification channels = messages: true, nudges: true")
+
+            // Reading a blocked channel must preserve that choice and avoid creating the other one.
+            manager.createNotificationChannel(NotificationChannel("ankiquest", "AnkiQuest", NotificationManager.IMPORTANCE_NONE))
+            val blocked = manager.notificationChannels.map { it.id }.toSet()
+
+            val blockedReport = DebugInfoService.getDebugInfo(targetContext)
+
+            assertEquals(blocked, manager.notificationChannels.map { it.id }.toSet())
+            assertContains(blockedReport, "Notification channels = messages: false, nudges: true")
+            assertEquals(NotificationManager.IMPORTANCE_NONE, manager.getNotificationChannel("ankiquest").importance)
+        }
+
     @Test
     fun `AnkiQuest debug info excludes credentials and the server path`() =
         runTest {
