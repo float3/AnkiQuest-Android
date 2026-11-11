@@ -34,20 +34,23 @@ internal object AnkiquestAki {
         profile: JSONObject?,
         now: Long = TimeManager.time.intTimeMS(),
     ): Mood {
-        val dayEndsAt = profile?.optLong("day_ends_at") ?: 0L
-        val current = profile?.takeUnless { dayEndsAt > 0L && dayEndsAt <= now }
-        if (current?.optString("streak_state") == "protected" && current.optJSONObject("today")?.optLong("reviews", 0) == 0L) {
+        val goal = local?.goal
+        val day =
+            if (goal == null) {
+                AnkiquestDay.judge(AnkiquestDay.Server.profile(profile), emptyList(), now)
+            } else {
+                goal.withServerDay(profile, now).streakDay
+            }
+        if (day?.label == AnkiquestDay.State.PROTECTED && day.reviews == 0) {
             return Mood.FREEZE
         }
         if (local?.decks?.isNotEmpty() == true && local.decks.all { it.due == 0 } &&
-            (current?.optJSONObject("today")?.optLong("reviews", 0) ?: 0) > 0
+            (day?.reviews ?: 0) > 0
         ) {
             return Mood.CELEBRATE
         }
         if ((local?.focus?.due ?: 0) > 0) return Mood.REVIEW
-        if (current?.optString("streak_state") == "studied" &&
-            (current.optJSONObject("today")?.optLong("reviews", 0) ?: 0) > 0
-        ) {
+        if (day?.met == true && day.reviews > 0) {
             return Mood.STREAK
         }
         return Mood.WELCOME
