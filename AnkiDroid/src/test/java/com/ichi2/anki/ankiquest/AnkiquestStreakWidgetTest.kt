@@ -6,10 +6,12 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.content.edit
 import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
 import org.json.JSONArray
 import org.json.JSONObject
@@ -19,6 +21,7 @@ import org.robolectric.annotation.Config
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -116,6 +119,45 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         val row = me(9, "pending", 8, 6, 10).apply { remove("today_reviews") }
         val meter = render(JSONArray().put(row)).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
         assertEquals(View.GONE, meter.visibility)
+    }
+
+    @Test
+    fun `an unsent earlier day hides the own meter despite a current row`() {
+        val now = TimeManager.time.intTimeMS()
+        val prefs = targetContext.sharedPrefs()
+        prefs.edit {
+            putString(Ankiquest.PREF_URL, "https://study.example.test")
+            putString(Ankiquest.PREF_USER, "hill")
+            putString(Ankiquest.PREF_TOKEN, "test-token")
+        }
+        val server =
+            AnkiquestDay.Server(
+                streak = 9,
+                streakState = "pending",
+                dayEndsAt = now + 3_600_000,
+                lastReviewId = now - 7_200_000,
+                startsAt = now - 3_600_000,
+                reviews = 8,
+                timeMs = 360_000,
+                streakMinutes = 10,
+            )
+        AnkiquestDay.remember(server.json(), prefs)
+        AnkiquestDay.rememberLocal(
+            assertNotNull(HomeAccount.current(prefs)).scope,
+            server,
+            listOf(AnkiquestDay.Review(now - 3_600_001, 60_000)),
+            prefs,
+        )
+        assertEquals(AnkiquestDay.State.UNKNOWN, assertNotNull(AnkiquestDay.own(now)).label)
+
+        for (size in AnkiquestStreakWidget.Size.entries) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, JSONArray().put(me(9, "pending", 8, 6, 10)), "hill", size)
+                    .apply(targetContext, FrameLayout(targetContext))
+            val meter = widget.allViews.filterIsInstance<ProgressBar>().single()
+            assertEquals(View.GONE, meter.visibility, size.name)
+        }
     }
 
     @Test
