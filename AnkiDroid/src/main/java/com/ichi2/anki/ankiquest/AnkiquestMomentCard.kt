@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.VisibleForTesting
@@ -51,6 +52,59 @@ import timber.log.Timber
 internal object AnkiquestMomentCard {
     private const val ART_DP = 128
     private const val RECAP_ART_DP = 112
+    private const val MAX_PAGE_HEIGHT_DP = 400
+
+    /** Leave room for all dialog actions on short screens; each page scrolls within this height. */
+    private class Content(
+        context: Context,
+    ) : LinearLayout(context) {
+        init {
+            orientation = VERTICAL
+            setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, 0)
+            LayoutInflater.from(context).inflate(R.layout.dialog_ankiquest_moment, this, true)
+        }
+
+        override fun onMeasure(
+            widthMeasureSpec: Int,
+            heightMeasureSpec: Int,
+        ) {
+            // Dialogs first offer a maximum width; a pager needs its final width before laying out pages.
+            val width =
+                if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.AT_MOST) {
+                    MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY)
+                } else {
+                    widthMeasureSpec
+                }
+            val pager = findViewById<ViewPager2>(R.id.aq_moment_pager)
+            val more = findViewById<TextView>(R.id.aq_moment_more)
+            measureChild(more, width, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            val maximum = (MAX_PAGE_HEIGHT_DP * resources.displayMetrics.density).toInt()
+            // AlertDialog reserves only the first stacked action. Reserve the rest before growing the pager.
+            val actions = rootView.findViewById<View>(androidx.appcompat.R.id.buttonPanel)
+            val extraActions =
+                if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.AT_MOST && actions != null) {
+                    (actions.measuredHeight - minimumHeight(actions)).coerceAtLeast(0)
+                } else {
+                    0
+                }
+            val available =
+                if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED) {
+                    maximum
+                } else {
+                    MeasureSpec.getSize(heightMeasureSpec) - paddingTop - paddingBottom - extraActions -
+                        if (more.isVisible) more.measuredHeight else 0
+                }
+            pager.layoutParams.height = minOf(maximum, available.coerceAtLeast(0))
+            super.onMeasure(width, heightMeasureSpec)
+        }
+
+        private fun minimumHeight(view: View): Int =
+            when {
+                view.minimumHeight > 0 -> view.minimumHeight
+                view is ViewGroup && view.childCount == 1 -> minimumHeight(view.getChildAt(0))
+                else -> 0
+            }
+    }
 
     /** Review result -> recap and moment pages -> optional deck-sharing handoff. */
     data class Session(
@@ -73,7 +127,7 @@ internal object AnkiquestMomentCard {
         private val parentScope = (host as LifecycleOwner).lifecycleScope
         private val jobs = SupervisorJob(parentScope.coroutineContext[Job])
         private val scope = CoroutineScope(parentScope.coroutineContext + jobs)
-        private val content = LayoutInflater.from(host).inflate(R.layout.dialog_ankiquest_moment, null)
+        private val content = Content(host)
         private val pager = content.findViewById<ViewPager2>(R.id.aq_moment_pager)
         private val more = content.findViewById<TextView>(R.id.aq_moment_more)
         private val recap = RecapPage(host)

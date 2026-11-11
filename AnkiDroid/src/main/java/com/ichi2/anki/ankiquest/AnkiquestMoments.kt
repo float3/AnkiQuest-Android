@@ -616,8 +616,8 @@ internal object AnkiquestMoments {
     }
 
     /**
-     * Shows what waits for the signed-in account over [host], when it is [resting] and no moment is
-     * showing yet. Call it on the main thread.
+     * Shows waiting moments over a resting [host], joining its session card when one is open.
+     * Call on the main thread; returns whether the card owns the post-study feedback.
      */
     fun present(
         host: Activity,
