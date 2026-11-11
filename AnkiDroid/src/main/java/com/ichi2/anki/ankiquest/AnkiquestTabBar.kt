@@ -20,7 +20,7 @@ import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 
 /**
- * The bottom navigation of the four AnkiQuest tabs: Today, Friends, Progress and Decks.
+ * The bottom navigation of the three AnkiQuest tabs: Decks, Today and Friends.
  *
  * Every tab sets its bar up here so the bars look and behave the same: the bar reaches the bottom
  * edge of the screen, behind the gesture handle or navigation buttons, and pads its items above them.

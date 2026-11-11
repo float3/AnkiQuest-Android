@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="ankiquest_me">Moi</string>
     <string name="ankiquest_nav_today">Aujourd’hui</string>
     <string name="ankiquest_nav_friends">Amis</string>
     <string name="ankiquest_nav_progress">Progression</string>

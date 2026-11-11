@@ -274,7 +274,7 @@ object AnkiquestDeckPickerHooks {
         return true
     }
 
-    /** Maps Alt+1..4 to the AnkiQuest bottom navigation items. */
+    /** Keep the existing shortcuts; Alt+3 now opens Me above the deck list. */
     fun dispatchNavigationKey(
         activity: DeckPicker,
         event: KeyEvent,
@@ -295,7 +295,11 @@ object AnkiquestDeckPickerHooks {
                 KeyEvent.KEYCODE_4 -> R.id.ankiquest_nav_decks
                 else -> return false
             }
-        bottomNavigation.selectedItemId = target
+        if (target == R.id.ankiquest_nav_progress) {
+            activity.startActivity(AnkiquestProfileActivity.intent(activity))
+        } else {
+            bottomNavigation.selectedItemId = target
+        }
         return true
     }
 
@@ -310,7 +314,7 @@ object AnkiquestDeckPickerHooks {
             when (destination) {
                 NavigationItem.HOME -> R.string.ankiquest_nav_today
                 NavigationItem.BROWSER -> R.string.ankiquest_nav_friends
-                NavigationItem.STATS -> R.string.ankiquest_nav_progress
+                NavigationItem.STATS -> R.string.ankiquest_me
                 NavigationItem.MORE -> R.string.ankiquest_nav_decks
             }
         return activity.shortcut(keys, label)
