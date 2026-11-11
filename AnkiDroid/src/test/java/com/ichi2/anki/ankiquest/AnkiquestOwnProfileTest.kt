@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.widget.FrameLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -139,6 +140,7 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
                 .views(targetContext, JSONArray(), "hill", now = now)
                 .apply(targetContext, FrameLayout(targetContext))
         assertEquals("13", widget.findViewById<TextView>(R.id.ankiquest_streak_number).text.toString())
+        assertEquals(10, widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress).progress)
         assertEquals(
             targetContext.getString(R.string.aq_goal_streak_safe_unsent),
             widget.findViewById<TextView>(R.id.ankiquest_streak_status).text.toString(),
