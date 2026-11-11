@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_goal_setup_failed">The daily goal could not be saved. Try again.</string>
     <string name="aq_goal_today">Today’s goal</string>
     <string name="aq_goal_minimum_minutes">Streak minimum: %1$d minutes of review today</string>
     <string name="aq_goal_minimum_any">Any review today keeps your streak going.</string>

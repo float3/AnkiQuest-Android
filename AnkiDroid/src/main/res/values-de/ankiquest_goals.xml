@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_goal_setup_failed">Das Tagesziel konnte nicht gespeichert werden. Versuche es erneut.</string>
     <string name="aq_goal_today">Heutiges Ziel</string>
     <string name="aq_goal_minimum_minutes">Minimum für die Lernserie: heute %1$d Minuten wiederholen</string>
     <string name="aq_goal_minimum_any">Jede Wiederholung heute hält deine Lernserie am Leben.</string>

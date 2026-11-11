@@ -29,6 +29,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.pages.AnkiPackageImporterFragment
@@ -50,6 +51,9 @@ import java.io.IOException
  * records ([AnkiquestRecordsActivity]).
  */
 class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
+    private enum class GoalSetup { READY, SAVING, FAILED }
+
+    private var goalSetup = GoalSetup.READY
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private var account: HomeAccount? = null
@@ -99,7 +103,6 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         account = AnkiquestHomeData.account()
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
         render()
-        if (savedInstanceState == null) AnkiquestGoalDialog.offerSetup(this) { refresh() }
     }
 
     private var localRefreshJob: Job? = null
@@ -130,6 +133,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
             // A new owner starts with empty caches and a fresh loading state.
+            goalSetup = GoalSetup.READY
             account = current
             local = null
             localFailed = false
@@ -171,6 +175,9 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 val failure =
                     try {
                         val result = AnkiquestHomeData.profile(current)
+                        if (AnkiquestHomeData.account()?.scope == current.scope) {
+                            restoreOldGoal(current, result)
+                        }
                         if (turn == generation && AnkiquestHomeData.account()?.scope == current.scope) {
                             profile = result
                             AnkiquestDailyGoal.remember(result)
@@ -303,7 +310,16 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
                 button(study, R.string.aq_home_open_decks) { openDecks() }
             }
         }
-        local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile)) }
+        val signed = account?.takeIf { it.token.isNotEmpty() }
+        val suggested =
+            AnkiquestDailyGoal.ServerGoal
+                .parse(profile?.optJSONObject("goal"))
+                ?.takeIf { it.chosen == false }
+                ?.choice
+        if (signed != null && suggested != null) {
+            renderGoalSetup(signed, suggested)
+        }
+        local?.goal?.let { renderGoal(AnkiquestDailyGoal.withProfile(it, profile), suggested) }
         if (account == null) connectionCard()
         if (account != null) renderDeckCopies()
         AnkiquestStudySession.latest()?.let { summary ->
@@ -335,7 +351,10 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         if (account != null) button(content, R.string.aq_home_retry, enabled = !loading) { refresh() }
     }
 
-    private fun renderGoal(status: AnkiquestDailyGoal.Status) {
+    private fun renderGoal(
+        status: AnkiquestDailyGoal.Status,
+        suggested: AnkiquestDailyGoal.Choice?,
+    ) {
         val panel = card()
         text(panel, getString(R.string.aq_goal_today), heading = true)
         val secondsPerCard = local?.secondsPerCard ?: AnkiquestGoalPlan.DEFAULT_SECONDS_PER_CARD
@@ -354,9 +373,84 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             },
         )
         // The goal is set where it shows; there is no goal setting elsewhere.
-        account?.takeIf { it.token.isNotEmpty() }?.let { signed ->
-            button(panel, R.string.aq_goal_change) { AnkiquestGoalDialog.edit(this, signed) { refresh() } }
+        if (suggested == null) {
+            account?.takeIf { it.token.isNotEmpty() }?.let { signed ->
+                button(panel, R.string.aq_goal_change) { AnkiquestGoalDialog.edit(this, signed) { refresh() } }
+            }
         }
+    }
+
+    private suspend fun restoreOldGoal(
+        owner: HomeAccount,
+        result: JSONObject,
+    ) {
+        if (owner.token.isEmpty()) return
+        val prefs = AnkiDroidApp.sharedPrefs()
+        if (AnkiquestDailyGoal.localChoice(prefs) == null || AnkiquestDailyGoal.cached(prefs, owner.scope) != null) return
+
+        // Fetch once before caching the first profile, so a chosen device goal can migrate.
+        try {
+            val restored = AnkiquestDailyGoal.fetch(owner, prefs)
+            if (restored.chosen == true) {
+                result.put("goal", restored.json().put("chosen", true))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "AnkiQuest device goal could not be restored")
+        }
+    }
+
+    private fun renderGoalSetup(
+        owner: HomeAccount,
+        choice: AnkiquestDailyGoal.Choice,
+    ) {
+        val panel = card()
+        text(panel, getString(R.string.ankiquest_goal_setup_title), heading = true)
+        text(panel, AnkiquestDailyGoal.describe(this, choice))
+        if (goalSetup == GoalSetup.FAILED) {
+            text(panel, getString(R.string.aq_goal_setup_failed), small = true)
+        }
+        if (goalSetup == GoalSetup.SAVING) {
+            text(panel, getString(R.string.ankiquest_goal_saving), small = true)
+            return
+        }
+        button(panel, CommonString.save, primary = true) { saveSuggestedGoal(owner, choice) }
+        button(panel, R.string.ankiquest_goal_custom) {
+            AnkiquestGoalDialog.show(this, owner, choice) { applyGoal(owner, it) }
+        }
+    }
+
+    private fun saveSuggestedGoal(
+        owner: HomeAccount,
+        choice: AnkiquestDailyGoal.Choice,
+    ) {
+        if (goalSetup == GoalSetup.SAVING || AnkiquestHomeData.account()?.scope != owner.scope) return
+        goalSetup = GoalSetup.SAVING
+        render()
+        lifecycleScope.launch {
+            try {
+                applyGoal(owner, AnkiquestDailyGoal.save(owner, choice, restart = choice.mode == AnkiquestDailyGoal.Mode.BACKLOG))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "AnkiQuest suggested goal could not be saved")
+                if (AnkiquestHomeData.account()?.scope == owner.scope) {
+                    goalSetup = GoalSetup.FAILED
+                    render()
+                }
+            }
+        }
+    }
+
+    private fun applyGoal(
+        owner: HomeAccount,
+        goal: AnkiquestDailyGoal.ServerGoal,
+    ) {
+        if (AnkiquestHomeData.account()?.scope != owner.scope) return
+        goalSetup = GoalSetup.READY
+        profile?.put("goal", goal.json().put("chosen", true))
+        refresh()
     }
 
     private fun renderDeckCopies() {

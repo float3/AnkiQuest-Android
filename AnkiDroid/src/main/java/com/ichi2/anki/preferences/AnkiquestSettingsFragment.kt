@@ -42,7 +42,6 @@ import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
-import com.ichi2.anki.ankiquest.AnkiquestGoalDialog
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
@@ -275,7 +274,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     dialog.dismiss()
                     showSnackbar(getString(R.string.ankiquest_sign_in_done, signed.user))
                     AnkiquestPoll.refreshNow(requireContext())
-                    AnkiquestGoalDialog.offerSetup(requireActivity())
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -754,7 +752,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                     if (request != generation || account != HomeAccount.current() || !isAdded) return@launch
                     preference.isChecked = enabled
                     preference.isEnabled = true
-                    if (enabled && notify) askForNotifications()
+                    if (wanted && enabled && notify) {
+                        askForNotifications()
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -960,15 +960,6 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        val prefs = preferenceManager.sharedPreferences ?: return
-        if (signedIn() != null && !prefs.getBoolean(PREF_ASKED, false)) {
-            prefs.edit { putBoolean(PREF_ASKED, true) }
-            askForNotifications()
-        }
-    }
-
     private fun askForNotifications() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         val granted =
@@ -988,9 +979,5 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         pictureEditor?.dismiss()
         pictureEditor = null
         super.onDestroyView()
-    }
-
-    companion object {
-        private const val PREF_ASKED = "ankiquestAskedNotifications"
     }
 }
