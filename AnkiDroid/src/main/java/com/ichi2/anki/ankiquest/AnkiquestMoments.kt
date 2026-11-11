@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.app.Activity
-import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -144,7 +143,7 @@ internal object AnkiquestMoments {
         QUIET,
     }
 
-    private var showing = WeakReference<Dialog>(null)
+    private var showing = WeakReference<AnkiquestMomentCard.Card>(null)
 
     private data class StudyDay(
         val start: Long,
@@ -624,27 +623,49 @@ internal object AnkiquestMoments {
         host: Activity,
         prefs: SharedPreferences,
         resting: Boolean = resting(host),
-    ) {
+        session: AnkiquestMomentCard.Session? = null,
+    ): Boolean {
         if (!resting || !AnkiquestPostStudyPrompts.resumed(host)) {
-            return
+            return false
         }
-        val account = AnkiquestHomeData.account(prefs) ?: return
-        val current = showing.get()?.takeIf { it.isShowing }
-        // A notification may replace our card, but must wait for another prompt.
+        val account = AnkiquestHomeData.account(prefs)
+        var current = showing.get()?.takeIf { it.dialog.isShowing }
+        if (current != null && !current.owns(host)) {
+            current.abandon()
+            current = null
+        }
         if (current == null && !AnkiquestPostStudyPrompts.ready(host)) {
-            return
+            return false
         }
-        val tapped = notice(host, account, prefs)
+        val tapped = account?.let { notice(host, it, prefs) }
         if (current != null) {
-            if (tapped == null) {
-                return
+            current.attach(session)
+            if (current.hasSession()) {
+                if (account != null) {
+                    current.append(take(prefs, account.notificationAccount))
+                }
+                if (tapped != null) {
+                    current.select(tapped)
+                }
+                return true
             }
-            current.dismiss()
+            if (tapped == null) {
+                return true
+            }
+            current.abandon()
         }
-        val moments = if (tapped == null) take(prefs, account.notificationAccount) else listOf(tapped)
-        if (moments.isEmpty()) return
-        val dialog = AnkiquestMomentCard.show(host, account, moments)
-        showing = WeakReference(dialog)
-        AnkiquestPostStudyPrompts.track(dialog)
+        val moments =
+            when {
+                tapped != null -> listOf(tapped)
+                account != null -> take(prefs, account.notificationAccount)
+                else -> emptyList()
+            }
+        if (moments.isEmpty() && session?.summary == null) {
+            return false
+        }
+        val card = AnkiquestMomentCard.show(host, account, moments, prefs, session)
+        showing = WeakReference(card)
+        AnkiquestPostStudyPrompts.track(card.dialog)
+        return true
     }
 }

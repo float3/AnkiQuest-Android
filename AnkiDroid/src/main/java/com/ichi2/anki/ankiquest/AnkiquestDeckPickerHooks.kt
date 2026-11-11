@@ -2,20 +2,17 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.AppCompatCheckBox
-import androidx.core.content.edit
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.ichi2.anki.AbstractFlashcardViewer
@@ -90,87 +87,27 @@ object AnkiquestDeckPickerHooks {
             return false
         }
         activity.launchCatchingTask {
+            val prefs = activity.sharedPrefs()
+            val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
             val summary = AnkiquestStudySession.finish()
-            if (!AnkiquestPostStudyPrompts.resumed(activity)) {
-                return@launchCatchingTask
+            // Keep the result with this host while paused; discard it after an account change.
+            activity.lifecycle.withResumed {
+                if (owner != AnkiquestNavigation.accountFingerprint(prefs.all)) {
+                    return@withResumed
+                }
+                val session =
+                    AnkiquestMomentCard.Session(
+                        summary = summary?.takeIf { prefs.getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true) },
+                        onContinue = openReviewer,
+                        onClose = { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } },
+                    )
+                if (!AnkiquestMoments.present(activity, prefs, session = session)) {
+                    activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) }
+                }
+                activity.fragment?.refreshInterface()
             }
-            if (summary != null && activity.sharedPrefs().getBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, true)) {
-                showSummary(activity, summary, openReviewer) { activity.launchCatchingTask { AnkiquestDeckShare.offer(activity) } }
-            } else {
-                AnkiquestDeckShare.offer(activity)
-            }
-            activity.fragment?.refreshInterface()
         }
         return true
-    }
-
-    /** [then] runs when the summary is closed without going on to study or to the progress page. */
-    private fun showSummary(
-        activity: DeckPicker,
-        summary: AnkiquestStudySession.Summary,
-        onContinue: () -> Unit,
-        then: () -> Unit,
-    ) {
-        if (!AnkiquestPostStudyPrompts.ready(activity)) {
-            return
-        }
-        var elsewhere = false
-        val neverAgain =
-            AppCompatCheckBox(activity).apply {
-                setText(R.string.ankiquest_summary_dont_show_again)
-            }
-        val content =
-            LinearLayout(activity).apply {
-                orientation = LinearLayout.VERTICAL
-                val padding = (20 * resources.displayMetrics.density).toInt()
-                setPadding(padding, 0, padding, 0)
-                addView(
-                    AnkiquestAki
-                        .image(
-                            activity,
-                            if (summary.remaining == 0) R.drawable.aki_celebrate else R.drawable.aki_streak,
-                            112,
-                        ).apply {
-                            layoutParams =
-                                LinearLayout
-                                    .LayoutParams(
-                                        layoutParams,
-                                    ).apply { gravity = Gravity.CENTER_HORIZONTAL }
-                        },
-                )
-                addView(neverAgain)
-            }
-        val builder =
-            AlertDialog
-                .Builder(activity)
-                .setTitle(R.string.ankiquest_summary_title)
-                .setView(content)
-                .setMessage(
-                    activity.getString(
-                        R.string.ankiquest_summary_body,
-                        summary.reviews,
-                        summary.duration(activity),
-                        summary.remaining,
-                    ),
-                ).setNegativeButton(CommonString.multimedia_editor_field_editing_done, null)
-                .setNeutralButton(R.string.ankiquest_summary_progress) { _, _ ->
-                    elsewhere = true
-                    activity.startActivity(AnkiquestProfileActivity.intent(activity))
-                }
-        if (summary.remaining > 0) {
-            builder.setPositiveButton(R.string.ankiquest_summary_continue) { _, _ ->
-                elsewhere = true
-                onContinue()
-            }
-        }
-        val dialog = builder.show()
-        AnkiquestPostStudyPrompts.track(dialog)
-        dialog.setOnDismissListener {
-            if (neverAgain.isChecked) {
-                activity.sharedPrefs().edit { putBoolean(AnkiquestNavigation.PREF_SESSION_SUMMARY, false) }
-            }
-            if (!elsewhere && AnkiquestPostStudyPrompts.ready(activity)) then()
-        }
     }
 
     /**

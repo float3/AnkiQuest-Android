@@ -5,9 +5,11 @@ package com.ichi2.anki.ankiquest
 import android.content.Intent
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.viewpager2.widget.ViewPager2
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
@@ -136,7 +138,7 @@ class AnkiquestStudySessionTest : RobolectricTest() {
     }
 
     @Test
-    fun `a queued moment waits for the recap to close`() {
+    fun `a queued moment joins the recap without another dialog`() {
         AnkiDroidApp.sharedPrefs().edit { putBoolean(AnkiquestDeckShare.PREF_ASK, false) }
         mockkObject(AnkiquestStudySession)
         try {
@@ -154,13 +156,14 @@ class AnkiquestStudySessionTest : RobolectricTest() {
 
             AnkiquestMoments.present(host, AnkiDroidApp.sharedPrefs())
             assertSame(recap, ShadowDialog.getLatestDialog())
-            assertEquals(listOf(moment), AnkiquestMoments.pending(AnkiDroidApp.sharedPrefs(), account))
+            assertTrue(AnkiquestMoments.pending(AnkiDroidApp.sharedPrefs(), account).isEmpty())
+            val pager = assertNotNull(recap.findViewById<ViewPager2>(R.id.aq_moment_pager))
+            assertEquals(2, pager.adapter?.itemCount, "Recap and moment share the pager")
 
             recap.dismiss()
             AnkiquestMoments.present(host, AnkiDroidApp.sharedPrefs())
-            assertTrue(assertNotNull(ShadowDialog.getLatestDialog()).isShowing)
-            assertTrue(AnkiquestMoments.pending(AnkiDroidApp.sharedPrefs(), account).isEmpty())
-            ShadowDialog.getLatestDialog().dismiss()
+            assertSame(recap, ShadowDialog.getLatestDialog())
+            assertTrue(!recap.isShowing, "Closing the combined card must not replay its moments")
         } finally {
             ShadowDialog.getLatestDialog()?.dismiss()
             unmockkObject(AnkiquestStudySession)
