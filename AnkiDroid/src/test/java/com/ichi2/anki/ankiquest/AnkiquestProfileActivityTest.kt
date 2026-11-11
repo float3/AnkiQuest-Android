@@ -108,7 +108,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     fun `the player's own profile shows level, streak, freezes, quests, wins and achievements`() {
         val screen = launch()
         coVerify { AnkiquestBoards.player(identity, "hill") }
-        assertEquals("Hill", screen.findViewById<TextView>(R.id.aq_board_title).text.toString())
+        assertEquals(screen.getString(R.string.ankiquest_me), screen.findViewById<TextView>(R.id.aq_board_title).text.toString())
         assertTrue(screen.hasText(screen.getString(R.string.aq_profile_level, 2)))
         assertTrue(screen.hasText(screen.getString(R.string.aq_profile_level_progress, "1", "280", 3, "101")))
         assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_count, 2)))
@@ -189,6 +189,8 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         coEvery { AnkiquestBoards.player(identity, "hill") } throws IOException("offline")
         val offline = launch()
         assertTrue(offline.hasText(offline.getString(R.string.aq_board_offline)))
+        offline.click(offline.getString(R.string.aq_home_settings))
+        assertEquals(PreferencesActivity::class.java.name, shadowOf(offline).nextStartedActivity.component?.className)
     }
 
     @Test

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="ankiquest_me">Me</string>
     <string name="ankiquest_nav_today" comment="Today navigation destination, in title case" maxLength="28">Today</string>
     <string name="ankiquest_nav_friends" maxLength="28">Friends</string>
-    <string name="ankiquest_nav_progress" maxLength="28">Progress</string>
     <string name="ankiquest_nav_decks" maxLength="28">Decks</string>
     <string name="ankiquest_open_today_key" translatable="false">ankiquestOpenToday</string>
     <string name="ankiquest_open_today_title" maxLength="41">Open Today on launch</string>

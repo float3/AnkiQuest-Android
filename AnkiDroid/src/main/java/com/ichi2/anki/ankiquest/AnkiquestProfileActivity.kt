@@ -60,7 +60,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         content = findViewById(R.id.aq_board_content)
         scroll = findViewById(R.id.aq_board_scroll)
         findViewById<TextView>(R.id.aq_board_title).apply {
-            setText(R.string.aq_profile_title)
+            setText(if (intent.hasExtra(EXTRA_USER)) R.string.aq_profile_title else R.string.ankiquest_me)
             ViewCompat.setAccessibilityHeading(this, true)
         }
         findViewById<View>(R.id.aq_board_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
@@ -70,16 +70,11 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         }
         findViewById<View>(R.id.aq_board_loading).contentDescription = getString(R.string.aq_profile_loading)
         val root = findViewById<LinearLayout>(R.id.aq_board_root)
-        // The player's own profile is the Progress tab; another player's is a page of its own.
-        if (!intent.hasExtra(EXTRA_USER)) {
-            AnkiquestTabBar.attach(this, root, R.id.ankiquest_nav_progress)
-            AnkiquestTabBar.removeBack(findViewById(R.id.aq_board_back), findViewById(R.id.aq_board_title))
-        } else {
-            ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-                val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-                root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
-                insets
-            }
+        // Me and other profiles are pages above their caller, with Back going up one level.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
+            insets
         }
         account = AnkiquestHomeData.account()
         load()
@@ -243,14 +238,18 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         if (shown == null) {
             if (loading) views.text(content, getString(R.string.aq_profile_loading), small = true)
         } else {
-            findViewById<TextView>(R.id.aq_board_title).text = shown.profile.display
+            findViewById<TextView>(R.id.aq_board_title).text =
+                if (shown.own) getString(R.string.ankiquest_me) else shown.profile.display
             profile(shown)
         }
         failure?.let { problem ->
             if (problem == R.string.aq_profile_hidden) content.addView(AnkiquestAki.image(this, R.drawable.aki_sleeping, 72))
             views.text(content, getString(problem), small = problem != R.string.aq_profile_hidden).accessibilityLiveRegion =
                 View.ACCESSIBILITY_LIVE_REGION_POLITE
-            if (problem == R.string.aq_home_auth) views.button(content, getString(R.string.aq_home_settings)) { settings() }
+        }
+        // Settings must remain reachable even when Me cannot load its profile.
+        if (!intent.hasExtra(EXTRA_USER) || shown?.own == true || failure == R.string.aq_home_auth) {
+            views.button(content, getString(R.string.aq_home_settings)) { settings() }
         }
         views.button(content, getString(R.string.aq_profile_leaderboard)) {
             startActivity(AnkiquestLeaderboardActivity.intent(this))
@@ -385,7 +384,6 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         )
         if (p.achievements.isNotEmpty()) achievements(p)
         controls(page)
-        if (page.own) views.button(content, getString(R.string.aq_home_settings)) { settings() }
     }
 
     private fun achievements(p: AnkiquestBoards.Profile) {

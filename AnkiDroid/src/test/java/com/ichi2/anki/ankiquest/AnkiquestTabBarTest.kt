@@ -4,6 +4,7 @@ package com.ichi2.anki.ankiquest
 
 import android.app.Activity
 import android.content.Intent
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.edit
@@ -51,7 +52,7 @@ class AnkiquestTabBarTest : RobolectricTest() {
             putString(Ankiquest.PREF_USER, identity.user)
             putString(Ankiquest.PREF_TOKEN, identity.token)
         }
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed)
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestHomeData.local() } returns HomeLocal(listOf(HomeDeck(12, "Spanish", 3, 2, 19)), 12)
         coEvery { AnkiquestHomeData.profile(identity) } returns JSONObject().put("level", 2)
@@ -59,11 +60,12 @@ class AnkiquestTabBarTest : RobolectricTest() {
         coEvery { AnkiquestSocial.overview(identity) } throws IOException("offline")
         coEvery { AnkiquestBoards.player(identity, any()) } throws IOException("offline")
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } throws IOException("offline")
+        coEvery { AnkiquestAvatars.refresh(any(), any()) } returns Unit
     }
 
     @After
     fun clearTabMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestFeed, AnkiquestAvatars)
     }
 
     @Test
@@ -78,17 +80,15 @@ class AnkiquestTabBarTest : RobolectricTest() {
                 startRegularActivity<AnkiquestFriendsActivity>(
                     AnkiquestFriendsActivity.intent(targetContext),
                 ) to R.id.ankiquest_nav_friends,
-                startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext)) to
-                    R.id.ankiquest_nav_progress,
                 startActivityNormallyOpenCollectionWithIntent(DeckPicker::class.java, Intent()) to R.id.ankiquest_nav_decks,
             )
         for ((screen, selected) in tabs) {
             val bar = bar(screen)
             val name = screen::class.java.simpleName
             assertTrue(bar.isVisible, name)
-            assertEquals(4, bar.menu.size, name)
+            assertEquals(3, bar.menu.size, name)
             assertEquals(
-                listOf(R.id.ankiquest_nav_today, R.id.ankiquest_nav_friends, R.id.ankiquest_nav_progress, R.id.ankiquest_nav_decks),
+                listOf(R.id.ankiquest_nav_decks, R.id.ankiquest_nav_today, R.id.ankiquest_nav_friends),
                 (0 until bar.menu.size).map { bar.menu[it].itemId },
                 name,
             )
@@ -111,7 +111,6 @@ class AnkiquestTabBarTest : RobolectricTest() {
                     AnkiquestHomeActivity.intent(targetContext),
                 ),
                 startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext)),
-                startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext)),
             )
         for (screen in screens) {
             val bar = bar(screen)
@@ -131,20 +130,20 @@ class AnkiquestTabBarTest : RobolectricTest() {
     fun `switching tabs replaces the open tab without an animation`() {
         val friends = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
         val bar = bar(friends)
-        bar.selectedItemId = R.id.ankiquest_nav_progress
-        val progress = assertNotNull(shadowOf(friends).nextStartedActivity)
-        assertEquals(AnkiquestProfileActivity::class.java.name, progress.component?.className)
-        assertTrue(progress.flags and Intent.FLAG_ACTIVITY_NO_ANIMATION != 0)
-        assertTrue(friends.isFinishing, "Friends is replaced, not left under Progress")
+        bar.selectedItemId = R.id.ankiquest_nav_today
+        val today = assertNotNull(shadowOf(friends).nextStartedActivity)
+        assertEquals(AnkiquestHomeActivity::class.java.name, today.component?.className)
+        assertTrue(today.flags and Intent.FLAG_ACTIVITY_NO_ANIMATION != 0)
+        assertTrue(friends.isFinishing, "Friends is replaced, not left under Today")
         assertEquals(R.id.ankiquest_nav_friends, bar.selectedItemId)
 
-        val profile = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext))
-        bar(profile).selectedItemId = R.id.ankiquest_nav_decks
-        val decks = assertNotNull(shadowOf(profile).nextStartedActivity)
+        val home = startRegularActivity<AnkiquestHomeActivity>(AnkiquestHomeActivity.intent(targetContext))
+        bar(home).selectedItemId = R.id.ankiquest_nav_decks
+        val decks = assertNotNull(shadowOf(home).nextStartedActivity)
         assertEquals(DeckPicker::class.java.name, decks.component?.className)
         assertTrue(decks.flags and Intent.FLAG_ACTIVITY_CLEAR_TOP != 0)
         assertTrue(decks.getBooleanExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, false))
-        assertTrue(profile.isFinishing)
+        assertTrue(home.isFinishing)
 
         val same = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
         bar(same).selectedItemId = R.id.ankiquest_nav_friends
@@ -162,6 +161,17 @@ class AnkiquestTabBarTest : RobolectricTest() {
     }
 
     @Test
+    fun `the legacy Progress shortcut opens Me without needing a fourth tab`() {
+        val picker = startActivityNormallyOpenCollectionWithIntent(DeckPicker::class.java, Intent())
+        val key = KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_3, 0, KeyEvent.META_ALT_ON)
+        assertTrue(AnkiquestDeckPickerHooks.dispatchNavigationKey(picker, key))
+        val me = assertNotNull(shadowOf(picker).nextStartedActivity)
+        assertEquals(AnkiquestProfileActivity::class.java.name, me.component?.className)
+        assertFalse(picker.isFinishing)
+        assertEquals(R.id.ankiquest_nav_decks, bar(picker).selectedItemId)
+    }
+
+    @Test
     fun `another player's profile is a page of its own without the bar`() {
         val other = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, "ana"))
         assertNull(other.findViewById<View>(R.id.ankiquest_tab_bar))
@@ -175,8 +185,7 @@ class AnkiquestTabBarTest : RobolectricTest() {
                 AnkiquestHomeActivity.intent(targetContext),
             )
         val friends = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
-        val progress = startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext))
-        for (tab in listOf(home, friends, progress)) {
+        for (tab in listOf(home, friends)) {
             val name = tab::class.java.simpleName
             assertTrue(backControls(tab).isEmpty(), "$name shows no back arrow")
         }
@@ -188,16 +197,15 @@ class AnkiquestTabBarTest : RobolectricTest() {
             "the title starts where the arrow did",
         )
 
-        for (tab in listOf(friends, progress)) {
-            tab.onBackPressedDispatcher.onBackPressed()
-            assertTrue(tab.isFinishing, "${tab::class.java.simpleName} goes back to the deck list underneath")
-        }
+        friends.onBackPressedDispatcher.onBackPressed()
+        assertTrue(friends.isFinishing, "Friends goes back to the deck list underneath")
     }
 
     @Test
     fun `pages without the bar keep their back arrow`() {
         val pages =
             listOf(
+                startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext)),
                 startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, "ana")),
                 startRegularActivity<AnkiquestFeedActivity>(AnkiquestFeedActivity.intent(targetContext)),
             )
@@ -209,6 +217,29 @@ class AnkiquestTabBarTest : RobolectricTest() {
             back.performClick()
             assertTrue(page.isFinishing, name)
         }
+    }
+
+    @Test
+    fun `Today avatar opens Me above Today and Back returns to it`() {
+        val home = startRegularActivity<AnkiquestHomeActivity>(AnkiquestHomeActivity.intent(targetContext))
+        val avatar = assertNotNull(home.findViewById<View>(R.id.aq_home_account))
+        assertEquals(home.getString(R.string.ankiquest_me), avatar.contentDescription)
+        val node = avatar.createAccessibilityNodeInfo()
+        assertEquals(android.widget.Button::class.java.name, node.className.toString())
+        assertTrue(node.isClickable)
+        val touchTarget = (48 * home.resources.displayMetrics.density).toInt()
+        assertTrue(avatar.width >= touchTarget && avatar.height >= touchTarget)
+        avatar.performClick()
+        val destination = assertNotNull(shadowOf(home).nextStartedActivity)
+        assertEquals(AnkiquestProfileActivity::class.java.name, destination.component?.className)
+        assertFalse(destination.hasExtra(AnkiquestProfileActivity.EXTRA_USER))
+        assertFalse(home.isFinishing, "Me keeps Today underneath")
+        val me = startRegularActivity<AnkiquestProfileActivity>(destination)
+        assertNull(me.findViewById<View>(R.id.ankiquest_tab_bar))
+        assertTrue(me.findViewById<View>(R.id.aq_board_back).isVisible)
+        assertEquals(home.getString(R.string.ankiquest_me), me.findViewById<android.widget.TextView>(R.id.aq_board_title).text)
+        me.onBackPressedDispatcher.onBackPressed()
+        assertTrue(me.isFinishing)
     }
 
     /** The visible controls of [screen] announced as going back. */

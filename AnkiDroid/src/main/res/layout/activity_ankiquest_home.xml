@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/aq_home_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -40,15 +39,16 @@
             android:layout_height="wrap_content"
             android:minHeight="48dp"
             android:text="@string/aq_home_activity" />
-        <ImageButton
+        <LinearLayout
             android:id="@+id/aq_home_account"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:padding="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_settings_black"
-            app:tint="@color/aq_home_text"
-            android:contentDescription="@string/aq_home_settings" />
+            android:contentDescription="@string/ankiquest_me" />
     </LinearLayout>
     <ProgressBar
         android:id="@+id/aq_home_loading"

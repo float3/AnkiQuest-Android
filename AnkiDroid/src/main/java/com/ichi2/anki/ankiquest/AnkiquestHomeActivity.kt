@@ -17,7 +17,9 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
+import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
@@ -64,6 +66,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
     @StringRes private var profileFailure: Int? = null
     private var loading = false
     private var networkJob: Job? = null
+    private var avatarJob: Job? = null
     private var copyJob: Job? = null
     private var copyInbox: CopyInbox = CopyInbox.Loading
     private var copyBusy = false
@@ -98,7 +101,21 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             setTextColor(getColor(R.color.aq_home_text))
             setOnClickListener { startActivity(AnkiquestFeedActivity.intent(this@AnkiquestHomeActivity)) }
         }
-        findViewById<View>(R.id.aq_home_account).setOnClickListener { settings() }
+        findViewById<View>(R.id.aq_home_account).apply {
+            setOnClickListener { startActivity(AnkiquestProfileActivity.intent(this@AnkiquestHomeActivity)) }
+            ViewCompat.setAccessibilityDelegate(
+                this,
+                object : AccessibilityDelegateCompat() {
+                    override fun onInitializeAccessibilityNodeInfo(
+                        host: View,
+                        info: AccessibilityNodeInfoCompat,
+                    ) {
+                        super.onInitializeAccessibilityNodeInfo(host, info)
+                        info.className = android.widget.Button::class.java.name
+                    }
+                },
+            )
+        }
         AnkiquestTabBar.attach(this, findViewById(R.id.aq_home_root), R.id.ankiquest_nav_today)
         account = AnkiquestHomeData.account()
         if (savedInstanceState == null) focus = intent.getStringExtra(EXTRA_FOCUS)
@@ -161,6 +178,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
             }
         }
         networkJob?.cancel()
+        avatarJob?.cancel()
         copyJob?.cancel()
         if (current == null) {
             loading = false
@@ -169,6 +187,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         }
         loading = true
         render()
+        refreshAvatar(current, turn)
         refreshCopies(current, turn)
         networkJob =
             lifecycleScope.launch {
@@ -258,6 +277,7 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         content.removeAllViews()
         val face = findViewById<ImageView>(R.id.aq_home_companion)
         AnkiquestCompanion.show(face, R.drawable.aki_face, face.layoutParams.width)
+        renderAvatar()
         findViewById<View>(R.id.aq_home_loading).isVisible = loading
         renderToday()
         val target = questsHeading?.takeIf { focus == FOCUS_QUESTS }
@@ -267,6 +287,30 @@ class AnkiquestHomeActivity : AnkiActivity(R.layout.activity_ankiquest_home) {
         } else {
             scroll.post { scroll.scrollTo(0, position) }
         }
+    }
+
+    /** The same account-scoped photo or initial used on profiles, with a 48 dp touch target. */
+    private fun renderAvatar() {
+        val avatar = findViewById<LinearLayout>(R.id.aq_home_account)
+        avatar.removeAllViews()
+        val user = account?.user.orEmpty()
+        val display = profile?.optString("display").orEmpty().ifBlank { user.ifBlank { getString(R.string.ankiquest_me) } }
+        AnkiquestBoardViews(this).avatar(avatar, user, display, 32)
+    }
+
+    /** Optional photos must neither delay Today nor apply after its account changes. */
+    private fun refreshAvatar(
+        current: HomeAccount,
+        turn: Int,
+    ) {
+        val captured = AnkiquestAvatars.account()?.takeIf { it.scope == current.scope } ?: return
+        avatarJob =
+            lifecycleScope.launch {
+                boardAttempt { AnkiquestAvatars.refresh(listOf(current.user), captured) }
+                if (isCurrent(turn, current.scope)) {
+                    renderAvatar()
+                }
+            }
     }
 
     private fun renderToday() {
