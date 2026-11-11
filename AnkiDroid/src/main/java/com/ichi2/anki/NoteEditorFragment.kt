@@ -168,6 +168,7 @@ import com.ichi2.anki.utils.bottomCornerSideClearance
 import com.ichi2.anki.utils.doOnApplyWindowInsets
 import com.ichi2.anki.utils.ext.getLongOrNull
 import com.ichi2.anki.utils.ext.requireLong
+import com.ichi2.anki.utils.ext.setSupportActionBarText
 import com.ichi2.anki.utils.ext.sharedPrefs
 import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.anki.utils.insetsOf
@@ -315,10 +316,10 @@ class NoteEditorFragment :
 
     private var delegate: NoteEditorFragmentDelegate? = null
     private val inNoteEditorActivity: Boolean
-        get() = requireAnkiActivity() is NoteEditorActivity
+        get() = requireActivity() is NoteEditorActivity
 
     private val noteEditorActivity
-        get() = requireAnkiActivity() as? NoteEditorActivity
+        get() = requireActivity() as? NoteEditorActivity
 
     // List of affected cards (siblings) when editing notes.
     private val cardIdsFromArguments: LongArray?
@@ -823,7 +824,7 @@ class NoteEditorFragment :
         )
         if (addNote) {
             noteTypeSpinner!!.onItemSelectedListener = SetNoteTypeListener()
-            requireAnkiActivity().setToolbarText(titleRes = CommonString.menu_add)
+            setSupportActionBarText(getString(CommonString.menu_add))
             // set information transferred by intent
             var contents: String? = null
             val tags = requireArguments().getStringArray(EXTRA_TAGS)
@@ -880,7 +881,7 @@ class NoteEditorFragment :
                 reloadRequired = true
                 closeNoteEditorAfterSave()
             }
-            requireAnkiActivity().setTitle(CommonString.cardeditor_title_edit_card)
+            requireActivity().setTitle(CommonString.cardeditor_title_edit_card)
         }
         requireView().findViewById<View>(R.id.CardEditorTagButton).setOnClickListener {
             Timber.i("NoteEditor:: Tags button pressed... opening tags editor")
@@ -1955,7 +1956,7 @@ class NoteEditorFragment :
                 }
             }
             previous = editLineView
-            editLineView.enableAnimation = requireAnkiActivity().animationEnabled()
+            editLineView.enableAnimation = requireActivity().animationEnabled()
 
             // Use custom implementation of ActionMode.Callback customize selection and insert menus
             editLineView.setActionModeCallbacks(getActionModeCallback(newEditText, View.generateViewId()))

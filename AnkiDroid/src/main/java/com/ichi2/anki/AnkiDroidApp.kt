@@ -343,6 +343,7 @@ open class AnkiDroidApp :
             initializeNavigator()
             initializeWidgetRepository()
             initializeDatabaseErrorDialogs()
+            initializeActivitySetup()
             WidgetNotificationScheduler.register { scheduleNotification() }
             WidgetStatus.register(Prefs) { context -> AnkiDroidWidgetSmall.UpdateService().doUpdate(context) }
             Animations.setPreferencesProvider { context -> PrefsRepository(context) }
