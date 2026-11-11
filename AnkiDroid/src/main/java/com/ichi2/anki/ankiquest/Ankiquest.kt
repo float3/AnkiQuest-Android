@@ -1217,9 +1217,14 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             scope.launch { refreshLocalDay() }
             launchRefresh(showFeedback = false, resync = resyncDue(now))
         }
-        if (AnkiquestMoments.resting(activity)) {
-            AnkiquestMoments.present(activity, AnkiDroidApp.sharedPrefs())
-            if (HomeAccount.current()?.token?.isNotEmpty() == true) checkMoments(activity)
+        // The activity callback can run before AndroidX dispatches ON_RESUME.
+        activity.window.decorView.post {
+            if (AnkiquestPostStudyPrompts.resumed(activity) && AnkiquestMoments.resting(activity)) {
+                AnkiquestMoments.present(activity, AnkiDroidApp.sharedPrefs())
+                if (HomeAccount.current()?.token?.isNotEmpty() == true) {
+                    checkMoments(activity)
+                }
+            }
         }
     }
 

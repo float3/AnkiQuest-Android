@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="aq_goal_setup_failed">Impossible d’enregistrer l’objectif quotidien. Réessaie.</string>
     <string name="aq_goal_today">Objectif du jour</string>
     <string name="aq_goal_minimum_minutes">Minimum pour la série : %1$d minutes de révision aujourd’hui</string>
     <string name="aq_goal_minimum_any">Une seule révision aujourd’hui suffit pour garder ta série.</string>

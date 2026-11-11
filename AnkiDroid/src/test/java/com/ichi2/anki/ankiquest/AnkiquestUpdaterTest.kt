@@ -3,12 +3,16 @@
 package com.ichi2.anki.ankiquest
 
 import android.app.Activity
+import android.content.Intent
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.BuildConfig
+import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.setIntroductionSlidesShown
 import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockk
@@ -38,10 +42,50 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AnkiquestUpdaterTest : RobolectricTest() {
+    @Test
+    fun `an update response cannot attach to a stopped deck picker`() {
+        setIntroductionSlidesShown(true)
+        val requested = CountDownLatch(1)
+        val response = CountDownLatch(1)
+        val intent = Intent().putExtra(AnkiquestHomeActivity.EXTRA_SKIP_HOME, true)
+        val controller = startActivityControllerNormallyOpenCollectionWithIntent(DeckPicker::class.java, intent)
+        val host = controller.get()
+        assertTrue(AnkiquestPostStudyPrompts.ready(host))
+        val release = AnkiquestUpdater.Release(BuildConfig.ANKIQUEST_RELEASE + 1, "New release", "", 1)
+        mockkObject(AnkiquestUpdater, recordPrivateCalls = true)
+        try {
+            every { AnkiquestUpdater["available"]() } answers {
+                requested.countDown()
+                check(response.await(10, TimeUnit.SECONDS))
+                release
+            }
+            val before = ShadowDialog.getLatestDialog()
+            val check = CoroutineScope(Dispatchers.Main).async { AnkiquestUpdater.checkNow(host) }
+            advanceRobolectricLooperUntil { requested.count == 0L }
+            controller.pause().stop()
+            response.countDown()
+            advanceRobolectricLooperUntil { check.isCompleted }
+            assertNull(runBlocking { check.await() })
+            assertSame(before, ShadowDialog.getLatestDialog())
+
+            controller.start().resume()
+            val retry = CoroutineScope(Dispatchers.Main).async { AnkiquestUpdater.checkNow(host) }
+            advanceRobolectricLooperUntil { retry.isCompleted }
+            assertNull(runBlocking { retry.await() })
+            assertTrue(assertNotNull(ShadowDialog.getLatestDialog()).isShowing)
+            ShadowDialog.getLatestDialog().dismiss()
+        } finally {
+            response.countDown()
+            ShadowDialog.getLatestDialog()?.dismiss()
+            unmockkObject(AnkiquestUpdater)
+        }
+    }
+
     @Test
     fun `check now shares the in-flight check`() {
         val activity = mockk<Activity>(relaxed = true)
