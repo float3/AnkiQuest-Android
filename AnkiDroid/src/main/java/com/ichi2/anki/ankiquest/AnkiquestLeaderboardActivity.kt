@@ -98,6 +98,8 @@ class AnkiquestLeaderboardActivity : AnkiActivity(R.layout.activity_ankiquest_bo
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
             account = current
+            rows = null
+            weekEnds = null
             status = null
         }
         loadJob?.cancel()

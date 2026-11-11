@@ -17,6 +17,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONArray
 import org.junit.After
 import org.junit.Before
@@ -192,6 +193,71 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         assertTrue(board.hasText("Ana"))
         assertFalse(launch(account = identity.notificationAccount).hasText(board.getString(R.string.aq_board_account_changed)))
     }
+
+    @Test
+    fun `switching accounts clears old rows and week data while the new board loads`() {
+        val controller = launchController()
+        val board = controller.get()
+        assertTrue(board.hasText("Ana"))
+        val other = HomeAccount("https://anki.example.test", "other", "other-token")
+        val waiting = CompletableDeferred<List<AnkiquestBoards.Standing>>()
+        every { AnkiquestHomeData.account(any()) } returns other
+        coEvery { AnkiquestBoards.leaderboard(other, any()) } coAnswers { waiting.await() }
+        coEvery { AnkiquestBoards.weekEnds(other) } returns null
+        try {
+            controller.pause().resume()
+            advanceRobolectricLooper()
+
+            assertTrue(board.findViewById<View>(R.id.aq_board_loading).isVisible)
+            assertFalse(board.hasText("Ana"), "the previous account's circle must disappear immediately")
+            assertFalse(board.hasText(board.getString(R.string.aq_board_xp, "90")))
+            assertFalse(board.hasTextContaining(board.getString(R.string.aq_board_resets, "").trim()))
+            waiting.complete(emptyList())
+            advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+            assertTrue(board.hasText(board.getString(R.string.aq_board_empty)))
+        } finally {
+            waiting.cancel()
+        }
+    }
+
+    @Test
+    fun `a failed new account request cannot leave the previous leaderboard visible`() {
+        val controller = launchController()
+        val board = controller.get()
+        assertTrue(board.hasText("Ana"))
+        val other = HomeAccount("https://other.example.test", "bo", "other-token")
+        every { AnkiquestHomeData.account(any()) } returns other
+        coEvery { AnkiquestBoards.leaderboard(other, any()) } throws IOException("offline")
+
+        controller.pause().resume()
+        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+
+        assertTrue(board.hasText(board.getString(R.string.aq_board_offline)))
+        assertFalse(board.hasText("Ana"))
+        assertFalse(board.hasTextContaining(board.getString(R.string.aq_board_resets, "").trim()))
+    }
+
+    @Test
+    fun `a failed refresh for the same account keeps its last board`() {
+        val board = launch()
+        coEvery { AnkiquestBoards.leaderboard(identity, any()) } throws IOException("offline")
+
+        board.findViewById<View>(R.id.aq_board_refresh).performClick()
+        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+
+        assertTrue(board.hasText(board.getString(R.string.aq_board_offline)))
+        assertTrue(board.hasText("Ana"))
+        assertTrue(board.hasText(board.getString(R.string.aq_board_xp, "90")))
+        assertTrue(board.hasTextContaining(board.getString(R.string.aq_board_resets, "").trim()))
+    }
+
+    private fun launchController() =
+        startActivityControllerNormallyOpenCollectionWithIntent(
+            AnkiquestLeaderboardActivity::class.java,
+            AnkiquestLeaderboardActivity.intent(targetContext),
+        ).also { controller ->
+            advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_board_loading).isVisible }
+        }
 
     private fun launch(
         period: String = AnkiquestBoards.Period.WEEK.query,
