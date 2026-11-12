@@ -46,6 +46,9 @@ internal object AnkiquestCompanion {
                 -> R.drawable.ankilope_face
                 R.drawable.aki_nudge -> R.drawable.ankilope_nudge
                 R.drawable.aki_backlog -> R.drawable.ankilope_backlog
+                R.drawable.aki_place_1 -> R.drawable.ankilope_place_1
+                R.drawable.aki_place_2 -> R.drawable.ankilope_place_2
+                R.drawable.aki_place_3 -> R.drawable.ankilope_place_3
                 R.drawable.aki_challenge -> R.drawable.ankilope_challenge
                 R.drawable.aki_challenge_won -> R.drawable.ankilope_challenge_won
                 R.drawable.aki_challenge_lost -> R.drawable.ankilope_challenge_lost
@@ -53,7 +56,6 @@ internal object AnkiquestCompanion {
                 -> R.drawable.ankilope_welcome
                 R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_achievement,
                 R.drawable.aki_goal, R.drawable.aki_deck_conquered,
-                R.drawable.aki_place_1, R.drawable.aki_place_2, R.drawable.aki_place_3,
                 -> R.drawable.ankilope_celebrate
                 R.drawable.aki_review, R.drawable.aki_streak, R.drawable.aki_freeze, R.drawable.aki_freeze_used,
                 R.drawable.aki_streak_hot, R.drawable.aki_streak_blazing, R.drawable.aki_streak_legend, R.drawable.aki_at_risk,
