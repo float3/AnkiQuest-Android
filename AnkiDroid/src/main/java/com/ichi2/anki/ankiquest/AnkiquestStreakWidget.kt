@@ -84,6 +84,28 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
         }
     }
 
+    /** Separate picker entries share data and sizing, while keeping the existing card as the default. */
+    internal enum class Style(
+        val provider: Class<out AppWidgetProvider>,
+    ) {
+        CARD(AnkiquestStreakWidget::class.java),
+        TRANSPARENT(AnkiquestClearStreakWidget::class.java),
+        ;
+
+        @LayoutRes
+        fun layout(size: Size): Int =
+            if (this == CARD) {
+                size.layout
+            } else {
+                when (size) {
+                    Size.SMALL -> R.layout.widget_ankiquest_streak_small_clear
+                    Size.MEDIUM -> R.layout.widget_ankiquest_streak_clear
+                    Size.LARGE -> R.layout.widget_ankiquest_streak_large_clear
+                    Size.HUGE -> R.layout.widget_ankiquest_streak_huge_clear
+                }
+            }
+    }
+
     companion object {
         /** The companion's pose for a streak state. New artwork for these moments is requested in float3/ankiquest#88. */
         @DrawableRes
@@ -216,18 +238,33 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             board: JSONArray?,
         ) {
             val manager = getAppWidgetManager(context) ?: return
-            val ids = manager.getAppWidgetIds(ComponentName(context, AnkiquestStreakWidget::class.java)) ?: return
-            if (ids.isEmpty()) return
+            for (style in Style.entries) {
+                renderStyle(context, board, manager, style)
+            }
+        }
+
+        private fun renderStyle(
+            context: Context,
+            board: JSONArray?,
+            manager: AppWidgetManager,
+            style: Style,
+        ) {
+            val ids = manager.getAppWidgetIds(ComponentName(context, style.provider)) ?: return
+            if (ids.isEmpty()) {
+                return
+            }
             val player = Ankiquest.player()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // The launcher picks the layout for each size itself, also while resizing.
                 val views =
                     RemoteViews(
                         Size.entries.associate { size ->
-                            SizeF(size.minWidthDp, size.minHeightDp) to views(context, board, player, size)
+                            SizeF(size.minWidthDp, size.minHeightDp) to views(context, board, player, size, style = style)
                         },
                     )
-                for (id in ids) manager.updateAppWidget(id, views)
+                for (id in ids) {
+                    manager.updateAppWidget(id, views)
+                }
             } else {
                 for (id in ids) {
                     val options = manager.getAppWidgetOptions(id)
@@ -236,7 +273,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                             options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).toFloat(),
                             options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).toFloat(),
                         )
-                    manager.updateAppWidget(id, views(context, board, player, size))
+                    manager.updateAppWidget(id, views(context, board, player, size, style = style))
                 }
             }
         }
@@ -247,9 +284,10 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             player: String?,
             size: Size = Size.MEDIUM,
             now: Long = TimeManager.time.intTimeMS(),
+            style: Style = Style.CARD,
         ): RemoteViews {
             val language = AnkiquestLanguage.context(context)
-            val views = RemoteViews(context.packageName, size.layout)
+            val views = RemoteViews(context.packageName, style.layout(size))
             val me = board?.let { mine(it, player) }
             // The collection can secure today before the board reflects it.
             val ownDay = if (player != null && player == Ankiquest.player()) AnkiquestDay.own(now) else null
@@ -295,7 +333,18 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             fitLegacyStatus(views, language, size, status)
             val progress = setMinimumProgress(views, language, day, status, size)
             val goal = setGoalProgress(views, language, day, me.takeIf { player == Ankiquest.player() }, now)
-            val milestone = setStreakTier(views, language, state, streak, size, number)
+            if (style == Style.TRANSPARENT && progress != null) {
+                // The same RemoteViews progress keeps a contrasting edge on either wallpaper tone.
+                val ring = size == Size.SMALL || size == Size.MEDIUM
+                val outline = if (ring) R.drawable.ankiquest_streak_clear_ring else R.drawable.ankiquest_streak_clear_meter
+                views.setInt(R.id.ankiquest_streak_progress, "setBackgroundResource", outline)
+                val edge =
+                    language.resources.displayMetrics.density
+                        .toInt()
+                        .coerceAtLeast(1)
+                views.setViewPadding(R.id.ankiquest_streak_progress, edge, edge, edge, edge)
+            }
+            val milestone = setStreakTier(views, language, state, streak, size, number, style)
             if (size == Size.SMALL || size == Size.MEDIUM) {
                 val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
                 views.setViewVisibility(R.id.ankiquest_streak_badge, badge)
@@ -332,11 +381,12 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             streak: Int?,
             size: Size,
             number: String,
+            style: Style,
         ): String? {
             val current = streak?.takeIf { state != State.UNKNOWN && it > 0 }
             val tier = current?.let { days -> StreakTier.entries.lastOrNull { it.days <= days } }
             views.setTextViewCompoundDrawablesRelative(R.id.ankiquest_streak_number, 0, 0, tier?.flame ?: 0, 0)
-            fitLegacyNumber(views, context, size, number, tier)
+            fitLegacyNumber(views, context, size, number, tier, style)
             if (size == Size.SMALL || size == Size.MEDIUM) {
                 return null
             }
@@ -361,6 +411,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             size: Size,
             number: String,
             tier: StreakTier?,
+            style: Style,
         ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 return
@@ -380,7 +431,9 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 }
             val flameWidth = tier?.let { AppCompatResources.getDrawable(context, it.flame)?.intrinsicWidth } ?: 0
             val available = widthDp * metrics.density - flameWidth
-            val scale = minOf(1f, available / paint.measureText(number), heightDp * metrics.density / paint.fontSpacing)
+            // The transparent compact layouts reserve two more dp for the outlined goal meter.
+            val height = heightDp - if (style == Style.TRANSPARENT && (size == Size.SMALL || size == Size.MEDIUM)) 2f else 0f
+            val scale = minOf(1f, available / paint.measureText(number), height * metrics.density / paint.fontSpacing)
             views.setTextViewTextSize(R.id.ankiquest_streak_number, TypedValue.COMPLEX_UNIT_PX, paint.textSize * scale)
         }
 
