@@ -43,6 +43,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
+import com.ichi2.anki.ankiquest.AnkiquestDialogOwner
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestIcon
 import com.ichi2.anki.ankiquest.AnkiquestNotificationHealth
@@ -474,14 +475,40 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             read = { switches().opt(global) as? Boolean },
             save = { Ankiquest.setNotificationSwitch(global, it).getBoolean(global) },
         )
-        bindAction(R.string.ankiquest_moments_decks_key) {
+        bindAction(R.string.ankiquest_moments_decks_key) { account ->
+            if (account == null || account.token.isEmpty()) {
+                return@bindAction null
+            }
+            val owner = AnkiquestDialogOwner(requireActivity(), account, viewLifecycleOwner.lifecycle)
             try {
-                showDeckNotifications(Ankiquest.deckNotificationSettings())
+                if (!owner.isCurrent()) {
+                    owner.close()
+                    return@bindAction null
+                }
+                val settings = Ankiquest.deckNotificationSettings(account)
+                if (!owner.isCurrent()) {
+                    owner.close()
+                    return@bindAction null
+                }
+                showDeckNotifications(account, owner, settings)
                 null
             } catch (e: CancellationException) {
+                owner.close()
                 throw e
             } catch (e: Exception) {
-                getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName)
+                if (owner.isCurrent()) {
+                    val failed =
+                        AlertDialog
+                            .Builder(requireContext())
+                            .setTitle(requirePreference<Preference>(R.string.ankiquest_moments_decks_key).title)
+                            .setMessage(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create()
+                    owner.show(failed)
+                } else {
+                    owner.close()
+                }
+                null
             }
         }
     }
@@ -812,7 +839,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
 
     private fun bindAction(
         key: Int,
-        action: suspend () -> String?,
+        action: suspend (HomeAccount?) -> String?,
     ) {
         val preference = requirePreference<Preference>(key)
         val idleSummary = preference.summary
@@ -821,10 +848,11 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             running = true
             preference.summary = getString(R.string.ankiquest_check_running)
             val context = requireContext()
+            val account = AnkiquestHomeData.account()
             lifecycleScope.launch {
                 val message =
                     try {
-                        action()
+                        action(account)
                     } finally {
                         running = false
                         preference.summary = idleSummary
@@ -841,15 +869,21 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         }
     }
 
-    private fun showDeckNotifications(settings: JSONObject) {
+    private fun showDeckNotifications(
+        account: HomeAccount,
+        owner: AnkiquestDialogOwner,
+        settings: JSONObject,
+    ) {
         val context = requireContext()
         val rows = settings.getJSONArray("decks")
         if (rows.length() == 0) {
-            AlertDialog
-                .Builder(context)
-                .setMessage(R.string.ankiquest_deck_notifications_empty)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
+            val empty =
+                AlertDialog
+                    .Builder(context)
+                    .setMessage(R.string.ankiquest_deck_notifications_empty)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .create()
+            owner.show(empty)
             return
         }
         val tree = AnkiquestDeckTree((0 until rows.length()).map { rows.getJSONObject(it) })
@@ -875,17 +909,21 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 adapter.setAll(adapter.anyUnchecked())
             }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                if (!owner.take(dialog)) {
+                    return@setOnClickListener
+                }
                 val shared = tree.rows.filterIndexed { index, _ -> adapter.checked[index] }.map { it.deck }
                 val unshared = tree.rows.filterIndexed { index, _ -> !adapter.checked[index] }.map { it.deck }
-                dialog.dismiss()
-                chooseRecipients(settings, shared, unshared)
+                chooseRecipients(account, owner, settings, shared, unshared)
             }
         }
-        dialog.show()
+        owner.show(dialog)
     }
 
     /** Asks once who should hear about every newly shared deck. */
     private fun chooseRecipients(
+        account: HomeAccount,
+        owner: AnkiquestDialogOwner,
         settings: JSONObject,
         shared: List<JSONObject>,
         unshared: List<JSONObject>,
@@ -893,17 +931,19 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val context = requireContext()
         val ids = { decks: List<JSONObject> -> decks.map { it.getString("id") } }
         if (shared.isEmpty()) {
-            saveDeckSharing(emptyList(), ids(unshared), emptyList())
+            saveDeckSharing(account, owner, emptyList(), ids(unshared), emptyList())
             return
         }
         val rows = settings.getJSONArray("recipients")
         val people = (0 until rows.length()).map { rows.getJSONObject(it) }
         if (people.isEmpty()) {
-            AlertDialog
-                .Builder(context)
-                .setMessage(R.string.ankiquest_deck_notifications_no_people)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
+            val empty =
+                AlertDialog
+                    .Builder(context)
+                    .setMessage(R.string.ankiquest_deck_notifications_no_people)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .create()
+            owner.show(empty)
             return
         }
         val chosen =
@@ -925,23 +965,33 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val recipients = people.filterIndexed { index, _ -> checked[index] }.map { it.getString("user") }
-                if (recipients.isEmpty()) {
-                    AlertDialog
-                        .Builder(context)
-                        .setMessage(R.string.ankiquest_deck_notifications_choose_people)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
+                if (!owner.isCurrent()) {
+                    owner.close()
                     return@setOnClickListener
                 }
-                dialog.dismiss()
-                saveDeckSharing(ids(shared), ids(unshared), recipients)
+                val recipients = people.filterIndexed { index, _ -> checked[index] }.map { it.getString("user") }
+                if (recipients.isEmpty()) {
+                    val validation =
+                        AlertDialog
+                            .Builder(context)
+                            .setMessage(R.string.ankiquest_deck_notifications_choose_people)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .create()
+                    owner.explain(validation)
+                    return@setOnClickListener
+                }
+                if (!owner.take(dialog)) {
+                    return@setOnClickListener
+                }
+                saveDeckSharing(account, owner, ids(shared), ids(unshared), recipients)
             }
         }
-        dialog.show()
+        owner.show(dialog)
     }
 
     private fun saveDeckSharing(
+        account: HomeAccount,
+        owner: AnkiquestDialogOwner,
         shared: List<String>,
         unshared: List<String>,
         recipients: List<String>,
@@ -949,25 +999,38 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         val context = requireContext()
         lifecycleScope.launch {
             try {
-                Ankiquest.saveDeckNotificationSettings(shared, unshared, recipients)
-                AlertDialog
-                    .Builder(context)
-                    .setMessage(
-                        resources.getQuantityString(
-                            R.plurals.ankiquest_deck_notifications_saved,
-                            shared.size,
-                            shared.size,
-                        ),
-                    ).setPositiveButton(android.R.string.ok, null)
-                    .show()
+                Ankiquest.saveDeckNotificationSettings(shared, unshared, recipients, account)
+                if (!owner.isCurrent()) {
+                    owner.close()
+                    return@launch
+                }
+                val saved =
+                    AlertDialog
+                        .Builder(context)
+                        .setMessage(
+                            resources.getQuantityString(
+                                R.plurals.ankiquest_deck_notifications_saved,
+                                shared.size,
+                                shared.size,
+                            ),
+                        ).setPositiveButton(android.R.string.ok, null)
+                        .create()
+                owner.show(saved)
             } catch (e: CancellationException) {
+                owner.close()
                 throw e
             } catch (e: Exception) {
-                AlertDialog
-                    .Builder(context)
-                    .setMessage(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show()
+                if (!owner.isCurrent()) {
+                    owner.close()
+                    return@launch
+                }
+                val failed =
+                    AlertDialog
+                        .Builder(context)
+                        .setMessage(getString(R.string.ankiquest_check_failed, e.message ?: e.javaClass.simpleName))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create()
+                owner.show(failed)
             }
         }
     }
