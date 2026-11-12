@@ -390,7 +390,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             scope.launch {
                 recordAnswers()
                 refreshLocalDay(reviewOwner)
-                launchRefresh(showFeedback = true)
+                launchRefresh(showFeedback = true, reviewOwner = reviewOwner)
             }
             return
         }
@@ -489,13 +489,18 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         host is Reviewer ||
             (host as? FragmentActivity)?.supportFragmentManager?.fragments?.any { it is ReviewerFragment } == true
 
-    /** Answers arriving while a refresh waits for the running one join it instead of each queueing an upload. */
+    /** Only the initiating account's answers can join its waiting upload. */
     private fun launchRefresh(
         showFeedback: Boolean,
         resync: Boolean = false,
+        reviewOwner: String? = null,
     ) {
-        if (HomeAccount.current() == null || !refreshes.offer(showFeedback, resync)) return
-        scope.launch { refresh(background = false) }
+        val account = HomeAccount.current() ?: return
+        if (reviewOwner != null && account.scope != reviewOwner) {
+            return
+        }
+        if (!refreshes.offer(account.scope, showFeedback, resync)) return
+        scope.launch { refresh(account, background = false) }
     }
 
     /**
@@ -505,9 +510,10 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      * used, such as during a sync.
      */
     internal suspend fun uploadPending() {
-        if (HomeAccount.current()?.token.isNullOrEmpty() || !collectionAvailable()) return
-        if (!refreshes.offer(showFeedback = false, resync = false)) return
-        refresh(background = true)
+        val account = HomeAccount.current()?.takeIf { it.token.isNotEmpty() } ?: return
+        if (!collectionAvailable()) return
+        if (!refreshes.offer(account.scope, showFeedback = false, resync = false)) return
+        refresh(account, background = true)
     }
 
     /**
@@ -516,10 +522,11 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
      * server. The server keeps one copy of each review, so rows it already has change nothing.
      */
     internal suspend fun uploadAfterSync() {
-        if (HomeAccount.current()?.token.isNullOrEmpty() || !collectionAvailable()) return
+        val account = HomeAccount.current()?.takeIf { it.token.isNotEmpty() } ?: return
+        if (!collectionAvailable()) return
         refreshLocalDay()
-        if (!refreshes.offer(showFeedback = false, resync = true)) return
-        refresh(background = true)
+        if (!refreshes.offer(account.scope, showFeedback = false, resync = true)) return
+        refresh(account, background = true)
     }
 
     /** [uploadAfterSync] without waiting for it, for a sync that finished on screen. */
@@ -549,11 +556,28 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
         }
 
     /** Runs the waiting refresh. A background one shows nothing unless an answer asked for feedback meanwhile. */
-    private suspend fun refresh(background: Boolean) {
-        mutex.withLock {
-            val (feedback, again) = refreshes.take()
+    private suspend fun refresh(
+        account: HomeAccount,
+        background: Boolean,
+    ) {
+        try {
+            mutex.lock()
+        } catch (e: CancellationException) {
+            // A cancelled waiter must not prevent the next poll from claiming its work.
+            if (HomeAccount.current()?.scope == account.scope) {
+                refreshes.retry(account.scope)
+            } else {
+                refreshes.take(account.scope)
+            }
+            throw e
+        }
+        try {
+            val (feedback, again) = refreshes.take(account.scope)
+            // A queued callback may outlive sign-out, token replacement or an account switch.
+            if (HomeAccount.current()?.scope != account.scope) {
+                return
+            }
             try {
-                val account = HomeAccount.current() ?: return@withLock
                 val profile =
                     if (account.token.isEmpty()) {
                         preview(account.server, account.encodedUser)
@@ -569,6 +593,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest refresh failed")
             }
+        } finally {
+            // The running upload has already consumed its slot; keep any newer waiting request.
+            mutex.unlock()
         }
     }
 
@@ -1253,25 +1280,37 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     override fun onActivityDestroyed(activity: Activity) {}
 }
 
-/** At most one refresh waits behind the running one; requests made meanwhile join it, keeping any feedback or resync they ask for. */
+/** One waiting refresh per account; a replaced session cannot consume the next session's request. */
 internal class RefreshQueue {
-    private val queued = AtomicBoolean(false)
-    private val feedback = AtomicBoolean(false)
-    private val resync = AtomicBoolean(false)
+    private enum class State { WAITING, RETRY }
+
+    private data class Waiting(
+        val feedback: Boolean,
+        val resync: Boolean,
+        val state: State = State.WAITING,
+    )
+
+    private val waiting = mutableMapOf<String, Waiting>()
 
     /** Records a request; true when the caller must start a refresh, false when a waiting one will cover it. */
+    @Synchronized
     fun offer(
+        owner: String,
         showFeedback: Boolean,
         resync: Boolean,
     ): Boolean {
-        if (showFeedback) feedback.set(true)
-        if (resync) this.resync.set(true)
-        return queued.compareAndSet(false, true)
+        val previous = waiting[owner]
+        waiting[owner] = Waiting(previous?.feedback == true || showFeedback, previous?.resync == true || resync)
+        return previous == null || previous.state == State.RETRY
+    }
+
+    /** Retains coalesced intent when a waiter is cancelled, letting the next caller claim it. */
+    @Synchronized
+    fun retry(owner: String) {
+        waiting[owner]?.let { waiting[owner] = it.copy(state = State.RETRY) }
     }
 
     /** Starts the waiting refresh, so later requests queue another; answers whether to show feedback and whether to resync. */
-    fun take(): Pair<Boolean, Boolean> {
-        queued.set(false)
-        return feedback.getAndSet(false) to resync.getAndSet(false)
-    }
+    @Synchronized
+    fun take(owner: String): Pair<Boolean, Boolean> = waiting.remove(owner)?.let { it.feedback to it.resync } ?: (false to false)
 }
