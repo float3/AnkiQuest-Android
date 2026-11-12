@@ -175,6 +175,7 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
             Player("amara", "Amara", level = 4, week = 530, today = 21, streak = 5),
             Player("jonas", "Jonas", level = 3, week = 260, today = 12, streak = 2),
         ).forEach { rows.put(it.row()) }
+        coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns
             AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK)
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * DAY

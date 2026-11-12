@@ -285,7 +285,14 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
-        sections.attach(content)
+        val groups =
+            overview?.groups?.let { AnkiquestFriendsSections.Groups.Ready(it) }
+                ?: if (loading) {
+                    AnkiquestFriendsSections.Groups.Loading
+                } else {
+                    AnkiquestFriendsSections.Groups.Unavailable
+                }
+        sections.attach(content, groups)
         sections.showTarget()
         findViewById<View>(R.id.aq_feed_loading).isVisible = loading
         status?.let { line ->

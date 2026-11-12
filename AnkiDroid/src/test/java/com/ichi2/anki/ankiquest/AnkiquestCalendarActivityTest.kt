@@ -131,6 +131,7 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
         mockkObject(AnkiquestBoards, AnkiquestSocial)
         try {
             coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
+            coEvery { AnkiquestBoards.hasScopes(any()) } returns false
             coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns emptyList()
             coEvery { AnkiquestBoards.weekEnds(identity) } returns null
             val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))

@@ -44,6 +44,7 @@ class AnkiquestFriendsScreenshotTest : ScreenshotTest() {
         val overview = AnkiquestSocial.parse(JSONObject(sample))
         coEvery { AnkiquestSocial.overview(any()) } returns overview
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
+        coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns
             AnkiquestBoards.parseLeaderboard(
                 JSONArray().put(AnkiquestBoardsTest.row("cerro", 90, 5)).put(AnkiquestBoardsTest.row("hill", 40, 2)),

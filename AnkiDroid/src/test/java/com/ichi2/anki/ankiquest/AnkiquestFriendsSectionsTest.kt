@@ -52,6 +52,7 @@ class AnkiquestFriendsSectionsTest : RobolectricTest() {
         every { AnkiquestHomeData.account(any()) } answers { account }
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("friends unavailable")
         coEvery { AnkiquestFeed.page(any(), any(), any(), any()) } returns page
+        coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(any(), any()) } returns board
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
