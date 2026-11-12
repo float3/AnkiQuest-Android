@@ -69,6 +69,7 @@ internal object AnkiquestDiagnostics {
         val providers =
             mapOf(
                 "streak" to AnkiquestStreakWidget::class.java,
+                "transparent streak" to AnkiquestClearStreakWidget::class.java,
                 "leaderboard" to AnkiquestWidget::class.java,
                 "transparent leaderboard" to AnkiquestTransparentWidget::class.java,
             )
