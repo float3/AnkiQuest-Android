@@ -37,6 +37,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
+    private lateinit var undo: AnkiquestUndo
     private lateinit var sections: AnkiquestMeSections
     private var account: HomeAccount? = null
     private var page: AnkiquestBoards.PlayerPage? = null
@@ -55,6 +56,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
+        undo = AnkiquestUndo(this)
         views = AnkiquestBoardViews(this)
         content = findViewById(R.id.aq_board_content)
         scroll = findViewById(R.id.aq_board_scroll)
@@ -101,6 +103,7 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         val current = AnkiquestHomeData.account()
         sections.refresh()
         if (current?.scope != account?.scope) {
+            undo.clear()
             account = current
             page = null
             muted = null
@@ -164,7 +167,10 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     }
 
     /** Runs one change from the profile, then reads the profile and its controls again. */
-    private fun change(work: suspend (HomeAccount) -> Unit) {
+    private fun change(
+        after: (() -> Unit)? = null,
+        work: suspend (HomeAccount) -> Unit,
+    ) {
         val current = account ?: return
         if (changing) return
         changing = true
@@ -173,6 +179,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             val problem = boardAttempt { work(current) }
             changing = false
             if (problem != null) showThemedToast(this@AnkiquestProfileActivity, getString(problem), shortLength = false)
+            if (problem == null) {
+                after?.invoke()
+            }
             load()
         }
     }
@@ -205,18 +214,23 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views
                 .button(content, getString(if (isMuted) R.string.aq_friends_unmute else R.string.aq_friends_mute)) {
                     if (isMuted) {
-                        change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Unmute(p.user)) }
+                        unmute(p.user)
                     } else {
-                        AlertDialog
-                            .Builder(this)
-                            .setMessage(getString(R.string.aq_friends_mute_confirm, p.display))
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .setPositiveButton(R.string.aq_friends_mute) { _, _ ->
-                                change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Mute(p.user)) }
-                            }.show()
+                        val current = account ?: return@button
+                        undo.apply(
+                            current,
+                            getString(R.string.aq_friends_muted_done, p.display),
+                            perform = { done -> change(after = done) { AnkiquestSocial.change(it, AnkiquestSocial.Change.Mute(p.user)) } },
+                            inverse = { unmute(p.user) },
+                        )
                     }
                 }.isEnabled = !changing
         }
+    }
+
+    private fun unmute(user: String) {
+        undo.clear()
+        change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Unmute(user)) }
     }
 
     private fun refreshPicture(

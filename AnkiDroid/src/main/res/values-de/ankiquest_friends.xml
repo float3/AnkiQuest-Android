@@ -35,7 +35,6 @@
 
     <string name="aq_friends_mute">Stummschalten</string>
     <string name="aq_friends_unmute">Stumm aufheben</string>
-    <string name="aq_friends_mute_confirm">%s stummschalten? Du hörst nichts mehr von dieser Person. Sie erfährt es nicht.</string>
     <string name="aq_friends_muted_done">%s ist stummgeschaltet.</string>
     <string name="aq_friends_unmuted">%s ist nicht mehr stummgeschaltet.</string>
     <string name="aq_friends_muted">Stummgeschaltet</string>

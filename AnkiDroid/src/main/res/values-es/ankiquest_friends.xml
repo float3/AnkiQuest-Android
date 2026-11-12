@@ -35,7 +35,6 @@
 
     <string name="aq_friends_mute">Silenciar</string>
     <string name="aq_friends_unmute">Dejar de silenciar</string>
-    <string name="aq_friends_mute_confirm">¿Silenciar a %s? No recibirás nada de esta persona. No se le avisará.</string>
     <string name="aq_friends_muted_done">%s está silenciado.</string>
     <string name="aq_friends_unmuted">%s ya no está silenciado.</string>
     <string name="aq_friends_muted">Silenciados</string>
