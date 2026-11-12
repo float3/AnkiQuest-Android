@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <plurals name="ankiquest_streak_milestone">
+        <item quantity="one">Falta %1$d dia para %2$d 🔥</item>
+        <item quantity="other">Faltam %1$d dias para %2$d 🔥</item>
+    </plurals>
+</resources>
