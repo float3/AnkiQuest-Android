@@ -35,6 +35,7 @@ import java.net.InetSocketAddress
 import java.util.TimeZone
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -63,6 +64,11 @@ class AnkiquestUploadTest : RobolectricTest() {
 
     @Volatile
     private var reviewStatus = 200
+
+    private enum class ReplyOwner { CURRENT, CHANGED }
+
+    @Volatile
+    private var replyOwner = ReplyOwner.CURRENT
 
     private data class UploadRequest(
         val method: String,
@@ -95,6 +101,9 @@ class AnkiquestUploadTest : RobolectricTest() {
                 ),
             )
             val settings = path.startsWith("/api/decks/")
+            if (settings && exchange.requestMethod == "POST" && replyOwner == ReplyOwner.CHANGED) {
+                configureAccount("other", "second-token")
+            }
             val answering = path.startsWith("/api/reply/")
             val response =
                 when {
@@ -452,10 +461,12 @@ class AnkiquestUploadTest : RobolectricTest() {
     @Test
     fun `saving for subdecks stores the same choice for each deck in one request`() =
         runBlocking {
-            Ankiquest.saveDeckNotificationSettings(listOf("1", unsharedDeck.toString()), emptyList(), listOf("hill"))
+            val account = AnkiquestHomeData.account()!!
+            Ankiquest.saveDeckNotificationSettings(listOf("1", unsharedDeck.toString()), emptyList(), listOf("hill"), account)
 
             val saves = requests.filter { it.method == "POST" && it.path == "/api/decks/cerro" }
             assertEquals(1, saves.size)
+            assertEquals("Bearer first-token", saves.single().authorization)
             val decks = saves.single().body!!.getJSONArray("decks")
             val ids = (0 until decks.length()).map { decks.getJSONObject(it).getString("id") }
             assertEquals(setOf("1", unsharedDeck.toString()), ids.toSet())
@@ -464,6 +475,46 @@ class AnkiquestUploadTest : RobolectricTest() {
                 assertTrue(deck.getBoolean("enabled"))
                 assertEquals("hill", deck.getJSONArray("recipients").getString(0))
             }
+        }
+
+    @Test
+    fun `stale deck settings and saves never use changed account details`() =
+        runBlocking {
+            val account = AnkiquestHomeData.account()!!
+            for ((key, value) in listOf(
+                Ankiquest.PREF_USER to "other",
+                Ankiquest.PREF_TOKEN to "replacement-token",
+                Ankiquest.PREF_URL to "http://127.0.0.1:9",
+            )) {
+                configureAccount("cerro", "first-token")
+                AnkiDroidApp.sharedPrefs().edit { putString(key, value) }
+                assertFailsWith<HomeAccountChanged> {
+                    Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("hill"), account)
+                }
+                assertFailsWith<HomeAccountChanged> { Ankiquest.deckNotificationSettings(account) }
+            }
+            assertTrue(requests.isEmpty(), "neither old nor new credentials send a request for a stale picker")
+        }
+
+    @Test
+    fun `an account switch during a deck save rejects the result without changing the request owner`() =
+        runBlocking {
+            val account = AnkiquestHomeData.account()!!
+            replyOwner = ReplyOwner.CHANGED
+            assertFailsWith<HomeAccountChanged> {
+                Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("hill"), account)
+            }
+            val sent = requests.single()
+            assertEquals("/api/decks/cerro", sent.path)
+            assertEquals("Bearer first-token", sent.authorization)
+            assertEquals(
+                "hill",
+                sent.body!!
+                    .getJSONArray("decks")
+                    .getJSONObject(0)
+                    .getJSONArray("recipients")
+                    .getString(0),
+            )
         }
 
     @Test

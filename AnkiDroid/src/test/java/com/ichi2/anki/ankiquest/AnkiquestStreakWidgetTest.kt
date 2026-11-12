@@ -7,7 +7,6 @@ import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
-import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -78,7 +77,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                     AnkiquestStreakWidget
                         .views(targetContext, board, "hill", size)
                         .apply(targetContext, FrameLayout(targetContext))
-                val progress = widget.allViews.filterIsInstance<ProgressBar>().single()
+                val progress = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
                 val expected = minutes.coerceAtMost(10)
                 assertEquals(View.VISIBLE, progress.visibility, size.name)
                 assertEquals(10, progress.max, size.name)
@@ -98,7 +97,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     fun `hides the meter for stale or missing data`() {
         val stale = me(9, "pending", 8, 6, 10).put("day_ends_at", TimeManager.time.intTimeMS())
         for (board in listOf(null, JSONArray().put(stale), JSONArray().put(me(9, "pending", 8)))) {
-            val progress = render(board).allViews.filterIsInstance<ProgressBar>().single()
+            val progress = render(board).findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
             assertEquals(View.GONE, progress.visibility)
         }
     }
@@ -155,7 +154,7 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
                 AnkiquestStreakWidget
                     .views(targetContext, JSONArray().put(me(9, "pending", 8, 6, 10)), "hill", size)
                     .apply(targetContext, FrameLayout(targetContext))
-            val meter = widget.allViews.filterIsInstance<ProgressBar>().single()
+            val meter = widget.findViewById<ProgressBar>(R.id.ankiquest_streak_progress)
             assertEquals(View.GONE, meter.visibility, size.name)
         }
     }
