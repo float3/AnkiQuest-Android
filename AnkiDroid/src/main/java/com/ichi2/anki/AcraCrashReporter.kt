@@ -12,6 +12,7 @@ import androidx.core.content.pm.PackageInfoCompat
 import androidx.webkit.WebViewCompat
 import com.ichi2.anki.analytics.AnkiDroidCrashReportDialog
 import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.ankiquest.AnkiquestCrashReportHooks
 import com.ichi2.anki.common.analytics.Analytics
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.crashreporting.CrashReporter
@@ -80,8 +81,13 @@ private object AcraCrashReporter : CrashReporter {
         val builder =
             CoreConfigurationBuilder()
                 .withBuildConfigClass(com.ichi2.anki.BuildConfig::class.java) // AnkiDroid BuildConfig - Acrarium#319
-                .withExcludeMatchingSharedPreferencesKeys("username", "hkey", "currentSyncUri", "browser_search_history")
-                .withSharedPreferencesName("acra")
+                .withExcludeMatchingSharedPreferencesKeys(
+                    "username",
+                    "hkey",
+                    "currentSyncUri",
+                    "browser_search_history",
+                    AnkiquestCrashReportHooks.PRIVATE_PREFERENCES,
+                ).withSharedPreferencesName("acra")
                 .withReportContent(
                     ReportField.REPORT_ID,
                     ReportField.APP_VERSION_CODE,
