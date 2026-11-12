@@ -23,6 +23,7 @@
 
     <TextView
         android:id="@+id/ankiquest_streak_number"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -34,11 +35,6 @@
         android:gravity="center"
         android:includeFontPadding="false"
         android:maxLines="1"
-        android:shadowColor="#E6000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/ankiquest_widget_clear_text"
         android:textSize="120sp"
         tools:targetApi="o" />
 
@@ -63,42 +59,30 @@
 
     <TextView
         android:id="@+id/ankiquest_streak_label"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif-medium"
-        android:shadowColor="#E6000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/ankiquest_widget_clear_text"
         android:textSize="28sp" />
 
     <TextView
         android:id="@+id/ankiquest_streak_milestone"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:gravity="center"
         android:maxLines="2"
-        android:shadowColor="#E6000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/ankiquest_widget_clear_text"
         android:textSize="18sp"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/ankiquest_streak_status"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:gravity="center"
         android:maxLines="2"
-        android:shadowColor="#E6000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/ankiquest_widget_clear_text"
         android:textSize="20sp" />
 </LinearLayout>

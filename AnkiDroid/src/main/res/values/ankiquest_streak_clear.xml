@@ -2,4 +2,11 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_streak_clear_label">AnkiQuest Streak — Transparent</string>
+    <style name="AnkiquestClearStreakText">
+        <item name="android:textColor">@color/ankiquest_widget_clear_text</item>
+        <item name="android:shadowColor">#FF000000</item>
+        <item name="android:shadowDx">0</item>
+        <item name="android:shadowDy">2</item>
+        <item name="android:shadowRadius">1.5</item>
+    </style>
 </resources>
