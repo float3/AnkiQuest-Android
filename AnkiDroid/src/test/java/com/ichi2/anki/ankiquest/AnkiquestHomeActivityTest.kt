@@ -64,7 +64,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
     @After
     fun clearHomeMocks() {
-        unmockkObject(AnkiquestHomeData)
+        unmockkObject(AnkiquestHomeData, AnkiquestDeckCopies)
     }
 
     @Test
@@ -334,6 +334,109 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     }
 
     private fun launch(): AnkiquestHomeActivity = launchController().get()
+
+    @Test
+    fun `copy recipients are dismissed when the account changes`() {
+        mockCopies()
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        switchCopyOwner()
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        assertFalse(recipients.isShowing, "the previous account's friends must not remain visible")
+    }
+
+    @Test
+    fun `a retained copy Save cannot share for a replacement account`() {
+        mockCopies()
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        pickCopyFriend(recipients)
+        val save = recipients.getButton(AlertDialog.BUTTON_POSITIVE)
+        switchCopyOwner()
+        controller.pause().resume()
+        advanceRobolectricLooper()
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a retained copy Save cannot start after leaving Today`() {
+        mockCopies()
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        pickCopyFriend(recipients)
+        val save = recipients.getButton(AlertDialog.BUTTON_POSITIVE)
+        controller.pause().stop()
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 0) { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `an owned recipient selection sends once and clears the busy state`() {
+        mockCopies()
+        val home = launch()
+        val recipients = copyDialog(home)
+        pickCopyFriend(recipients)
+        val save = recipients.getButton(AlertDialog.BUTTON_POSITIVE)
+        save.performClick()
+        advanceRobolectricLooper()
+        save.performClick()
+        advanceRobolectricLooper()
+        coVerify(exactly = 1) { AnkiquestDeckCopies.share(identity, 12, "Spanish", listOf("friend-a"), any()) }
+        assertTrue(home.hasText(home.getString(R.string.aq_copies_sent)))
+        assertTrue(copyDialog(home).isShowing)
+    }
+
+    @Test
+    fun `a stopped copy upload cannot leave Today permanently busy`() {
+        mockCopies()
+        val completion = CompletableDeferred<JSONObject>()
+        coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } coAnswers { completion.await() }
+        val controller = launchController()
+        val recipients = copyDialog(controller.get())
+        pickCopyFriend(recipients)
+        recipients.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        advanceRobolectricLooper()
+        controller.pause().stop()
+        completion.complete(JSONObject())
+        advanceRobolectricLooper()
+        controller.start().resume()
+        advanceRobolectricLooper()
+        assertTrue(copyDialog(controller.get()).isShowing)
+    }
+
+    private fun mockCopies() {
+        mockkObject(AnkiquestDeckCopies)
+        coEvery { AnkiquestDeckCopies.inbox(any()) } returns
+            JSONObject()
+                .put("friends", JSONArray().put(JSONObject().put("user", "friend-a").put("display", "Friend A")))
+                .put("offers", JSONArray())
+        coEvery { AnkiquestDeckCopies.share(any(), any(), any(), any(), any()) } returns JSONObject()
+    }
+
+    private fun switchCopyOwner() {
+        val other = HomeAccount("https://anki.example.test", "other", "other-token")
+        every { AnkiquestHomeData.account(any()) } returns other
+        coEvery { AnkiquestHomeData.profile(other) } returns profile
+        coEvery { AnkiquestHomeData.companion(other) } throws IOException("offline")
+    }
+
+    private fun copyDialog(home: AnkiquestHomeActivity): AlertDialog {
+        home.click(home.getString(R.string.aq_copies_share))
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog).listView
+        assertTrue(decks.performItemClick(decks.getChildAt(0), 0, decks.getItemIdAtPosition(0)))
+        advanceRobolectricLooper()
+        return assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog).also { assertTrue(it.isShowing) }
+    }
+
+    private fun pickCopyFriend(dialog: AlertDialog) {
+        val choices = dialog.listView
+        assertTrue(choices.performItemClick(choices.getChildAt(0), 0, choices.getItemIdAtPosition(0)))
+        assertTrue(choices.isItemChecked(0), "the fixture must select a recipient before testing Save")
+    }
 
     private fun launchController() =
         startActivityControllerNormallyOpenCollectionWithIntent(
