@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- 4x5 and up, such as a tablet's spare corner: the companion fills the card above a giant number. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ankiquest_streak_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/ankiquest_streak_companion"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:importantForAccessibility="no"
+        android:maxHeight="520dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/aki_streak" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_number"
+        style="@style/AnkiquestClearStreakText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:autoSizeMaxTextSize="120sp"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeStepGranularity="1sp"
+        android:autoSizeTextType="uniform"
+        android:fontFamily="sans-serif-black"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textSize="120sp"
+        tools:targetApi="o" />
+
+    <FrameLayout
+        android:id="@+id/ankiquest_streak_meter"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginTop="6dp"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/ankiquest_streak_goal"
+        style="@style/AnkiquestStreakProgress"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="1dp"
+        android:background="@drawable/ankiquest_streak_clear_meter"
+        android:padding="1dp"
+        android:progressDrawable="@drawable/ankiquest_streak_widget_meter"
+        android:progressTint="@color/ankiquest_streak_warm"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_label"
+        style="@style/AnkiquestClearStreakText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="28sp" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_milestone"
+        style="@style/AnkiquestClearStreakText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/ankiquest_streak_status"
+        style="@style/AnkiquestClearStreakText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textSize="20sp" />
+</LinearLayout>
