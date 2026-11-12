@@ -66,6 +66,7 @@ internal object AnkiquestArt {
     ): Int =
         when (kind) {
             "celebration", "share" -> forTopic(topic)
+            "nudge" -> R.drawable.aki_nudge
             "challenge_invite", "challenge_accepted" -> R.drawable.aki_challenge
             "challenge_complete" -> R.drawable.aki_challenge_won
             "reminder_weekly_recap" -> place(topic?.removePrefix("place:")?.toIntOrNull()) ?: R.drawable.aki_face

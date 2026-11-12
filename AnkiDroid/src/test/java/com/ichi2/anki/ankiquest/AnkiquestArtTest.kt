@@ -26,6 +26,7 @@ class AnkiquestArtTest {
         assertEquals(R.drawable.aki_deck_conquered, AnkiquestArt.forNotice("celebration", "conquered"))
         assertEquals(R.drawable.aki_challenge, AnkiquestArt.forNotice("challenge_invite", null))
         assertEquals(R.drawable.aki_challenge_won, AnkiquestArt.forNotice("challenge_complete", null))
+        assertEquals(R.drawable.aki_nudge, AnkiquestArt.forNotice("nudge", null))
         assertEquals(R.drawable.aki_place_2, AnkiquestArt.forNotice("reminder_weekly_recap", "place:2"))
         assertEquals(R.drawable.aki_face, AnkiquestArt.forNotice("reminder_weekly_recap", "place:4"))
         assertEquals(R.drawable.aki_face, AnkiquestArt.forNotice("completion", null))

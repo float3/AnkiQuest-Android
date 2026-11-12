@@ -38,7 +38,10 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.resource(R.drawable.aki_place_1))
         assertEquals(R.drawable.ankilope_study, AnkiquestCompanion.resource(R.drawable.aki_streak_milestone))
         assertEquals(R.drawable.ankilope_celebrate, AnkiquestCompanion.resource(R.drawable.aki_deck_conquered))
-        assertEquals(R.drawable.ankilope_welcome, AnkiquestCompanion.resource(R.drawable.aki_challenge))
+        assertEquals(R.drawable.ankilope_challenge, AnkiquestCompanion.resource(R.drawable.aki_challenge))
+        assertEquals(R.drawable.ankilope_challenge_won, AnkiquestCompanion.resource(R.drawable.aki_challenge_won))
+        assertEquals(R.drawable.ankilope_challenge_lost, AnkiquestCompanion.resource(R.drawable.aki_challenge_lost))
+        assertEquals(R.drawable.ankilope_nudge, AnkiquestCompanion.resource(R.drawable.aki_nudge))
 
         val bob = account("bob")
         assertEquals("aki", AnkiquestCompanion.selected())
