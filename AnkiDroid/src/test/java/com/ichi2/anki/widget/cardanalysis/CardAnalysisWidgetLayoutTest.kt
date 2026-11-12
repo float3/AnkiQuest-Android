@@ -15,6 +15,7 @@ import android.widget.RemoteViews
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.allViews
+import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
@@ -127,7 +128,7 @@ class CardAnalysisWidgetLayoutTest : RobolectricTest() {
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
                 putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
-                if (sdk >= Build.VERSION_CODES.S) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && sdk >= Build.VERSION_CODES.S) {
                     putParcelableArrayList(
                         AppWidgetManager.OPTION_APPWIDGET_SIZES,
                         arrayListOf(SizeF(widthDp.toFloat(), heightDp.toFloat())),
@@ -198,7 +199,7 @@ class CardAnalysisWidgetLayoutTest : RobolectricTest() {
             )
         }
         val name = widget.findViewById<TextView>(WidgetR.id.deckNameCardAnalysis)
-        if (name.visibility == View.VISIBLE) {
+        if (name.isVisible) {
             inside(widget, name)
             val line = minOf(name.layout.lineCount, name.maxLines) - 1
             assertTrue(line >= 0 && name.height > name.compoundPaddingTop + name.compoundPaddingBottom, "deck name has no usable space")
