@@ -1,0 +1,37 @@
+[
+    {
+        "drawable": "AnkiDroid/src/main/res/drawable-nodpi/aki_comeback.webp",
+        "sha256": "427ca13fcb9eacab1869e468321684e48b5e7d3ae9b4faf3bb7283bd238d56b6",
+        "master": "static/aki/comeback.png",
+        "master_sha256": "7bde87b283118f12916f1c4b5395fd378ba257fa81cc1855cf7d8c78e09140fe",
+        "dimensions": [336, 336]
+    },
+    {
+        "drawable": "AnkiDroid/src/main/res/drawable-nodpi/aki_freeze_used.webp",
+        "sha256": "ee5e3f8c8de753aaa85f254720698229be93fc0c3e2bb2e52714295d8f14d68b",
+        "master": "static/aki/freeze_used.png",
+        "master_sha256": "9b91b79a596ee69065f54429c25f4d2a85502a645e7b023378610c3231532882",
+        "dimensions": [336, 336]
+    },
+    {
+        "drawable": "AnkiDroid/src/main/res/drawable-nodpi/aki_streak_hot.webp",
+        "sha256": "0c87c9ed20cf64107bfc92e604fff7ecc2f304e758f328baecada9b7d5431961",
+        "master": "static/aki/streak_hot.png",
+        "master_sha256": "8b68b8b64811aa4374e522ca3e92b65938b6089fa1f7e27cc9c6aaf5999a806f",
+        "dimensions": [336, 336]
+    },
+    {
+        "drawable": "AnkiDroid/src/main/res/drawable-nodpi/aki_streak_blazing.webp",
+        "sha256": "d5ee100d237df0b9fcf53a4b2b79810e756574505c5203c51ff18019ec6636d7",
+        "master": "static/aki/streak_blazing.png",
+        "master_sha256": "80fbdad744c1ad5f2671c4c78e4d3e76f76faa8e07006289ac53e5e520a87989",
+        "dimensions": [336, 336]
+    },
+    {
+        "drawable": "AnkiDroid/src/main/res/drawable-nodpi/aki_streak_legend.webp",
+        "sha256": "de21f993840563ddb97d1954ccd527a2cc13e9440d7e592cb3a3fe2414e657af",
+        "master": "static/aki/streak_legend.png",
+        "master_sha256": "5f9a899163d52be7037ba00cc943ada5e4d5e914b71dac2d7bf776dd6038a127",
+        "dimensions": [336, 336]
+    }
+]
