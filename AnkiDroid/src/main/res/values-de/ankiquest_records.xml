@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="aq_records_title">Rekorde</string>
-    <string name="aq_records_refresh">Rekorde aktualisieren</string>
     <string name="aq_records_loading">Rekorde werden geladen…</string>
     <string name="aq_records_lead">Rekorde, die sich lohnen.</string>
     <string name="aq_records_intro">Persönliche Bestleistungen werden zu gemeinsamen Meilensteinen. Feiere die Sitzungen, Serien und Lerntage, die die Messlatte höher gelegt haben.</string>
@@ -26,7 +25,6 @@
     <string name="aq_records_server_error">Die Rekorde konnten nicht geladen werden. Versuche es mit Aktualisieren.</string>
 
     <string name="aq_history_title">Lernverlauf</string>
-    <string name="aq_history_refresh">Lernverlauf aktualisieren</string>
     <string name="aq_history_loading">Dein Lernverlauf wird geladen…</string>
     <string name="aq_history_intro">Jeder Tag, an dem du gelernt hast, schreibt deine Geschichte weiter.</string>
     <string name="aq_history_connect">Verbinde AnkiQuest, um deinen Lernkalender zu sehen.</string>
