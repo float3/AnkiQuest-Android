@@ -315,7 +315,7 @@ open class AnkiquestWidget : AppWidgetProvider() {
             val before = fresh?.takeIf { it.scope == account.scope }
             fresh = Fresh(account.scope, account.user, profile, now)
             val known = currentBoard(account)
-            val streakChanged = before == null || streakShown(ownRow(before.profile, null)) != streakShown(ownRow(profile, null))
+            val streakChanged = before == null || streakShown(before.profile) != streakShown(profile)
             if (streakChanged) renderStreaks(context, known ?: Drawn(JSONArray(), 0, false, scope = account.scope))
             // Without standings to put the row in, the leaderboards keep what they show until the poll.
             val shown = known ?: return
@@ -357,14 +357,17 @@ open class AnkiquestWidget : AppWidgetProvider() {
             )
         }
 
-        private fun streakShown(row: JSONObject): List<Any> =
-            listOf(
+        private fun streakShown(profile: JSONObject): List<Any> {
+            val row = ownRow(profile, null)
+            return listOf(
                 row.optLong("streak"),
                 streakState(row),
                 row.optLong("today_minutes"),
                 row.optLong("streak_minutes"),
                 row.optLong("day_ends_at"),
+                profile.optJSONObject("goal")?.toString().orEmpty(),
             )
+        }
 
         /** A leaderboard row for the player of [profile], keeping what [old] has that a profile does not say. */
         internal fun ownRow(
