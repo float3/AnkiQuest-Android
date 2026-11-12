@@ -24,6 +24,9 @@ import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminder
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
+import com.ichi2.anki.ankiquest.AnkiquestDeckSharing
+import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Mode
+import com.ichi2.anki.ankiquest.AnkiquestDeckSharing.Setting
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
 import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
@@ -70,6 +73,8 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         signIn()
         repository = mockk()
         mockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestHomeData)
+        mockkObject(AnkiquestDeckSharing)
+        coEvery { AnkiquestDeckSharing.restore(any(), any()) } returns JSONObject()
         every { AnkiquestSubscriptions.repository } returns repository
         justRun { AnkiquestPoll.refreshNow(any()) }
         coEvery { repository.load(any()) } returns IncomingSubscriptions(true, emptySet(), emptyList())
@@ -82,6 +87,7 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
     @After
     fun clearMocks() {
         unmockkObject(AnkiquestCommunity, AnkiquestSharing, AnkiquestSubscriptions, AnkiquestPoll, Ankiquest, AnkiquestHomeData)
+        unmockkObject(AnkiquestDeckSharing)
     }
 
     private fun signIn() =
@@ -412,8 +418,9 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         repeat(2) { people.getButton(AlertDialog.BUTTON_POSITIVE).performClick() }
         idle()
         coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("ana"), account) }
-        assertTrue(ShadowDialog.getLatestDialog()?.isShowing == true)
-        assertTrue(ShadowDialog.getLatestDialog() !== people, "the current owner sees the saved result")
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true, "saving must return to Settings")
+        assertNotNull(fragment.requireActivity().findViewById<android.view.View>(com.google.android.material.R.id.snackbar_action))
     }
 
     @Test
@@ -470,6 +477,124 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
             """{"decks":[{"id":"1","name":"Default","enabled":true,"recipients":["ana"]}],
                "recipients":[{"user":"ana","display":"Ana"}]}""",
         )
+
+    @Test
+    fun `bulk Undo restores different recipients for each deck once`() {
+        val settings =
+            JSONObject(
+                """{"decks":[
+                   {"id":"1","name":"One","enabled":true,"recipients":["ana"]},
+                   {"id":"2","name":"Two","enabled":true,"recipients":["cerro"]},
+                   {"id":"3","name":"Three","enabled":false,"recipients":[]}],
+                   "recipients":[{"user":"ana","display":"Ana"},{"user":"cerro","display":"Cerro"}]}""",
+            )
+        val fragment = saveBulk(settings)
+        val account = assertNotNull(AnkiquestHomeData.account())
+        coVerify(exactly = 1) {
+            Ankiquest.saveDeckNotificationSettings(listOf("1", "2"), listOf("3"), listOf("ana", "cerro"), account)
+        }
+        val button = assertNotNull(undoButton(fragment))
+        repeat(2) { button.performClick() }
+        idle()
+        coVerify(exactly = 1) {
+            AnkiquestDeckSharing.restore(
+                account,
+                listOf(
+                    Setting("1", Mode.SHARED, listOf("ana")),
+                    Setting("2", Mode.SHARED, listOf("cerro")),
+                    Setting("3", Mode.PRIVATE, emptyList()),
+                ),
+            )
+        }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+    }
+
+    @Test
+    fun `bulk Undo cannot cross an account switch`() {
+        val fragment = saveBulk(deckSettings())
+        val button = assertNotNull(undoButton(fragment))
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "replacement") }
+        button.performClick()
+        idle()
+        coVerify(exactly = 0) { AnkiquestDeckSharing.restore(any(), any()) }
+    }
+
+    @Test
+    fun `turning every deck private can restore its previous recipients`() {
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
+        val fragment = open()
+        val account = assertNotNull(AnkiquestHomeData.account())
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_NEUTRAL).performClick()
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(emptyList(), listOf("1"), emptyList(), account) }
+        assertNotNull(undoButton(fragment)).performClick()
+        idle()
+        coVerify(exactly = 1) {
+            AnkiquestDeckSharing.restore(account, listOf(Setting("1", Mode.SHARED, listOf("ana"))))
+        }
+    }
+
+    @Test
+    fun `removing Settings invalidates its retained Undo button`() {
+        val fragment = saveBulk(deckSettings())
+        val button = assertNotNull(undoButton(fragment))
+        fragment.parentFragmentManager
+            .beginTransaction()
+            .remove(fragment)
+            .commitNow()
+        button.performClick()
+        idle()
+        coVerify(exactly = 0) { AnkiquestDeckSharing.restore(any(), any()) }
+    }
+
+    @Test
+    fun `failed bulk Undo explains the failure without another inverse`() {
+        val fragment = saveBulk(deckSettings())
+        coEvery { AnkiquestDeckSharing.restore(any(), any()) } throws java.io.IOException("offline")
+        val button = assertNotNull(undoButton(fragment))
+        repeat(2) { button.performClick() }
+        idle()
+        coVerify(exactly = 1) { AnkiquestDeckSharing.restore(any(), any()) }
+        val error = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(error.isShowing)
+        assertTrue(error.findViewById<TextView>(android.R.id.message)!!.text.contains("offline"))
+    }
+
+    @Test
+    fun `a failed bulk save does not offer Undo`() {
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } throws java.io.IOException("offline")
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
+        val fragment = open()
+        finishBulk(fragment)
+        assertNull(undoButton(fragment))
+        assertTrue(ShadowDialog.getLatestDialog()?.isShowing == true)
+        coVerify(exactly = 0) { AnkiquestDeckSharing.restore(any(), any()) }
+    }
+
+    private fun saveBulk(settings: JSONObject): AnkiquestSettingsFragment {
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
+        return open().also { finishBulk(it) }
+    }
+
+    private fun finishBulk(fragment: AnkiquestSettingsFragment) {
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+    }
+
+    private fun undoButton(fragment: AnkiquestSettingsFragment): android.view.View? =
+        fragment.requireActivity().findViewById(com.google.android.material.R.id.snackbar_action)
 
     private fun open(): AnkiquestSettingsFragment {
         val intent = PreferencesActivity.getIntent(targetContext, AnkiquestSettingsFragment::class)
