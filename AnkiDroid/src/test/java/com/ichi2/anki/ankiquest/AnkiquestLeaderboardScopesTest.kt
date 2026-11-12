@@ -39,7 +39,7 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars)
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
         every { AnkiquestHomeData.account(any()) } answers { account }
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         coEvery { AnkiquestBoards.leaderboard(any(), any(), any()) } answers {
@@ -48,11 +48,12 @@ class AnkiquestLeaderboardScopesTest : RobolectricTest() {
         coEvery { AnkiquestBoards.weekEnds(any()) } returns null
         coEvery { AnkiquestAvatars.refresh(any()) } returns Unit
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
+        coEvery { AnkiquestGlobalHides.load(any()) } returns null
     }
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
     }
 
     @Test
