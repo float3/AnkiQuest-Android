@@ -14,12 +14,17 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /** Opt-in visual QA; the normal unit-test task excludes ScreenshotTestCategory. */
 class AnkiquestHomeScreenshotTest : ScreenshotTest() {
@@ -66,6 +71,17 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
 
     @Test
     fun todayLargeText() = captureToday(largeText = true)
+
+    @Test
+    fun delayedProfile() {
+        coEvery { AnkiquestHomeData.profile(any()) } coAnswers {
+            withContext(Dispatchers.IO) {
+                delay(1_000)
+                JSONObject().put("level", 4).put("streak", 3)
+            }
+        }
+        captureToday(prefix = "today_delayed")
+    }
 
     @Test
     fun suggestedGoal() = captureSuggestedGoal(1f)
@@ -116,8 +132,22 @@ class AnkiquestHomeScreenshotTest : ScreenshotTest() {
         prefix: String = "today",
     ) {
         RuntimeEnvironment.setFontScale(if (largeText) 2f else 1f)
-        startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
-        advanceRobolectricLooper()
+        val home =
+            startActivityNormallyOpenCollectionWithIntent(AnkiquestHomeActivity::class.java, AnkiquestHomeActivity.intent(targetContext))
+        // Draining Main alone can finish while the profile request is still on IO.
+        advanceRobolectricLooperUntil {
+            !home.findViewById<View>(R.id.aq_home_loading).isVisible &&
+                home.window.decorView.allViews
+                    .filterIsInstance<TextView>()
+                    .any { it.text == home.getString(R.string.aq_home_streak_level, 3, 4) }
+        }
+        assertFalse(home.findViewById<View>(R.id.aq_home_loading).isVisible, "capture must await the profile")
+        assertTrue(
+            home.window.decorView.allViews
+                .filterIsInstance<TextView>()
+                .any { it.text == home.getString(R.string.aq_home_streak_level, 3, 4) },
+            "capture must include the fixture's streak and level",
+        )
         val size = if (device == DeviceConfig.PHONE) "320dp" else "default"
         captureScreen("${prefix}_${size}${if (largeText) "_200percent" else ""}")
     }
