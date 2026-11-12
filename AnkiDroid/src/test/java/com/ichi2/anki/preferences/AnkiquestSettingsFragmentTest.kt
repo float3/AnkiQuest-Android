@@ -6,6 +6,7 @@ import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Looper
+import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
@@ -18,6 +19,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.ankiquest.Ankiquest
+import com.ichi2.anki.ankiquest.AnkiquestAccountSettings
 import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminder
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
@@ -27,6 +29,7 @@ import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
 import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
+import com.ichi2.anki.ankiquest.HomeAccount
 import com.ichi2.anki.ankiquest.IncomingSubscriptions
 import com.ichi2.anki.ankiquest.SubscriptionRepository
 import io.mockk.coEvery
@@ -101,6 +104,41 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         assertTrue(fragment.preference<PreferenceCategory>(R.string.ankiquest_app_group_key).isVisible)
         assertTrue(fragment.preference<Preference>(R.string.ankiquest_sign_in_screen_key).isVisible)
         coVerify(exactly = 0) { AnkiquestCommunity.reminders(any()) }
+    }
+
+    @Test
+    fun `signing back in prefills the previous username but no password`() {
+        AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
+        val fragment = open()
+        fragment.preference<Preference>(R.string.ankiquest_sign_in_key).performClick()
+        val dialog = assertNotNull(ShadowDialog.getLatestDialog())
+
+        assertEquals("https://quest.example", dialog.findViewById<EditText>(R.id.ankiquest_sign_in_server).text.toString())
+        val user = dialog.findViewById<EditText>(R.id.ankiquest_sign_in_user)
+        assertEquals("member", user.text.toString())
+        assertEquals("", dialog.findViewById<EditText>(R.id.ankiquest_sign_in_password).text.toString())
+        user.setText("another")
+        assertEquals("another", user.text.toString())
+        assertNull(AnkiDroidApp.sharedPrefs().getString(Ankiquest.PREF_TOKEN, null))
+    }
+
+    @Test
+    fun `changing the server refreshes the suggested username without replacing a typed name`() {
+        AnkiquestAccountSettings.signOut(assertNotNull(HomeAccount.current()))
+        val fragment = open()
+        fragment.preference<Preference>(R.string.ankiquest_sign_in_key).performClick()
+        val dialog = assertNotNull(ShadowDialog.getLatestDialog())
+        val server = dialog.findViewById<EditText>(R.id.ankiquest_sign_in_server)
+        val user = dialog.findViewById<EditText>(R.id.ankiquest_sign_in_user)
+        assertEquals("member", user.text.toString())
+
+        server.setText("https://different.example")
+        assertEquals("", user.text.toString())
+        server.setText("https://quest.example/")
+        assertEquals("member", user.text.toString())
+        user.setText("typed-name")
+        server.setText("https://different.example")
+        assertEquals("typed-name", user.text.toString())
     }
 
     @Test
