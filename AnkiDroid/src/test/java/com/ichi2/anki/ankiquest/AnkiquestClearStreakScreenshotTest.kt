@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.allViews
 import androidx.core.view.drawToBitmap
 import androidx.core.view.isVisible
@@ -34,6 +35,7 @@ import kotlin.test.assertTrue
 @Config(sdk = [33])
 class AnkiquestClearStreakScreenshotTest : ScreenshotTest() {
     private val now = 1_750_000_000_000L
+    private val textContrast = 4.5
 
     @Test
     fun lightWallpaper() = captureStates("light_wallpaper", Color.rgb(250, 250, 250))
@@ -164,6 +166,16 @@ class AnkiquestClearStreakScreenshotTest : ScreenshotTest() {
             val lastLine = minOf(status.maxLines, status.layout.lineCount) - 1
             assertTrue(lastLine >= 0 && status.layout.getLineEnd(lastLine) == status.text.length, "$size truncates the status")
             assertTrue(status.layout.height <= status.height, "$size clips the status")
+            // The shadow must separate small white text from a pale wallpaper.
+            val text = status.drawToBitmap()
+            var contrast = 1.0
+            for (y in 0 until text.height) {
+                for (x in 0 until text.width) {
+                    val pixel = ColorUtils.compositeColors(text.getPixel(x, y), Color.WHITE)
+                    contrast = maxOf(contrast, ColorUtils.calculateContrast(Color.WHITE, pixel))
+                }
+            }
+            assertTrue(contrast >= textContrast, "$size status outline contrast is $contrast on white")
         }
         for (meter in widget.allViews.filterIsInstance<ProgressBar>().filter { it.isVisible }) {
             val bounds = Rect(0, 0, meter.width, meter.height)

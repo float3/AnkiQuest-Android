@@ -48,6 +48,7 @@
 
     <TextView
         android:id="@+id/ankiquest_streak_number"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="18dp"
         android:autoSizeMaxTextSize="18sp"
@@ -58,22 +59,19 @@
         android:gravity="center"
         android:includeFontPadding="false"
         android:maxLines="1"
-        android:shadowColor="#E6000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/ankiquest_widget_clear_text"
         android:textSize="18sp"
         tools:targetApi="o" />
 
     <TextView
         android:id="@+id/ankiquest_streak_label"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/ankiquest_streak_status"
+        style="@style/AnkiquestClearStreakText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone" />
