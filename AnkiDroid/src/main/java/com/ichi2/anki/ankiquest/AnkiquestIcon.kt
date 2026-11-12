@@ -169,7 +169,16 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 .put("streak_state", profile.optString("streak_state"))
                 .put("day_ends_at", profile.optLong("day_ends_at"))
                 .put("goal_reached", profile.optJSONObject("goal")?.optBoolean("reached") == true)
-                .toString()
+                .put(
+                    "goal",
+                    profile.optJSONObject("goal")?.let { goal ->
+                        JSONObject().apply {
+                            for (key in listOf("mode", "value", "progress", "reached")) {
+                                if (goal.has(key)) put(key, goal.get(key))
+                            }
+                        }
+                    },
+                ).toString()
         val key = lastProfileKey(prefs)
         if (prefs.getString(key, null) != kept) prefs.edit { putString(key, kept) }
     }

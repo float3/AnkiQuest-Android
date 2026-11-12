@@ -7,17 +7,22 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
+import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.ColorUtils
 import com.ichi2.anki.R
 import com.ichi2.anki.ankiquest.AnkiquestDay.State
 import com.ichi2.anki.common.time.TimeManager
@@ -113,6 +118,44 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             MONTH(30, R.drawable.ankiquest_streak_tier_30),
             HUNDRED(100, R.drawable.ankiquest_streak_tier_100),
             YEAR(365, R.drawable.ankiquest_streak_tier_365),
+        }
+
+        /** XML variants keep tint and pending alpha compatible with RemoteViews on Android 7. */
+        private enum class Tone(
+            @ColorRes val color: Int,
+            @LayoutRes val ring: Int,
+            @LayoutRes val pendingRing: Int,
+            @LayoutRes val meter: Int,
+            @LayoutRes val pendingMeter: Int,
+        ) {
+            WARM(
+                R.color.ankiquest_streak_warm,
+                R.layout.ankiquest_streak_ring_warm,
+                R.layout.ankiquest_streak_ring_warm_pending,
+                R.layout.ankiquest_streak_meter_warm,
+                R.layout.ankiquest_streak_meter_warm_pending,
+            ),
+            AMBER(
+                R.color.ankiquest_streak_amber,
+                R.layout.ankiquest_streak_ring_amber,
+                R.layout.ankiquest_streak_ring_amber_pending,
+                R.layout.ankiquest_streak_meter_amber,
+                R.layout.ankiquest_streak_meter_amber_pending,
+            ),
+            BLUE(
+                R.color.ankiquest_streak_blue,
+                R.layout.ankiquest_streak_ring_blue,
+                R.layout.ankiquest_streak_ring_blue_pending,
+                R.layout.ankiquest_streak_meter_blue,
+                R.layout.ankiquest_streak_meter_blue_pending,
+            ),
+            GRAY(
+                R.color.ankiquest_streak_gray,
+                R.layout.ankiquest_streak_ring_gray,
+                R.layout.ankiquest_streak_ring_gray_pending,
+                R.layout.ankiquest_streak_meter_gray,
+                R.layout.ankiquest_streak_meter_gray_pending,
+            ),
         }
 
         /**
@@ -249,13 +292,15 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     else -> AnkiquestWidget.streakLabel(language, me, state)
                 }
             views.setTextViewText(R.id.ankiquest_streak_status, status)
-            val progress = setMinimumProgress(views, language, day, status)
+            fitLegacyStatus(views, language, size, status)
+            val progress = setMinimumProgress(views, language, day, status, size)
+            val goal = setGoalProgress(views, language, day, me.takeIf { player == Ankiquest.player() }, now)
             val milestone = setStreakTier(views, language, state, streak, size, number)
             if (size == Size.SMALL || size == Size.MEDIUM) {
                 val badge = if (companionVisible || progress != null) View.VISIBLE else View.GONE
                 views.setViewVisibility(R.id.ankiquest_streak_badge, badge)
             }
-            val description = listOfNotNull(status, progress, milestone).distinct().joinToString(" · ")
+            val description = listOfNotNull(status, progress, goal, milestone).distinct().joinToString(" · ")
             views.setContentDescription(
                 R.id.ankiquest_streak_root,
                 if (streak == null) {
@@ -323,8 +368,8 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             val (widthDp, heightDp, textSp) =
                 when (size) {
                     Size.SMALL -> Triple(49f, 20f, 20f)
-                    Size.MEDIUM -> Triple(56f, 28f, 44f)
-                    Size.LARGE -> Triple(168f, 84f, 72f)
+                    Size.MEDIUM -> Triple(56f, 25f, 44f)
+                    Size.LARGE -> Triple(168f, 54f, 72f)
                     Size.HUGE -> Triple(252f, 140f, 120f)
                 }
             val metrics = context.resources.displayMetrics
@@ -339,23 +384,117 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             views.setTextViewTextSize(R.id.ankiquest_streak_number, TypedValue.COMPLEX_UNIT_PX, paint.textSize * scale)
         }
 
+        /** Before native autosizing, keep the complete status in the compact layout's minimum space. */
+        private fun fitLegacyStatus(
+            views: RemoteViews,
+            context: Context,
+            size: Size,
+            status: String,
+        ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O || size != Size.MEDIUM) return
+            val metrics = context.resources.displayMetrics
+            val width = (84 * metrics.density).toInt()
+            val height = (28 * metrics.density).toInt()
+            val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+            var lower = metrics.density
+            var upper = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 11f, metrics)
+            repeat(10) {
+                val candidate = (lower + upper) / 2
+                paint.textSize = candidate
+                val layout =
+                    StaticLayout.Builder
+                        .obtain(status, 0, status.length, paint, width)
+                        .setIncludePad(false)
+                        .build()
+                if (layout.height <= height && layout.lineCount <= 3) lower = candidate else upper = candidate
+            }
+            views.setTextViewTextSize(R.id.ankiquest_streak_status, TypedValue.COMPLEX_UNIT_PX, lower)
+        }
+
         /** Use the same current day that supplies the widget's status. */
         private fun setMinimumProgress(
             views: RemoteViews,
             context: Context,
             day: AnkiquestDay.Verdict?,
             status: String,
+            size: Size,
         ): String? {
             val id = R.id.ankiquest_streak_progress
+            val container = R.id.ankiquest_streak_meter
+            val tone =
+                when {
+                    day?.label == State.STUDIED -> Tone.WARM
+                    day?.label == State.PROTECTED -> Tone.BLUE
+                    (day?.streak ?: 0) > 0 -> Tone.AMBER
+                    else -> Tone.GRAY
+                }
+            val pending = day != null && !day.confirmed && day.unsent > 0
+            val ring = size == Size.SMALL || size == Size.MEDIUM
+            val layout =
+                when {
+                    ring && pending -> tone.pendingRing
+                    ring -> tone.ring
+                    pending -> tone.pendingMeter
+                    else -> tone.meter
+                }
+            views.removeAllViews(container)
+            views.addView(container, RemoteViews(context.packageName, layout))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Keep the semantic tone, with a small contribution from the wallpaper accent.
+                val color = ColorUtils.blendARGB(context.getColor(tone.color), context.getColor(android.R.color.system_accent1_500), 0.12f)
+                views.setColorStateList(id, "setProgressTintList", ColorStateList.valueOf(color))
+                val track = ColorUtils.blendARGB(context.getColor(R.color.ankiquest_widget_bg), color, 0.35f)
+                views.setColorStateList(id, "setProgressBackgroundTintList", ColorStateList.valueOf(track))
+            }
             if (day == null || day.label == AnkiquestDay.State.UNKNOWN || day.streakMinutes <= 0) {
                 views.setViewVisibility(id, View.GONE)
+                views.setViewVisibility(container, View.GONE)
                 return null
             }
             val reached = day.met || day.label == AnkiquestDay.State.PROTECTED
             val minutes = if (reached) day.streakMinutes else day.minutes.coerceIn(0, day.streakMinutes)
             views.setProgressBar(id, day.streakMinutes, minutes, false)
             views.setViewVisibility(id, View.VISIBLE)
+            views.setViewVisibility(container, View.VISIBLE)
             return if (reached) status else context.getString(R.string.ankiquest_streak_short, minutes, day.streakMinutes)
+        }
+
+        /** Only the configured account's unexpired profile can supply this optional second meter. */
+        private fun setGoalProgress(
+            views: RemoteViews,
+            context: Context,
+            day: AnkiquestDay.Verdict?,
+            entry: JSONObject?,
+            now: Long,
+        ): String? {
+            val id = R.id.ankiquest_streak_goal
+            views.setViewVisibility(id, View.GONE)
+            if (day?.met != true) return null
+            val endsAt = entry?.optLong("day_ends_at")?.takeIf { it > now } ?: return null
+            val last = AnkiquestIcon.lastKnown()?.takeIf { it.optLong("day_ends_at") == endsAt } ?: return null
+            val goal = last.optJSONObject("goal") ?: return null
+            val reached = goal.optBoolean("reached")
+            val mode = goal.optString("mode")
+            val maximum: Int
+            val progress: Int
+            val label: String
+            if (mode == "backlog") {
+                // Backlog progress is unknown until the client reports completion; do not invent a count.
+                if (!reached) return null
+                maximum = 1
+                progress = 1
+                label = context.getString(R.string.aq_goal_done_title)
+            } else {
+                if (mode != "cards" && mode != "minutes") return null
+                maximum = goal.optInt("value").takeIf { it > 0 } ?: return null
+                if (goal.isNull("progress") && !reached) return null
+                progress = if (reached) maximum else goal.optInt("progress").coerceIn(0, maximum)
+                val format = if (mode == "cards") R.string.aq_goal_progress_cards else R.string.aq_goal_progress_minutes
+                label = context.getString(R.string.aq_goal_daily, context.getString(format, progress, maximum))
+            }
+            views.setProgressBar(id, maximum, progress, false)
+            views.setViewVisibility(id, View.VISIBLE)
+            return label
         }
 
         private fun mine(
