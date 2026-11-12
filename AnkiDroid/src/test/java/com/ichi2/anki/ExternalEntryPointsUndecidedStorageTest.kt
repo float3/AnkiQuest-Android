@@ -104,6 +104,7 @@ class ExternalEntryPointsUndecidedStorageTest : RobolectricTest() {
             "com.ichi2.anki.ankiquest.AnkiquestWidget",
             "com.ichi2.anki.ankiquest.AnkiquestTransparentWidget",
             "com.ichi2.anki.ankiquest.AnkiquestStreakWidget",
+            "com.ichi2.anki.ankiquest.AnkiquestClearStreakWidget",
             ->
                 Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(1))
             else -> fail("define the externally-sent intent for new entry point: $this")
