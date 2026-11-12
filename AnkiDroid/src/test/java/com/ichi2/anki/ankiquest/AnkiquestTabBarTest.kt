@@ -59,6 +59,7 @@ class AnkiquestTabBarTest : RobolectricTest() {
         coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
         coEvery { AnkiquestSocial.overview(identity) } throws IOException("offline")
         coEvery { AnkiquestBoards.player(identity, any()) } throws IOException("offline")
+        coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } throws IOException("offline")
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } throws IOException("offline")
         coEvery { AnkiquestAvatars.refresh(any(), any()) } returns Unit

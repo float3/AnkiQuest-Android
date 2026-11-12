@@ -52,6 +52,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards)
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestBoards.hasScopes(any()) } returns false
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns week
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * 24 * 60 * 60 * 1000L
     }

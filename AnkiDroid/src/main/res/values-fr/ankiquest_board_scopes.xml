@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_scope_group">Groupe</string>
+    <string name="aq_board_your_rank">Tu es à la place %1$d.</string>
+    <string name="aq_board_private_row">Ta ligne n’est pas montrée aux autres.</string>
+    <string name="aq_board_streak_count">Série de %1$s jours</string>
+    <string name="aq_board_group_missing">Ce groupe n’est plus disponible. Tes amis sont affichés.</string>
+    <string name="aq_board_group_unavailable">Ce groupe n’est plus disponible pour toi.</string>
+</resources>
