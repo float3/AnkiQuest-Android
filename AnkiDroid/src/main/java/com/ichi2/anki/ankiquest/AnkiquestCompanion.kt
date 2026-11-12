@@ -44,9 +44,13 @@ internal object AnkiquestCompanion {
                 R.drawable.aki_face, R.drawable.aki_icon_happy, R.drawable.aki_icon_worried,
                 R.drawable.aki_icon_frozen, R.drawable.aki_icon_sleepy,
                 -> R.drawable.ankilope_face
-                R.drawable.aki_welcome, R.drawable.aki_sleeping, R.drawable.aki_comeback, R.drawable.aki_challenge,
+                R.drawable.aki_nudge -> R.drawable.ankilope_nudge
+                R.drawable.aki_challenge -> R.drawable.ankilope_challenge
+                R.drawable.aki_challenge_won -> R.drawable.ankilope_challenge_won
+                R.drawable.aki_challenge_lost -> R.drawable.ankilope_challenge_lost
+                R.drawable.aki_welcome, R.drawable.aki_sleeping, R.drawable.aki_comeback,
                 -> R.drawable.ankilope_welcome
-                R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_achievement, R.drawable.aki_challenge_won,
+                R.drawable.aki_celebrate, R.drawable.aki_winner, R.drawable.aki_achievement,
                 R.drawable.aki_goal, R.drawable.aki_deck_conquered,
                 R.drawable.aki_place_1, R.drawable.aki_place_2, R.drawable.aki_place_3,
                 -> R.drawable.ankilope_celebrate
