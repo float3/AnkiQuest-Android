@@ -47,6 +47,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.io.IOException
 import java.util.Date
@@ -424,6 +425,21 @@ class AnkiquestSignInFragment : SettingsFragment() {
                     if (methods?.linkedUnavailable == true) R.string.ankiquest_reauth_none else R.string.ankiquest_password_operator,
                 ),
             )
+            return
+        }
+        if (linked.size == 1) {
+            val scope = current()?.scope ?: return
+            lifecycleScope.launch {
+                // A password or deletion request may still own act's busy slot until it returns.
+                yield()
+                if (isResumed && current()?.scope == scope) {
+                    act { account ->
+                        if (openBrowser(account, linked.single().key, Purpose.REAUTH)) {
+                            afterReauth = then
+                        }
+                    }
+                }
+            }
             return
         }
         AlertDialog
