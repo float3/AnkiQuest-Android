@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
+import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
@@ -105,7 +106,7 @@ class AnkiquestClearStreakTest : RobolectricTest() {
                 assertEquals(original.visibility, meter.visibility)
                 assertEquals(original.progress, meter.progress)
                 assertEquals(original.max, meter.max)
-                if (meter.visibility == View.VISIBLE) {
+                if (meter.isVisible) {
                     assertNotNull(meter.background, "progress needs a contrasting outline")
                     assertTrue(meter.paddingTop > 0)
                 }
