@@ -97,6 +97,19 @@ class AnkiquestApiContractTest : RobolectricTest() {
     private val account: HomeAccount get() = assertNotNull(AnkiquestHomeData.account())
 
     @Test
+    fun `private Global hiding reads the server's updated player list`() =
+        runBlocking {
+            val expected = listOf(AnkiquestGlobalHides.Player("ana", "Ana"))
+            assertEquals(expected, AnkiquestGlobalHides.load(account))
+            assertEquals(expected, AnkiquestGlobalHides.change(account, "ana", AnkiquestGlobalHides.Action.HIDE))
+            assertTrue(
+                requests.containsAll(
+                    listOf("GET /api/capabilities", "GET /api/leaderboard/hidden/hill", "POST /api/leaderboard/hidden/hill"),
+                ),
+            )
+        }
+
+    @Test
     fun `activity pages keep global counts and invitation actions`() =
         runBlocking {
             val first = AnkiquestFeed.page(account)
@@ -570,6 +583,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
     ): String? {
         val parts = path.removePrefix("/api/").split('/')
         return when {
+            path == "/api/capabilities" -> "capabilities"
+            path == "/api/leaderboard/hidden/hill" -> "leaderboard_hide"
             path == "/api/activity/hill" && method == "GET" ->
                 when (query.orEmpty().split('&').firstOrNull { it.startsWith("before=") }) {
                     null -> "activity"

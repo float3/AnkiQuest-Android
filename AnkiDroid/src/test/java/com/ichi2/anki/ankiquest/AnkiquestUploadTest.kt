@@ -492,8 +492,58 @@ class AnkiquestUploadTest : RobolectricTest() {
                     Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("hill"), account)
                 }
                 assertFailsWith<HomeAccountChanged> { Ankiquest.deckNotificationSettings(account) }
+                assertFailsWith<HomeAccountChanged> {
+                    AnkiquestDeckSharing.restore(
+                        account,
+                        listOf(AnkiquestDeckSharing.Setting("1", AnkiquestDeckSharing.Mode.SHARED, listOf("hill"))),
+                    )
+                }
             }
             assertTrue(requests.isEmpty(), "neither old nor new credentials send a request for a stale picker")
+        }
+
+    @Test
+    fun `bulk restoration sends each previous setting in one owned request`() =
+        runBlocking {
+            val account = AnkiquestHomeData.account()!!
+            val rows =
+                listOf(
+                    JSONObject("""{"id":"1","enabled":true,"recipients":["hill"]}"""),
+                    JSONObject("""{"id":"$unsharedDeck","enabled":false,"recipients":[]}"""),
+                    JSONObject("""{"id":"99","enabled":true,"recipients":["ana","other"]}"""),
+                )
+            val previous = AnkiquestDeckSharing.snapshot(rows)
+            rows[0].getJSONArray("recipients").put("new-person")
+            AnkiquestDeckSharing.restore(account, previous)
+            val sent = requests.single()
+            assertEquals("POST", sent.method)
+            assertEquals("/api/decks/cerro", sent.path)
+            assertEquals("Bearer first-token", sent.authorization)
+            val decks = sent.body!!.getJSONArray("decks")
+            assertEquals(3, decks.length())
+            assertEquals("1", decks.getJSONObject(0).getString("id"))
+            assertTrue(decks.getJSONObject(0).getBoolean("enabled"))
+            assertEquals(listOf("hill"), decks.getJSONObject(0).getJSONArray("recipients").strings())
+            assertEquals(unsharedDeck.toString(), decks.getJSONObject(1).getString("id"))
+            assertFalse(decks.getJSONObject(1).getBoolean("enabled"))
+            assertEquals(0, decks.getJSONObject(1).getJSONArray("recipients").length())
+            assertEquals("99", decks.getJSONObject(2).getString("id"))
+            assertEquals(listOf("ana", "other"), decks.getJSONObject(2).getJSONArray("recipients").strings())
+        }
+
+    @Test
+    fun `a switched account rejects a late restoration result`() =
+        runBlocking {
+            val account = AnkiquestHomeData.account()!!
+            replyOwner = ReplyOwner.CHANGED
+            assertFailsWith<HomeAccountChanged> {
+                AnkiquestDeckSharing.restore(
+                    account,
+                    listOf(AnkiquestDeckSharing.Setting("1", AnkiquestDeckSharing.Mode.SHARED, listOf("hill"))),
+                )
+            }
+            assertEquals("/api/decks/cerro", requests.single().path)
+            assertEquals("Bearer first-token", requests.single().authorization)
         }
 
     @Test
