@@ -202,10 +202,16 @@ class AnkiquestMeSectionsTest : RobolectricTest() {
 
     @Test
     fun `legacy explicit activities redirect to the matching Me section`() {
-        val records = startRegularActivity<AnkiquestRecordsActivity>(Intent(targetContext, AnkiquestRecordsActivity::class.java))
+        val records =
+            startRegularActivity<AnkiquestRecordsActivity>(
+                Intent(targetContext, AnkiquestRecordsActivity::class.java).putExtra("unrelated_launch_payload", ByteArray(300_000)),
+            )
         assertTrue(records.isFinishing)
         assertEquals(AnkiquestRecordsActivity.intent(targetContext).toUri(0), shadowOf(records).nextStartedActivity.toUri(0))
-        val history = startRegularActivity<AnkiquestHistoryActivity>(Intent(targetContext, AnkiquestHistoryActivity::class.java))
+        val history =
+            startRegularActivity<AnkiquestHistoryActivity>(
+                Intent(targetContext, AnkiquestHistoryActivity::class.java).putExtra("unrelated_launch_payload", ByteArray(300_000)),
+            )
         assertTrue(history.isFinishing)
         assertEquals(AnkiquestHistoryActivity.intent(targetContext).toUri(0), shadowOf(history).nextStartedActivity.toUri(0))
     }
