@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="aq_records_title">Recordes</string>
-    <string name="aq_records_refresh">Atualizar recordes</string>
     <string name="aq_records_loading">Carregando recordes…</string>
     <string name="aq_records_lead">Recordes que valem a pena.</string>
     <string name="aq_records_intro">Os melhores resultados pessoais viram marcos compartilhados. Comemore as sessões, sequências e dias de estudo que elevaram o nível.</string>
@@ -26,7 +25,6 @@
     <string name="aq_records_server_error">Não foi possível carregar os recordes. Tente atualizar.</string>
 
     <string name="aq_history_title">Histórico de estudo</string>
-    <string name="aq_history_refresh">Atualizar histórico de estudo</string>
     <string name="aq_history_loading">Carregando seu histórico de estudo…</string>
     <string name="aq_history_intro">Cada dia em que você estudou faz parte da sua história.</string>
     <string name="aq_history_connect">Conecte o AnkiQuest para ver seu calendário de estudo.</string>
