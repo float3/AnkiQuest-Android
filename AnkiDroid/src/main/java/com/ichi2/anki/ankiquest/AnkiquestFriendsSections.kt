@@ -53,6 +53,9 @@ import kotlinx.coroutines.withContext
 import org.json.JSONException
 import timber.log.Timber
 import java.io.IOException
+import java.net.HttpURLConnection.HTTP_FORBIDDEN
+import java.net.HttpURLConnection.HTTP_NOT_FOUND
+import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.util.Calendar
 
 /** Friends -> independent sections; an unavailable overview does not block either one. */
@@ -61,6 +64,17 @@ internal class AnkiquestFriendsSections(
     savedState: Bundle?,
 ) {
     enum class Destination { FEED, LEADERBOARD }
+
+    /** Friends overview -> group picker -> scoped board; only ready membership can select a group. */
+    sealed interface Groups {
+        data object Loading : Groups
+
+        data object Unavailable : Groups
+
+        data class Ready(
+            val values: List<AnkiquestSocial.Group>,
+        ) : Groups
+    }
 
     private val restored = savedState?.takeIf { it.getString(STATE_ACCOUNT) == AnkiquestHomeData.account()?.scope }
     private val initial = Destination.entries.firstOrNull { it.name == activity.intent.getStringExtra(EXTRA_SECTION) }
@@ -80,9 +94,13 @@ internal class AnkiquestFriendsSections(
             addView(board.root)
         }
 
-    fun attach(parent: LinearLayout) {
+    fun attach(
+        parent: LinearLayout,
+        groups: Groups,
+    ) {
         (root.parent as? ViewGroup)?.removeView(root)
         parent.addView(root)
+        board.updateGroups(groups)
     }
 
     fun refresh() {
@@ -953,9 +971,37 @@ private class LeaderboardSection(
         saved,
         initial,
     ) {
+    private enum class Scope { FRIENDS, GROUP, GLOBAL }
+
+    private enum class Support { UNKNOWN, AVAILABLE, UNAVAILABLE }
+
+    private enum class Refresh { CACHED_SCOPES, CHECK_SCOPES }
+
+    private sealed interface Selection {
+        data object Friends : Selection
+
+        data object Global : Selection
+
+        data class Group(
+            val id: Long?,
+        ) : Selection
+    }
+
     private val views = AnkiquestBoardViews(activity)
     private var account: HomeAccount? = AnkiquestHomeData.account()
     private var period = AnkiquestBoards.Period.WEEK
+    private var selection: Selection = Selection.Friends
+    private var groups: AnkiquestFriendsSections.Groups = AnkiquestFriendsSections.Groups.Loading
+    private var scopes = Support.UNKNOWN
+    private val availableGroups get() = (groups as? AnkiquestFriendsSections.Groups.Ready)?.values.orEmpty()
+    private val group get() = (selection as? Selection.Group)?.id
+    private val scope
+        get() =
+            when (selection) {
+                Selection.Friends -> Scope.FRIENDS
+                Selection.Global -> Scope.GLOBAL
+                is Selection.Group -> Scope.GROUP
+            }
     private var rows: List<AnkiquestBoards.Standing>? = null
     private var weekEnds: Long? = null
     private var loading = false
@@ -968,6 +1014,12 @@ private class LeaderboardSection(
     init {
         // Only a fresh link supplies a period; recreation uses this account's saved selection.
         period = AnkiquestBoards.Period.of(saved?.getString(STATE_PERIOD) ?: launchPeriod)
+        selection =
+            when (saved?.getString(STATE_SCOPE)) {
+                Scope.GLOBAL.name -> Selection.Global
+                Scope.GROUP.name -> Selection.Group(saved.getLong(STATE_GROUP).takeIf { it > 0 })
+                else -> Selection.Friends
+            }
         if (saved == null) {
             val addressed = activity.intent.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT)
             if (addressed != null && addressed != account?.notificationAccount) {
@@ -976,22 +1028,47 @@ private class LeaderboardSection(
         }
     }
 
-    override fun reload() = load()
+    override fun reload() = load(Refresh.CHECK_SCOPES)
+
+    /** Reuses Friends' overview, including membership changes, without another social request. */
+    fun updateGroups(next: AnkiquestFriendsSections.Groups) {
+        if (account?.scope != AnkiquestHomeData.account()?.scope || groups == next) {
+            return
+        }
+        groups = next
+        if (scope == Scope.GROUP) {
+            if (next is AnkiquestFriendsSections.Groups.Ready && group != null && availableGroups.none { it.id == group }) {
+                selection = Selection.Friends
+                status = getString(R.string.aq_board_group_missing)
+            } else if (group == null) {
+                selection = Selection.Group(availableGroups.firstOrNull()?.id)
+            }
+            rows = null
+            refresh()
+        } else {
+            render()
+        }
+    }
 
     override fun saveFilters(out: Bundle) {
         if (account?.scope != AnkiquestHomeData.account()?.scope) {
             return
         }
         out.putString(STATE_PERIOD, period.query)
+        out.putString(STATE_SCOPE, scope.name)
+        group?.let { out.putLong(STATE_GROUP, it) }
     }
 
     /** Loads [period]'s board for the current account, and when the week resets. */
-    private fun load() {
+    private fun load(refresh: Refresh = Refresh.CACHED_SCOPES) {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
             account = current
             rows = null
             period = AnkiquestBoards.Period.WEEK
+            selection = Selection.Friends
+            groups = AnkiquestFriendsSections.Groups.Loading
+            scopes = Support.UNKNOWN
             weekEnds = null
             status = null
         }
@@ -1010,18 +1087,54 @@ private class LeaderboardSection(
         loadJob =
             lifecycleScope.launch {
                 var gone = false
+                var groupDenied = false
                 val problem =
                     boardAttempt {
+                        if (scopes == Support.UNKNOWN || refresh == Refresh.CHECK_SCOPES) {
+                            val supported = optionalScopes(current)
+                            if (turn != generation || current.scope != AnkiquestHomeData.account()?.scope) {
+                                return@boardAttempt
+                            }
+                            if (supported != null) {
+                                scopes = supported
+                            }
+                        }
+                        if (scopes == Support.UNAVAILABLE && scope != Scope.FRIENDS) {
+                            selection = Selection.Friends
+                            rows = null
+                            status = getString(R.string.ankiquest_widget_global_unavailable)
+                        }
+                        if (scope != Scope.FRIENDS && scopes != Support.AVAILABLE) {
+                            throw IOException("Leaderboard scopes unavailable")
+                        }
+                        val source =
+                            when (scope) {
+                                Scope.FRIENDS -> AnkiquestBoards.Source.Friends
+                                Scope.GLOBAL -> AnkiquestBoards.Source.Global
+                                Scope.GROUP -> {
+                                    val chosen = availableGroups.firstOrNull { it.id == group }
+                                    if (chosen == null) {
+                                        rows = null
+                                        return@boardAttempt
+                                    }
+                                    AnkiquestBoards.Source.Group(chosen.id)
+                                }
+                            }
                         try {
-                            val board = AnkiquestBoards.leaderboard(current, asked)
+                            val board = AnkiquestBoards.leaderboard(current, asked, source)
                             val ends = if (asked == AnkiquestBoards.Period.WEEK) optionalWeekEnds(current) else weekEnds
                             if (turn == generation && current.scope == AnkiquestHomeData.account()?.scope) {
                                 rows = board
                                 weekEnds = ends
                             }
                         } catch (e: AnkiquestHttpException) {
-                            if (e.code != 404) throw e
-                            gone = true
+                            when {
+                                e.code == HTTP_FORBIDDEN && source is AnkiquestBoards.Source.Group -> {
+                                    groupDenied = true
+                                }
+                                e.code == HTTP_NOT_FOUND -> gone = true
+                                else -> throw e
+                            }
                         }
                     }
                 if (turn != generation || current.scope != AnkiquestHomeData.account()?.scope) return@launch
@@ -1029,12 +1142,48 @@ private class LeaderboardSection(
                     load()
                     return@launch
                 }
-                failure = if (gone) R.string.aq_server_outdated else problem
+                // A superseded group's failure must not clear the current selection's rows.
+                if (groupDenied) {
+                    rows = null
+                }
+                failure =
+                    when {
+                        groupDenied -> R.string.aq_board_group_unavailable
+                        gone -> R.string.aq_server_outdated
+                        else -> problem
+                    }
                 loading = false
                 render()
                 if (problem == null) loadPictures(current)
             }
     }
+
+    /** Optional controls must not prevent a normal Friends board from loading. */
+    private suspend fun optionalScopes(current: HomeAccount): Support? =
+        try {
+            if (AnkiquestBoards.hasScopes(current)) {
+                Support.AVAILABLE
+            } else {
+                Support.UNAVAILABLE
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: HomeAccountChanged) {
+            throw e
+        } catch (e: AnkiquestHttpException) {
+            if (e.code == HTTP_UNAUTHORIZED || e.code == HTTP_FORBIDDEN) {
+                throw e
+            }
+            if (e.code == HTTP_NOT_FOUND) {
+                Support.UNAVAILABLE
+            } else {
+                null
+            }
+        } catch (_: IOException) {
+            null
+        } catch (_: JSONException) {
+            null
+        }
 
     /** When the week resets; the board shows without it when the server cannot say. */
     private suspend fun optionalWeekEnds(current: HomeAccount): Long? =
@@ -1079,6 +1228,31 @@ private class LeaderboardSection(
             views.button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
             return
         }
+        if (scopes == Support.AVAILABLE) {
+            scopeChoices()
+            if (scope == Scope.GROUP) {
+                val available = availableGroups
+                if (available.isEmpty()) {
+                    val explanation =
+                        when (groups) {
+                            AnkiquestFriendsSections.Groups.Loading -> R.string.ankiquest_widget_settings_groups_loading
+                            AnkiquestFriendsSections.Groups.Unavailable -> R.string.ankiquest_widget_settings_groups_failed
+                            is AnkiquestFriendsSections.Groups.Ready -> R.string.aq_friends_groups_empty
+                        }
+                    views.text(content, getString(explanation), small = true)
+                } else {
+                    views.choices(content, available.map { it.id to it.name }, selected = group, enabled = true) { chosen ->
+                        if (group != chosen) {
+                            selection = Selection.Group(chosen)
+                            rows = null
+                            load()
+                        } else {
+                            render()
+                        }
+                    }
+                }
+            }
+        }
         views.choices(
             content,
             AnkiquestBoards.Period.entries.map { it to getString(it.label) },
@@ -1105,10 +1279,10 @@ private class LeaderboardSection(
         when {
             board == null -> if (loading) views.text(content, getString(R.string.aq_board_loading), small = true)
             board.isEmpty() -> if (!loading) empty(R.string.aq_board_empty)
-            board.all { it.xp == 0L } -> if (!loading) empty(R.string.aq_board_no_xp)
+            board.all { it.xp == 0L } && scope != Scope.GLOBAL -> if (!loading) empty(R.string.aq_board_no_xp)
             else -> {
                 standing(current, board)
-                board.forEachIndexed { index, row -> row(index + 1, row, row.user == current.user, board.first().xp) }
+                board.forEachIndexed { index, row -> row(row.rank ?: (index + 1), row, row.user == current.user, board.first().xp) }
             }
         }
         failure?.let { problem ->
@@ -1118,6 +1292,51 @@ private class LeaderboardSection(
         views.button(content, getString(R.string.aq_board_my_profile)) { openProfile(current.user) }
         views.button(content, getString(R.string.aq_calendar_title)) { startActivity(AnkiquestCalendarActivity.intent(this)) }
         scroll.post { scroll.scrollTo(0, position) }
+    }
+
+    /** All three scopes stay visible at large text sizes instead of hiding the active choice offscreen. */
+    private fun scopeChoices() {
+        val choices = ChipGroup(this).apply { isSingleSelection = true }
+        val labels =
+            listOf(
+                Scope.FRIENDS to R.string.ankiquest_nav_friends,
+                Scope.GROUP to R.string.aq_board_scope_group,
+                Scope.GLOBAL to R.string.ankiquest_widget_who_global,
+            )
+        for ((choice, label) in labels) {
+            choices.addView(
+                Chip(this).apply {
+                    text = getString(label)
+                    textSize = 15f
+                    minimumHeight = views.dp(48)
+                    chipMinHeight = maxOf(views.dp(32).toFloat(), paint.fontMetrics.run { descent - ascent } + views.dp(14))
+                    isCheckable = true
+                    isChecked = choice == scope
+                    isCheckedIconVisible = false
+                    setTextColor(getColor(if (isChecked) R.color.aq_home_primary_text else R.color.aq_home_text))
+                    chipBackgroundColor =
+                        ColorStateList.valueOf(getColor(if (isChecked) R.color.aq_home_primary else R.color.aq_home_surface))
+                    chipStrokeWidth = if (isChecked) 0f else views.dp(1).toFloat()
+                    chipStrokeColor = ColorStateList.valueOf(getColor(R.color.aq_home_outline))
+                    setOnClickListener {
+                        if (scope != choice) {
+                            selection =
+                                when (choice) {
+                                    Scope.FRIENDS -> Selection.Friends
+                                    Scope.GLOBAL -> Selection.Global
+                                    Scope.GROUP -> Selection.Group(availableGroups.firstOrNull()?.id)
+                                }
+                            rows = null
+                            status = null
+                            load()
+                        } else {
+                            render()
+                        }
+                    }
+                },
+            )
+        }
+        content.addView(choices)
     }
 
     private fun empty(
@@ -1134,13 +1353,23 @@ private class LeaderboardSection(
     ) {
         val index = board.indexOfFirst { it.user == current.user }
         if (index < 0) return
-        val place = index + 1
+        val own = board[index]
+        val place = own.rank ?: (index + 1)
         val panel = views.card(content, tinted = true, horizontal = true)
         AnkiquestArt.place(place)?.takeIf { board[index].xp > 0 && AnkiquestCompanion.visible() }?.let { art ->
             panel.addView(AnkiquestAki.image(this, art, 56))
         }
         views.column(panel).also { column ->
-            views.text(column, getString(R.string.aq_board_your_place, place, board.size), heading = true)
+            val position =
+                if (own.rank != null) {
+                    getString(R.string.aq_board_your_rank, place)
+                } else {
+                    getString(R.string.aq_board_your_place, place, board.size)
+                }
+            views.text(column, position, heading = true)
+            if (own.shown == false) {
+                views.text(column, getString(R.string.aq_board_private_row), small = true)
+            }
         }
     }
 
@@ -1178,9 +1407,11 @@ private class LeaderboardSection(
                     text = views.number(place.toLong())
                     textSize = 16f
                     gravity = Gravity.CENTER
+                    minWidth = views.dp(28)
+                    maxLines = 1
                     setTextColor(getColor(R.color.aq_home_muted))
                 },
-                LinearLayout.LayoutParams(views.dp(28), LinearLayout.LayoutParams.WRAP_CONTENT),
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT),
             )
         }
         views.avatar(identity, row.user, row.display, 40)
@@ -1199,7 +1430,7 @@ private class LeaderboardSection(
                 listOfNotNull(getString(R.string.ankiquest_widget_level, row.level), streak).joinToString(" · "),
                 small = true,
             ).apply {
-                if (row.streak > 0) {
+                if (row.streak > 0 && row.hasToday) {
                     setCompoundDrawablesRelativeWithIntrinsicBounds(streakIcon(row.state), 0, 0, 0)
                     compoundDrawablePadding = views.dp(4)
                 }
@@ -1225,7 +1456,9 @@ private class LeaderboardSection(
             gravity = alignment
             ViewCompat.setAccessibilityHeading(this, false)
         }
-        views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
+        if (row.hasToday) {
+            views.text(score, getString(R.string.aq_board_today_reviews, views.number(row.todayReviews)), small = true).gravity = alignment
+        }
         val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
         closing?.let { xp ->
             views.text(score, getString(R.string.aq_board_closing_xp, views.number(xp)), small = true).gravity = alignment
@@ -1233,8 +1466,19 @@ private class LeaderboardSection(
         panel.contentDescription =
             listOfNotNull(
                 getString(R.string.aq_board_row_description, place, name, row.level, views.number(row.xp)),
-                streak?.let { getString(R.string.ankiquest_streak_description, views.number(row.streak.toLong()), it) },
+                streak?.let {
+                    if (row.hasToday) {
+                        getString(
+                            R.string.ankiquest_streak_description,
+                            views.number(row.streak.toLong()),
+                            it,
+                        )
+                    } else {
+                        it
+                    }
+                },
                 closing?.let { getString(R.string.aq_board_closing_xp, views.number(it)) },
+                getString(R.string.aq_board_private_row).takeIf { mine && row.shown == false },
             ).joinToString(". ")
         val ripple = TypedValue().also { theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true) }
         panel.foreground = AppCompatResources.getDrawable(this, ripple.resourceId)
@@ -1244,6 +1488,9 @@ private class LeaderboardSection(
     /** Today's status for a row with a streak, in words; null without a streak. */
     private fun streakLine(row: AnkiquestBoards.Standing): String? {
         if (row.streak <= 0) return null
+        if (!row.hasToday) {
+            return getString(R.string.aq_board_streak_count, views.number(row.streak.toLong()))
+        }
         val status = AnkiquestDay.words(this, row.state, row.todayMinutes, row.streakMinutes)
         return "${views.number(row.streak.toLong())} · $status"
     }
@@ -1261,6 +1508,8 @@ private class LeaderboardSection(
 
     companion object {
         private const val STATE_PERIOD = "ankiquest.board_period"
+        private const val STATE_SCOPE = "ankiquest.board_scope"
+        private const val STATE_GROUP = "ankiquest.board_group"
         private const val STACKED_TEXT_SCALE = 1.5f
     }
 }

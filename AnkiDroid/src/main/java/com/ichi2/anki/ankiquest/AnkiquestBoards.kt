@@ -39,6 +39,17 @@ internal object AnkiquestBoards {
         }
     }
 
+    /** Friends keeps the original circle request; explicit scopes require server support. */
+    sealed interface Source {
+        data object Friends : Source
+
+        data object Global : Source
+
+        data class Group(
+            val id: Long,
+        ) : Source
+    }
+
     data class Standing(
         val user: String,
         val display: String,
@@ -56,6 +67,12 @@ internal object AnkiquestBoards {
         val closingXp: Long? = null,
         /** When this row's day ends (Unix ms), and with it [closingXp]; 0 when the server does not say. */
         val dayEndsAt: Long = 0,
+        /** Global ranks include omitted rows, so the visible list cannot be renumbered. */
+        val rank: Int? = null,
+        /** Only the viewer's Global row says whether others can see it. */
+        val shown: Boolean? = null,
+        /** Stranger summaries omit all today fields; missing counts are not zero study. */
+        val hasToday: Boolean = true,
     ) {
         /** [closingXp] while it still counts at [now]. */
         fun closingXp(now: Long): Long? = closingXp?.takeIf { dayEndsAt > now }
@@ -166,6 +183,7 @@ internal object AnkiquestBoards {
     suspend fun leaderboard(
         account: HomeAccount,
         period: Period,
+        source: Source = Source.Friends,
     ): List<Standing> =
         withContext(Dispatchers.IO) {
             val url =
@@ -173,9 +191,28 @@ internal object AnkiquestBoards {
                     .url("api/leaderboard")
                     .newBuilder()
                     .addQueryParameter("period", period.query)
-                    .build()
+                    .apply {
+                        when (source) {
+                            Source.Friends -> Unit
+                            Source.Global -> addQueryParameter("scope", "global")
+                            is Source.Group -> {
+                                require(source.id > 0)
+                                addQueryParameter("scope", "group")
+                                addQueryParameter("group", source.id.toString())
+                            }
+                        }
+                    }.build()
             val request = AnkiquestApi.request(url, account.token, account.language).build()
             parseLeaderboard(AnkiquestApi.call(account, request) { AnkiquestApi.jsonArray(it) }, period)
+        }
+
+    /** Older servers ignore scopes, so never offer a Global board unless the setting is present. */
+    suspend fun hasScopes(account: HomeAccount): Boolean =
+        withContext(Dispatchers.IO) {
+            val request = AnkiquestApi.request(account, "api/decks/${account.encodedUser}").build()
+            AnkiquestApi.call(account, request, AnkiquestApi.Timeout.QUICK) {
+                AnkiquestApi.jsonObject(it).has(AnkiquestWidgetSettings.GLOBAL_SETTING)
+            }
         }
 
     /** When this competition week ends (Unix ms), or null when the server does not say. */
@@ -260,8 +297,16 @@ internal object AnkiquestBoards {
                     streakMinutes = row.optLong("streak_minutes"),
                     closingXp = row.takeIf { it.has("closing_xp") && !it.isNull("closing_xp") }?.optLong("closing_xp"),
                     dayEndsAt = row.optLong("day_ends_at"),
+                    rank = row.optInt("rank").takeIf { it > 0 },
+                    shown = row.takeIf { it.has("shown") && !it.isNull("shown") }?.optBoolean("shown"),
+                    hasToday = row.has("today_reviews") && !row.isNull("today_reviews"),
                 )
-            }.sortedWith(compareByDescending<Standing> { it.xp }.thenByDescending { it.xpTotal }.thenBy { it.user })
+            }.sortedWith(
+                compareBy<Standing> { it.rank ?: Int.MAX_VALUE }
+                    .thenByDescending { it.xp }
+                    .thenByDescending { it.xpTotal }
+                    .thenBy { it.user },
+            )
 
     /** A profile's `closing_week`, or null when it has none or is malformed. */
     fun parseClosingWeek(json: JSONObject?): ClosingWeek? {
