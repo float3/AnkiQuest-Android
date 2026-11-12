@@ -20,7 +20,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="85"
-            android:textColor="@color/flag_reviewer_blue"
+            android:textColor="@color/widget_card_analysis_new"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:ignore="HardcodedText" />
@@ -31,7 +31,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="38"
-            android:textColor="@color/flag_reviewer_red"
+            android:textColor="@color/widget_card_analysis_learn"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:ignore="HardcodedText" />
@@ -42,7 +42,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="84"
-            android:textColor="@color/flag_reviewer_green"
+            android:textColor="@color/widget_card_analysis_review"
             android:textSize="24sp"
             android:textStyle="bold"
             tools:ignore="HardcodedText" />
