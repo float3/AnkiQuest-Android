@@ -1,4 +1,4 @@
-<RelativeLayout android:id="@+id/widget_deck_picker"
+<LinearLayout android:id="@+id/widget_deck_picker"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -6,76 +6,103 @@
     android:background="@drawable/widget_card_analysis_rounded_background"
     android:clickable="true"
     android:focusable="false"
+    android:orientation="vertical"
     android:theme="@style/Theme.Material3.DynamicColors.DayNight">
 
     <TextView
         android:id="@+id/empty_widget"
         style="@style/TextAppearance.AppCompat.Medium"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginStart="7dp"
+        android:layout_height="match_parent"
         android:gravity="center"
-        android:layout_centerInParent="true"
-        android:padding="30dp"
+        android:padding="8dp"
         android:text="@string/empty_widget_state"
-        android:visibility="gone" />/>
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/cardAnalysisDataHolder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:background="@drawable/widget_card_analysis_rounded_inner_background"
         android:orientation="horizontal"
-        android:paddingVertical="14dp"
-        android:paddingHorizontal="16dp">
+        android:paddingVertical="4dp"
+        android:paddingHorizontal="8dp">
 
         <TextView
             android:id="@+id/deckNew_card_analysis_widget"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="8dp"
+            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeStepGranularity="1dp"
             android:gravity="center"
-            android:textColor="@color/flag_reviewer_blue"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_card_analysis_new"
             android:textSize="24sp"
             android:textStyle="bold"
-            tools:text="50" />
+            tools:text="50"
+            tools:targetApi="o" />
 
         <TextView
             android:id="@+id/deckLearn_card_analysis_widget"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="8dp"
+            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeStepGranularity="1dp"
             android:gravity="center"
-            android:textColor="@color/flag_reviewer_red"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_card_analysis_learn"
             android:textSize="24sp"
             android:textStyle="bold"
-            tools:text="12" />
+            tools:text="12"
+            tools:targetApi="o" />
 
         <TextView
             android:id="@+id/deckDue_card_analysis_widget"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="8dp"
+            android:autoSizeMaxTextSize="24sp"
+            android:autoSizeStepGranularity="1dp"
             android:gravity="center"
-            android:textColor="@color/flag_reviewer_green"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_card_analysis_review"
             android:textSize="24sp"
             android:textStyle="bold"
-            tools:text="57" />
+            tools:text="57"
+            tools:targetApi="o" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/deckNameCardAnalysis"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/cardAnalysisDataHolder"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="8dp"
+        android:autoSizeMaxTextSize="24sp"
+        android:autoSizeStepGranularity="1dp"
+        android:ellipsize="end"
         android:gravity="center"
-        android:paddingVertical="8dp"
-        android:paddingHorizontal="16dp"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:paddingVertical="4dp"
+        android:paddingHorizontal="8dp"
         android:textColor="?android:attr/textColorPrimary"
         android:textSize="24sp"
         android:textStyle="bold"
-        tools:text="Default" />
+        tools:text="Default"
+        tools:targetApi="o" />
 
-</RelativeLayout>
+</LinearLayout>
