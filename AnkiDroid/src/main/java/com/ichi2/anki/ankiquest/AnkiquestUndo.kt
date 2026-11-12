@@ -10,6 +10,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
+import com.ichi2.anki.snackbar.showSnackbar
 
 /** Offers the inverse only after success, while the same account and screen still own the action. */
 internal class AnkiquestUndo(
@@ -35,29 +36,30 @@ internal class AnkiquestUndo(
         val turn = generation
         perform {
             if (turn == generation && owns(account)) {
-                val notice = Snackbar.make(activity.findViewById<View>(android.R.id.content), message, Snackbar.LENGTH_LONG)
-                notice.anchorView = activity.findViewById<View>(R.id.ankiquest_tab_bar)?.takeIf { it.isShown }
-                snackbar = notice
-                notice.setAction(CommonString.undo) {
-                    if (turn == generation && snackbar === notice && notice.isShown && owns(account)) {
-                        clear()
-                        inverse()
-                    }
-                }
-                notice.addCallback(
-                    object : Snackbar.Callback() {
-                        override fun onDismissed(
-                            transientBottomBar: Snackbar?,
-                            event: Int,
-                        ) {
-                            if (snackbar === transientBottomBar) {
-                                snackbar = null
-                                generation++
-                            }
+                activity.findViewById<View>(android.R.id.content).showSnackbar(message) {
+                    val notice = this
+                    notice.anchorView = activity.findViewById<View>(R.id.ankiquest_tab_bar)?.takeIf { it.isShown }
+                    snackbar = notice
+                    notice.setAction(CommonString.undo) {
+                        if (turn == generation && snackbar === notice && notice.isShown && owns(account)) {
+                            clear()
+                            inverse()
                         }
-                    },
-                )
-                notice.show()
+                    }
+                    notice.addCallback(
+                        object : Snackbar.Callback() {
+                            override fun onDismissed(
+                                transientBottomBar: Snackbar?,
+                                event: Int,
+                            ) {
+                                if (snackbar === transientBottomBar) {
+                                    snackbar = null
+                                    generation++
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
