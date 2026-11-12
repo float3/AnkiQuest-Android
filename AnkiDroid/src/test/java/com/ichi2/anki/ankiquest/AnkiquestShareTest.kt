@@ -276,7 +276,7 @@ class AnkiquestShareTest : RobolectricTest() {
         )
         assertEquals("der Hund", AnkiquestShare.suggestedLabel("", fields, cloze = false), "an empty front falls back to the fields")
         assertEquals("the dog", AnkiquestShare.suggestedLabel("<img src=dog.jpg>", listOf("00412", "", "the dog"), cloze = false))
-        assertEquals("B1L02", AnkiquestShare.suggestedLabel("", listOf("B1L02", "0042"), cloze = false), "only ids: the first field")
+        assertNull(AnkiquestShare.suggestedLabel("", listOf("B1L02", "0042"), cloze = false), "only ids: no meaningful suggestion")
         assertNull(AnkiquestShare.suggestedLabel("", listOf("", "<br>"), cloze = false))
         assertEquals(
             "Paris is the capital of France",
