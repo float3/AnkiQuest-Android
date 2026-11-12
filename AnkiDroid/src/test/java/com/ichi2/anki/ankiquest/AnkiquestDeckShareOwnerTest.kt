@@ -3,6 +3,9 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.os.Looper
+import android.view.View
+import android.widget.FrameLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -22,12 +25,14 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowToast
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -105,6 +110,98 @@ class AnkiquestDeckShareOwnerTest : RobolectricTest() {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
         advanceRobolectricLooper()
         coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("ana"), identity) }
+    }
+
+    @Test
+    fun `a saved deck offers Undo for its previous recipients`() {
+        val screen = launch().get()
+        screen.setContentView(FrameLayout(screen))
+        AnkiquestDeckShare.choose(screen, 1)
+        advanceRobolectricLooperUntil { ShadowDialog.getLatestDialog()?.isShowing == true }
+        val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        val list = dialog.listView
+        list.performItemClick(list.getChildAt(0), 0, list.getItemIdAtPosition(0))
+        list.performItemClick(list.getChildAt(1), 1, list.getItemIdAtPosition(1))
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("cerro"), identity) }
+        val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        repeat(2) { undo.performClick() }
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("ana"), identity) }
+    }
+
+    @Test
+    fun `a failed deck save has no Undo`() {
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } throws java.io.IOException("offline")
+        val screen = launch().get()
+        screen.setContentView(FrameLayout(screen))
+        savePicker(screen)
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        assertEquals(screen.getString(com.ichi2.anki.R.string.ankiquest_share_failed), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `a retained Undo cannot restore into another account`() {
+        val screen = launch().get()
+        screen.setContentView(FrameLayout(screen))
+        savePicker(screen)
+        val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        account = identity.copy(token = "replacement")
+        undo.performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), identity) }
+    }
+
+    @Test
+    fun `opening another picker invalidates the old Undo`() {
+        val screen = launch().get()
+        screen.setContentView(FrameLayout(screen))
+        savePicker(screen)
+        val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        AnkiquestDeckShare.choose(screen, 1)
+        undo.performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), identity) }
+    }
+
+    @Test
+    fun `a failed deck Undo reports failure and cannot be submitted twice`() {
+        val screen = launch().get()
+        screen.setContentView(FrameLayout(screen))
+        savePicker(screen)
+        val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } throws java.io.IOException("offline")
+        repeat(2) { undo.performClick() }
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        coVerify(exactly = 2) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), identity) }
+        assertEquals(screen.getString(com.ichi2.anki.R.string.ankiquest_share_failed), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `a stopped save cannot offer Undo after returning`() {
+        val controller = launch()
+        val screen = controller.get()
+        screen.setContentView(FrameLayout(screen))
+        val waiting = CompletableDeferred<JSONObject>()
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } coAnswers { waiting.await() }
+        savePicker(screen)
+        controller
+            .pause()
+            .stop()
+            .start()
+            .resume()
+        waiting.complete(JSONObject())
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
+        assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+    }
+
+    private fun savePicker(screen: EmptyAnkiActivity) {
+        AnkiquestDeckShare.choose(screen, 1)
+        advanceRobolectricLooperUntil { ShadowDialog.getLatestDialog()?.isShowing == true }
+        val dialog = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500))
     }
 
     @Test

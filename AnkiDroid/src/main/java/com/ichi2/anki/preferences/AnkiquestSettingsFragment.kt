@@ -42,6 +42,7 @@ import com.ichi2.anki.ankiquest.AnkiquestCommunity
 import com.ichi2.anki.ankiquest.AnkiquestCommunity.Reminders
 import com.ichi2.anki.ankiquest.AnkiquestCompanion
 import com.ichi2.anki.ankiquest.AnkiquestDeckAdapter
+import com.ichi2.anki.ankiquest.AnkiquestDeckSharing
 import com.ichi2.anki.ankiquest.AnkiquestDeckTree
 import com.ichi2.anki.ankiquest.AnkiquestDialogOwner
 import com.ichi2.anki.ankiquest.AnkiquestHomeData
@@ -51,6 +52,7 @@ import com.ichi2.anki.ankiquest.AnkiquestNotifier
 import com.ichi2.anki.ankiquest.AnkiquestPoll
 import com.ichi2.anki.ankiquest.AnkiquestSharing
 import com.ichi2.anki.ankiquest.AnkiquestSubscriptions
+import com.ichi2.anki.ankiquest.AnkiquestUndo
 import com.ichi2.anki.ankiquest.AnkiquestUpdater
 import com.ichi2.anki.ankiquest.AnkiquestWidget
 import com.ichi2.anki.ankiquest.AnkiquestWidgetSettings
@@ -85,6 +87,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     override val analyticsScreenNameConstant = "prefs.ankiquest"
 
     private var running = false
+    private var deckUndo: AnkiquestUndo? = null
 
     /** Every server write from this screen, one at a time, so a write never overwrites another's answer. */
     private val serverWrites = Mutex()
@@ -479,6 +482,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
             if (account == null || account.token.isEmpty()) {
                 return@bindAction null
             }
+            deckUndo?.clear()
             val owner = AnkiquestDialogOwner(requireActivity(), account, viewLifecycleOwner.lifecycle)
             try {
                 if (!owner.isCurrent()) {
@@ -930,8 +934,9 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     ) {
         val context = requireContext()
         val ids = { decks: List<JSONObject> -> decks.map { it.getString("id") } }
+        val previous = AnkiquestDeckSharing.snapshot(shared + unshared)
         if (shared.isEmpty()) {
-            saveDeckSharing(account, owner, emptyList(), ids(unshared), emptyList())
+            saveDeckSharing(account, owner, emptyList(), ids(unshared), emptyList(), previous)
             return
         }
         val rows = settings.getJSONArray("recipients")
@@ -983,7 +988,7 @@ class AnkiquestSettingsFragment : SettingsFragment() {
                 if (!owner.take(dialog)) {
                     return@setOnClickListener
                 }
-                saveDeckSharing(account, owner, ids(shared), ids(unshared), recipients)
+                saveDeckSharing(account, owner, ids(shared), ids(unshared), recipients, previous)
             }
         }
         owner.show(dialog)
@@ -995,27 +1000,40 @@ class AnkiquestSettingsFragment : SettingsFragment() {
         shared: List<String>,
         unshared: List<String>,
         recipients: List<String>,
+        previous: List<AnkiquestDeckSharing.Setting>,
+    ) {
+        val activity = requireActivity() as AnkiActivity
+        val undo = deckUndo ?: AnkiquestUndo(activity).also { deckUndo = it }
+        val message = resources.getQuantityString(R.plurals.ankiquest_deck_notifications_saved, shared.size, shared.size)
+        undo.apply(
+            account,
+            message,
+            perform = { done ->
+                deckWrite(owner, done) { Ankiquest.saveDeckNotificationSettings(shared, unshared, recipients, account) }
+            },
+            inverse = {
+                val restoreOwner = AnkiquestDialogOwner(activity, account, viewLifecycleOwner.lifecycle)
+                deckWrite(restoreOwner, { view?.showSnackbar(getString(R.string.ankiquest_deck_sharing_restored)) }) {
+                    AnkiquestDeckSharing.restore(account, previous)
+                }
+            },
+        )
+    }
+
+    /** Keep success, failure and Undo with the same foreground visit as the picker. */
+    private fun deckWrite(
+        owner: AnkiquestDialogOwner,
+        saved: () -> Unit,
+        write: suspend () -> Unit,
     ) {
         val context = requireContext()
         lifecycleScope.launch {
             try {
-                Ankiquest.saveDeckNotificationSettings(shared, unshared, recipients, account)
-                if (!owner.isCurrent()) {
-                    owner.close()
-                    return@launch
+                write()
+                if (owner.isCurrent()) {
+                    saved()
                 }
-                val saved =
-                    AlertDialog
-                        .Builder(context)
-                        .setMessage(
-                            resources.getQuantityString(
-                                R.plurals.ankiquest_deck_notifications_saved,
-                                shared.size,
-                                shared.size,
-                            ),
-                        ).setPositiveButton(android.R.string.ok, null)
-                        .create()
-                owner.show(saved)
+                owner.close()
             } catch (e: CancellationException) {
                 owner.close()
                 throw e
@@ -1051,8 +1069,15 @@ class AnkiquestSettingsFragment : SettingsFragment() {
     }
 
     override fun onDestroyView() {
+        deckUndo?.clear()
+        deckUndo = null
         pictureEditor?.dismiss()
         pictureEditor = null
         super.onDestroyView()
+    }
+
+    override fun onStop() {
+        deckUndo?.clear()
+        super.onStop()
     }
 }

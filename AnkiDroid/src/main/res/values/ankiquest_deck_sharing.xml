@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <item name="ankiquest_deck_share_undo" type="id" />
+    <string name="ankiquest_deck_sharing_restored">Previous deck sharing restored.</string>
+</resources>
