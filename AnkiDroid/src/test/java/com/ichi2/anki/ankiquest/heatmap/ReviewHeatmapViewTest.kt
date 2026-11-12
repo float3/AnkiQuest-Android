@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest.heatmap
 
 import android.content.Context
+import android.graphics.Rect
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
 import android.view.View
@@ -31,6 +32,46 @@ import com.ichi2.anki.common.android.R as CommonR
 class ReviewHeatmapViewTest {
     private val context: Context
         get() = ContextThemeWrapper(ApplicationProvider.getApplicationContext(), CommonR.style.Theme_Light)
+
+    @Test
+    fun `each day has a distinct 48dp touch target including the gap around its square`() {
+        val today = LocalDate.of(2024, 2, 28)
+        val view = ReviewHeatmapView(context).apply { setData(ReviewHeatmap.summarize(today, emptyMap(), emptyMap())) }
+        layout(view)
+        val grid = view.findViewById<ReviewHeatmapGrid>(R.id.review_heatmap_grid)
+        val provider = assertNotNull(grid.accessibilityNodeProvider)
+        val density = context.resources.displayMetrics.density
+        val targets =
+            (0 until today.lengthOfYear()).map { index ->
+                val node = assertNotNull(provider.createAccessibilityNodeInfo(index))
+                Rect().also { bounds ->
+                    @Suppress("DEPRECATION")
+                    node.getBoundsInParent(bounds)
+                    assertTrue(bounds.width() >= 48 * density, "day $index width")
+                    assertTrue(bounds.height() >= 48 * density, "day $index height")
+                }
+            }
+        for (first in targets.indices) {
+            for (second in first + 1 until targets.size) {
+                assertFalse(Rect.intersects(targets[first], targets[second]), "day targets must not overlap")
+            }
+        }
+        val chosen = today.plusDays(1)
+        val target = targets[chosen.dayOfYear - 1]
+        touch(grid, MotionEvent.ACTION_DOWN, target.left + density, target.top + density)
+        touch(grid, MotionEvent.ACTION_UP, target.left + density, target.top + density)
+        assertEquals(chosen, grid.selectedDate, "the gap belongs to the same day's touch target")
+    }
+
+    @Test
+    fun `the focusable calendar has a spoken label as well as labelled days`() {
+        val today = LocalDate.of(2024, 2, 28)
+        val view = ReviewHeatmapView(context).apply { setData(ReviewHeatmap.summarize(today, emptyMap(), emptyMap())) }
+        layout(view)
+        val grid = view.findViewById<ReviewHeatmapGrid>(R.id.review_heatmap_grid)
+        val host = assertNotNull(assertNotNull(grid.accessibilityNodeProvider).createAccessibilityNodeInfo(View.NO_ID))
+        assertEquals(context.getString(R.string.review_heatmap_title), host.contentDescription)
+    }
 
     @Test
     fun `selecting leap day previews details and only the full size button opens cards`() {
