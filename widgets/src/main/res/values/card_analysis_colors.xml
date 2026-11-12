@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<resources>
+    <!-- Preserve the count categories with small-text contrast on the light primary container. -->
+    <color name="widget_card_analysis_new">#005AA8</color>
+    <color name="widget_card_analysis_learn">#B71C1C</color>
+    <color name="widget_card_analysis_review">#136B17</color>
+</resources>

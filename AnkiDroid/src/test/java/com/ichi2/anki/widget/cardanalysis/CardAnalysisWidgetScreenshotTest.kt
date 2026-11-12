@@ -60,6 +60,12 @@ class CardAnalysisWidgetScreenshotTest : ScreenshotTest() {
         }
 
     @Test
+    fun minimumLargeFont() =
+        runTest {
+            captureDeck("minimum_large_font", widthDp = 84, heightDp = 56, fontScale = 2f)
+        }
+
+    @Test
     fun size3x2LargeFont() =
         runTest {
             captureDeck("size_3x2_large_font", widthDp = 262, heightDp = 220, fontScale = 2f)
