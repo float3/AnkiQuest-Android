@@ -24,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -127,21 +128,22 @@ class AnkiquestCalendarActivityTest : RobolectricTest() {
 
     @Test
     fun `the leaderboard opens the calendar`() {
-        mockkObject(AnkiquestBoards)
+        mockkObject(AnkiquestBoards, AnkiquestSocial)
         try {
+            coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
             coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns emptyList()
             coEvery { AnkiquestBoards.weekEnds(identity) } returns null
-            val board = startRegularActivity<AnkiquestLeaderboardActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
-            advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+            val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
+            advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             board
-                .findViewById<View>(R.id.aq_board_content)
+                .findViewById<View>(R.id.aq_friends_board_content)
                 .allViews
                 .filterIsInstance<TextView>()
                 .first { it.text.toString() == board.getString(R.string.aq_calendar_title) }
                 .performClick()
             assertEquals(AnkiquestCalendarActivity::class.java.name, shadowOf(board).nextStartedActivity.component?.className)
         } finally {
-            unmockkObject(AnkiquestBoards)
+            unmockkObject(AnkiquestBoards, AnkiquestSocial)
         }
     }
 

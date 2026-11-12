@@ -179,10 +179,10 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
             AnkiquestBoards.parseLeaderboard(rows, AnkiquestBoards.Period.WEEK)
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * DAY
         val board =
-            startRegularActivity<AnkiquestLeaderboardActivity>(
+            startRegularActivity<AnkiquestFriendsActivity>(
                 AnkiquestLeaderboardActivity.intent(targetContext, AnkiquestBoards.Period.WEEK.query, null),
             )
-        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         captureScreen("4_leaderboard")
     }
 
@@ -226,7 +226,8 @@ class AnkiquestBannerScreenshots : ScreenshotTest() {
     /** The server screens: a signed-in sample player at a fixed time, with the API mocked. */
     private fun social() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestBoards)
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial)
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { AnkiquestHomeData.account(any()) } returns identity
     }
 

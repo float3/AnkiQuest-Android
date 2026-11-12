@@ -109,7 +109,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
         assertEquals(owner, invite.getStringExtra(AnkiquestChallengesActivity.EXTRA_ACCOUNT))
 
         val message = AnkiquestNotifier.notificationIntent(targetContext, JSONObject().put("id", 72), owner)
-        assertEquals(ComponentName(targetContext, AnkiquestFeedActivity::class.java), message.component)
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), message.component)
         assertEquals(owner, message.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
         assertTrue((message.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)
         assertEquals(null, message.data)
@@ -184,7 +184,7 @@ class AnkiquestMobileNavigationTest : RobolectricTest() {
 
         val recapEntry = JSONObject().put("id", 75).put("kind", "reminder_weekly_recap")
         val recap = AnkiquestNotifier.notificationIntent(targetContext, recapEntry, owner)
-        assertEquals(ComponentName(targetContext, AnkiquestLeaderboardActivity::class.java), recap.component)
+        assertEquals(ComponentName(targetContext, AnkiquestFriendsActivity::class.java), recap.component)
         assertEquals("week", recap.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
         assertEquals(owner, recap.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_ACCOUNT))
         assertTrue((recap.flags and Intent.FLAG_ACTIVITY_NEW_TASK) != 0)

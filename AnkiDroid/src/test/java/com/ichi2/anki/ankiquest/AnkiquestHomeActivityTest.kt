@@ -241,7 +241,7 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
 
         home.findViewById<View>(R.id.aq_home_activity).performClick()
         val feed = assertNotNull(shadowOf(home).nextStartedActivity)
-        assertEquals(AnkiquestFeedActivity::class.java.name, feed.component?.className)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, feed.component?.className)
         assertNull(feed.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
 
         nav.selectedItemId = R.id.ankiquest_nav_decks
