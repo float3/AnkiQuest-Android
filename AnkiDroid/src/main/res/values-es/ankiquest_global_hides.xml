@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_hide_for_me">Ocultar para mí</string>
+    <string name="aq_board_hide_person">Ocultar a %1$s para mí</string>
+    <string name="aq_board_show_again">Mostrar de nuevo</string>
+    <string name="aq_board_show_person">Mostrar a %1$s de nuevo</string>
+    <string name="aq_board_hidden_players">Personas ocultas</string>
+    <string name="aq_board_hidden_loading">Cargando personas ocultas…</string>
+    <string name="aq_board_hidden_empty">No hay nadie oculto.</string>
+    <string name="aq_board_hidden_explained">Solo cambia tu clasificación global. Las demás personas no reciben ninguna notificación.</string>
+    <string name="aq_board_hide_saving">Guardando…</string>
+    <string name="aq_board_hidden_saved">Oculto en tu clasificación global.</string>
+    <string name="aq_board_shown_saved">Se muestra de nuevo en tu clasificación global.</string>
+    <string name="aq_board_hide_failed">No se pudieron actualizar las personas ocultas. Inténtalo de nuevo.</string>
+    <string name="aq_board_hide_gone">Esta persona ya no está disponible para ocultarla.</string>
+    <string name="aq_board_hide_limit">Puedes ocultar hasta 500 personas. Muestra a alguien de nuevo antes de ocultar a otra persona.</string>
+</resources>

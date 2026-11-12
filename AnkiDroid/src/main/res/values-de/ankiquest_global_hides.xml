@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_hide_for_me">Für mich ausblenden</string>
+    <string name="aq_board_hide_person">%1$s für mich ausblenden</string>
+    <string name="aq_board_show_again">Wieder anzeigen</string>
+    <string name="aq_board_show_person">%1$s wieder anzeigen</string>
+    <string name="aq_board_hidden_players">Ausgeblendete Personen</string>
+    <string name="aq_board_hidden_loading">Ausgeblendete Personen werden geladen…</string>
+    <string name="aq_board_hidden_empty">Niemand ist ausgeblendet.</string>
+    <string name="aq_board_hidden_explained">Nur deine globale Rangliste ändert sich. Andere Personen werden nicht benachrichtigt.</string>
+    <string name="aq_board_hide_saving">Wird gespeichert…</string>
+    <string name="aq_board_hidden_saved">Aus deiner globalen Rangliste ausgeblendet.</string>
+    <string name="aq_board_shown_saved">Wird wieder in deiner globalen Rangliste angezeigt.</string>
+    <string name="aq_board_hide_failed">Ausgeblendete Personen konnten nicht aktualisiert werden. Versuche es erneut.</string>
+    <string name="aq_board_hide_gone">Diese Person kann nicht mehr ausgeblendet werden.</string>
+    <string name="aq_board_hide_limit">Du kannst bis zu 500 Personen ausblenden. Zeige zuerst jemanden wieder an.</string>
+</resources>
