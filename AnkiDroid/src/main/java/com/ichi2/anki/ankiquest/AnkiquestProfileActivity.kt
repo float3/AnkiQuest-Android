@@ -31,14 +31,14 @@ import kotlinx.coroutines.launch
 /**
  * A player's profile, natively, as the website's `/week#<user>` shows it: level and XP, streak and
  * freezes, today, daily quests, personal bests, hard-won cards and achievements. The player's own
- * profile adds their latest wins and leads to the native settings, never to a web page. Personal bests
- * lead on to the records ([AnkiquestRecordsActivity]) and, for the player, their study history
- * ([AnkiquestHistoryActivity]).
+ * profile adds their latest wins, records and study history, and leads to native settings.
  */
 class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board) {
     private lateinit var content: LinearLayout
     private lateinit var scroll: NestedScrollView
     private lateinit var views: AnkiquestBoardViews
+    private lateinit var undo: AnkiquestUndo
+    private lateinit var sections: AnkiquestMeSections
     private var account: HomeAccount? = null
     private var page: AnkiquestBoards.PlayerPage? = null
     private var loading = false
@@ -56,9 +56,11 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
+        undo = AnkiquestUndo(this)
         views = AnkiquestBoardViews(this)
         content = findViewById(R.id.aq_board_content)
         scroll = findViewById(R.id.aq_board_scroll)
+        sections = AnkiquestMeSections(this, savedInstanceState)
         findViewById<TextView>(R.id.aq_board_title).apply {
             setText(if (intent.hasExtra(EXTRA_USER)) R.string.aq_profile_title else R.string.ankiquest_me)
             ViewCompat.setAccessibilityHeading(this, true)
@@ -80,6 +82,13 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
         load()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::sections.isInitialized) {
+            sections.save(outState)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         if (!::content.isInitialized) return
@@ -92,7 +101,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
 
     private fun load() {
         val current = AnkiquestHomeData.account()
+        sections.refresh()
         if (current?.scope != account?.scope) {
+            undo.clear()
             account = current
             page = null
             muted = null
@@ -156,7 +167,10 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
     }
 
     /** Runs one change from the profile, then reads the profile and its controls again. */
-    private fun change(work: suspend (HomeAccount) -> Unit) {
+    private fun change(
+        after: (() -> Unit)? = null,
+        work: suspend (HomeAccount) -> Unit,
+    ) {
         val current = account ?: return
         if (changing) return
         changing = true
@@ -165,6 +179,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             val problem = boardAttempt { work(current) }
             changing = false
             if (problem != null) showThemedToast(this@AnkiquestProfileActivity, getString(problem), shortLength = false)
+            if (problem == null) {
+                after?.invoke()
+            }
             load()
         }
     }
@@ -197,18 +214,23 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views
                 .button(content, getString(if (isMuted) R.string.aq_friends_unmute else R.string.aq_friends_mute)) {
                     if (isMuted) {
-                        change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Unmute(p.user)) }
+                        unmute(p.user)
                     } else {
-                        AlertDialog
-                            .Builder(this)
-                            .setMessage(getString(R.string.aq_friends_mute_confirm, p.display))
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .setPositiveButton(R.string.aq_friends_mute) { _, _ ->
-                                change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Mute(p.user)) }
-                            }.show()
+                        val current = account ?: return@button
+                        undo.apply(
+                            current,
+                            getString(R.string.aq_friends_muted_done, p.display),
+                            perform = { done -> change(after = done) { AnkiquestSocial.change(it, AnkiquestSocial.Change.Mute(p.user)) } },
+                            inverse = { unmute(p.user) },
+                        )
                     }
                 }.isEnabled = !changing
         }
+    }
+
+    private fun unmute(user: String) {
+        undo.clear()
+        change { AnkiquestSocial.change(it, AnkiquestSocial.Change.Unmute(user)) }
     }
 
     private fun refreshPicture(
@@ -232,6 +254,10 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             val panel = views.card(content)
             views.text(panel, getString(R.string.aq_board_connect))
             views.button(panel, getString(R.string.aq_home_connect), primary = true) { settings() }
+            if (!intent.hasExtra(EXTRA_USER)) {
+                sections.attach(content)
+                sections.showTarget()
+            }
             return
         }
         val shown = page
@@ -241,6 +267,10 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             findViewById<TextView>(R.id.aq_board_title).text =
                 if (shown.own) getString(R.string.ankiquest_me) else shown.profile.display
             profile(shown)
+        }
+        // Sections stay usable when the profile endpoint is offline.
+        if (shown == null && !intent.hasExtra(EXTRA_USER)) {
+            sections.attach(content)
         }
         failure?.let { problem ->
             if (problem == R.string.aq_profile_hidden) content.addView(AnkiquestAki.image(this, R.drawable.aki_sleeping, 72))
@@ -255,6 +285,9 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             startActivity(AnkiquestLeaderboardActivity.intent(this))
         }
         scroll.post { scroll.scrollTo(0, position) }
+        if (!loading) {
+            sections.showTarget()
+        }
     }
 
     private fun profile(page: AnkiquestBoards.PlayerPage) {
@@ -370,9 +403,12 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
                 ).apply { ViewCompat.setAccessibilityHeading(this, false) }
             views.text(panel, days(p.daysActive), small = true)
         }
-        // The bests lead on to the records everyone is chasing and, on the player's own profile, their study calendar.
-        views.button(content, getString(R.string.aq_records_title)) { startActivity(AnkiquestRecordsActivity.intent(this)) }
-        if (page.own) views.button(content, getString(R.string.aq_history_title)) { startActivity(AnkiquestHistoryActivity.intent(this)) }
+        // Own records and history expand here; other profiles link back to the player's records.
+        if (page.own) {
+            sections.attach(content)
+        } else {
+            views.button(content, getString(R.string.aq_records_title)) { startActivity(AnkiquestRecordsActivity.intent(this)) }
+        }
         views.section(content, getString(R.string.aq_profile_lifetime))
         tiles(
             listOf(

@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="aq_records_title">Records</string>
-    <string name="aq_records_refresh">Actualiser les records</string>
     <string name="aq_records_loading">Chargement des records…</string>
     <string name="aq_records_lead">Des records à battre.</string>
     <string name="aq_records_intro">Les records personnels deviennent des étapes partagées. Célébrez les sessions, séries et jours d’étude qui ont placé la barre plus haut.</string>
@@ -26,7 +25,6 @@
     <string name="aq_records_server_error">Les records n’ont pas pu être chargés. Essayez d’actualiser.</string>
 
     <string name="aq_history_title">Historique d’étude</string>
-    <string name="aq_history_refresh">Actualiser l’historique d’étude</string>
     <string name="aq_history_loading">Chargement de votre historique d’étude…</string>
     <string name="aq_history_intro">Chaque jour où vous avez étudié enrichit votre histoire.</string>
     <string name="aq_history_connect">Connectez AnkiQuest pour voir votre calendrier d’étude.</string>

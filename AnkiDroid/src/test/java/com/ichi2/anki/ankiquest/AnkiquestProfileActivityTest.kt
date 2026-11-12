@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.os.Looper
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
@@ -24,10 +25,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -44,19 +47,22 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
 
     @Before
     fun prepareProfile() {
-        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions)
+        mockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.player(identity, "hill") } returns own
         coEvery { AnkiquestSocial.overview(any()) } throws IOException("offline")
         every { AnkiquestSubscriptions.repository } returns repository
         coEvery { repository.load(any()) } throws IOException("offline")
+        coEvery { AnkiquestRecords.records(any(), any()) } returns emptyList()
+        coEvery { AnkiquestRecords.scopes(any()) } returns emptyList()
+        coEvery { AnkiquestRecords.study(any(), any()) } throws IOException("offline")
     }
 
     private val repository = mockk<SubscriptionRepository>()
 
     @After
     fun clearProfileMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions)
+        unmockkObject(AnkiquestHomeData, AnkiquestBoards, AnkiquestSocial, AnkiquestSubscriptions, AnkiquestRecords)
     }
 
     private fun overview(vararg muted: String) =
@@ -88,6 +94,23 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         advanceRobolectricLooper()
         coVerify { repository.setSubscribed(identity, "cerro", false) }
         assertTrue(screen.hasText(screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")))
+    }
+
+    @Test
+    fun `profile mute applies immediately and offers Undo`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        coEvery { AnkiquestSocial.change(identity, any()) } returns overview("cerro")
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        screen.views<TextView>().first { it.text == screen.getString(R.string.aq_friends_mute) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("cerro")) }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("cerro")) }
     }
 
     @Test
@@ -151,12 +174,16 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `personal bests lead to the records, and on the player's own profile to the study history`() {
+    fun `records and history expand on Me while another player's history stays private`() {
         val mine = launch()
+        coVerify(exactly = 0) { AnkiquestRecords.records(any(), any()) }
+        coVerify(exactly = 0) { AnkiquestRecords.study(any(), any()) }
         mine.click(mine.getString(R.string.aq_records_title))
-        assertEquals(AnkiquestRecordsActivity::class.java.name, shadowOf(mine).nextStartedActivity.component?.className)
+        assertNull(shadowOf(mine).nextStartedActivity, "records stay on Me")
+        advanceRobolectricLooperUntil { mine.hasText(mine.getString(R.string.aq_records_empty)) }
         mine.click(mine.getString(R.string.aq_history_title))
-        assertEquals(AnkiquestHistoryActivity::class.java.name, shadowOf(mine).nextStartedActivity.component?.className)
+        assertNull(shadowOf(mine).nextStartedActivity, "history stays on Me")
+        advanceRobolectricLooperUntil { mine.hasText(mine.getString(R.string.aq_history_intro)) }
 
         coEvery { AnkiquestBoards.player(identity, "cerro") } returns
             AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())

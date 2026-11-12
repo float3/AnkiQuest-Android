@@ -35,7 +35,6 @@
 
     <string name="aq_friends_mute">Mute</string>
     <string name="aq_friends_unmute">Unmute</string>
-    <string name="aq_friends_mute_confirm">Mute %s? You won’t hear from them. They are not told.</string>
     <string name="aq_friends_muted_done">%s is muted.</string>
     <string name="aq_friends_unmuted">%s is no longer muted.</string>
     <string name="aq_friends_muted">Muted</string>

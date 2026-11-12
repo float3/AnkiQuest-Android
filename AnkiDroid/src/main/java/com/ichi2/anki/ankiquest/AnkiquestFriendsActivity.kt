@@ -51,6 +51,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     private lateinit var content: LinearLayout
     private lateinit var sections: AnkiquestFriendsSections
     private lateinit var scroll: NestedScrollView
+    private lateinit var undo: AnkiquestUndo
     private var account: HomeAccount? = null
     private var overview: AnkiquestSocial.Overview? = null
     private var loading = false
@@ -71,6 +72,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (showedActivityFailedScreen(savedInstanceState)) return
         super.onCreate(savedInstanceState)
+        undo = AnkiquestUndo(this)
         content = findViewById(R.id.aq_feed_content)
         scroll = findViewById(R.id.aq_feed_scroll)
         findViewById<TextView>(R.id.aq_feed_title).apply {
@@ -120,6 +122,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     private fun reload() {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
+            undo.clear()
             account = current
             overview = null
             status = null
@@ -467,15 +470,22 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             chip(parent, getString(R.string.aq_friends_unmute), enabled = !busy) { unmute(person) }
         } else {
             chip(parent, getString(R.string.aq_friends_mute), enabled = !busy) {
-                confirm(getString(R.string.aq_friends_mute_confirm, person.display), R.string.aq_friends_mute) {
-                    change(AnkiquestSocial.Change.Mute(person.user), { getString(R.string.aq_friends_muted_done, person.display) })
-                }
+                val current = account ?: return@chip
+                val message = getString(R.string.aq_friends_muted_done, person.display)
+                undo.apply(
+                    current,
+                    message,
+                    perform = { done -> change(AnkiquestSocial.Change.Mute(person.user), { message }, after = done) },
+                    inverse = { unmute(person) },
+                )
             }
         }
     }
 
-    private fun unmute(person: AnkiquestSocial.Person) =
+    private fun unmute(person: AnkiquestSocial.Person) {
+        undo.clear()
         change(AnkiquestSocial.Change.Unmute(person.user), { getString(R.string.aq_friends_unmuted, person.display) })
+    }
 
     /** Asks for a username and sends a request, or accepts theirs if they already asked. */
     private fun askFriend() {

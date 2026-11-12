@@ -3,4 +3,8 @@
 <resources>
     <!-- Old shortcuts still route Progress to Me. -->
     <item name="ankiquest_nav_progress" type="id" />
+    <item name="aq_me_records_content" type="id" />
+    <item name="aq_me_records_loading" type="id" />
+    <item name="aq_me_history_content" type="id" />
+    <item name="aq_me_history_loading" type="id" />
 </resources>
