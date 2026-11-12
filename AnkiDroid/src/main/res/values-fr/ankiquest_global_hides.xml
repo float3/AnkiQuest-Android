@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_hide_for_me">Masquer pour moi</string>
+    <string name="aq_board_hide_person">Masquer %1$s pour moi</string>
+    <string name="aq_board_show_again">Afficher à nouveau</string>
+    <string name="aq_board_show_person">Afficher %1$s à nouveau</string>
+    <string name="aq_board_hidden_players">Joueurs masqués</string>
+    <string name="aq_board_hidden_loading">Chargement des joueurs masqués…</string>
+    <string name="aq_board_hidden_empty">Personne n’est masqué.</string>
+    <string name="aq_board_hidden_explained">Seul votre classement global change. Les autres joueurs ne sont pas avertis.</string>
+    <string name="aq_board_hide_saving">Enregistrement…</string>
+    <string name="aq_board_hidden_saved">Masqué dans votre classement global.</string>
+    <string name="aq_board_shown_saved">Affiché à nouveau dans votre classement global.</string>
+    <string name="aq_board_hide_failed">Impossible de mettre à jour les joueurs masqués. Réessayez.</string>
+    <string name="aq_board_hide_gone">Ce joueur ne peut plus être masqué.</string>
+    <string name="aq_board_hide_limit">Vous pouvez masquer jusqu’à 500 joueurs. Affichez-en un à nouveau avant d’en masquer un autre.</string>
+</resources>

@@ -43,12 +43,7 @@
         "upload"
     ],
     "unused": [],
-    "boards": ["leaderboard_day", "player_profile", "week", "wins"],
+    "boards": ["leaderboard_day", "leaderboard_hide", "player_profile", "week", "wins"],
     "challenges": [],
-    "not_yet": [
-        "global_leaderboard_on",
-        "leaderboard_global",
-        "leaderboard_global_hidden",
-        "leaderboard_hide"
-    ]
+    "not_yet": ["global_leaderboard_on", "leaderboard_global", "leaderboard_global_hidden"]
 }

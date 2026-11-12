@@ -53,6 +53,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONException
 import timber.log.Timber
 import java.io.IOException
+import java.net.HttpURLConnection.HTTP_CONFLICT
 import java.net.HttpURLConnection.HTTP_FORBIDDEN
 import java.net.HttpURLConnection.HTTP_NOT_FOUND
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
@@ -977,6 +978,34 @@ private class LeaderboardSection(
 
     private enum class Refresh { CACHED_SCOPES, CHECK_SCOPES }
 
+    private enum class HiddenPanel { CLOSED, OPEN }
+
+    /** Discovery -> ready -> one save; stale account results never replace this state. */
+    private sealed interface Hides {
+        data object Unknown : Hides
+
+        data object Unavailable : Hides
+
+        data class Loading(
+            val panel: HiddenPanel,
+        ) : Hides
+
+        data class Failed(
+            val panel: HiddenPanel,
+            @StringRes val message: Int,
+        ) : Hides
+
+        data class Ready(
+            val players: List<AnkiquestGlobalHides.Player>,
+            val panel: HiddenPanel,
+            val message: String? = null,
+        ) : Hides
+
+        data class Saving(
+            val before: Ready,
+        ) : Hides
+    }
+
     private sealed interface Selection {
         data object Friends : Selection
 
@@ -1010,6 +1039,10 @@ private class LeaderboardSection(
     private var status: String? = null
     private var generation = 0
     private var loadJob: Job? = null
+
+    private var hides: Hides = Hides.Unknown
+    private var hideGeneration = 0
+    private var hideJob: Job? = null
 
     init {
         // Only a fresh link supplies a period; recreation uses this account's saved selection.
@@ -1063,6 +1096,9 @@ private class LeaderboardSection(
     private fun load(refresh: Refresh = Refresh.CACHED_SCOPES) {
         val current = AnkiquestHomeData.account()
         if (current?.scope != account?.scope) {
+            hideJob?.cancel()
+            hideGeneration++
+            hides = Hides.Unknown
             account = current
             rows = null
             period = AnkiquestBoards.Period.WEEK
@@ -1154,9 +1190,123 @@ private class LeaderboardSection(
                     }
                 loading = false
                 render()
+                if (scope == Scope.GLOBAL && (hides == Hides.Unknown || refresh == Refresh.CHECK_SCOPES)) {
+                    loadHidden(current)
+                }
                 if (problem == null) loadPictures(current)
             }
     }
+
+    /** Hidden players are optional and load independently of the standings. */
+    private fun loadHidden(current: HomeAccount) {
+        if (hides is Hides.Saving || current.scope != AnkiquestHomeData.account()?.scope) {
+            return
+        }
+        val panel =
+            when (val previous = hides) {
+                is Hides.Ready -> previous.panel
+                is Hides.Failed -> previous.panel
+                is Hides.Loading -> previous.panel
+                else -> HiddenPanel.CLOSED
+            }
+        hideJob?.cancel()
+        val turn = ++hideGeneration
+        hides = Hides.Loading(panel)
+        render()
+        hideJob =
+            lifecycleScope.launch {
+                val next =
+                    try {
+                        AnkiquestGlobalHides.load(current)?.let { Hides.Ready(it, panel) } ?: Hides.Unavailable
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Hides.Failed(panel, hideFailure(e))
+                    }
+                if (turn != hideGeneration || current.scope != AnkiquestHomeData.account()?.scope) {
+                    return@launch
+                }
+                hides = next
+                render()
+            }
+    }
+
+    private fun hiddenReady(): Hides.Ready? =
+        when (val state = hides) {
+            is Hides.Ready -> state
+            is Hides.Saving -> state.before
+            else -> null
+        }
+
+    private fun hideOwner(current: HomeAccount): Boolean =
+        scope == Scope.GLOBAL && content.isShown && AnkiquestPostStudyPrompts.resumed(activity) &&
+            account?.scope == current.scope && AnkiquestHomeData.account()?.scope == current.scope
+
+    /** Save once, then reload the selected period so the server keeps ownership of rank gaps. */
+    private fun changeHidden(
+        current: HomeAccount,
+        user: String,
+        action: AnkiquestGlobalHides.Action,
+    ) {
+        val before = hides as? Hides.Ready ?: return
+        if (!hideOwner(current)) {
+            return
+        }
+        val allowed =
+            when (action) {
+                AnkiquestGlobalHides.Action.HIDE -> rows.orEmpty().any { it.user == user && it.user != current.user && !it.hasToday }
+                AnkiquestGlobalHides.Action.SHOW -> before.panel == HiddenPanel.OPEN && before.players.any { it.user == user }
+            }
+        if (!allowed) {
+            return
+        }
+        val turn = ++hideGeneration
+        hides = Hides.Saving(before.copy(message = null))
+        render()
+        hideJob =
+            lifecycleScope.launch {
+                val next =
+                    try {
+                        val players = AnkiquestGlobalHides.change(current, user, action)
+                        val message =
+                            if (action ==
+                                AnkiquestGlobalHides.Action.HIDE
+                            ) {
+                                R.string.aq_board_hidden_saved
+                            } else {
+                                R.string.aq_board_shown_saved
+                            }
+                        Hides.Ready(players, before.panel, getString(message))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        if (turn == hideGeneration && current.scope == AnkiquestHomeData.account()?.scope) {
+                            hides = before.copy(message = getString(hideFailure(e)))
+                            render()
+                        }
+                        return@launch
+                    }
+                if (turn != hideGeneration || current.scope != AnkiquestHomeData.account()?.scope) {
+                    return@launch
+                }
+                hides = next
+                if (scope == Scope.GLOBAL) {
+                    rows = null
+                    load()
+                } else {
+                    render()
+                }
+            }
+    }
+
+    @StringRes
+    private fun hideFailure(error: Exception): Int =
+        when ((error as? AnkiquestHttpException)?.code) {
+            HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> R.string.aq_home_auth
+            HTTP_NOT_FOUND -> R.string.aq_board_hide_gone
+            HTTP_CONFLICT -> R.string.aq_board_hide_limit
+            else -> R.string.aq_board_hide_failed
+        }
 
     /** Optional controls must not prevent a normal Friends board from loading. */
     private suspend fun optionalScopes(current: HomeAccount): Support? =
@@ -1267,6 +1417,9 @@ private class LeaderboardSection(
                 render()
             }
         }
+        if (scope == Scope.GLOBAL) {
+            hiddenControls(current)
+        }
         views.section(content, getString(R.string.aq_board_xp_in, getString(AnkiquestLeaderboardActivity.periodPhrase(period))))
         weekEnds?.takeIf { period == AnkiquestBoards.Period.WEEK }?.let { ends ->
             val now = TimeManager.time.intTimeMS()
@@ -1292,6 +1445,61 @@ private class LeaderboardSection(
         views.button(content, getString(R.string.aq_board_my_profile)) { openProfile(current.user) }
         views.button(content, getString(R.string.aq_calendar_title)) { startActivity(AnkiquestCalendarActivity.intent(this)) }
         scroll.post { scroll.scrollTo(0, position) }
+    }
+
+    private fun hiddenControls(current: HomeAccount) {
+        when (val state = hides) {
+            Hides.Unknown, Hides.Unavailable -> return
+            is Hides.Loading -> {
+                views.text(content, getString(R.string.aq_board_hidden_loading), small = true)
+                return
+            }
+            is Hides.Failed -> {
+                views.text(content, getString(state.message), small = true)
+                views.button(content, getString(CommonString.retry)) {
+                    if (hideOwner(current)) {
+                        loadHidden(current)
+                    }
+                }
+                return
+            }
+            else -> Unit
+        }
+        val ready = hiddenReady() ?: return
+        val saving = hides is Hides.Saving
+        views
+            .button(content, getString(R.string.aq_board_hidden_players)) {
+                if (hides === ready && hideOwner(current)) {
+                    hides = ready.copy(panel = if (ready.panel == HiddenPanel.CLOSED) HiddenPanel.OPEN else HiddenPanel.CLOSED)
+                    render()
+                }
+            }.apply {
+                isEnabled = !saving
+                val toggle = if (ready.panel == HiddenPanel.OPEN) CommonString.collapse else CommonString.expand
+                contentDescription = "$text, ${getString(toggle)}"
+            }
+        val message = if (saving) getString(R.string.aq_board_hide_saving) else ready.message
+        message?.let {
+            views.text(content, it, small = true).accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
+        if (ready.panel != HiddenPanel.OPEN) {
+            return
+        }
+        val panel = views.card(content)
+        views.text(panel, getString(R.string.aq_board_hidden_explained), small = true)
+        if (ready.players.isEmpty()) {
+            views.text(panel, getString(R.string.aq_board_hidden_empty))
+        }
+        for (player in ready.players) {
+            views.text(panel, player.display, heading = true)
+            views
+                .button(panel, getString(R.string.aq_board_show_again)) {
+                    changeHidden(current, player.user, AnkiquestGlobalHides.Action.SHOW)
+                }.apply {
+                    isEnabled = !saving
+                    contentDescription = getString(R.string.aq_board_show_person, player.display)
+                }
+        }
     }
 
     /** All three scopes stay visible at large text sizes instead of hiding the active choice offscreen. */
@@ -1380,7 +1588,9 @@ private class LeaderboardSection(
         leader: Long,
     ) {
         // Large text needs the full card width for study status and XP.
-        val stacked = resources.configuration.fontScale >= STACKED_TEXT_SCALE
+        // A private action needs its own width instead of squeezing the player's name and streak.
+        val hiding = scope == Scope.GLOBAL && !mine && !row.hasToday && hiddenReady() != null
+        val stacked = resources.configuration.fontScale >= STACKED_TEXT_SCALE || hiding
         val panel = views.card(content, tinted = mine, horizontal = !stacked)
         val identity =
             if (stacked) {
@@ -1462,6 +1672,16 @@ private class LeaderboardSection(
         val closing = row.closingXp(TimeManager.time.intTimeMS())?.takeIf { period == AnkiquestBoards.Period.WEEK }
         closing?.let { xp ->
             views.text(score, getString(R.string.aq_board_closing_xp, views.number(xp)), small = true).gravity = alignment
+        }
+        val current = account
+        if (hiding && current != null) {
+            views
+                .button(score, getString(R.string.aq_board_hide_for_me)) {
+                    changeHidden(current, row.user, AnkiquestGlobalHides.Action.HIDE)
+                }.apply {
+                    isEnabled = hides is Hides.Ready
+                    contentDescription = getString(R.string.aq_board_hide_person, row.display)
+                }
         }
         panel.contentDescription =
             listOfNotNull(

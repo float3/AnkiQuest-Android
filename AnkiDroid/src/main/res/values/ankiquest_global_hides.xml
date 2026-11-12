@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <string name="aq_board_hide_for_me">Hide for me</string>
+    <string name="aq_board_hide_person">Hide %1$s for me</string>
+    <string name="aq_board_show_again">Show again</string>
+    <string name="aq_board_show_person">Show %1$s again</string>
+    <string name="aq_board_hidden_players">Hidden players</string>
+    <string name="aq_board_hidden_loading">Loading hidden players…</string>
+    <string name="aq_board_hidden_empty">Nobody is hidden.</string>
+    <string name="aq_board_hidden_explained">Only your Global leaderboard changes. Other players are not notified.</string>
+    <string name="aq_board_hide_saving">Saving…</string>
+    <string name="aq_board_hidden_saved">Hidden from your Global leaderboard.</string>
+    <string name="aq_board_shown_saved">Shown again on your Global leaderboard.</string>
+    <string name="aq_board_hide_failed">Could not update hidden players. Try again.</string>
+    <string name="aq_board_hide_gone">This player is no longer available to hide.</string>
+    <string name="aq_board_hide_limit">You can hide up to 500 players. Show someone again before hiding another.</string>
+</resources>
