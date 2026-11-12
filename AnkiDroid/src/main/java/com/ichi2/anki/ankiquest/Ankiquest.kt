@@ -250,14 +250,16 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     internal suspend fun shareWinLink(
         win: Long,
         expectedScope: String,
+        timeout: AnkiquestApi.Timeout = AnkiquestApi.Timeout.STANDARD,
     ): AnkiquestShare.Link {
-        val answer = share(JSONObject().put("win", win).put("to", "link"), expectedScope)
+        val answer = share(JSONObject().put("win", win).put("to", "link"), expectedScope, timeout)
         return AnkiquestShare.Link(answer.getString("url"), answer.getString("image"), answer.getString("text"))
     }
 
     private suspend fun share(
         body: JSONObject,
         expectedScope: String,
+        timeout: AnkiquestApi.Timeout = AnkiquestApi.Timeout.STANDARD,
     ): JSONObject =
         withContext(Dispatchers.IO) {
             val account = AnkiquestHomeData.account()?.takeIf { it.scope == expectedScope } ?: throw HomeAccountChanged()
@@ -268,6 +270,7 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
                     .request(account, "api/share/${account.encodedUser}")
                     .post(AnkiquestApi.body(body))
                     .build(),
+                timeout,
             )
         }
 

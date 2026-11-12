@@ -4,8 +4,12 @@ package com.ichi2.anki.ankiquest
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.service.chooser.ChooserAction
+import androidx.core.content.FileProvider
+import androidx.core.content.IntentCompat
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
@@ -16,8 +20,12 @@ import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.testutils.EmptyApplication
+import com.ichi2.testutils.ShadowFileProviderPathStrategy
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -27,19 +35,28 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import org.robolectric.util.ReflectionHelpers
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import javax.imageio.ImageIO
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
-@Config(application = EmptyApplication::class)
+@Config(application = EmptyApplication::class, shadows = [ShadowFileProviderPathStrategy::class])
 @Category(EmptyApplicationCategory::class)
 class AnkiquestShareTest : RobolectricTest() {
     private lateinit var server: HttpServer
@@ -51,6 +68,8 @@ class AnkiquestShareTest : RobolectricTest() {
 
     @Before
     fun startServer() {
+        // Robolectric changes cache directories between tests; AndroidX caches their old roots.
+        ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
         SharedPreferencesTestHook.override = targetContext.sharedPrefs()
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/api/share/hill") { exchange ->
@@ -94,6 +113,12 @@ class AnkiquestShareTest : RobolectricTest() {
         }
         server.createContext("/w/huge.png") { exchange -> respond(exchange, 200, ByteArray(5 * 1024 * 1024)) }
         server.createContext("/w/gone.png") { exchange -> respond(exchange, 404, ByteArray(0)) }
+        val png =
+            ByteArrayOutputStream().use { out ->
+                check(ImageIO.write(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB), "png", out))
+                out.toByteArray()
+            }
+        server.createContext("/w/valid.png") { exchange -> respond(exchange, 200, png) }
         server.start()
         base = "http://127.0.0.1:${server.address.port}"
         AnkiDroidApp.sharedPrefs().edit {
@@ -173,22 +198,163 @@ class AnkiquestShareTest : RobolectricTest() {
     }
 
     @Test
-    fun `without its card a link is shared as text, which carries the link`() {
+    fun `an unavailable server card gets a local picture and keeps the link`() {
         val link = AnkiquestShare.Link("$base/w/token", "$base/w/huge.png", "Level 54! $base/w/token")
         val chooser = AnkiquestShare.linkChooser(targetContext, link)
         val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
-        assertEquals("text/plain", send.type)
+        assertEquals("image/png", send.type)
         assertEquals(link.text, send.getStringExtra(Intent.EXTRA_TEXT))
-        assertFalse(send.hasExtra(Intent.EXTRA_STREAM))
+        assertTrue(send.hasExtra(Intent.EXTRA_STREAM))
+        val uri = assertNotNull(send.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM))
+        val bitmap = targetContext.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+        assertNotNull(bitmap, "the shared stream contains a readable picture")
+        assertTrue(bitmap.width > 0 && bitmap.height > 0)
+        assertEquals(uri, send.clipData?.getItemAt(0)?.uri)
+        assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+        val download =
+            assertIs<Intent>(
+                assertNotNull(
+                    IntentCompat.getParcelableArrayExtra(chooser, Intent.EXTRA_INITIAL_INTENTS, Intent::class.java),
+                ).single(),
+            )
+        assertEquals(AnkiquestGalleryActivity::class.java.name, download.component?.className)
+        assertEquals(uri, download.data, "Download picture uses the exact PNG offered to other apps")
+        assertEquals(AnkiquestHomeData.account()!!.scope, download.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
     }
 
     @Test
-    fun `wins from older servers are shared as a line of text`() {
+    fun `wins from older servers include a local picture`() {
         val chooser = AnkiquestShare.textChooser(targetContext, "Level 54", "You reached level 54.")
         val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
-        assertEquals("text/plain", send.type)
+        assertEquals("image/png", send.type)
+        assertTrue(send.hasExtra(Intent.EXTRA_STREAM))
         val text = send.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
         assertTrue(text.contains("Level 54") && text.contains(base))
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `an available canonical picture is preferred to the local render`() {
+        val bitmap = AnkiquestShare.picture(targetContext, AnkiquestShare.Card("Local", "Fallback"), "$base/w/valid.png")
+        assertEquals(2, bitmap.width)
+        assertEquals(2, bitmap.height)
+        bitmap.recycle()
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `an invalid server PNG still produces a local picture`() {
+        val bitmap = AnkiquestShare.picture(targetContext, AnkiquestShare.Card("A win", "Saved locally"), "$base/w/token.png")
+        assertEquals(1080, bitmap.width)
+        bitmap.recycle()
+    }
+
+    @Test
+    fun `a malformed server image address still attaches the local picture`() {
+        val chooser = AnkiquestShare.cardChooser(targetContext, "A public win", "not a valid image URL")
+        val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
+        assertEquals("image/png", send.type)
+        assertTrue(send.hasExtra(Intent.EXTRA_STREAM))
+    }
+
+    @Test
+    fun `rendering errors preserve the text when a picture cannot be allocated`() {
+        mockkObject(AnkiquestPicture)
+        try {
+            for (error in listOf(IllegalStateException("renderer unavailable"), OutOfMemoryError("synthetic allocation failure"))) {
+                every { AnkiquestPicture.render(any(), any()) } throws error
+                val chooser = AnkiquestShare.textChooser(targetContext, "A win", "Still shareable")
+                val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
+                assertEquals("text/plain", send.type)
+                assertTrue(send.getStringExtra(Intent.EXTRA_TEXT).orEmpty().contains("Still shareable"))
+                assertFalse(send.hasExtra(Intent.EXTRA_STREAM))
+            }
+        } finally {
+            unmockkObject(AnkiquestPicture)
+        }
+    }
+
+    @Test
+    fun `notification images retain their longer network deadline`() {
+        server.createContext("/w/notification.png") { exchange ->
+            Thread.sleep(2_000)
+            respond(exchange, 200, card)
+        }
+        assertContentEquals(card, AnkiquestShare.image("$base/w/notification.png"))
+    }
+
+    @Test
+    fun `a stalled image request promptly uses the local picture`() {
+        val release = CountDownLatch(1)
+        server.createContext("/w/stalled.png") { exchange ->
+            release.await(15, TimeUnit.SECONDS)
+            exchange.close()
+        }
+        // Warm the graphics runtime so this measures the network deadline, not test startup.
+        val card = AnkiquestShare.Card("A win", "Saved locally")
+        AnkiquestShare.picture(targetContext, card).recycle()
+        try {
+            val start = System.nanoTime()
+            val bitmap = AnkiquestShare.picture(targetContext, card, "$base/w/stalled.png")
+            assertEquals(1080, bitmap.width)
+            bitmap.recycle()
+            assertTrue(
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - start) < 5,
+                "a blocked server must not delay sharing for ten seconds",
+            )
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun `only a rendering failure leaves a text-only share`() {
+        mockkObject(AnkiquestPicture)
+        try {
+            every { AnkiquestPicture.render(any(), any()) } throws IllegalArgumentException("cannot render")
+            val chooser = AnkiquestShare.textChooser(targetContext, "A win", "Still shareable")
+            val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
+            assertEquals("text/plain", send.type)
+            assertTrue(send.getStringExtra(Intent.EXTRA_TEXT).orEmpty().contains("Still shareable"))
+            assertFalse(send.hasExtra(Intent.EXTRA_STREAM))
+            assertFalse(chooser.hasExtra(Intent.EXTRA_INITIAL_INTENTS), "there is no picture to download")
+        } finally {
+            unmockkObject(AnkiquestPicture)
+        }
+    }
+
+    @Test
+    fun `sharing removes only expired pictures from its own cache`() {
+        val directory = File(targetContext.cacheDir, "ankiquest-share").apply { mkdirs() }
+        val expired =
+            File(directory, "old.png").apply {
+                writeText("old picture")
+                check(setLastModified(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)))
+            }
+        val fresh = File(directory, "fresh.png").apply { writeText("still in use") }
+        val unrelated =
+            File(directory, "other.txt").apply {
+                writeText("not a picture")
+                check(setLastModified(expired.lastModified()))
+            }
+        AnkiquestShare.textChooser(targetContext, "A win", "A shared moment")
+        assertFalse(expired.exists(), "share pictures must not accumulate indefinitely")
+        assertEquals("still in use", fresh.readText())
+        assertTrue(unrelated.exists())
+    }
+
+    @Test
+    fun `another share keeps the first granted picture readable`() {
+        fun stream(title: String): Uri {
+            val chooser = AnkiquestShare.textChooser(targetContext, title, "A shared moment")
+            val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
+            return assertNotNull(send.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM))
+        }
+        val first = stream("First")
+        val bytes = targetContext.contentResolver.openInputStream(first)!!.use { it.readBytes() }
+        val second = stream("Second")
+        assertTrue(first != second, "share grants must not point to an overwritten file")
+        assertContentEquals(bytes, targetContext.contentResolver.openInputStream(first)!!.use { it.readBytes() })
     }
 
     @Test

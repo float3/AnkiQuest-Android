@@ -36,6 +36,9 @@ internal class HomeAccountChanged : IOException("The AnkiQuest account changed")
 internal object AnkiquestApi {
     /** How long a request may take. */
     enum class Timeout {
+        /** Optional share metadata, leaving another second for its picture. */
+        PICTURE,
+
         /** Optional extras such as profile pictures, which must never hold up anything else. */
         QUICK,
 
@@ -55,6 +58,7 @@ internal object AnkiquestApi {
             .followSslRedirects(false)
             .build()
     private val quick = base.newBuilder().callTimeout(3, TimeUnit.SECONDS).build()
+    private val picture = base.newBuilder().callTimeout(1, TimeUnit.SECONDS).build()
     private val standard = base.newBuilder().callTimeout(20, TimeUnit.SECONDS).build()
     private val transfer =
         base
@@ -66,6 +70,7 @@ internal object AnkiquestApi {
 
     fun client(timeout: Timeout): OkHttpClient =
         when (timeout) {
+            Timeout.PICTURE -> picture
             Timeout.QUICK -> quick
             Timeout.STANDARD -> standard
             Timeout.TRANSFER -> transfer

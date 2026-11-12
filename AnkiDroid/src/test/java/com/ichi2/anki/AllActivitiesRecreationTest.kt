@@ -9,6 +9,7 @@ import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.account.AccountActivity
 import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
+import com.ichi2.anki.ankiquest.AnkiquestGalleryActivity
 import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
 import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
 import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
@@ -171,6 +172,7 @@ class AllActivitiesRecreationTest : RobolectricTest() {
                 AnkiquestLeaderboardActivity::class.java,
                 AnkiquestRecordsActivity::class.java,
                 AnkiquestShareActivity::class.java,
+                AnkiquestGalleryActivity::class.java,
                 AnkiquestWidgetConfig::class.java,
                 CardAnalysisWidgetConfig::class.java,
                 DeckPickerWidgetConfig::class.java,
