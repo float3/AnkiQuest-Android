@@ -35,7 +35,6 @@
 
     <string name="aq_friends_mute">Masquer</string>
     <string name="aq_friends_unmute">Réafficher</string>
-    <string name="aq_friends_mute_confirm">Masquer %s ? Tu ne recevras plus rien de cette personne. Elle n’en sera pas informée.</string>
     <string name="aq_friends_muted_done">%s est masqué.</string>
     <string name="aq_friends_unmuted">%s n’est plus masqué.</string>
     <string name="aq_friends_muted">Masqués</string>

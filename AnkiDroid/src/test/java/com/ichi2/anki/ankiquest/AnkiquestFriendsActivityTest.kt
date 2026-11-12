@@ -3,6 +3,7 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.os.Looper
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -116,20 +117,38 @@ class AnkiquestFriendsActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `removing, muting and unmuting ask first where it matters`() {
+    fun `removing asks first and unmuting is immediate`() {
         val friends = launch()
         friends.click(friends.getString(R.string.aq_friends_remove))
         friends.confirm()
         coVerify { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unfriend("friend")) }
         assertTrue(friends.hasText(friends.getString(R.string.aq_friends_removed, "Friend")))
 
-        friends.click(friends.getString(R.string.aq_friends_mute))
-        friends.confirm()
-        coVerify { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("friend")) }
-
         friends.click(friends.getString(R.string.aq_friends_unmute))
         coVerify { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("cerro")) }
         assertTrue(friends.hasText(friends.getString(R.string.aq_friends_unmuted, "Cerro")))
+    }
+
+    @Test
+    fun `muting applies immediately and Undo unmutes the same friend`() {
+        val friends = launch()
+        friends.views<TextView>().first { it.text == friends.getString(R.string.aq_friends_mute) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("friend")) }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        val undo = assertNotNull(friends.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        undo.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("friend")) }
+    }
+
+    @Test
+    fun `a failed mute has no Undo action`() {
+        coEvery { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("friend")) } throws IOException("offline")
+        val friends = launch()
+        friends.click(friends.getString(R.string.aq_friends_mute))
+        assertTrue(friends.texts().any { it.contains(friends.getString(R.string.aq_friends_offline)) })
+        assertNull(friends.findViewById<View>(com.google.android.material.R.id.snackbar_action))
     }
 
     @Test
