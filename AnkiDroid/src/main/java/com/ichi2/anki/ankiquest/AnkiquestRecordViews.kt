@@ -139,13 +139,14 @@ internal class AnkiquestRecordViews(
             )
         }
 
-    /** Tiles of a value over its label, side by side, wrapping into rows of [perRow]. */
+    /** Tiles of a value over its label, with more room when system text is enlarged. */
     fun tiles(
         parent: LinearLayout,
         values: List<Pair<String, String>>,
         perRow: Int = 3,
     ) {
-        for (chunk in values.chunked(perRow)) {
+        val columns = if (activity.resources.configuration.fontScale >= LARGE_FONT_SCALE) 1 else perRow
+        for (chunk in values.chunked(columns)) {
             val line = row(parent)
             for ((value, label) in chunk) {
                 LinearLayout(activity).apply {
@@ -179,7 +180,10 @@ internal class AnkiquestRecordViews(
                     )
                 }
             }
-            repeat(perRow - chunk.size) { line.addView(View(activity), LinearLayout.LayoutParams(0, 0, 1f)) }
+            // Match the tiles' height so an incomplete row is not measured as zero height.
+            repeat(
+                columns - chunk.size,
+            ) { line.addView(View(activity), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)) }
         }
     }
 
@@ -292,6 +296,8 @@ internal class AnkiquestRecordViews(
         }
 
     companion object {
+        private const val LARGE_FONT_SCALE = 1.5f
+
         /**
          * Runs [work] and answers the message for its failure, or null when it worked: a refused
          * token [R.string.aq_home_auth], a changed account [R.string.aq_feed_account_changed] for
