@@ -8,6 +8,7 @@
     <color name="aq_home_primary">#245FAB</color>
     <color name="aq_home_primary_text">#FFFFFF</color>
     <color name="aq_home_tint">#EAF2FF</color>
+    <color name="aq_home_avatar_text">@color/aq_home_primary</color>
     <color name="aq_home_outline">#DCE4E7</color>
     <string name="aq_home_activity">Activity</string>
     <string name="aq_home_settings">Account and preferences</string>
