@@ -42,6 +42,7 @@ class AnkiquestCompanionTest : RobolectricTest() {
         assertEquals(R.drawable.ankilope_challenge_won, AnkiquestCompanion.resource(R.drawable.aki_challenge_won))
         assertEquals(R.drawable.ankilope_challenge_lost, AnkiquestCompanion.resource(R.drawable.aki_challenge_lost))
         assertEquals(R.drawable.ankilope_nudge, AnkiquestCompanion.resource(R.drawable.aki_nudge))
+        assertEquals(R.drawable.ankilope_backlog, AnkiquestCompanion.resource(R.drawable.aki_backlog))
 
         val bob = account("bob")
         assertEquals("aki", AnkiquestCompanion.selected())
