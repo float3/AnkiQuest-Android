@@ -91,6 +91,7 @@ class ReviewHeatmapGrid
 
         init {
             isFocusable = true
+            contentDescription = context.getString(R.string.review_heatmap_title)
             ViewCompat.setAccessibilityDelegate(this, accessibility)
             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
         }
@@ -167,11 +168,14 @@ class ReviewHeatmapGrid
             }
         }
 
-        internal fun cellBounds(index: Int): RectF {
+        internal fun cellBounds(index: Int): RectF = dayBounds(index).apply { inset(2 * density, 2 * density) }
+
+        /** The whole pitch is clickable, including the visual gap between squares. */
+        private fun dayBounds(index: Int): RectF {
             val position = offset + index
-            val x = position / 7 * pitch + 2 * density
-            val y = headingHeight + position % 7 * pitch + 2 * density
-            return RectF(x, y, x + pitch - 4 * density, y + pitch - 4 * density)
+            val x = position / 7 * pitch
+            val y = headingHeight + position % 7 * pitch
+            return RectF(x, y, x + pitch, y + pitch)
         }
 
         private fun dayAt(
@@ -240,6 +244,10 @@ class ReviewHeatmapGrid
         }
 
         private inner class DayAccessibility : ExploreByTouchHelper(this@ReviewHeatmapGrid) {
+            override fun onPopulateNodeForHost(node: AccessibilityNodeInfoCompat) {
+                node.contentDescription = this@ReviewHeatmapGrid.contentDescription
+            }
+
             override fun getVirtualViewAt(
                 x: Float,
                 y: Float,
@@ -268,7 +276,7 @@ class ReviewHeatmapGrid
                 node.isSelected = date == selectedDate
                 node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
                 val bounds = Rect()
-                cellBounds(virtualViewId).roundOut(bounds)
+                dayBounds(virtualViewId).roundOut(bounds)
                 // ExploreByTouchHelper requires parent bounds to derive screen bounds and keyboard focus order.
                 @Suppress("DEPRECATION")
                 node.setBoundsInParent(bounds)
@@ -290,7 +298,7 @@ class ReviewHeatmapGrid
             ) {
                 if (hasFocus && virtualViewId in 0 until firstDate.lengthOfYear()) {
                     val bounds = Rect()
-                    cellBounds(virtualViewId).roundOut(bounds)
+                    dayBounds(virtualViewId).roundOut(bounds)
                     requestRectangleOnScreen(bounds)
                 }
                 invalidate()
@@ -347,9 +355,15 @@ private class HeatmapLabels(
             color = MaterialColors.getColor(context, android.R.attr.textColorSecondary, 0)
         }
     val fontMetrics = paint.fontMetrics
-    val pitch = maxOf(22 * density, paint.fontSpacing + 6 * density)
-    val headingHeight = paint.fontSpacing + 8 * density
+
+    // Whole-pixel boundaries keep adjacent accessibility targets separate at every density.
+    val pitch = ceil(maxOf(MINIMUM_DAY_TARGET_DP * density, paint.fontSpacing + 6 * density))
+    val headingHeight = ceil(paint.fontSpacing + 8 * density)
     val width = DayOfWeek.values().maxOf { paint.measureText(it.getDisplayName(TextStyle.SHORT, locale)) } + 8 * density
+
+    private companion object {
+        const val MINIMUM_DAY_TARGET_DP = 48
+    }
 }
 
 internal fun ReviewHeatmapData.dayCountDescription(

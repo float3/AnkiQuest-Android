@@ -45,6 +45,8 @@ class ReviewHeatmapRenderTest {
         render("dark-320", 320, dark = true) { setData(data) }
         render("dark-390", 390, dark = true) { setData(data) }
         render("large-font-320", 320, fontScale = 1.5f) { setData(data) }
+        render("200percent-320", 320, fontScale = 2f) { setData(data) }
+        render("dark-200percent-320", 320, dark = true, fontScale = 2f) { setData(data) }
         render("empty-320", 320) { setData(ReviewHeatmap.summarize(today, emptyMap(), emptyMap())) }
         render("loading-390", 390) { setLoading() }
         render("error-390", 390) { setError() }
