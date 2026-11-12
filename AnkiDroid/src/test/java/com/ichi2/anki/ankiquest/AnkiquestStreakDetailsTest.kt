@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
@@ -319,8 +320,11 @@ class AnkiquestStreakDetailsTest : RobolectricTest() {
             val widget = remote.apply(targetContext, FrameLayout(targetContext))
             // Android 7 has no native autosizing; only our RemoteViews text sizes should fit these views.
             val status = widget.findViewById<TextView>(R.id.ankiquest_streak_status)
-            status.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
-            widget.findViewById<TextView>(R.id.ankiquest_streak_number).setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
+            TextViewCompat.setAutoSizeTextTypeWithDefaults(status, TextViewCompat.AUTO_SIZE_TEXT_TYPE_NONE)
+            TextViewCompat.setAutoSizeTextTypeWithDefaults(
+                widget.findViewById<TextView>(R.id.ankiquest_streak_number),
+                TextViewCompat.AUTO_SIZE_TEXT_TYPE_NONE,
+            )
             remote.reapply(targetContext, widget)
             widget.layoutDirection = View.LAYOUT_DIRECTION_LTR
             val density = widget.resources.displayMetrics.density
