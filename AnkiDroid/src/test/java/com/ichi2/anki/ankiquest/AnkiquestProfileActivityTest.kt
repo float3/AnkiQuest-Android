@@ -2,6 +2,7 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.os.Looper
 import android.view.View
 import android.widget.TextView
 import androidx.core.view.allViews
@@ -24,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -88,6 +90,23 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         advanceRobolectricLooper()
         coVerify { repository.setSubscribed(identity, "cerro", false) }
         assertTrue(screen.hasText(screen.getString(R.string.aq_profile_deck_alerts_start, "Cerro")))
+    }
+
+    @Test
+    fun `profile mute applies immediately and offers Undo`() {
+        coEvery { AnkiquestBoards.player(identity, "cerro") } returns
+            AnkiquestBoards.PlayerPage(profile.copy(user = "cerro", display = "Cerro"), own = false, wins = emptyList())
+        coEvery { AnkiquestSocial.overview(identity) } returns overview()
+        coEvery { AnkiquestSocial.change(identity, any()) } returns overview("cerro")
+        val screen = launch("cerro")
+        advanceRobolectricLooper()
+        screen.views<TextView>().first { it.text == screen.getString(R.string.aq_friends_mute) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Mute("cerro")) }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action)).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        coVerify(exactly = 1) { AnkiquestSocial.change(identity, AnkiquestSocial.Change.Unmute("cerro")) }
     }
 
     @Test
