@@ -9,7 +9,6 @@
     <string name="aq_board_hidden_loading">Loading hidden players…</string>
     <string name="aq_board_hidden_empty">Nobody is hidden.</string>
     <string name="aq_board_hidden_explained">Only your Global leaderboard changes. Other players are not notified.</string>
-    <string name="aq_board_hide_saving">Saving…</string>
     <string name="aq_board_hidden_saved">Hidden from your Global leaderboard.</string>
     <string name="aq_board_shown_saved">Shown again on your Global leaderboard.</string>
     <string name="aq_board_hide_failed">Could not update hidden players. Try again.</string>

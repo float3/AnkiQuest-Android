@@ -99,7 +99,7 @@ class AnkiquestGlobalHidesScreenshotTest : ScreenshotTest() {
         try {
             val screen = launch()
             click(screen, R.string.aq_board_hide_for_me)
-            awaitText(screen, R.string.aq_board_hide_saving)
+            awaitText(screen, R.string.ankiquest_goal_saving)
             assertFalse(control(screen, R.string.aq_board_hide_for_me).isEnabled)
             captureScreen("hidden_saving")
         } finally {

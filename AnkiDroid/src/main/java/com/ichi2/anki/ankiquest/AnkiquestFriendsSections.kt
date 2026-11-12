@@ -1478,7 +1478,7 @@ private class LeaderboardSection(
                 val toggle = if (ready.panel == HiddenPanel.OPEN) CommonString.collapse else CommonString.expand
                 contentDescription = "$text, ${getString(toggle)}"
             }
-        val message = if (saving) getString(R.string.aq_board_hide_saving) else ready.message
+        val message = if (saving) getString(R.string.ankiquest_goal_saving) else ready.message
         message?.let {
             views.text(content, it, small = true).accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
