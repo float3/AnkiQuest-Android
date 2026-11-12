@@ -49,7 +49,7 @@ Mannered prose substitutes metaphor and flourish for direct statement. Instead o
 
 ## This repository
 
-- **Two kinds of code.** AnkiQuest code lives in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. It is ours: improve it freely. Upstream AnkiDroid code is not: change it only through small hooks into AnkiQuest code, so the daily upstream merge stays easy, and touch nothing upstream "while you're in there".
+- **Where AnkiQuest lives.** AnkiQuest code is in `AnkiDroid/src/main/java/com/ichi2/anki/ankiquest/`, `ankiquest_*` resources and `.github/workflows/ankiquest_*`. Ownership covers upstream AnkiDroid code too, but every change there can conflict with the daily upstream merge: keep such changes self-contained and say in the PR why they are worth it.
 - **Upstream merges** come in as merge commits that keep upstream history (this overrides upstream's linear-history rule). Never squash or rebase them. When upstream changes `AGENTS.md` or `CLAUDE.md`, keep ours and fold in any upstream rule that still applies. Upstream's [AI policy](AI_POLICY.md) disclosure rules (`Assisted-by`) apply here too.
 - **Server data is pinned.** API examples and shared fixtures are copied from one server commit (`AnkiDroid/src/test/resources/ankiquest-server.sha`); see [docs/ankiquest-server-snapshot.md](docs/ankiquest-server-snapshot.md). The bump PR brings server changes in; whoever's server change breaks it fixes it. Example ownership is listed in `ankiquest-api/names.json`.
 - **CI on PRs runs Ubuntu only.** macOS and Windows run on `main` and nightly. For changes to Gradle, test setup or native libraries, dispatch the unit test workflow with all three systems before merging.
