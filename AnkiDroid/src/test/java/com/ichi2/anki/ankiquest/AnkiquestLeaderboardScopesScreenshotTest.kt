@@ -39,10 +39,11 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
 
     @Before
     fun prepare() {
-        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars)
+        mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestSocial.overview(any()) } returns overview
         coEvery { AnkiquestBoards.hasScopes(any()) } returns true
+        coEvery { AnkiquestGlobalHides.load(any()) } returns null
         val board =
             AnkiquestBoards.parseLeaderboard(
                 JSONArray(
@@ -63,7 +64,7 @@ class AnkiquestLeaderboardScopesScreenshotTest : ScreenshotTest() {
 
     @After
     fun cleanup() {
-        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars)
+        unmockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestBoards, AnkiquestAvatars, AnkiquestGlobalHides)
         RuntimeEnvironment.setFontScale(1f)
     }
 
