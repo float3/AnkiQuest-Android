@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -40,6 +41,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
@@ -317,6 +319,157 @@ class AnkiquestSettingsFragmentTest : RobolectricTest() {
         val settings = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
         assertEquals(3, assertNotNull(settings.listView).adapter.count)
     }
+
+    @Test
+    fun `late deck settings cannot open a picker for another account`() {
+        val waiting = CompletableDeferred<JSONObject>()
+        coEvery { Ankiquest.deckNotificationSettings(any()) } coAnswers { waiting.await() }
+        val fragment = open()
+        val scope = assertNotNull(fragment.lifecycleScope.coroutineContext[Job])
+        val before = scope.children.toSet()
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        val work = scope.children.first { it !in before }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+        waiting.complete(deckSettings())
+        advanceRobolectricLooperUntil { work.isCompleted }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+    }
+
+    @Test
+    fun `old bulk recipients cannot be saved into another account`() {
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
+        val fragment = open()
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(people !== decks)
+        assertTrue(people.listView.isItemChecked(0), "retain the server's recipient preselection")
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_USER, "other") }
+        people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        coVerify(exactly = 0) { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `recipient validation closes with the settings view`() {
+        val settings = deckSettings().apply { getJSONArray("decks").getJSONObject(0).put("recipients", org.json.JSONArray()) }
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
+        val fragment = open()
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val validation = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(validation !== people)
+        assertTrue(validation.isShowing)
+        fragment.parentFragmentManager
+            .beginTransaction()
+            .remove(fragment)
+            .commitNow()
+        idle()
+        assertFalse(validation.isShowing, "validation belongs to the same foreground visit as the picker")
+    }
+
+    @Test
+    fun `a deck settings error closes with the settings view`() {
+        coEvery { Ankiquest.deckNotificationSettings(any()) } throws java.io.IOException("offline")
+        val fragment = open()
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val failure = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        assertTrue(failure.isShowing)
+        fragment.parentFragmentManager
+            .beginTransaction()
+            .remove(fragment)
+            .commitNow()
+        idle()
+        assertFalse(failure.isShowing, "the failure dialog cannot outlive its settings view")
+    }
+
+    @Test
+    fun `bulk sharing saves once and ignores the previous wizard button`() {
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
+        val fragment = open()
+        val account = assertNotNull(AnkiquestHomeData.account())
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        assertTrue(ShadowDialog.getLatestDialog() === people)
+        repeat(2) { people.getButton(AlertDialog.BUTTON_POSITIVE).performClick() }
+        idle()
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("ana"), account) }
+        assertTrue(ShadowDialog.getLatestDialog()?.isShowing == true)
+        assertTrue(ShadowDialog.getLatestDialog() !== people, "the current owner sees the saved result")
+    }
+
+    @Test
+    fun `closing recipient validation preserves the picker for a valid save`() {
+        val settings = deckSettings().apply { getJSONArray("decks").getJSONObject(0).put("recipients", org.json.JSONArray()) }
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns settings
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } returns JSONObject()
+        val fragment = open()
+        val account = assertNotNull(AnkiquestHomeData.account())
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val validation = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        validation.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        assertTrue(people.isShowing)
+        val list = people.listView
+        list.performItemClick(list.getChildAt(0), 0, list.getItemIdAtPosition(0))
+        people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        coVerify(exactly = 1) { Ankiquest.saveDeckNotificationSettings(listOf("1"), emptyList(), listOf("ana"), account) }
+    }
+
+    @Test
+    fun `late bulk save result cannot open for another account`() {
+        val waiting = CompletableDeferred<JSONObject>()
+        coEvery { Ankiquest.deckNotificationSettings(any()) } returns deckSettings()
+        coEvery { Ankiquest.saveDeckNotificationSettings(any(), any(), any(), any()) } coAnswers { waiting.await() }
+        val fragment = open()
+        fragment.preference<Preference>(R.string.ankiquest_moments_decks_key).performClick()
+        idle()
+        val decks = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        decks.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val people = assertNotNull(ShadowDialog.getLatestDialog() as? AlertDialog)
+        val scope = assertNotNull(fragment.lifecycleScope.coroutineContext[Job])
+        val before = scope.children.toSet()
+        people.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        idle()
+        val work = scope.children.first { it !in before }
+        AnkiDroidApp.sharedPrefs().edit { putString(Ankiquest.PREF_TOKEN, "new-token") }
+        waiting.complete(JSONObject())
+        advanceRobolectricLooperUntil { work.isCompleted }
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+    }
+
+    private fun deckSettings() =
+        JSONObject(
+            """{"decks":[{"id":"1","name":"Default","enabled":true,"recipients":["ana"]}],
+               "recipients":[{"user":"ana","display":"Ana"}]}""",
+        )
 
     private fun open(): AnkiquestSettingsFragment {
         val intent = PreferencesActivity.getIntent(targetContext, AnkiquestSettingsFragment::class)

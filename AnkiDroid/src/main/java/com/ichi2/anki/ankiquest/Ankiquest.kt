@@ -151,10 +151,9 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
             )
         }
 
-    /** Silently refresh the complete local catalog before loading private preferences. */
-    suspend fun deckNotificationSettings(): JSONObject =
+    /** Refresh the catalog before private preferences; capture [account] before queuing IO. */
+    internal suspend fun deckNotificationSettings(account: HomeAccount = authenticated()): JSONObject =
         withContext(Dispatchers.IO) {
-            val account = authenticated()
             mutex.withLock {
                 upload(account, resync = false, catalog = true)
                 val local =
@@ -170,13 +169,13 @@ object Ankiquest : ChangeManager.Subscriber, Application.ActivityLifecycleCallba
     private fun fetchDeckNotificationSettings(account: HomeAccount): JSONObject =
         AnkiquestApi.json(account, AnkiquestApi.request(account, "api/decks/${account.encodedUser}").build())
 
-    /** Shares every deck in [shared] with [recipients] and stops sharing [unshared], in one request. */
-    suspend fun saveDeckNotificationSettings(
+    /** Share [shared] with [recipients] and stop [unshared], under the account captured before IO. */
+    internal suspend fun saveDeckNotificationSettings(
         shared: List<String>,
         unshared: List<String>,
         recipients: List<String>,
+        account: HomeAccount = authenticated(),
     ) = withContext(Dispatchers.IO) {
-        val account = authenticated()
         val decks = JSONArray()
         for (id in shared) {
             decks.put(JSONObject().put("id", id).put("enabled", true).put("recipients", JSONArray(recipients)))

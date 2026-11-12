@@ -99,40 +99,62 @@ internal object AnkiquestDeckShare {
         activity: FragmentActivity,
         deck: Long,
     ) {
+        val account = AnkiquestHomeData.account()?.takeIf { it.token.isNotEmpty() } ?: return
+        val owner = AnkiquestDialogOwner(activity, account)
+        if (!owner.isCurrent()) {
+            owner.close()
+            return
+        }
         activity.lifecycleScope.launch {
             val language = AnkiquestLanguage.context(activity)
             try {
-                val settings = Ankiquest.deckNotificationSettings()
+                val settings = Ankiquest.deckNotificationSettings(account)
                 val name = withCol { decks.name(deck) }
+                if (!owner.isCurrent()) {
+                    owner.close()
+                    return@launch
+                }
                 val people = recipients(settings)
                 if (people.isEmpty()) {
                     showThemedToast(activity, language.getString(R.string.ankiquest_deck_notifications_no_people), shortLength = false)
+                    owner.close()
                     return@launch
                 }
                 val chosen = told(deck, settings)
                 val picked = people.map { it.user in chosen }.toBooleanArray()
-                AlertDialog
-                    .Builder(activity)
-                    .setTitle(language.getString(R.string.ankiquest_deck_menu_share_title, name))
-                    .setMultiChoiceItems(people.map { it.display }.toTypedArray(), picked) { _, which, checked ->
-                        picked[which] = checked
-                    }.setPositiveButton(language.getString(R.string.ankiquest_deck_notifications_save)) { _, _ ->
-                        val recipients = people.filterIndexed { index, _ -> picked[index] }.map { it.user }
-                        save(activity.applicationContext, deck, name, recipients)
-                    }.setNegativeButton(android.R.string.cancel, null)
-                    .show()
+                val dialog =
+                    AlertDialog
+                        .Builder(activity)
+                        .setTitle(language.getString(R.string.ankiquest_deck_menu_share_title, name))
+                        .setMultiChoiceItems(people.map { it.display }.toTypedArray(), picked) { _, which, checked ->
+                            picked[which] = checked
+                        }.setPositiveButton(language.getString(R.string.ankiquest_deck_notifications_save)) { dialog, _ ->
+                            if (!owner.take(dialog)) {
+                                return@setPositiveButton
+                            }
+                            val recipients = people.filterIndexed { index, _ -> picked[index] }.map { it.user }
+                            save(activity.applicationContext, account, owner, deck, name, recipients)
+                        }.setNegativeButton(android.R.string.cancel, null)
+                        .create()
+                owner.show(dialog)
             } catch (e: CancellationException) {
+                owner.close()
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "ankiquest deck sharing unavailable")
-                val reason = (e as? AnkiquestHttpException)?.explanation ?: e.message ?: e.javaClass.simpleName
-                showThemedToast(activity, language.getString(R.string.ankiquest_check_failed, reason), shortLength = false)
+                if (owner.isCurrent()) {
+                    val reason = (e as? AnkiquestHttpException)?.explanation ?: e.message ?: e.javaClass.simpleName
+                    showThemedToast(activity, language.getString(R.string.ankiquest_check_failed, reason), shortLength = false)
+                }
+                owner.close()
             }
         }
     }
 
     private fun save(
         context: Context,
+        account: HomeAccount,
+        owner: AnkiquestDialogOwner,
         deck: Long,
         name: String,
         recipients: List<String>,
@@ -143,19 +165,23 @@ internal object AnkiquestDeckShare {
                 try {
                     val id = listOf(deck.toString())
                     if (recipients.isEmpty()) {
-                        Ankiquest.saveDeckNotificationSettings(emptyList(), id, emptyList())
+                        Ankiquest.saveDeckNotificationSettings(emptyList(), id, emptyList(), account)
                         language.getString(R.string.ankiquest_deck_menu_share_off, name)
                     } else {
-                        Ankiquest.saveDeckNotificationSettings(id, emptyList(), recipients)
+                        Ankiquest.saveDeckNotificationSettings(id, emptyList(), recipients, account)
                         language.getString(R.string.ankiquest_deck_menu_share_on, name)
                     }
                 } catch (e: CancellationException) {
+                    owner.close()
                     throw e
                 } catch (e: Exception) {
                     Timber.w(e, "ankiquest deck sharing not saved")
                     language.getString(R.string.ankiquest_share_failed)
                 }
-            launch(Dispatchers.Main) { showThemedToast(context, message, shortLength = false) }
+            if (owner.isCurrent()) {
+                showThemedToast(context, message, shortLength = false)
+            }
+            owner.close()
         }
     }
 
