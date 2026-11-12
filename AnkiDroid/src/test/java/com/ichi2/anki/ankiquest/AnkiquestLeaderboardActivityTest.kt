@@ -49,7 +49,8 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
     @Before
     fun prepareBoard() {
         TimeManager.resetWith(MockTime(NOW))
-        mockkObject(AnkiquestHomeData, AnkiquestBoards)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards)
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } returns week
         coEvery { AnkiquestBoards.weekEnds(identity) } returns NOW + 2 * 24 * 60 * 60 * 1000L
@@ -57,7 +58,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
 
     @After
     fun clearBoardMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestBoards)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestBoards)
     }
 
     @Test
@@ -208,12 +209,12 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
             controller.pause().resume()
             advanceRobolectricLooper()
 
-            assertTrue(board.findViewById<View>(R.id.aq_board_loading).isVisible)
+            assertTrue(board.findViewById<View>(R.id.aq_friends_board_loading).isVisible)
             assertFalse(board.hasText("Ana"), "the previous account's circle must disappear immediately")
             assertFalse(board.hasText(board.getString(R.string.aq_board_xp, "90")))
             assertFalse(board.hasTextContaining(board.getString(R.string.aq_board_resets, "").trim()))
             waiting.complete(emptyList())
-            advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+            advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             assertTrue(board.hasText(board.getString(R.string.aq_board_empty)))
         } finally {
             waiting.cancel()
@@ -230,7 +231,7 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         coEvery { AnkiquestBoards.leaderboard(other, any()) } throws IOException("offline")
 
         controller.pause().resume()
-        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
 
         assertTrue(board.hasText(board.getString(R.string.aq_board_offline)))
         assertFalse(board.hasText("Ana"))
@@ -242,8 +243,8 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
         val board = launch()
         coEvery { AnkiquestBoards.leaderboard(identity, any()) } throws IOException("offline")
 
-        board.findViewById<View>(R.id.aq_board_refresh).performClick()
-        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+        board.findViewById<View>(R.id.aq_feed_refresh).performClick()
+        advanceRobolectricLooperUntil { !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
 
         assertTrue(board.hasText(board.getString(R.string.aq_board_offline)))
         assertTrue(board.hasText("Ana"))
@@ -253,34 +254,34 @@ class AnkiquestLeaderboardActivityTest : RobolectricTest() {
 
     private fun launchController() =
         startActivityControllerNormallyOpenCollectionWithIntent(
-            AnkiquestLeaderboardActivity::class.java,
+            AnkiquestFriendsActivity::class.java,
             AnkiquestLeaderboardActivity.intent(targetContext),
         ).also { controller ->
-            advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_board_loading).isVisible }
+            advanceRobolectricLooperUntil { !controller.get().findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         }
 
     private fun launch(
         period: String = AnkiquestBoards.Period.WEEK.query,
         account: String? = null,
-    ): AnkiquestLeaderboardActivity =
-        startRegularActivity<AnkiquestLeaderboardActivity>(AnkiquestLeaderboardActivity.intent(targetContext, period, account))
+    ): AnkiquestFriendsActivity =
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext, period, account))
             .also { board ->
-                advanceRobolectricLooperUntil { board.isFinishing || !board.findViewById<View>(R.id.aq_board_loading).isVisible }
+                advanceRobolectricLooperUntil { board.isFinishing || !board.findViewById<View>(R.id.aq_friends_board_loading).isVisible }
             }
 
-    private inline fun <reified T : View> AnkiquestLeaderboardActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_board_content).allViews.filterIsInstance<T>().toList()
+    private inline fun <reified T : View> AnkiquestFriendsActivity.views(): List<T> =
+        findViewById<View>(R.id.aq_friends_board_content).allViews.filterIsInstance<T>().toList()
 
-    private fun AnkiquestLeaderboardActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+    private fun AnkiquestFriendsActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
 
-    private fun AnkiquestLeaderboardActivity.hasTextContaining(value: String): Boolean =
+    private fun AnkiquestFriendsActivity.hasTextContaining(value: String): Boolean =
         views<TextView>().any { it.text.toString().contains(value) }
 
-    private fun AnkiquestLeaderboardActivity.click(label: String) {
+    private fun AnkiquestFriendsActivity.click(label: String) {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
         assertTrue(control.isEnabled, label)
         control.performClick()
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_board_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_friends_board_loading).isVisible }
         advanceRobolectricLooper()
     }
 

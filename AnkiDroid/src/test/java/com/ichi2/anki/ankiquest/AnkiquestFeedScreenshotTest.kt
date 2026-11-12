@@ -14,6 +14,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.robolectric.RuntimeEnvironment
+import java.io.IOException
 
 /** Opt-in visual QA; the normal unit-test task excludes ScreenshotTestCategory. */
 class AnkiquestFeedScreenshotTest : ScreenshotTest() {
@@ -27,7 +28,8 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
     @Before
     fun prepareFeed() {
         val identity = HomeAccount("https://anki.example.test", "sam", "visual-test-token")
-        mockkObject(AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns AnkiquestFeed.parsePage(JSONObject(AnkiquestFeedTest.PAGE))
         every { AnkiquestShare.picture(any()) } returns
@@ -36,7 +38,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
         RuntimeEnvironment.setFontScale(1f)
     }
 
@@ -48,7 +50,7 @@ class AnkiquestFeedScreenshotTest : ScreenshotTest() {
 
     private fun captureFeed(largeText: Boolean = false) {
         RuntimeEnvironment.setFontScale(if (largeText) 2f else 1f)
-        startActivityNormallyOpenCollectionWithIntent(AnkiquestFeedActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
+        startActivityNormallyOpenCollectionWithIntent(AnkiquestFriendsActivity::class.java, AnkiquestFeedActivity.intent(targetContext))
         advanceRobolectricLooper()
         val size = if (device == DeviceConfig.PHONE) "320dp" else "default"
         captureScreen("activity_feed_${size}${if (largeText) "_200percent" else ""}")

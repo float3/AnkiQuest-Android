@@ -145,6 +145,9 @@ class AllActivitiesScreenshotTest : ScreenshotTest() {
                     // AnkiquestMeScreenshotTest covers the sections these legacy entry points now open.
                     com.ichi2.anki.ankiquest.AnkiquestRecordsActivity::class.java,
                     com.ichi2.anki.ankiquest.AnkiquestHistoryActivity::class.java,
+                    // Friends/Feed screenshot tests cover the sections these legacy entry points now open.
+                    com.ichi2.anki.ankiquest.AnkiquestFeedActivity::class.java,
+                    com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity::class.java,
                 )
             return ActivityList
                 .allActivitiesAndIntents()
