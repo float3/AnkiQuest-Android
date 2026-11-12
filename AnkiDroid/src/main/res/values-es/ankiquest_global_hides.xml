@@ -9,7 +9,6 @@
     <string name="aq_board_hidden_loading">Cargando personas ocultas…</string>
     <string name="aq_board_hidden_empty">No hay nadie oculto.</string>
     <string name="aq_board_hidden_explained">Solo cambia tu clasificación global. Las demás personas no reciben ninguna notificación.</string>
-    <string name="aq_board_hide_saving">Guardando…</string>
     <string name="aq_board_hidden_saved">Oculto en tu clasificación global.</string>
     <string name="aq_board_shown_saved">Se muestra de nuevo en tu clasificación global.</string>
     <string name="aq_board_hide_failed">No se pudieron actualizar las personas ocultas. Inténtalo de nuevo.</string>
