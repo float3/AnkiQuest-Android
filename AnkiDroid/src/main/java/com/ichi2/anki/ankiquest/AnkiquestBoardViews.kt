@@ -226,7 +226,7 @@ internal class AnkiquestBoardViews(
                             text = initial
                             textSize = size * 0.4f
                             typeface = Typeface.DEFAULT_BOLD
-                            setTextColor(context.getColor(R.color.aq_home_primary))
+                            setTextColor(context.getColor(R.color.aq_home_avatar_text))
                             gravity = Gravity.CENTER
                         },
                         FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),

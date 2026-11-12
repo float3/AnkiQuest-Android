@@ -8,5 +8,6 @@
     <color name="aq_home_primary">#3E73BD</color>
     <color name="aq_home_primary_text">#FFFFFF</color>
     <color name="aq_home_tint">#283F59</color>
+    <color name="aq_home_avatar_text">@color/aq_home_text</color>
     <color name="aq_home_outline">#3B4C58</color>
 </resources>
