@@ -194,11 +194,8 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         val (controller, fragment) = open()
         fragment.provider("google").performClick()
         idle()
-        val choose = latest()
-        assertEquals(1, choose.listView.adapter.count, "only GitHub is linked")
-        choose.listView.performItemClick(null, 0, 0)
-        idle()
-        coVerify { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
+        assertTrue(ShadowDialog.getShownDialogs().none { it.isShowing }, "one linked provider needs no chooser")
+        coVerify(exactly = 1) { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
         assertNotNull(fragment.afterReauth)
         shadowOf(controller.get()).nextStartedActivity
 
@@ -280,11 +277,8 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         assertEquals(targetContext.getString(R.string.ankiquest_password_set_with, "GitHub"), fragment.password().summary)
         fragment.password().performClick()
         idle()
-        val choose = latest()
-        assertEquals(1, choose.listView.adapter.count, "only GitHub is linked")
-        choose.listView.performItemClick(null, 0, 0)
-        idle()
-        coVerify { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
+        assertTrue(ShadowDialog.getShownDialogs().none { it.isShowing }, "one linked provider needs no chooser")
+        coVerify(exactly = 1) { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
         shadowOf(controller.get()).nextStartedActivity
         controller.pause().stop()
         controller.start().resume()
@@ -311,6 +305,23 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         positive(dialog)
         coVerify(exactly = 1) { AnkiquestAccountSettings.setPassword(any(), null, "a new long password", false) }
         assertFalse(dialog.isShowing)
+    }
+
+    @Test
+    fun `several linked providers still require a choice`() {
+        coEvery { AnkiquestAccountSettings.methods(any()) } returns
+            withoutPassword.copy(providers = withoutPassword.providers.map { it.copy(linked = true) })
+        coEvery { AnkiquestAccountSettings.summary(any()) } returns Summary("ana", password = false, confirmedUntil = null)
+        val fragment = open().second
+        fragment.password().performClick()
+        idle()
+        val choose = latest()
+        assertEquals(2, choose.listView.adapter.count)
+        coVerify(exactly = 0) { AnkiquestAccountSettings.browser(any(), any(), any()) }
+        choose.listView.performItemClick(null, 1, 1)
+        idle()
+        coVerify(exactly = 1) { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
+        assertNotNull(fragment.afterReauth)
     }
 
     @Test
@@ -459,9 +470,8 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         val (controller, fragment) = open()
         fragment.delete().performClick()
         idle()
-        latest().listView.performItemClick(null, 0, 0)
-        idle()
-        coVerify { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
+        assertTrue(ShadowDialog.getShownDialogs().none { it.isShowing }, "one linked provider needs no chooser")
+        coVerify(exactly = 1) { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
         controller.pause().stop()
         controller.start().resume()
         idle()
@@ -493,7 +503,8 @@ class AnkiquestSignInFragmentTest : RobolectricTest() {
         dialog.edits().single().setText("ana")
         positive(dialog)
         assertFalse(dialog.isShowing)
-        assertEquals(1, latest().listView.adapter.count)
+        assertTrue(ShadowDialog.getShownDialogs().none { it.isShowing }, "one linked provider needs no chooser")
+        coVerify(exactly = 1) { AnkiquestAccountSettings.browser(any(), "github", Purpose.REAUTH) }
     }
 
     private fun open(): Pair<ActivityController<PreferencesActivity>, AnkiquestSignInFragment> {
