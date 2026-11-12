@@ -8,6 +8,8 @@ import androidx.core.content.edit
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.account.AccountActivity
+import com.ichi2.anki.ankiquest.AnkiquestFeedActivity
+import com.ichi2.anki.ankiquest.AnkiquestLeaderboardActivity
 import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -160,6 +162,9 @@ class AllActivitiesRecreationTest : RobolectricTest() {
          */
         private val finishesDuringStartup =
             listOf(
+                // These legacy links redirect immediately to sections within Friends.
+                AnkiquestFeedActivity::class.java,
+                AnkiquestLeaderboardActivity::class.java,
                 AnkiquestShareActivity::class.java,
                 AnkiquestWidgetConfig::class.java,
                 CardAnalysisWidgetConfig::class.java,

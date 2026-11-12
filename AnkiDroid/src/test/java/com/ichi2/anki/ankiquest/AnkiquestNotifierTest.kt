@@ -402,7 +402,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
         assertEquals("Sent to Cerro: Good job!", sent.extras.getString(Notification.EXTRA_TEXT))
         assertNull(sent.actions)
         val open = shadowOf(sent.contentIntent).savedIntent
-        assertEquals(AnkiquestFeedActivity::class.java.name, open.component?.className)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
         assertEquals(account.notificationAccount, open.getStringExtra(AnkiquestFeedActivity.EXTRA_ACCOUNT))
 
         AnkiquestNotifier.onReplyFailed(targetContext, data)
@@ -589,7 +589,7 @@ class AnkiquestNotifierTest : RobolectricTest() {
                 assertEquals("▲ You're now #1", posted.extras.getString(Notification.EXTRA_TITLE))
                 assertEquals("You passed Hill.", posted.extras.getString(Notification.EXTRA_TEXT))
                 val open = shadowOf(posted.contentIntent).savedIntent
-                assertEquals(AnkiquestLeaderboardActivity::class.java.name, open.component?.className)
+                assertEquals(AnkiquestFriendsActivity::class.java.name, open.component?.className)
                 assertEquals("week", open.getStringExtra(AnkiquestLeaderboardActivity.EXTRA_PERIOD))
                 manager.cancelAll()
 
