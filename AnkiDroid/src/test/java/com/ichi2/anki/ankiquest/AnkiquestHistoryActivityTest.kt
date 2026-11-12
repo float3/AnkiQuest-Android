@@ -40,14 +40,15 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
 
     @Before
     fun prepareHistory() {
-        mockkObject(AnkiquestHomeData, AnkiquestRecords)
+        mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
         every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
         coEvery { AnkiquestRecords.study(identity, any()) } returns study
     }
 
     @After
     fun clearHistoryMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
     }
 
     @Test
@@ -155,25 +156,25 @@ class AnkiquestHistoryActivityTest : RobolectricTest() {
     private fun date(day: LocalDate): String =
         day.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(AnkiquestLanguage.locale()))
 
-    private fun launch(): AnkiquestHistoryActivity =
-        startRegularActivity<AnkiquestHistoryActivity>(AnkiquestHistoryActivity.intent(targetContext))
-            .also { history -> advanceRobolectricLooperUntil { !history.findViewById<View>(R.id.aq_records_loading).isVisible } }
+    private fun launch(): AnkiquestProfileActivity =
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestHistoryActivity.intent(targetContext))
+            .also { history -> advanceRobolectricLooperUntil { !history.findViewById<View>(R.id.aq_me_history_loading).isVisible } }
 
-    private inline fun <reified T : View> AnkiquestHistoryActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_records_content).allViews.filterIsInstance<T>().toList()
+    private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =
+        findViewById<View>(R.id.aq_me_history_content).allViews.filterIsInstance<T>().toList()
 
-    private fun AnkiquestHistoryActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+    private fun AnkiquestProfileActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
 
-    private fun AnkiquestHistoryActivity.hasTile(
+    private fun AnkiquestProfileActivity.hasTile(
         value: String,
         label: String,
     ): Boolean = views<View>().any { it.contentDescription == "$value $label" }
 
-    private fun AnkiquestHistoryActivity.click(label: String) {
+    private fun AnkiquestProfileActivity.click(label: String) {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
         assertTrue(control.isEnabled, label)
         control.performClick()
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_records_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_me_history_loading).isVisible }
         advanceRobolectricLooper()
     }
 

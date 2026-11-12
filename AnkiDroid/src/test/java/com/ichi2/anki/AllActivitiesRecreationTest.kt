@@ -8,6 +8,8 @@ import androidx.core.content.edit
 import com.google.testing.junit.testparameterinjector.TestParameter
 import com.google.testing.junit.testparameterinjector.TestParameterValuesProvider
 import com.ichi2.anki.account.AccountActivity
+import com.ichi2.anki.ankiquest.AnkiquestHistoryActivity
+import com.ichi2.anki.ankiquest.AnkiquestRecordsActivity
 import com.ichi2.anki.ankiquest.AnkiquestShareActivity
 import com.ichi2.anki.ankiquest.AnkiquestWidgetConfig
 import com.ichi2.anki.common.preferences.sharedPrefs
@@ -157,9 +159,12 @@ class AllActivitiesRecreationTest : RobolectricTest() {
         /**
          * Activities which finish on the way up given what this test provides: an empty
          * collection, no card to review, no notetype, no widget id and no signed-in account.
+         * Compatibility redirects finish after opening the replacement screen.
          */
         private val finishesDuringStartup =
             listOf(
+                AnkiquestHistoryActivity::class.java,
+                AnkiquestRecordsActivity::class.java,
                 AnkiquestShareActivity::class.java,
                 AnkiquestWidgetConfig::class.java,
                 CardAnalysisWidgetConfig::class.java,

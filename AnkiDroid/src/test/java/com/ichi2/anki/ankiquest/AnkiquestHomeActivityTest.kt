@@ -327,12 +327,9 @@ class AnkiquestHomeActivityTest : RobolectricTest() {
     @Test
     fun `Today links to the study history and the records`() {
         val home = launch()
-        for ((label, screen) in listOf(
-            R.string.aq_history_title to AnkiquestHistoryActivity::class.java,
-            R.string.aq_records_title to AnkiquestRecordsActivity::class.java,
-        )) {
+        for (label in listOf(R.string.aq_history_title, R.string.aq_records_title)) {
             home.click(home.getString(label))
-            assertEquals(screen.name, assertNotNull(shadowOf(home).nextStartedActivity).component?.className)
+            assertEquals(AnkiquestProfileActivity::class.java.name, assertNotNull(shadowOf(home).nextStartedActivity).component?.className)
         }
     }
 

@@ -38,15 +38,16 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
 
     @Before
     fun prepareRecords() {
-        mockkObject(AnkiquestHomeData, AnkiquestRecords)
+        mockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
         every { AnkiquestHomeData.account(any()) } returns identity
+        coEvery { AnkiquestBoards.player(any(), any()) } throws IOException("offline")
         coEvery { AnkiquestRecords.records(identity, any()) } returns boards
         coEvery { AnkiquestRecords.scopes(identity) } returns emptyList()
     }
 
     @After
     fun clearRecordMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestRecords)
+        unmockkObject(AnkiquestHomeData, AnkiquestRecords, AnkiquestBoards)
     }
 
     @Test
@@ -155,20 +156,20 @@ class AnkiquestRecordsActivityTest : RobolectricTest() {
         assertFalse(records.isFinishing)
     }
 
-    private fun launch(): AnkiquestRecordsActivity =
-        startRegularActivity<AnkiquestRecordsActivity>(AnkiquestRecordsActivity.intent(targetContext))
-            .also { records -> advanceRobolectricLooperUntil { !records.findViewById<View>(R.id.aq_records_loading).isVisible } }
+    private fun launch(): AnkiquestProfileActivity =
+        startRegularActivity<AnkiquestProfileActivity>(AnkiquestRecordsActivity.intent(targetContext))
+            .also { records -> advanceRobolectricLooperUntil { !records.findViewById<View>(R.id.aq_me_records_loading).isVisible } }
 
-    private inline fun <reified T : View> AnkiquestRecordsActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_records_content).allViews.filterIsInstance<T>().toList()
+    private inline fun <reified T : View> AnkiquestProfileActivity.views(): List<T> =
+        findViewById<View>(R.id.aq_me_records_content).allViews.filterIsInstance<T>().toList()
 
-    private fun AnkiquestRecordsActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+    private fun AnkiquestProfileActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
 
-    private fun AnkiquestRecordsActivity.click(label: String) {
+    private fun AnkiquestProfileActivity.click(label: String) {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
         assertTrue(control.isEnabled, label)
         control.performClick()
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_records_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_me_records_loading).isVisible }
         advanceRobolectricLooper()
     }
 

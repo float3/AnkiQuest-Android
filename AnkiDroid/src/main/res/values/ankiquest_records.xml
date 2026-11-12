@@ -2,7 +2,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="aq_records_title">Records</string>
-    <string name="aq_records_refresh">Refresh records</string>
     <string name="aq_records_loading">Loading records…</string>
     <string name="aq_records_lead">Records worth chasing.</string>
     <string name="aq_records_intro">Personal bests become shared milestones. Celebrate the sessions, streaks and study days that raised the bar.</string>
@@ -26,7 +25,6 @@
     <string name="aq_records_server_error">Records could not be loaded. Try refreshing.</string>
 
     <string name="aq_history_title">Study history</string>
-    <string name="aq_history_refresh">Refresh study history</string>
     <string name="aq_history_loading">Loading your study history…</string>
     <string name="aq_history_intro">Every day you showed up adds to your story.</string>
     <string name="aq_history_connect">Connect AnkiQuest to see your study calendar.</string>
