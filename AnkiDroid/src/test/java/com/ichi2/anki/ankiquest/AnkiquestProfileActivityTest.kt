@@ -27,6 +27,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -125,6 +126,65 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         val mine = launch()
         assertTrue(mine.hasText(mine.getString(R.string.aq_profile_freezes_pause)))
         assertFalse(mine.hasText(mine.getString(R.string.aq_friends_mute)))
+    }
+
+    @Test
+    fun `pause and resume apply immediately and Undo restores the previous protection`() {
+        mockkObject(Ankiquest)
+        try {
+            for (initial in listOf(true, false)) {
+                var enabled = initial
+                val changes = mutableListOf<Boolean>()
+                coEvery { AnkiquestBoards.player(identity, "hill") } answers {
+                    own.copy(profile = profile.copy(freezesEnabled = enabled))
+                }
+                coEvery { Ankiquest.setStreakProtection(any()) } answers {
+                    enabled = firstArg()
+                    changes.add(enabled)
+                    enabled
+                }
+                val screen = launch()
+                advanceRobolectricLooper()
+                val label = if (initial) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume
+                screen.views<TextView>().first { it.text == screen.getString(label) }.performClick()
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+                assertEquals(listOf(!initial), changes)
+                assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+                assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_count, profile.freezes)))
+                val undo = assertNotNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+                undo.performClick()
+                undo.performClick()
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+                assertEquals(listOf(!initial, initial), changes, "Undo restores the setting once")
+            }
+        } finally {
+            unmockkObject(Ankiquest)
+        }
+    }
+
+    @Test
+    fun `a failed protection change keeps the setting and offers no Undo`() {
+        mockkObject(Ankiquest)
+        try {
+            coEvery { Ankiquest.setStreakProtection(false) } throws IOException("offline")
+            val screen = launch()
+            advanceRobolectricLooper()
+            screen.views<TextView>().first { it.text == screen.getString(R.string.aq_profile_freezes_pause) }.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+            coVerify(exactly = 1) { Ankiquest.setStreakProtection(false) }
+            assertNull(screen.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+            assertTrue(screen.hasText(screen.getString(R.string.aq_profile_freezes_ready)))
+            assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
+        } finally {
+            unmockkObject(Ankiquest)
+        }
+    }
+
+    @Test
+    fun `the protection explanation belongs beside its control on Me`() {
+        val screen = launch()
+        assertTrue(screen.hasText(screen.getString(R.string.ankiquest_streak_protection_summary)))
+        assertFalse(ShadowDialog.getLatestDialog()?.isShowing == true)
     }
 
     @Test

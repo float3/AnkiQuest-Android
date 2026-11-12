@@ -11,7 +11,6 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
@@ -193,14 +192,16 @@ class AnkiquestProfileActivity : AnkiActivity(R.layout.activity_ankiquest_board)
             views
                 .button(content, getString(if (enabled) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume)) {
                     if (changing) return@button
-                    AlertDialog
-                        .Builder(this)
-                        .setTitle(if (enabled) R.string.aq_profile_freezes_pause else R.string.aq_profile_freezes_resume)
-                        .setMessage(R.string.ankiquest_streak_protection_summary)
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setPositiveButton(android.R.string.ok) { _, _ -> change { Ankiquest.setStreakProtection(!enabled) } }
-                        .show()
+                    val current = account ?: return@button
+                    undo.apply(
+                        current,
+                        getString(if (enabled) R.string.aq_profile_freezes_paused else R.string.aq_profile_freezes_ready),
+                        perform = { done -> change(after = done) { Ankiquest.setStreakProtection(!enabled) } },
+                        inverse = { change { Ankiquest.setStreakProtection(enabled) } },
+                    )
                 }.isEnabled = !changing
+            // Explain protection where it changes; saved freezes and the current status stay visible on Me.
+            views.text(content, getString(R.string.ankiquest_streak_protection_summary), small = true)
             return
         }
         deckAlerts?.let { on ->
