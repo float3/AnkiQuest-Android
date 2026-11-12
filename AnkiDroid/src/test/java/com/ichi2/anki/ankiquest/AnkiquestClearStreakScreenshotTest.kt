@@ -12,6 +12,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.get
 import androidx.core.view.allViews
 import androidx.core.view.drawToBitmap
 import androidx.core.view.isVisible
@@ -171,7 +172,7 @@ class AnkiquestClearStreakScreenshotTest : ScreenshotTest() {
             var contrast = 1.0
             for (y in 0 until text.height) {
                 for (x in 0 until text.width) {
-                    val pixel = ColorUtils.compositeColors(text.getPixel(x, y), Color.WHITE)
+                    val pixel = ColorUtils.compositeColors(text[x, y], Color.WHITE)
                     contrast = maxOf(contrast, ColorUtils.calculateContrast(Color.WHITE, pixel))
                 }
             }
