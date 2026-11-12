@@ -22,13 +22,24 @@ import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.ui.windows.reviewer.ReviewerViewModel
 import com.sun.net.httpserver.HttpServer
 import io.mockk.Runs
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -37,8 +48,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.util.ReflectionHelpers
 import java.net.InetSocketAddress
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** The icon and the widgets follow the profile each upload answers with, without waiting for the poll. */
 @RunWith(AndroidJUnit4::class)
@@ -80,8 +93,10 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
     @After
     fun stopServer() {
         try {
-            if (::server.isInitialized) server.stop(0)
+            // The application scope outlives an individual test's server and preferences.
+            runBlocking { drainReviewJobs() }
         } finally {
+            if (::server.isInitialized) server.stop(0)
             AnkiquestWidget.forgetFresh()
             unmockkObject(AnkiquestPoll)
             SharedPreferencesTestHook.override = null
@@ -181,6 +196,125 @@ class AnkiquestOwnProfileTest : RobolectricTest() {
         advanceRobolectricLooper()
         assertEquals(emptyList(), AnkiquestMoments.pending(prefs, account))
     }
+
+    @Test
+    fun `a queued review cannot start an upload for the next account`() =
+        runBlocking {
+            drainReviewJobs()
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            mockkObject(AnkiquestReviewOffsets)
+            coEvery { AnkiquestReviewOffsets.recordAnswers(any(), any()) } coAnswers {
+                entered.complete(Unit)
+                release.await()
+            }
+            try {
+                val changes = OpChanges.newBuilder().setStudyQueues(true).build()
+                Ankiquest.opExecuted(changes, mockk<ReviewerViewModel>())
+                withTimeout(10_000) { entered.await() }
+                AnkiDroidApp.sharedPrefs().edit {
+                    putString(Ankiquest.PREF_USER, "other")
+                    putString(Ankiquest.PREF_TOKEN, "other-token")
+                }
+                release.complete(Unit)
+                drainReviewJobs()
+                val requested = synchronized(paths) { paths.toList() }
+                assertTrue(requested.none { it.contains("other") }, "old review work requested the next account: $requested")
+            } finally {
+                release.complete(Unit)
+                try {
+                    drainReviewJobs()
+                } finally {
+                    unmockkObject(AnkiquestReviewOffsets)
+                }
+            }
+        }
+
+    @Test
+    fun `an upload waiting behind another request keeps its original account`() =
+        runBlocking {
+            drainReviewJobs()
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val mutex = ReflectionHelpers.getField<Mutex>(Ankiquest, "mutex")
+            val owner = Any()
+            mockkObject(AnkiquestReviewOffsets)
+            coEvery { AnkiquestReviewOffsets.recordAnswers(any(), any()) } coAnswers {
+                entered.complete(Unit)
+                release.await()
+            }
+            mutex.lock(owner)
+            try {
+                Ankiquest.opExecuted(OpChanges.newBuilder().setStudyQueues(true).build(), mockk<ReviewerViewModel>())
+                withTimeout(10_000) { entered.await() }
+                val callback = reviewParent().children.single()
+                release.complete(Unit)
+                // The review callback has queued its upload, which cannot pass the mutex yet.
+                withTimeout(10_000) { callback.join() }
+                AnkiDroidApp.sharedPrefs().edit {
+                    putString(Ankiquest.PREF_USER, "other")
+                    putString(Ankiquest.PREF_TOKEN, "other-token")
+                }
+                mutex.unlock(owner)
+                drainReviewJobs()
+                val requested = synchronized(paths) { paths.toList() }
+                assertTrue(requested.none { it.contains("other") }, "waiting upload changed accounts: $requested")
+            } finally {
+                release.complete(Unit)
+                if (mutex.holdsLock(owner)) {
+                    mutex.unlock(owner)
+                }
+                try {
+                    drainReviewJobs()
+                } finally {
+                    unmockkObject(AnkiquestReviewOffsets)
+                }
+            }
+        }
+
+    /** Wait for the callback and any upload it schedules, without exposing a production test hook. */
+    private suspend fun drainReviewJobs() {
+        val parent = reviewParent()
+        withTimeout(10_000) {
+            do {
+                val pending = parent.children.toList()
+                pending.joinAll()
+            } while (parent.children.any())
+        }
+    }
+
+    private fun reviewParent(): Job = checkNotNull(ReflectionHelpers.getField<CoroutineScope>(Ankiquest, "scope").coroutineContext[Job])
+
+    @Test
+    fun `cancelling a waiting upload does not block the next poll`() =
+        runBlocking {
+            drainReviewJobs()
+            val mutex = ReflectionHelpers.getField<Mutex>(Ankiquest, "mutex")
+            val queue = ReflectionHelpers.getField<RefreshQueue>(Ankiquest, "refreshes")
+            val account = checkNotNull(HomeAccount.current()).scope
+            val owner = Any()
+            mutex.lock(owner)
+            val upload = launch(Dispatchers.IO) { Ankiquest.uploadPending() }
+            try {
+                // Wait for the queue barrier, then cancel while the upload still cannot run.
+                withTimeout(10_000) {
+                    while (!synchronized(queue) { ReflectionHelpers.getField<Map<String, *>>(queue, "waiting").containsKey(account) }) {
+                        delay(1)
+                    }
+                }
+                upload.cancelAndJoin()
+                mutex.unlock(owner)
+                Ankiquest.uploadPending()
+                val requested = synchronized(paths) { paths.toList() }
+                assertTrue(requested.any { it == "/api/reviews/hill" }, "the next poll must still upload after cancellation: $requested")
+            } finally {
+                upload.cancelAndJoin()
+                if (mutex.holdsLock(owner)) {
+                    mutex.unlock(owner)
+                }
+                queue.take(account)
+            }
+        }
 
     @Test
     fun `the streak widget is drawn again right after an upload`() =
