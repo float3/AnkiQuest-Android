@@ -59,6 +59,7 @@ class AnkiquestTabBarTest : RobolectricTest() {
         coEvery { AnkiquestHomeData.companion(identity) } throws IOException("offline")
         coEvery { AnkiquestSocial.overview(identity) } throws IOException("offline")
         coEvery { AnkiquestBoards.player(identity, any()) } throws IOException("offline")
+        coEvery { AnkiquestBoards.leaderboard(identity, any()) } throws IOException("offline")
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } throws IOException("offline")
         coEvery { AnkiquestAvatars.refresh(any(), any()) } returns Unit
     }
@@ -185,7 +186,9 @@ class AnkiquestTabBarTest : RobolectricTest() {
                 AnkiquestHomeActivity.intent(targetContext),
             )
         val friends = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFriendsActivity.intent(targetContext))
-        for (tab in listOf(home, friends)) {
+        val feed = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFeedActivity.intent(targetContext))
+        val board = startRegularActivity<AnkiquestFriendsActivity>(AnkiquestLeaderboardActivity.intent(targetContext))
+        for (tab in listOf(home, friends, feed, board)) {
             val name = tab::class.java.simpleName
             assertTrue(backControls(tab).isEmpty(), "$name shows no back arrow")
         }
@@ -207,7 +210,6 @@ class AnkiquestTabBarTest : RobolectricTest() {
             listOf(
                 startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext)),
                 startRegularActivity<AnkiquestProfileActivity>(AnkiquestProfileActivity.intent(targetContext, "ana")),
-                startRegularActivity<AnkiquestFeedActivity>(AnkiquestFeedActivity.intent(targetContext)),
             )
         for (page in pages) {
             val name = page::class.java.simpleName

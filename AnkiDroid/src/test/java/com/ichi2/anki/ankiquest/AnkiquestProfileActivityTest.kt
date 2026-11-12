@@ -170,7 +170,7 @@ class AnkiquestProfileActivityTest : RobolectricTest() {
         assertFalse(screen.hasText(screen.getString(R.string.aq_home_settings)))
         assertFalse(screen.hasText(screen.getString(R.string.aq_profile_wins)))
         screen.click(screen.getString(R.string.aq_profile_leaderboard))
-        assertEquals(AnkiquestLeaderboardActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
+        assertEquals(AnkiquestFriendsActivity::class.java.name, shadowOf(screen).nextStartedActivity.component?.className)
     }
 
     @Test

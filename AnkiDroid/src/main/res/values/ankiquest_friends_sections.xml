@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <item name="aq_friends_feed_content" type="id" />
+    <item name="aq_friends_feed_loading" type="id" />
+    <item name="aq_friends_board_content" type="id" />
+    <item name="aq_friends_board_loading" type="id" />
+</resources>

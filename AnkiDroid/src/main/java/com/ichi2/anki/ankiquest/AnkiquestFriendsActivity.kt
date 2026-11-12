@@ -49,6 +49,7 @@ import kotlin.math.abs
  */
 class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) {
     private lateinit var content: LinearLayout
+    private lateinit var sections: AnkiquestFriendsSections
     private lateinit var scroll: NestedScrollView
     private lateinit var undo: AnkiquestUndo
     private var account: HomeAccount? = null
@@ -88,6 +89,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         }
         findViewById<View>(R.id.aq_feed_loading).contentDescription = getString(R.string.aq_friends_loading)
         AnkiquestTabBar.attach(this, findViewById(R.id.aq_feed_root), R.id.ankiquest_nav_friends)
+        sections = AnkiquestFriendsSections(this, savedInstanceState)
         account = AnkiquestHomeData.account()
         if (savedInstanceState == null) {
             val addressed = intent.getStringExtra(EXTRA_ACCOUNT)
@@ -105,6 +107,9 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_INVITE, invite)
+        if (::sections.isInitialized) {
+            sections.save(outState)
+        }
     }
 
     override fun onResume() {
@@ -126,6 +131,7 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
             // The old account's change no longer answers here.
             busy = false
         }
+        sections.refresh()
         load()
     }
 
@@ -279,6 +285,8 @@ class AnkiquestFriendsActivity : AnkiActivity(R.layout.activity_ankiquest_feed) 
         if (!::content.isInitialized) return
         val position = scroll.scrollY
         content.removeAllViews()
+        sections.attach(content)
+        sections.showTarget()
         findViewById<View>(R.id.aq_feed_loading).isVisible = loading
         status?.let { line ->
             text(content, line, small = true).apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }

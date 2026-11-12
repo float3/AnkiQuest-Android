@@ -39,7 +39,8 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @Before
     fun prepareFeed() {
-        mockkObject(AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        mockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        coEvery { AnkiquestSocial.overview(any()) } throws IOException("overview unavailable")
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestFeed.page(identity, any(), any(), any()) } returns page
         coEvery { AnkiquestFeed.markRead(identity, any()) } returns Unit
@@ -51,7 +52,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
 
     @After
     fun clearFeedMocks() {
-        unmockkObject(AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
+        unmockkObject(AnkiquestSocial, AnkiquestHomeData, AnkiquestFeed, AnkiquestShare)
     }
 
     @Test
@@ -232,7 +233,7 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         feed.click(feed.getString(R.string.aq_feed_mark_all_read))
 
         feed.findViewById<View>(R.id.aq_feed_refresh).performClick()
-        advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_feed_loading).isVisible }
+        advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_friends_feed_loading).isVisible }
         val markAll = feed.views<TextView>().first { it.text.toString() == feed.getString(R.string.aq_feed_mark_all_read) }
         assertFalse(markAll.isEnabled, "marking all read could be sent twice")
 
@@ -241,23 +242,23 @@ class AnkiquestFeedActivityTest : RobolectricTest() {
         coVerify(exactly = 1) { AnkiquestFeed.markAllRead(identity, any()) }
     }
 
-    private fun launch(account: String? = null): AnkiquestFeedActivity =
-        startRegularActivity<AnkiquestFeedActivity>(AnkiquestFeedActivity.intent(targetContext, account))
-            .also { feed -> advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_feed_loading).isVisible } }
+    private fun launch(account: String? = null): AnkiquestFriendsActivity =
+        startRegularActivity<AnkiquestFriendsActivity>(AnkiquestFeedActivity.intent(targetContext, account))
+            .also { feed -> advanceRobolectricLooperUntil { !feed.findViewById<View>(R.id.aq_friends_feed_loading).isVisible } }
 
-    private inline fun <reified T : View> AnkiquestFeedActivity.views(): List<T> =
-        findViewById<View>(R.id.aq_feed_content).allViews.filterIsInstance<T>().toList()
+    private inline fun <reified T : View> AnkiquestFriendsActivity.views(): List<T> =
+        findViewById<View>(R.id.aq_friends_feed_content).allViews.filterIsInstance<T>().toList()
 
-    private fun AnkiquestFeedActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
+    private fun AnkiquestFriendsActivity.hasText(value: String): Boolean = views<TextView>().any { it.text.toString() == value }
 
-    private fun AnkiquestFeedActivity.hasTextContaining(value: String): Boolean =
+    private fun AnkiquestFriendsActivity.hasTextContaining(value: String): Boolean =
         views<TextView>().any { it.text.toString().contains(value) }
 
-    private fun AnkiquestFeedActivity.click(label: String) {
+    private fun AnkiquestFriendsActivity.click(label: String) {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
         assertTrue(control.isEnabled, label)
         control.performClick()
-        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_feed_loading).isVisible }
+        advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_friends_feed_loading).isVisible }
         advanceRobolectricLooper()
     }
 }
