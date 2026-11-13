@@ -12,6 +12,8 @@ AnkiDroid with [AnkiQuest](https://github.com/float3/ankiquest): study, shared g
 
 **Aki and Ankilope.** New poses for challenges (sent, won and lost), nudges, a review backlog and first, second and third place on the leaderboard.
 
+**Share pictures.** Sharing a moment or a conquered card attaches its picture, drawn on the phone when the server's picture is not ready, so it works for cards of other players and on slow connections. The share sheet also offers "Download picture" to save it to your gallery.
+
 **Conquered cards.** The suggested label comes from the fields on the card's front, without template text or ID fields. Two short fields, such as a word and its reading, are shown together.
 
 **Sign-in.** The app remembers your username for each server. With only one linked sign-in, it skips the choice of provider. The Password row says how to get a first password: sign in again with a linked sign-in, or ask the person who runs your server.
