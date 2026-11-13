@@ -211,7 +211,7 @@ internal class AnkiquestShareSheet(
         val picking = current as? State.Picking
         targets.removeAllViews()
         when (current) {
-            is State.Loading -> views.text(targets, language.getString(R.string.ankiquest_share_loading), small = true)
+            is State.Loading -> views.text(targets, language.getString(R.string.aq_friends_loading), small = true)
             is State.Offline -> views.text(targets, language.getString(R.string.ankiquest_share_targets_failed), small = true)
             is State.Lonely -> lonely()
             is State.Picking -> chips(current)

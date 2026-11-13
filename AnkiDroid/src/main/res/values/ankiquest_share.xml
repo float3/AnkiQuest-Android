@@ -64,7 +64,6 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_share_note_hint">Add a note (optional)</string>
     <string name="ankiquest_share_sending">Sending…</string>
     <string name="ankiquest_share_more_apps">More apps…</string>
-    <string name="ankiquest_share_loading">Loading your friends…</string>
     <string name="ankiquest_share_targets_failed">Couldn’t load your friends. Check your connection, or share with another app.</string>
     <string name="ankiquest_share_invite">Invite a friend</string>
     <string name="ankiquest_share_lonely">Add friends in AnkiQuest to send them your moments.</string>
