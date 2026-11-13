@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
+import androidx.appcompat.app.AppCompatDialog
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.EmptyAnkiActivity
@@ -128,6 +129,37 @@ class AnkiquestUndoTest : RobolectricTest() {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         oldButton.performClick()
         assertEquals(0, reversed)
+    }
+
+    @Test
+    fun `closed is told once the snackbar is gone, or at once when nothing is offered`() {
+        val screen = launch().get()
+        val undo = AnkiquestUndo(screen)
+        var closed = 0
+        undo.apply(identity, "Sent", perform = { it() }, inverse = {}, closed = { closed++ })
+        idle()
+        assertNotNull(action(screen))
+        assertEquals(0, closed)
+        undo.clear()
+        idle()
+        assertEquals(1, closed)
+
+        account = null
+        undo.apply(identity, "Sent", perform = { error("not owned") }, inverse = {}, closed = { closed++ })
+        assertEquals(2, closed)
+    }
+
+    @Test
+    fun `the snackbar can show in a dialog's window`() {
+        val screen = launch().get()
+        val dialog = AppCompatDialog(screen).apply { setContentView(FrameLayout(screen)) }
+        dialog.show()
+        val undo = AnkiquestUndo(screen) { dialog.findViewById(android.R.id.content) }
+        undo.apply(identity, "Sent", perform = { it() }, inverse = {})
+        idle()
+        assertNull(action(screen))
+        assertNotNull(dialog.findViewById<View>(com.google.android.material.R.id.snackbar_action))
+        dialog.dismiss()
     }
 
     private fun launch() =
