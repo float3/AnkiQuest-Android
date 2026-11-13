@@ -273,6 +273,23 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
         )
     }
 
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a 64-day streak whose day counts shows the blazing pose`() {
+        // The minimum was reached a minute ago: the big layouts showed the calm minimum pose.
+        val board = JSONArray().put(me(64, "studied", 20, 11, 10))
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val widget =
+                AnkiquestStreakWidget
+                    .views(targetContext, board, "hill", size)
+                    .apply(targetContext, FrameLayout(targetContext))
+            val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+            val shown = assertNotNull((drawable as? BitmapDrawable)?.bitmap, size.name)
+            val blazing = assertNotNull(AnkiquestArt.bitmap(targetContext, R.drawable.aki_streak_blazing, minOf(shown.width, shown.height)))
+            assertTrue(shown.sameAs(blazing), "$size shows the blazing pose")
+        }
+    }
+
     /** Edge of the companion bitmap each big layout shows at its largest, from its ImageView maxHeight. */
     private fun shownPx(size: AnkiquestStreakWidget.Size): Int {
         val dp = if (size == AnkiquestStreakWidget.Size.LARGE) LARGE_COMPANION_DP else HUGE_COMPANION_DP
