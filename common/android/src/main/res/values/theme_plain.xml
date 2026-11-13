@@ -19,7 +19,6 @@
         <item name="colorSurfaceContainerHigh">#F4F4F4</item>
         <item name="preferenceCategoryTitleTextColor">?attr/colorSecondary</item>
         <!-- Action bar styles -->
-        <item name="actionBarPopupTextColor">@color/material_grey_900</item>
         <!-- Bottom navigation -->
         <item name="bottomNavActiveIconColor">@color/white</item>
         <!-- Study Screen colors -->
@@ -67,7 +66,6 @@
         <item name="colorSurface">@color/white</item>
 
         <!-- ProgressDialog-->
-        <item name="dialogBackground">@color/white</item>
 
         <item name="incrementerButtonBackground">@color/material_grey_500</item>
     </style>

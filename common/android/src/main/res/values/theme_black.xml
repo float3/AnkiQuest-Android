@@ -25,14 +25,11 @@
         <item name="windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="actionBarTextColor">@color/white</item>
-        <item name="actionBarPopupTextColor">@color/white</item>
         <!-- Bottom navigation -->
         <item name="bottomNavActiveIconColor">@color/material_blue_500</item>
         <!-- Deck list colors -->
         <item name="selectedRowBackgroundColor">#1a1a1a</item>
         <item name="dynDeckColor">@color/material_light_blue_500</item>
-        <item name="expandRef">@drawable/ic_chevron_right_white</item>
-        <item name="collapseRef">@drawable/ic_expand_more_white</item>
         <!-- Count colors -->
         <item name="newCountColor">@color/material_blue_600</item>
         <item name="learnCountColor">@color/material_red_400</item>

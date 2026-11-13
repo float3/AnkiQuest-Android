@@ -9,15 +9,12 @@
      specifically for action bar text color isn't necessary, but it simplifies the color setting
      while making it accessible everywhere and eases the use of themes -->
     <attr name="actionBarTextColor" format="color"/> <!-- For title and subtitle, and any other text that may appear in action bar-->
-    <attr name="actionBarPopupTextColor" format="color"/>
 
     <attr name="incrementerButtonBackground" format="color" />
 
     <!-- Deck list colors and expander -->
     <attr name="selectedRowBackgroundColor" format="color"/> <!-- Selected deck, note type, browser row and settings header -->
     <attr name="dynDeckColor" format="color"/>
-    <attr name="expandRef" format="reference"/>
-    <attr name="collapseRef" format="reference"/>
     <!-- Navigation drawer -->
     <attr name="navDrawerItemColor" format="color"/>
     <attr name="navDrawerItemBackground" format="reference"/>
