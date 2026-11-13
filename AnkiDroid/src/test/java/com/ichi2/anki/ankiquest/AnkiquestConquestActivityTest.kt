@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
-import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
@@ -189,7 +188,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Español::Animales"
         coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
             AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
-        every { AnkiquestShare.picture(any(), any(), picture) } answers { createBitmap(2, 2) }
+        every { AnkiquestShare.cardPng(any(), any(), picture) } returns "the server's PNG".toByteArray()
         // Robolectric's cache folder is not always under the provider's root, so the picture's address is made up.
         val stream = "content://com.ichi2.anki.debug.apkgfileprovider/cache-directory/ankiquest-share/win.png".toUri()
         mockkStatic(FileProvider::class)

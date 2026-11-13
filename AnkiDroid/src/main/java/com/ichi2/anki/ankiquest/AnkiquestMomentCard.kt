@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -116,7 +117,7 @@ internal object AnkiquestMomentCard {
 
     /** One owner and lifetime for the recap and any moments that arrive while it is open. */
     class Card(
-        private val host: Activity,
+        private val host: FragmentActivity,
         private val account: HomeAccount?,
         initial: List<Moment>,
         private val prefs: SharedPreferences,
@@ -124,8 +125,8 @@ internal object AnkiquestMomentCard {
         private enum class Exit { DONE, CONTINUE, PROGRESS, REPLACED, CLOSED }
 
         private val owner = AnkiquestNavigation.accountFingerprint(prefs.all)
-        private val lifecycle = (host as LifecycleOwner).lifecycle
-        private val parentScope = (host as LifecycleOwner).lifecycleScope
+        private val lifecycle = host.lifecycle
+        private val parentScope = host.lifecycleScope
         private val jobs = SupervisorJob(parentScope.coroutineContext[Job])
         private val scope = CoroutineScope(parentScope.coroutineContext + jobs)
         private val content = Content(host)
@@ -344,7 +345,7 @@ internal object AnkiquestMomentCard {
 
     /** Shows a session, moments, or both in one scrollable, swipeable card. */
     fun show(
-        host: Activity,
+        host: FragmentActivity,
         account: HomeAccount?,
         moments: List<Moment>,
         prefs: SharedPreferences,
@@ -394,6 +395,7 @@ internal object AnkiquestMomentCard {
         val open: MaterialButton = view.findViewById(R.id.aq_moment_open)
         val tell: MaterialButton = view.findViewById(R.id.aq_moment_tell)
         val share: MaterialButton = view.findViewById(R.id.aq_moment_share)
+        val download: MaterialButton = view.findViewById(R.id.aq_moment_download)
     }
 
     /** What the server knows about a moment beyond the inbox row: whether friends heard it, and its picture. */
@@ -408,7 +410,7 @@ internal object AnkiquestMomentCard {
     )
 
     private class Pages(
-        private val host: Activity,
+        private val host: FragmentActivity,
         private val account: HomeAccount,
         private val moments: List<Moment>,
         private val scope: CoroutineScope?,
@@ -456,6 +458,7 @@ internal object AnkiquestMomentCard {
             holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
             holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
             holder.share.setOnClickListener { share(moment) }
+            holder.download.setOnClickListener { download(moment) }
             if (known == null) load(moment, position)
         }
 
@@ -647,7 +650,7 @@ internal object AnkiquestMomentCard {
                                 }
                             }
                         }
-                    (host as LifecycleOwner).lifecycle.withResumed {
+                    host.lifecycle.withResumed {
                         if (current()?.scope == signedIn.scope && !host.isFinishing && !host.isDestroyed) {
                             host.startActivity(chooser)
                         }
@@ -679,6 +682,25 @@ internal object AnkiquestMomentCard {
                     moment.deck?.let { host.getString(R.string.aq_conquest_share_deck, it) },
                 ),
             )
+        }
+
+        /** Saves [moment]'s picture drawn on the phone; unlike Share it never asks the server for a link. */
+        private fun download(moment: Moment) {
+            val scope = scope ?: return
+            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            val card = publicPicture(moment)
+            scope.launch {
+                val saving = withContext(Dispatchers.IO) { AnkiquestShare.download(host.applicationContext, card) }
+                if (saving == null) {
+                    toast(R.string.ankiquest_picture_failed)
+                    return@launch
+                }
+                host.lifecycle.withResumed {
+                    if (current()?.scope == signedIn.scope && !host.isFinishing && !host.isDestroyed) {
+                        host.startActivity(saving)
+                    }
+                }
+            }
         }
 
         private fun toast(message: Int) = showThemedToast(host, host.getString(message), shortLength = false)

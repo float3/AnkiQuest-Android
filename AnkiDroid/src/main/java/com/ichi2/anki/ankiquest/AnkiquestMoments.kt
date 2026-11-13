@@ -628,6 +628,9 @@ internal object AnkiquestMoments {
         if (!resting || !AnkiquestPostStudyPrompts.resumed(host)) {
             return false
         }
+
+        // Every resting screen is a FragmentActivity; the card lives in its lifecycle.
+        val owner = host as? FragmentActivity ?: return false
         val account = AnkiquestHomeData.account(prefs)
         var current = showing.get()?.takeIf { it.dialog.isShowing }
         if (current != null && !current.owns(host)) {
@@ -663,7 +666,7 @@ internal object AnkiquestMoments {
         if (moments.isEmpty() && session?.summary == null) {
             return false
         }
-        val card = AnkiquestMomentCard.show(host, account, moments, prefs, session)
+        val card = AnkiquestMomentCard.show(owner, account, moments, prefs, session)
         showing = WeakReference(card)
         AnkiquestPostStudyPrompts.track(card.dialog)
         return true

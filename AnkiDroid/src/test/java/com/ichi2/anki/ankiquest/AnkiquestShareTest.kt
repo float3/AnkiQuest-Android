@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.service.chooser.ChooserAction
 import androidx.core.content.FileProvider
-import androidx.core.content.IntentCompat
 import androidx.core.content.edit
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
@@ -52,7 +51,6 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -213,15 +211,18 @@ class AnkiquestShareTest : RobolectricTest() {
         assertTrue(bitmap.width > 0 && bitmap.height > 0)
         assertEquals(uri, send.clipData?.getItemAt(0)?.uri)
         assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
-        val download =
-            assertIs<Intent>(
-                assertNotNull(
-                    IntentCompat.getParcelableArrayExtra(chooser, Intent.EXTRA_INITIAL_INTENTS, Intent::class.java),
-                ).single(),
-            )
-        assertEquals(AnkiquestGalleryActivity::class.java.name, download.component?.className)
-        assertEquals(uri, download.data, "Download picture uses the exact PNG offered to other apps")
-        assertEquals(AnkiquestHomeData.account()!!.scope, download.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
+        assertFalse(chooser.hasExtra(Intent.EXTRA_INITIAL_INTENTS), "saving is its own action, apart from the link")
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a downloaded picture is drawn locally for the signed-in account`() {
+        val saving = assertNotNull(AnkiquestShare.download(targetContext, AnkiquestShare.Card("Level 54", "You reached level 54.")))
+        assertEquals(AnkiquestGalleryActivity::class.java.name, saving.component?.className)
+        assertEquals(AnkiquestHomeData.account()!!.scope, saving.getStringExtra(AnkiquestShare.EXTRA_SCOPE))
+        val bitmap = targetContext.contentResolver.openInputStreamSafe(assertNotNull(saving.data)).use { BitmapFactory.decodeStream(it) }
+        assertEquals(1080, assertNotNull(bitmap).width)
+        assertTrue(posted.isEmpty(), "saving makes no link")
     }
 
     @Test
@@ -237,7 +238,8 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `an available canonical picture is preferred to the local render`() {
-        val bitmap = AnkiquestShare.picture(targetContext, AnkiquestShare.Card("Local", "Fallback"), "$base/w/valid.png")
+        val bytes = AnkiquestShare.cardPng(targetContext, AnkiquestShare.Card("Local", "Fallback"), "$base/w/valid.png")
+        val bitmap = assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
         assertEquals(2, bitmap.width)
         assertEquals(2, bitmap.height)
         bitmap.recycle()
@@ -256,7 +258,8 @@ class AnkiquestShareTest : RobolectricTest() {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `an invalid server PNG still produces a local picture`() {
-        val bitmap = AnkiquestShare.picture(targetContext, AnkiquestShare.Card("A win", "Saved locally"), "$base/w/token.png")
+        val bytes = AnkiquestShare.cardPng(targetContext, AnkiquestShare.Card("A win", "Saved locally"), "$base/w/token.png")
+        val bitmap = assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
         assertEquals(1080, bitmap.width)
         bitmap.recycle()
     }
@@ -304,10 +307,11 @@ class AnkiquestShareTest : RobolectricTest() {
         }
         // Warm the graphics runtime so this measures the network deadline, not test startup.
         val card = AnkiquestShare.Card("A win", "Saved locally")
-        AnkiquestShare.picture(targetContext, card).recycle()
+        AnkiquestShare.render(targetContext, card).recycle()
         try {
             val start = System.nanoTime()
-            val bitmap = AnkiquestShare.picture(targetContext, card, "$base/w/stalled.png")
+            val bytes = AnkiquestShare.cardPng(targetContext, card, "$base/w/stalled.png")
+            val bitmap = assertNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
             assertEquals(1080, bitmap.width)
             bitmap.recycle()
             assertTrue(
