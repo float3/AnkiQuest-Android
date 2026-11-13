@@ -9,7 +9,6 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
-import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
@@ -27,6 +26,7 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -186,9 +186,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `the owner shares the card's words, deck, picture and page`() {
         val picture = "https://anki.example.test/w/tok.png"
         coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Español::Animales"
-        coEvery { Ankiquest.shareWinLink(6, identity.scope, AnkiquestApi.Timeout.PICTURE) } returns
+        coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
             AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
-        every { AnkiquestShare.picture(any(), any(), picture) } answers { createBitmap(2, 2) }
+        every { AnkiquestShare.cardPng(any(), any(), picture) } returns "the server's PNG".toByteArray()
         // Robolectric's cache folder is not always under the provider's root, so the picture's address is made up.
         val stream = "content://com.ichi2.anki.debug.apkgfileprovider/cache-directory/ankiquest-share/win.png".toUri()
         mockkStatic(FileProvider::class)
@@ -215,8 +215,26 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertTrue(sent.hasExtra(Intent.EXTRA_STREAM))
         val uri = assertNotNull(IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
         assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
+        assertTrue(sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty().endsWith("https://anki.example.test/conquered/hill/$AT"))
         coVerify(exactly = 1) { AnkiquestCommunity.conquest(identity, "hill", AT) }
-        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any(), any()) }
+        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+    }
+
+    @Test
+    fun `downloading the card's picture publishes nothing`() {
+        mockkObject(AnkiquestApi)
+        try {
+            val card = launch()
+            card.click(card.getString(R.string.ankiquest_download_picture))
+            advanceRobolectricLooperUntil { shadowOf(card).peekNextStartedActivity() != null }
+            val saving = assertNotNull(shadowOf(card).nextStartedActivity)
+            assertEquals(AnkiquestGalleryActivity::class.java.name, saving.component?.className)
+            val uri = assertNotNull(saving.data)
+            assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
+            verify(exactly = 0) { AnkiquestApi.json(any(), match { it.url.encodedPath.startsWith("/api/share/") }, any()) }
+        } finally {
+            unmockkObject(AnkiquestApi)
+        }
     }
 
     @Test
@@ -233,7 +251,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             sent.getStringExtra(Intent.EXTRA_TEXT),
         )
         coVerify(exactly = 0) { AnkiquestShare.conqueredCardDeck(any()) }
-        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any(), any()) }
+        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
     }
 
     private fun AnkiquestConquestActivity.sent(): Intent {
@@ -353,7 +371,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `a share finishing while paused leaves the screen ready after resume`() {
         val answer = CompletableDeferred<AnkiquestShare.Link>()
         val prepared = AtomicBoolean(false)
-        coEvery { Ankiquest.shareWinLink(6, identity.scope, AnkiquestApi.Timeout.PICTURE) } coAnswers { answer.await() }
+        coEvery { Ankiquest.shareWinLink(6, identity.scope) } coAnswers { answer.await() }
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
             prepared.set(true)
             Intent(Intent.ACTION_CHOOSER)

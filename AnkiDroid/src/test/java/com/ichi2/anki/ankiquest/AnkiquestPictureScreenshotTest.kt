@@ -55,7 +55,7 @@ class AnkiquestPictureScreenshotTest : ScreenshotTest() {
         name: String,
         card: AnkiquestShare.Card,
     ) {
-        val bitmap = AnkiquestShare.picture(targetContext, card)
+        val bitmap = AnkiquestShare.render(targetContext, card)
         assertTrue(bitmap.width > 0 && bitmap.height >= bitmap.width)
         val directory = "build/outputs/roborazzi/${javaClass.simpleName}"
         val options = provideRoborazziContext().options

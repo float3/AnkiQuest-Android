@@ -17,16 +17,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-/** Private "Download picture" destination in Android's share sheet. */
+/** "Download picture": saves a picture from the share cache to the gallery, asking for storage access before Android 10. */
 class AnkiquestGalleryActivity : AnkiActivity() {
-    private var started = false
+    /** Where saving stands. Kept across recreation, so a save never runs twice. */
+    private enum class State { CHECKING, AWAITING_PERMISSION, SAVING }
+
+    private var state = State.CHECKING
     private val permission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) {
                 savePicture()
-            } else {
-                finish()
+                return@registerForActivityResult
             }
+            toast(R.string.ankiquest_picture_failed)
+            finish()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,13 +38,24 @@ class AnkiquestGalleryActivity : AnkiActivity() {
             return
         }
         super.onCreate(savedInstanceState)
-        started = savedInstanceState?.getBoolean(STATE_STARTED) == true
-        if (started) {
-            finish()
-            return
+        state = savedInstanceState?.getString(STATE_PROGRESS)?.let(State::valueOf) ?: State.CHECKING
+        when (state) {
+            // The save already started before recreation.
+            State.SAVING -> finish()
+            // The permission answer is delivered to the recreated activity.
+            State.AWAITING_PERMISSION -> Unit
+            State.CHECKING -> check()
         }
-        val account = AnkiquestHomeData.account()
-        if (intent.data == null || account == null || intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE) != account.scope) {
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(STATE_PROGRESS, state.name)
+        super.onSaveInstanceState(outState)
+    }
+
+    /** Saves at once where no permission is needed, otherwise asks for it first. */
+    private fun check() {
+        if (account() == null) {
             finish()
             return
         }
@@ -48,28 +63,34 @@ class AnkiquestGalleryActivity : AnkiActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         ) {
             savePicture()
-        } else if (savedInstanceState == null) {
-            permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            return
         }
+        state = State.AWAITING_PERMISSION
+        permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean(STATE_STARTED, started)
-        super.onSaveInstanceState(outState)
+    /** The signed-in account, when this destination has a picture and still belongs to it. */
+    private fun account(): HomeAccount? {
+        val account = AnkiquestHomeData.account() ?: return null
+        if (intent.data == null || intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE) != account.scope) {
+            return null
+        }
+        return account
     }
 
     private fun savePicture() {
-        if (started) {
+        if (state == State.SAVING) {
             return
         }
-        started = true
-        val account = AnkiquestHomeData.account()
+        state = State.SAVING
+        val account = account()
         val source = intent.data
-        if (source == null || account == null || intent.getStringExtra(AnkiquestShare.EXTRA_SCOPE) != account.scope) {
+        if (account == null || source == null) {
             finish()
             return
         }
-        // A requested local save may finish after this short-lived chooser destination closes.
+
+        // A requested local save may finish after this short-lived destination closes.
         val context = applicationContext
         applicationScope.launch(Dispatchers.IO) {
             val message =
@@ -87,7 +108,9 @@ class AnkiquestGalleryActivity : AnkiActivity() {
         finish()
     }
 
+    private fun toast(message: Int) = showThemedToast(this, AnkiquestLanguage.context(this).getString(message), shortLength = false)
+
     companion object {
-        private const val STATE_STARTED = "ankiquest.picture_started"
+        private const val STATE_PROGRESS = "ankiquest.picture_state"
     }
 }

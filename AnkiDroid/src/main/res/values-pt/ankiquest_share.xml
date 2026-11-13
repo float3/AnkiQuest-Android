@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <string name="ankiquest_download_picture">Baixar imagem</string>
-    <string name="ankiquest_picture_saved">Imagem salva na sua galeria.</string>
-    <string name="ankiquest_picture_failed">Não foi possível salvar a imagem. Verifique o acesso ao armazenamento e tente novamente.</string>
+    <string name="ankiquest_download_picture">Transferir imagem</string>
+    <string name="ankiquest_picture_saved">Imagem guardada na tua galeria.</string>
+    <string name="ankiquest_picture_failed">Não foi possível guardar a imagem. Verifica o acesso ao armazenamento e tenta outra vez.</string>
     <string name="ankiquest_share">Partilhar</string>
     <string name="ankiquest_share_title">Partilhar esta conquista</string>
     <string name="ankiquest_share_friends">Com os meus amigos do AnkiQuest</string>

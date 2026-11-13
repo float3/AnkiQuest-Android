@@ -28,6 +28,7 @@ import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CommonString
 import com.ichi2.anki.R
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.preferences.AnkiquestSettingsFragment
 import com.ichi2.anki.preferences.PreferencesActivity
 import kotlinx.coroutines.CancellationException
@@ -260,6 +261,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             views.text(content, line, small = true).accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
         views.button(content, getString(R.string.ankiquest_share), primary = true) { share(current, card) }
+        views.button(content, getString(R.string.ankiquest_download_picture)) { download(current, card) }.isEnabled = !busy
         if (card.mine) owner(card)
         views.text(
             content,
@@ -441,45 +443,62 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         )
     }
 
+    /** What sharing [card] says, in the first person for its owner. */
+    private fun words(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ): String {
+        val mine = card.user == current.user
+        return when {
+            card.label != null && mine ->
+                resources.getQuantityString(
+                    R.plurals.aq_conquest_share_label_mine,
+                    card.lapses,
+                    card.label,
+                    card.lapses,
+                )
+            card.label != null ->
+                resources.getQuantityString(R.plurals.aq_conquest_share_label, card.lapses, card.display, card.label, card.lapses)
+            mine -> resources.getQuantityString(R.plurals.aq_conquest_share_mine, card.lapses, card.lapses)
+            else -> resources.getQuantityString(R.plurals.aq_conquest_share, card.lapses, card.display, card.lapses)
+        }
+    }
+
+    /** " from the deck …" for the card's owner; never for someone else's card. */
+    private fun from(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ): String = deck?.takeIf { owns(current, card) }?.let { " " + getString(R.string.aq_conquest_share_deck, it) }.orEmpty()
+
+    /** The public card as a picture; only its owner's picture names the private deck. */
+    private fun picture(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ): AnkiquestShare.Card =
+        AnkiquestShare.Card(
+            getString(if (card.leech) R.string.aq_profile_leech else R.string.aq_profile_conquest),
+            words(current, card),
+            if (card.leech) R.drawable.aki_winner else R.drawable.aki_deck_conquered,
+            listOfNotNull(
+                card.label,
+                from(current, card).trim().takeIf(String::isNotEmpty),
+                resources.getQuantityString(R.plurals.aq_conquest_answers, card.answers, views.number(card.answers.toLong())),
+                resources.getQuantityString(
+                    R.plurals.aq_conquest_days,
+                    card.days.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    views.number(card.days),
+                ),
+            ),
+        )
+
     /** Share the public card locally; only its owner can add a private deck name. */
     private fun share(
         current: HomeAccount,
         card: AnkiquestCommunity.Conquest,
     ) {
         if (busy) return
-        val mine = card.user == current.user
-        val words =
-            when {
-                card.label != null && mine ->
-                    resources.getQuantityString(
-                        R.plurals.aq_conquest_share_label_mine,
-                        card.lapses,
-                        card.label,
-                        card.lapses,
-                    )
-                card.label != null ->
-                    resources.getQuantityString(R.plurals.aq_conquest_share_label, card.lapses, card.display, card.label, card.lapses)
-                mine -> resources.getQuantityString(R.plurals.aq_conquest_share_mine, card.lapses, card.lapses)
-                else -> resources.getQuantityString(R.plurals.aq_conquest_share, card.lapses, card.display, card.lapses)
-            }
-        val from = deck?.takeIf { owns(current, card) }?.let { " " + getString(R.string.aq_conquest_share_deck, it) }.orEmpty()
-        val text = "$words$from ${AnkiquestCommunity.conquestLink(current.server, card.user, card.at)}"
-        val picture =
-            AnkiquestShare.Card(
-                getString(if (card.leech) R.string.aq_profile_leech else R.string.aq_profile_conquest),
-                words,
-                if (card.leech) R.drawable.aki_winner else R.drawable.aki_deck_conquered,
-                listOfNotNull(
-                    card.label,
-                    from.trim().takeIf(String::isNotEmpty),
-                    resources.getQuantityString(R.plurals.aq_conquest_answers, card.answers, views.number(card.answers.toLong())),
-                    resources.getQuantityString(
-                        R.plurals.aq_conquest_days,
-                        card.days.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                        views.number(card.days),
-                    ),
-                ),
-            )
+        val text = "${words(current, card)}${from(current, card)} ${AnkiquestCommunity.conquestLink(current.server, card.user, card.at)}"
+        val picture = picture(current, card)
         busy = true
         render()
         lifecycleScope.launch {
@@ -506,13 +525,32 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         }
     }
 
+    /** Saves the card's picture drawn on the phone; unlike Share it never asks the server for a link. */
+    private fun download(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ) {
+        if (busy) return
+        val picture = picture(current, card)
+        lifecycleScope.launch {
+            val saving = withContext(Dispatchers.IO) { AnkiquestShare.download(applicationContext, picture) }
+            if (saving == null) {
+                showThemedToast(this@AnkiquestConquestActivity, getString(R.string.ankiquest_picture_failed), shortLength = false)
+                return@launch
+            }
+            if (account?.scope == current.scope && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                startActivity(saving)
+            }
+        }
+    }
+
     /** Optional canonical image metadata; a new conquest uses its local picture immediately. */
     private suspend fun winImage(
         current: HomeAccount,
         card: AnkiquestCommunity.Conquest,
     ): String? =
         try {
-            card.win?.let { Ankiquest.shareWinLink(it, current.scope, AnkiquestApi.Timeout.PICTURE).image }
+            card.win?.let { Ankiquest.shareWinLink(it, current.scope).image }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

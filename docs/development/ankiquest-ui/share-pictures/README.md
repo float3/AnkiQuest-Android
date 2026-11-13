@@ -2,15 +2,17 @@
 
 Part of [#248](https://github.com/float3/AnkiQuest-Android/issues/248).
 
-Every card share supplies its public display content to `AnkiquestShare.picture`.
-Optional win metadata and the canonical PNG each get one second. When unavailable,
-the same helper draws a local picture and gives Android the PNG, caption and link.
+Every card share supplies its public display content to `AnkiquestShare.cardPng`.
+The win's link gets the standard request deadline; the server's PNG gets one
+second and is shared byte for byte. When it is unavailable, the same helper draws
+a local picture and gives Android the PNG, caption and link.
 An unsaved conquest-label suggestion is never part of the exported content.
 Rendering or file failures are logged and preserve the text-only share.
 
-The chooser's **Download picture** action saves the same file to the gallery.
-Android 10+ uses MediaStore pending writes; older Android requests storage
-permission. The action retains the account and removes an incomplete gallery row
+**Download picture** is a separate button on the moment card and the conquest
+screen, not part of the share sheet: it draws the picture locally, makes no
+request and so publishes nothing. Android 10+ uses MediaStore pending writes;
+older Android requests storage permission and writes `Pictures/AnkiQuest/*.png`. The action retains the account and removes an incomplete gallery row
 when copying or publishing fails. Each share has its own temporary file; files
 older than a day are removed from AnkiQuest's share cache.
 
@@ -48,6 +50,6 @@ These native captures and Robolectric tests do not verify receiving apps.
 | Telegram | Not tested on a device | Not tested on a device |
 | Google Messages | Not tested on a device | Not tested on a device |
 
-Also verify Download picture from a real chooser on Android 7 and Android 10+,
+Also verify Download picture on Android 7–9 and Android 10+,
 including denying permission, retrying and switching accounts. Issue #248 stays
 open until these checks are recorded.

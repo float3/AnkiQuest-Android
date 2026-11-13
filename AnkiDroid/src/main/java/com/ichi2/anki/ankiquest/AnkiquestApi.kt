@@ -36,7 +36,7 @@ internal class HomeAccountChanged : IOException("The AnkiQuest account changed")
 internal object AnkiquestApi {
     /** How long a request may take. */
     enum class Timeout {
-        /** Optional share metadata, leaving another second for its picture. */
+        /** The server's picture for a share, drawn on the phone instead when it is late. */
         PICTURE,
 
         /** Optional extras such as profile pictures, which must never hold up anything else. */

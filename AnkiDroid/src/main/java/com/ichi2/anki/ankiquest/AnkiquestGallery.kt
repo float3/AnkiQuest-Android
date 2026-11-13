@@ -9,26 +9,39 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import com.ichi2.utils.openInputStreamSafe
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 
-/** Saves the prepared share PNG, so the gallery and receiving app get identical bytes. */
+/** Saves a share picture from the share cache to the gallery, in Pictures/AnkiQuest. */
 internal object AnkiquestGallery {
+    /** The type of every share picture, in the share cache and in the gallery. */
+    const val PNG = "image/png"
+
+    private const val FOLDER = "AnkiQuest"
+
+    /** The FileProvider that exposes the share cache to other apps and to [save]. */
+    fun authority(context: Context) = "${context.packageName}.apkgfileprovider"
+
     fun save(
         context: Context,
         source: Uri,
         account: HomeAccount,
     ): Uri {
-        require(source.scheme == "content" && source.authority == "${context.packageName}.apkgfileprovider")
+        require(source.scheme == "content" && source.authority == authority(context))
         AnkiquestApi.requireCurrent(account)
 
+        val name = "$FOLDER-${UUID.randomUUID()}.png"
         val values =
             ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, "AnkiQuest-${UUID.randomUUID()}.png")
-                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                put(MediaStore.Images.Media.MIME_TYPE, PNG)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/AnkiQuest")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$FOLDER")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
+                } else {
+                    @Suppress("DEPRECATION")
+                    put(MediaStore.MediaColumns.DATA, legacyFile(name).path)
                 }
             }
         val resolver = context.contentResolver
@@ -52,5 +65,18 @@ internal object AnkiquestGallery {
             runCatching { resolver.delete(saved, null, null) }.exceptionOrNull()?.let(error::addSuppressed)
             throw error
         }
+    }
+
+    /**
+     * Before Android 10, MediaProvider ignores DISPLAY_NAME and, without DATA, creates
+     * Pictures/<millis>.jpg. Name the file here, in a folder that exists before the insert.
+     */
+    @Suppress("DEPRECATION")
+    private fun legacyFile(name: String): File {
+        val folder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), FOLDER)
+        if (!folder.isDirectory && !folder.mkdirs()) {
+            throw IOException("No gallery folder")
+        }
+        return File(folder, name)
     }
 }

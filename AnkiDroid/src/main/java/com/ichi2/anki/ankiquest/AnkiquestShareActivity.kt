@@ -268,13 +268,11 @@ class AnkiquestShareActivity : AnkiActivity() {
             val language = AnkiquestLanguage.context(this@AnkiquestShareActivity)
             val failure =
                 try {
-                    val topic = intent.getStringExtra(AnkiquestShare.EXTRA_TOPIC)
-                    val kind = if (share.place == null) "celebration" else "reminder_weekly_recap"
-                    val art = AnkiquestArt.forNotice(kind, topic ?: share.place?.let { "place:$it" })
+                    val art = AnkiquestShare.art(intent, share.place)
                     val card = AnkiquestShare.Card(share.title, share.body, art)
                     val link =
                         try {
-                            share.win?.let { Ankiquest.shareWinLink(it, share.scope, AnkiquestApi.Timeout.PICTURE) }
+                            share.win?.let { Ankiquest.shareWinLink(it, share.scope) }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: HomeAccountChanged) {
