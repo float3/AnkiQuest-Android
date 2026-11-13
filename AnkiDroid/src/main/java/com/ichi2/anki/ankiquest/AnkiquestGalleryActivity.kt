@@ -38,7 +38,7 @@ class AnkiquestGalleryActivity : AnkiActivity() {
             return
         }
         super.onCreate(savedInstanceState)
-        state = savedInstanceState?.getString(STATE)?.let(State::valueOf) ?: State.CHECKING
+        state = savedInstanceState?.getString(STATE_PROGRESS)?.let(State::valueOf) ?: State.CHECKING
         when (state) {
             // The save already started before recreation.
             State.SAVING -> finish()
@@ -49,7 +49,7 @@ class AnkiquestGalleryActivity : AnkiActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString(STATE, state.name)
+        outState.putString(STATE_PROGRESS, state.name)
         super.onSaveInstanceState(outState)
     }
 
@@ -111,6 +111,6 @@ class AnkiquestGalleryActivity : AnkiActivity() {
     private fun toast(message: Int) = showThemedToast(this, AnkiquestLanguage.context(this).getString(message), shortLength = false)
 
     companion object {
-        private const val STATE = "ankiquest.picture_state"
+        private const val STATE_PROGRESS = "ankiquest.picture_state"
     }
 }
