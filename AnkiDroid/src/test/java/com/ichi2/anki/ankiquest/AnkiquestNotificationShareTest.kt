@@ -2,7 +2,6 @@
 
 package com.ichi2.anki.ankiquest
 
-import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Intent
@@ -33,6 +32,9 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+/** Manifest.permission.POST_NOTIFICATIONS is API 33; this test runs on SDK 34, but lint checks against minSdk 24. */
+private const val POST_NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
+
 /** A notification's Share button, from the posted action to the share sheet, with the server mocked at the API layer. */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
@@ -48,7 +50,7 @@ class AnkiquestNotificationShareTest : RobolectricTest() {
             putString(Ankiquest.PREF_USER, "hill")
             putString(Ankiquest.PREF_TOKEN, "hill-token")
         }
-        shadowOf(targetContext as Application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        shadowOf(targetContext as Application).grantPermissions(POST_NOTIFICATIONS_PERMISSION)
         mockkObject(AnkiquestApi, AnkiquestShare)
         every { AnkiquestShare.textChooser(any(), any(), any(), any(), any()) } answers {
             art.set(arg(4))
