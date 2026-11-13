@@ -105,7 +105,7 @@ class AnkiquestGalleryTest : RobolectricTest() {
         // Without a path, MediaProvider names the file Pictures/<millis>.jpg and ignores the display name.
         val folder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "AnkiQuest")
         assertEquals(File(folder, name).path, inserted.captured.getAsString(MediaStore.MediaColumns.DATA))
-        assertTrue(folder.isDirectory, "MediaProvider does not create the folder")
+        assertTrue(folder.isDirectory)
     }
 
     @Test

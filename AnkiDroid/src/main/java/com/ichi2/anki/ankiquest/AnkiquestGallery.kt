@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import com.ichi2.utils.openInputStreamSafe
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 
@@ -30,13 +31,17 @@ internal object AnkiquestGallery {
         require(source.scheme == "content" && source.authority == authority(context))
         AnkiquestApi.requireCurrent(account)
 
+        val name = "$FOLDER-${UUID.randomUUID()}.png"
         val values =
             ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, "$FOLDER-${UUID.randomUUID()}.png")
+                put(MediaStore.Images.Media.DISPLAY_NAME, name)
                 put(MediaStore.Images.Media.MIME_TYPE, PNG)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$FOLDER")
                     put(MediaStore.Images.Media.IS_PENDING, 1)
+                } else {
+                    @Suppress("DEPRECATION")
+                    put(MediaStore.MediaColumns.DATA, legacyFile(name).path)
                 }
             }
         val resolver = context.contentResolver
@@ -60,5 +65,18 @@ internal object AnkiquestGallery {
             runCatching { resolver.delete(saved, null, null) }.exceptionOrNull()?.let(error::addSuppressed)
             throw error
         }
+    }
+
+    /**
+     * Before Android 10, MediaProvider ignores DISPLAY_NAME and, without DATA, creates
+     * Pictures/<millis>.jpg. Name the file here, in a folder that exists before the insert.
+     */
+    @Suppress("DEPRECATION")
+    private fun legacyFile(name: String): File {
+        val folder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), FOLDER)
+        if (!folder.isDirectory && !folder.mkdirs()) {
+            throw IOException("No gallery folder")
+        }
+        return File(folder, name)
     }
 }
