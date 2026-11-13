@@ -2,8 +2,10 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.appwidget.AppWidgetManager
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
+import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -278,11 +280,14 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     }
 
     /** The companion's bitmap edge in [size], for a first streak day (one pose in every layout). */
-    private fun companionPx(size: AnkiquestStreakWidget.Size): Int {
+    private fun companionPx(
+        size: AnkiquestStreakWidget.Size,
+        options: Bundle? = null,
+    ): Int {
         val board = JSONArray().put(me(1, "studied", 20, 30, 10))
         val widget =
             AnkiquestStreakWidget
-                .views(targetContext, board, "hill", size)
+                .views(targetContext, board, "hill", size, options = options)
                 .apply(targetContext, FrameLayout(targetContext))
         val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
         val bitmap = assertNotNull((drawable as? BitmapDrawable)?.bitmap, size.name)
@@ -310,6 +315,20 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
             // Power-of-two sampling covers the shown size with less than twice its edge.
             assertTrue(actual in shown until 2 * shown, "$size shows $shown px from $actual px")
         }
+    }
+
+    @Test
+    @Config(qualifiers = "xhdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `a narrow widget decodes a smaller companion`() {
+        val options =
+            Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 150)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 400)
+            }
+        val shown = (150 * targetContext.resources.displayMetrics.density).toInt()
+        val actual = companionPx(AnkiquestStreakWidget.Size.HUGE, options)
+        assertTrue(actual in shown until 2 * shown, "150 dp shows $shown px from $actual px")
     }
 
     @Test

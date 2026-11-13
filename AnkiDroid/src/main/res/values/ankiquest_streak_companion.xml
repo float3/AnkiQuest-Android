@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<resources>
+    <!-- Largest companion in the big streak layouts; the widget decodes the pose for this size. -->
+    <dimen name="ankiquest_streak_companion_large">220dp</dimen>
+    <dimen name="ankiquest_streak_companion_huge">520dp</dimen>
+</resources>
