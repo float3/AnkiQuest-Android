@@ -180,6 +180,11 @@ jobs:
           # Comment this and the with: above out for performance testing on a branch
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      - name: Robolectric SDK cache
+        # Linux only; macOS and Windows keep the SDK jars in their setup-gradle cache
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/robolectric-sdk-cache
+
       - name: Gradle Dependency Download
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
         with:
