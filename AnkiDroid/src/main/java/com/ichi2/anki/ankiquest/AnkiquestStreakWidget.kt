@@ -19,6 +19,7 @@ import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.ColorRes
+import androidx.annotation.DimenRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import androidx.appcompat.content.res.AppCompatResources
@@ -30,6 +31,7 @@ import com.ichi2.widget.getAppWidgetManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
+import kotlin.math.roundToInt
 
 /**
  * Your own streak as one big number with the companion, like a daily check-in.
@@ -125,6 +127,13 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 streak == 0 -> R.drawable.aki_sleeping
                 else -> R.drawable.aki_at_risk
             }
+
+        /**
+         * Largest companion bitmap edge, the size the streak poses are exported at (float3/ankiquest#253).
+         * One such ARGB bitmap is 4 MiB, under the RemoteViews bitmap limit (screen width x height x 4 x 1.5)
+         * of a 720 x 1280 screen.
+         */
+        private const val COMPANION_MAX_PX = 1024
 
         /** Minutes past the server's streak minimum during which it still counts as just reached. */
         private const val JUST_REACHED_MINUTES = 5
@@ -254,27 +263,28 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 return
             }
             val player = Ankiquest.player()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // The launcher picks the layout for each size itself, also while resizing.
-                val views =
-                    RemoteViews(
-                        Size.entries.associate { size ->
-                            SizeF(size.minWidthDp, size.minHeightDp) to views(context, board, player, size, style = style)
-                        },
-                    )
-                for (id in ids) {
-                    manager.updateAppWidget(id, views)
-                }
-            } else {
-                for (id in ids) {
-                    val options = manager.getAppWidgetOptions(id)
-                    val size =
-                        Size.fitting(
-                            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).toFloat(),
-                            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).toFloat(),
+            for (id in ids) {
+                // Each widget's own size decides how large its companion is decoded.
+                val options = manager.getAppWidgetOptions(id)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // The launcher picks the layout for each size itself, also while resizing.
+                    val views =
+                        RemoteViews(
+                            Size.entries.associate { size ->
+                                val layout = views(context, board, player, size, style = style, options = options)
+                                SizeF(size.minWidthDp, size.minHeightDp) to layout
+                            },
                         )
-                    manager.updateAppWidget(id, views(context, board, player, size, style = style))
+                    manager.updateAppWidget(id, views)
+                    continue
                 }
+
+                val size =
+                    Size.fitting(
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).toFloat(),
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).toFloat(),
+                    )
+                manager.updateAppWidget(id, views(context, board, player, size, style = style, options = options))
             }
         }
 
@@ -285,6 +295,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
             size: Size = Size.MEDIUM,
             now: Long = TimeManager.time.intTimeMS(),
             style: Style = Style.CARD,
+            options: Bundle? = null,
         ): RemoteViews {
             val language = AnkiquestLanguage.context(context)
             val views = RemoteViews(context.packageName, style.layout(size))
@@ -315,7 +326,7 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                     } else {
                         pose(state, streak ?: 0)
                     }
-                views.setImageViewResource(R.id.ankiquest_streak_companion, AnkiquestCompanion.resource(aki))
+                setCompanion(views, context, AnkiquestCompanion.resource(aki), companionPx(context, size, options))
             }
             views.setTextViewText(R.id.ankiquest_streak_number, number)
             views.setTextViewText(
@@ -371,6 +382,54 @@ class AnkiquestStreakWidget : AppWidgetProvider() {
                 )
             }
             return views
+        }
+
+        /** A bitmap decoded for [pixels] keeps the launcher from upscaling the drawable; null [pixels] keeps the drawable. */
+        private fun setCompanion(
+            views: RemoteViews,
+            context: Context,
+            @DrawableRes art: Int,
+            pixels: Int?,
+        ) {
+            val bitmap = pixels?.let { AnkiquestArt.bitmap(context, art, it) }
+            if (bitmap == null) {
+                views.setImageViewResource(R.id.ankiquest_streak_companion, art)
+                return
+            }
+            views.setImageViewBitmap(R.id.ankiquest_streak_companion, bitmap)
+        }
+
+        /** The layout's largest companion; the small layouts keep theirs small. */
+        @DimenRes
+        private fun companionDimen(size: Size): Int? =
+            when (size) {
+                Size.LARGE -> R.dimen.ankiquest_streak_companion_large
+                Size.HUGE -> R.dimen.ankiquest_streak_companion_huge
+                Size.SMALL, Size.MEDIUM -> null
+            }
+
+        /**
+         * The companion's largest edge in pixels for [size], or null for the small layouts. The square
+         * pose fits within the widget's largest width and height from [options] and the layout's limit.
+         */
+        private fun companionPx(
+            context: Context,
+            size: Size,
+            options: Bundle?,
+        ): Int? {
+            val dimen = companionDimen(size) ?: return null
+            val density = context.resources.displayMetrics.density
+            var edge = context.resources.getDimensionPixelSize(dimen)
+
+            // Launchers report 0 or nothing before the widget is placed.
+            val widthDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) ?: 0
+            val heightDp = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) ?: 0
+            for (dp in listOf(widthDp, heightDp)) {
+                if (dp > 0) {
+                    edge = minOf(edge, (dp * density).roundToInt())
+                }
+            }
+            return edge.coerceAtMost(COMPANION_MAX_PX)
         }
 
         /** Clear optional details on reapply when the cached day is no longer trustworthy. */

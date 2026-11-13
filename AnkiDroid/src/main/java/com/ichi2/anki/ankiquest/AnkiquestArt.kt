@@ -15,7 +15,8 @@ import com.ichi2.anki.R
  * several megabytes each time.
  */
 internal object AnkiquestArt {
-    private const val CACHE_BYTES = 4 * 1024 * 1024
+    /** Room for one 1024 px streak widget pose (4 MiB) next to the smaller art. */
+    private const val CACHE_BYTES = 8 * 1024 * 1024
 
     private val cache =
         object : LruCache<String, Bitmap>(CACHE_BYTES) {
@@ -35,8 +36,6 @@ internal object AnkiquestArt {
         size: Int,
     ): Bitmap? {
         if (size <= 0) return null
-        val key = "$resource:$size"
-        cache.get(key)?.let { return it }
         val bounds =
             BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
@@ -44,9 +43,14 @@ internal object AnkiquestArt {
             }
         BitmapFactory.decodeResource(context.resources, resource, bounds)
         val edge = minOf(bounds.outWidth, bounds.outHeight)
+        val sample = if (edge > 0) sampleSize(edge, size) else 1
+
+        // Keyed by sample, so sizes that decode alike share one bitmap, also within one RemoteViews.
+        val key = "$resource:$sample"
+        cache.get(key)?.let { return it }
         val options =
             BitmapFactory.Options().apply {
-                inSampleSize = if (edge > 0) sampleSize(edge, size) else 1
+                inSampleSize = sample
                 inScaled = false
             }
         val decoded = BitmapFactory.decodeResource(context.resources, resource, options) ?: return null

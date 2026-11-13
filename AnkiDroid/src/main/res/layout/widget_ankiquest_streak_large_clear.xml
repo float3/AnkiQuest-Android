@@ -17,7 +17,7 @@
         android:layout_weight="1"
         android:adjustViewBounds="true"
         android:importantForAccessibility="no"
-        android:maxHeight="220dp"
+        android:maxHeight="@dimen/ankiquest_streak_companion_large"
         android:scaleType="fitCenter"
         android:src="@drawable/aki_streak" />
 

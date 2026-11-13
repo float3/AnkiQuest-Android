@@ -2,7 +2,8 @@
 name: ankiquest art check
 
 # Runs the server's art exporter against the app's drawables. It runs the server's code, so it
-# only runs for pull requests and pushes, never on a schedule or by hand.
+# only runs for pull requests and pushes, never on a schedule or by hand. It checks against server
+# master, not the API snapshot pinned in ankiquest-server.sha: that pin covers API data only.
 on:
   pull_request:
   push:
@@ -19,7 +20,7 @@ jobs:
   art:
     name: App art matches the server's exporter
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,13 +33,16 @@ jobs:
           path: server
           persist-credentials: false
 
+      # The runner image ships rustup; install a minimal stable toolchain explicitly.
+      - name: Set up Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal --no-self-update && rustup default stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: server
+
+      # A server without the exporter fails here instead of skipping the check.
       - name: Check the app's art against the server's exporter
         shell: bash
-        run: |
-          if [ -f server/tools/export_android_art.py ]; then
-            python3 -m venv "$RUNNER_TEMP/art"
-            "$RUNNER_TEMP/art/bin/pip" install --quiet pillow
-            "$RUNNER_TEMP/art/bin/python" server/tools/export_android_art.py --check .
-          else
-            echo "The server has no tools/export_android_art.py"
-          fi
+        run: (cd server && cargo run -q -p ankiquest-xtask -- export-android-art --check "$GITHUB_WORKSPACE")
