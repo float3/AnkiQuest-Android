@@ -34,7 +34,7 @@ class AnkiquestGalleryActivity : AnkiActivity() {
             return
         }
         super.onCreate(savedInstanceState)
-        started = savedInstanceState?.getBoolean(STARTED) == true
+        started = savedInstanceState?.getBoolean(STATE_STARTED) == true
         if (started) {
             finish()
             return
@@ -54,7 +54,7 @@ class AnkiquestGalleryActivity : AnkiActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean(STARTED, started)
+        outState.putBoolean(STATE_STARTED, started)
         super.onSaveInstanceState(outState)
     }
 
@@ -88,6 +88,6 @@ class AnkiquestGalleryActivity : AnkiActivity() {
     }
 
     companion object {
-        private const val STARTED = "ankiquest.picture_started"
+        private const val STATE_STARTED = "ankiquest.picture_started"
     }
 }

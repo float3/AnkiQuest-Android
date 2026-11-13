@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import com.ichi2.utils.openInputStreamSafe
 import java.io.IOException
 import java.util.UUID
 
@@ -33,7 +34,7 @@ internal object AnkiquestGallery {
         val resolver = context.contentResolver
         val saved = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: throw IOException("No gallery destination")
         try {
-            val input = resolver.openInputStream(source) ?: throw IOException("The share picture is unavailable")
+            val input = resolver.openInputStreamSafe(source) ?: throw IOException("The share picture is unavailable")
             input.use {
                 val output = resolver.openOutputStream(saved) ?: throw IOException("The gallery picture is unavailable")
                 output.use { input.copyTo(it) }

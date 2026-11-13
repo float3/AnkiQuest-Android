@@ -17,6 +17,7 @@ import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.testutils.EmptyApplication
+import com.ichi2.utils.openInputStreamSafe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -64,7 +65,7 @@ class AnkiquestGalleryTest : RobolectricTest() {
                 override fun getContentResolver() = resolver
             }
         every { resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, capture(inserted)) } returns saved
-        every { resolver.openInputStream(source) } answers { bytes.inputStream() }
+        every { resolver.openInputStreamSafe(source) } answers { bytes.inputStream() }
         every { resolver.openOutputStream(saved) } returns output
         every { resolver.update(saved, capture(published), null, null) } returns 1
         every { resolver.delete(saved, null, null) } returns 1
@@ -102,7 +103,7 @@ class AnkiquestGalleryTest : RobolectricTest() {
 
     @Test
     fun `a missing source leaves no empty picture in the gallery`() {
-        every { resolver.openInputStream(source) } returns null
+        every { resolver.openInputStreamSafe(source) } returns null
         assertFailsWith<IOException> { AnkiquestGallery.save(context, source, account) }
         verify(exactly = 1) { resolver.delete(saved, null, null) }
     }

@@ -12,6 +12,7 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
 import com.ichi2.anki.R
 
 /** Draws only the display content explicitly supplied for sharing; no account or collection reads. */
@@ -57,10 +58,7 @@ internal object AnkiquestPicture {
         canvas.drawColor(context.getColor(R.color.aq_home_background))
         var top = MARGIN.toFloat()
         for ((index, block) in blocks.withIndex()) {
-            canvas.save()
-            canvas.translate(MARGIN.toFloat(), top)
-            block.draw(canvas)
-            canvas.restore()
+            canvas.withTranslation(MARGIN.toFloat(), top) { block.draw(this) }
             top += block.height + GAP
             if (index == 0 && art != null) {
                 val ratio = minOf(HERO.toFloat() / art.width, HERO.toFloat() / art.height)

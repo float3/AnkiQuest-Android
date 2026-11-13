@@ -18,9 +18,11 @@ import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.common.preferences.SharedPreferencesTestHook
 import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.testutils.EmptyApplication
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
+import com.ichi2.utils.openInputStreamSafe
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import io.mockk.every
@@ -206,7 +208,7 @@ class AnkiquestShareTest : RobolectricTest() {
         assertEquals(link.text, send.getStringExtra(Intent.EXTRA_TEXT))
         assertTrue(send.hasExtra(Intent.EXTRA_STREAM))
         val uri = assertNotNull(send.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM))
-        val bitmap = targetContext.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+        val bitmap = targetContext.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) }
         assertNotNull(bitmap, "the shared stream contains a readable picture")
         assertTrue(bitmap.width > 0 && bitmap.height > 0)
         assertEquals(uri, send.clipData?.getItemAt(0)?.uri)
@@ -329,7 +331,7 @@ class AnkiquestShareTest : RobolectricTest() {
         val expired =
             File(directory, "old.png").apply {
                 writeText("old picture")
-                check(setLastModified(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)))
+                check(setLastModified(TimeManager.time.intTimeMS() - TimeUnit.DAYS.toMillis(2)))
             }
         val fresh = File(directory, "fresh.png").apply { writeText("still in use") }
         val unrelated =
@@ -351,10 +353,10 @@ class AnkiquestShareTest : RobolectricTest() {
             return assertNotNull(send.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM))
         }
         val first = stream("First")
-        val bytes = targetContext.contentResolver.openInputStream(first)!!.use { it.readBytes() }
+        val bytes = targetContext.contentResolver.openInputStreamSafe(first)!!.use { it.readBytes() }
         val second = stream("Second")
         assertTrue(first != second, "share grants must not point to an overwritten file")
-        assertContentEquals(bytes, targetContext.contentResolver.openInputStream(first)!!.use { it.readBytes() })
+        assertContentEquals(bytes, targetContext.contentResolver.openInputStreamSafe(first)!!.use { it.readBytes() })
     }
 
     @Test

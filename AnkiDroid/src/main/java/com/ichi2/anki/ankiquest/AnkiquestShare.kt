@@ -18,6 +18,7 @@ import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import kotlinx.coroutines.CancellationException
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -154,7 +155,7 @@ internal object AnkiquestShare {
             try {
                 val bytes = picturePng(context, fallback, image)
                 val directory = File(context.cacheDir, "ankiquest-share").apply { mkdirs() }
-                val expired = System.currentTimeMillis() - CACHE_LIFETIME
+                val expired = TimeManager.time.intTimeMS() - CACHE_LIFETIME
                 directory.listFiles()?.filter { it.isFile && it.extension == "png" && it.lastModified() < expired }?.forEach { it.delete() }
                 // A second share must never overwrite a picture another app is still reading.
                 val file = File(directory, "${UUID.randomUUID()}.png").apply { writeBytes(bytes) }

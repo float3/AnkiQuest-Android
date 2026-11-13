@@ -17,6 +17,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
+import com.ichi2.utils.openInputStreamSafe
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -213,7 +214,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertEquals("image/png", sent.type)
         assertTrue(sent.hasExtra(Intent.EXTRA_STREAM))
         val uri = assertNotNull(IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
-        assertNotNull(card.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) })
+        assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
         coVerify(exactly = 1) { AnkiquestCommunity.conquest(identity, "hill", AT) }
         coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any(), any()) }
     }
