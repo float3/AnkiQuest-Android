@@ -150,6 +150,20 @@ class AnkiquestUndoTest : RobolectricTest() {
     }
 
     @Test
+    fun `pressing Undo tells closed once`() {
+        val screen = launch().get()
+        val undo = AnkiquestUndo(screen)
+        var closed = 0
+        var reversed = 0
+        undo.apply(identity, "Sent", perform = { it() }, inverse = { reversed++ }, closed = { closed++ })
+        idle()
+        assertNotNull(action(screen)).performClick()
+        idle()
+        assertEquals(1, reversed)
+        assertEquals(1, closed)
+    }
+
+    @Test
     fun `the snackbar can show in a dialog's window`() {
         val screen = launch().get()
         val dialog = AppCompatDialog(screen).apply { setContentView(FrameLayout(screen)) }

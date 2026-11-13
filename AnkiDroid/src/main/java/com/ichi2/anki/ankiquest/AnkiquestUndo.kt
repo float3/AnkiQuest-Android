@@ -34,15 +34,24 @@ internal class AnkiquestUndo(
         inverse: () -> Unit,
         closed: () -> Unit = {},
     ) {
+        // Pressing Undo dismisses the snackbar twice: by its action and by [clear]. Report once.
+        var ended = false
+        val end = {
+            if (!ended) {
+                ended = true
+                closed()
+            }
+        }
+
         clear()
         if (!owns(account)) {
-            closed()
+            end()
             return
         }
         val turn = generation
         perform {
             if (turn != generation || !owns(account)) {
-                closed()
+                end()
                 return@perform
             }
             val window = root()
@@ -66,7 +75,7 @@ internal class AnkiquestUndo(
                                 snackbar = null
                                 generation++
                             }
-                            closed()
+                            end()
                         }
                     },
                 )
