@@ -24,6 +24,6 @@ This release includes the latest AnkiDroid changes.
 
 Update your server to this companion release for "Hide for me" on Global, public profiles listed on Global unless their player turns it off, and fewer details in Global rows of players outside your friends and groups. With an older server, "Hide for me" and the Global switch do not appear.
 
-Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then fill in Settings → AnkiQuest (server URL, player, token). Later releases are offered inside the app.
+Installs next to the official AnkiDroid as "AnkiQuest". Log in to AnkiWeb and sync to get your cards, then open Settings → AnkiQuest → Account → Sign in or create account. Later releases are offered inside the app.
 
 Study uploads contain review history (card id, timestamp, previous interval, time taken, review type and your time-zone offset), never card content. Social actions send the invitation or message you choose to share.
