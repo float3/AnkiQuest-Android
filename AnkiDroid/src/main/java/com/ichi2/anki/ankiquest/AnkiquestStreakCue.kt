@@ -82,7 +82,7 @@ internal object AnkiquestStreakCue {
                     }
                 addView(ring, LinearLayout.LayoutParams(icon, icon))
                 if (AnkiquestCompanion.visible()) {
-                    addView(AnkiquestAki.image(host, R.drawable.aki_minimum, ICON_DP))
+                    addView(AnkiquestAki.image(host, AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, streak ?: 1), ICON_DP))
                 }
                 addView(label)
             }

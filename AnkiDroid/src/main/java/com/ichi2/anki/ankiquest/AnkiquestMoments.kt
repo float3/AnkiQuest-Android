@@ -40,6 +40,9 @@ internal object AnkiquestMoments {
     private const val EXTRA_OWNER = "ankiquest.moment_owner"
     private val milestoneDays = setOf(7, 30, 100, 365)
 
+    /** `streak`, the first day and the length. */
+    private const val STREAK_KEY_PARTS = 3
+
     /** Kept for continuity with the conquest pop-up this replaces: the review ids of conquests already seen. */
     private const val PREF_CONQUESTS_SEEN = "ankiquestConquestsShown"
 
@@ -69,7 +72,8 @@ internal object AnkiquestMoments {
      * One moment as the card shows it. [key] names it for "shown once"; [win] and [notification] are
      * the server's ids to share it by, [place] a top-three finish to share without a win, and
      * [conquest] the review id of a conquered card. [shareTitle] and [shareBody] are the server's
-     * first-person words for sharing, when it sends them.
+     * first-person words for sharing, when it sends them. [streak] is the streak a streak moment is
+     * about, when known.
      */
     data class Moment(
         val key: String,
@@ -85,6 +89,7 @@ internal object AnkiquestMoments {
         val deck: String? = null,
         val shareTitle: String? = null,
         val shareBody: String? = null,
+        val streak: Int? = null,
     ) {
         fun json(): JSONObject =
             JSONObject()
@@ -101,6 +106,7 @@ internal object AnkiquestMoments {
                 .putOpt("deck", deck)
                 .putOpt("share_title", shareTitle)
                 .putOpt("share_body", shareBody)
+                .putOpt("streak", streak)
 
         companion object {
             fun parse(json: JSONObject): Moment? {
@@ -123,6 +129,7 @@ internal object AnkiquestMoments {
                     deck = text("deck"),
                     shareTitle = text("share_title"),
                     shareBody = text("share_body"),
+                    streak = json.optInt("streak").takeIf { json.has("streak") && it > 0 },
                 )
             }
         }
@@ -188,6 +195,7 @@ internal object AnkiquestMoments {
                         title = language.getString(R.string.aq_streak_minimum_title),
                         detail = streakDays(language, streak),
                         at = now,
+                        streak = streak,
                     ),
                 ),
             )
@@ -376,7 +384,17 @@ internal object AnkiquestMoments {
             notification = id.takeIf { it > 0 },
             shareTitle = entry.optString("share_title").ifEmpty { null },
             shareBody = entry.optString("share_body").ifEmpty { null },
+            streak = if (kind == Kind.STREAK) keyStreak(key) else null,
         )
+    }
+
+    /** The streak in a milestone's event key, `streak:{first day}:{days}`. */
+    private fun keyStreak(key: String): Int? {
+        val parts = key.split(':')
+        if (parts.size != STREAK_KEY_PARTS || parts[0] != "streak") {
+            return null
+        }
+        return parts[2].toIntOrNull()?.takeIf { it > 0 }
     }
 
     /** A climb on the weekly board to [place] (1-based), as the server worded it in [change]. */

@@ -81,7 +81,8 @@ internal object AnkiquestArt {
     private fun forTopic(topic: String?): Int =
         when {
             topic == "streak" -> R.drawable.aki_streak_milestone
-            topic == "secured" -> R.drawable.aki_minimum
+            // A notification does not say how long the streak is: the first fire pose.
+            topic == "secured" -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, 1)
             topic == "goal" -> R.drawable.aki_goal
             topic == "conquered" -> R.drawable.aki_deck_conquered
             topic?.startsWith("place:") == true -> place(topic.removePrefix("place:").toIntOrNull()) ?: R.drawable.aki_achievement

@@ -169,6 +169,8 @@ internal object AnkiquestIcon : DefaultLifecycleObserver {
                 .put("streak_state", profile.optString("streak_state"))
                 .put("day_ends_at", profile.optLong("day_ends_at"))
                 .put("goal_reached", profile.optJSONObject("goal")?.optBoolean("reached") == true)
+                // The streak widget's frozen mood needs the run of frozen days before today.
+                .put("frozen_days", AnkiquestMood.frozenRun(profile.optJSONArray("heatmap")))
                 .put(
                     "goal",
                     profile.optJSONObject("goal")?.let { goal ->

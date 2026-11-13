@@ -36,11 +36,37 @@ class AnkiquestPictureScreenshotTest : ScreenshotTest() {
         )
 
     @Test
+    fun streakWarm() = capture("streak_warm", streakCard(3))
+
+    @Test
+    fun streakHot() = capture("streak_hot", streakCard(12))
+
+    @Test
+    fun streakBlazing() = capture("streak_blazing", streakCard(64))
+
+    @Test
+    fun streakLegend() = capture("streak_legend", streakCard(1234))
+
+    @Test
+    fun streakLargeFont() {
+        RuntimeEnvironment.setFontScale(2f)
+        capture("streak_large_font", streakCard(64))
+    }
+
+    @Test
     fun goal() = capture("goal", AnkiquestShare.Card("Daily goal reached", "I reviewed 40 cards today.", R.drawable.aki_goal))
 
     @Test
     fun weeklyPodium() =
         capture("weekly_podium", AnkiquestShare.Card("My week in AnkiQuest", "I finished second this week!", R.drawable.aki_place_2))
+
+    private fun streakCard(streak: Int) =
+        AnkiquestShare.Card(
+            "Streak safe for today",
+            AnkiquestMoments.streakDays(targetContext, streak),
+            AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, streak),
+            streak = streak,
+        )
 
     private fun conquestCard() =
         AnkiquestShare.Card(
