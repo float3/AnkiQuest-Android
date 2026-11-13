@@ -66,7 +66,6 @@
         <item name="windowNoTitle">true</item>
         <item name="windowActionModeOverlay">true</item>
         <item name="actionBarTextColor">@color/white</item>
-        <item name="actionBarPopupTextColor">@color/white</item>
         <item name="actionModeBackground">?attr/appBarColor</item>
         <!-- Bottom navigation -->
         <item name="bottomNavIndicatorColor">?attr/appBarColor</item>
@@ -74,14 +73,12 @@
         <!-- Deck list colors -->
         <item name="selectedRowBackgroundColor">#393939</item>
         <item name="dynDeckColor">@color/material_light_blue_500</item>
-        <item name="expandRef">@drawable/ic_chevron_right_white</item>
-        <item name="collapseRef">@drawable/ic_expand_more_white</item>
         <!-- Count colors -->
         <item name="newCountColor">@color/material_indigo_200</item>
         <item name="learnCountColor">@color/material_red_200</item>
         <item name="reviewCountColor">@color/material_green_200</item>
         <item name="buryCountColor">@color/disabled_gray_dark</item>
-        <item name="zeroCountColor">#404040</item>
+        <item name="zeroCountColor">@color/zero_count_color</item>
         <!-- Study Screen colors -->
         <item name="showAnswerButtonBackground">#22333f</item>
         <item name="againButtonBackground">@color/material_red_800</item>
@@ -139,7 +136,7 @@
         <item name="textAllCaps">false</item>
         <item name="clozeColor">#1976D2</item>
         <item name="popupBackgroundColor">#434343</item>
-        <item name="overflowAndPopupMenuIconColor">#9effffff</item>
+        <item name="overflowAndPopupMenuIconColor">@color/overflow_menu_icon_color</item>
         <!-- StatusBar -->
         <item name="android:statusBarColor">?attr/appBarColor</item>
         <item name="android:windowLightStatusBar">false</item>
@@ -161,7 +158,7 @@
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.AnkiDroid</item>
 
         <!-- ProgressDialog-->
-        <item name="dialogBackground">#ff303030</item>
+        <item name="dialogBackground">?attr/colorSurface</item>
 
 
         <!-- AlertDialogTheme-->

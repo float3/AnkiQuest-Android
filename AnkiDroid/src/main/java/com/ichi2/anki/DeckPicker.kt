@@ -432,6 +432,13 @@ open class DeckPicker :
             }
         }
 
+    internal val bottomNavBackCallback =
+        object : OnBackPressedCallback(enabled = false) {
+            override fun handleOnBackPressed() {
+                binding.bottomNavigation?.selectTab(NavigationItem.HOME)
+            }
+        }
+
     private val closeFloatingActionBarBackPressCallback =
         object : OnBackPressedCallback(enabled = false) {
             override fun handleOnBackPressed() {
@@ -1729,7 +1736,7 @@ open class DeckPicker :
                 KeyEvent.KEYCODE_4 -> NavigationItem.MORE
                 else -> return super.dispatchKeyEvent(event)
             }
-        bottomNavigation.selectedItemId = destination.id
+        bottomNavigation.selectTab(destination)
         return true
     }
 
