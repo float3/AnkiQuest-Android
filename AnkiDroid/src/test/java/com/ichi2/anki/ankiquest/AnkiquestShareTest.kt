@@ -67,6 +67,11 @@ class AnkiquestShareTest : RobolectricTest() {
     private val asked = CopyOnWriteArrayList<String>()
     private val imageAuthorizations = CopyOnWriteArrayList<String?>()
     private val card = "not really a png".toByteArray()
+    private val png =
+        ByteArrayOutputStream().use { out ->
+            check(ImageIO.write(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB), "png", out))
+            out.toByteArray()
+        }
 
     @Before
     fun startServer() {
@@ -115,11 +120,6 @@ class AnkiquestShareTest : RobolectricTest() {
         }
         server.createContext("/w/huge.png") { exchange -> respond(exchange, 200, ByteArray(5 * 1024 * 1024)) }
         server.createContext("/w/gone.png") { exchange -> respond(exchange, 404, ByteArray(0)) }
-        val png =
-            ByteArrayOutputStream().use { out ->
-                check(ImageIO.write(BufferedImage(2, 2, BufferedImage.TYPE_INT_ARGB), "png", out))
-                out.toByteArray()
-            }
         server.createContext("/w/valid.png") { exchange -> respond(exchange, 200, png) }
         server.start()
         base = "http://127.0.0.1:${server.address.port}"
@@ -241,6 +241,16 @@ class AnkiquestShareTest : RobolectricTest() {
         assertEquals(2, bitmap.width)
         assertEquals(2, bitmap.height)
         bitmap.recycle()
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `an available server picture is shared byte for byte`() {
+        val chooser = AnkiquestShare.cardChooser(targetContext, "A public win", "$base/w/valid.png")
+        val send = assertNotNull(chooser.getParcelableExtraCompat<Intent>(Intent.EXTRA_INTENT))
+        val uri = assertNotNull(send.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM))
+        val shared = assertNotNull(targetContext.contentResolver.openInputStreamSafe(uri)).use { it.readBytes() }
+        assertContentEquals(png, shared, "the server's PNG must not be decoded and encoded again")
     }
 
     @Test

@@ -27,6 +27,7 @@ import io.mockk.mockkStatic
 import io.mockk.runs
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -215,8 +216,26 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertTrue(sent.hasExtra(Intent.EXTRA_STREAM))
         val uri = assertNotNull(IntentCompat.getParcelableExtra(sent, Intent.EXTRA_STREAM, Uri::class.java))
         assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
+        assertTrue(sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty().endsWith("https://anki.example.test/conquered/hill/$AT"))
         coVerify(exactly = 1) { AnkiquestCommunity.conquest(identity, "hill", AT) }
         coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any(), any()) }
+    }
+
+    @Test
+    fun `downloading the card's picture publishes nothing`() {
+        mockkObject(AnkiquestApi)
+        try {
+            val card = launch()
+            card.click(card.getString(R.string.ankiquest_download_picture))
+            advanceRobolectricLooperUntil { shadowOf(card).peekNextStartedActivity() != null }
+            val saving = assertNotNull(shadowOf(card).nextStartedActivity)
+            assertEquals(AnkiquestGalleryActivity::class.java.name, saving.component?.className)
+            val uri = assertNotNull(saving.data)
+            assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
+            verify(exactly = 0) { AnkiquestApi.json(any(), match { it.url.encodedPath.startsWith("/api/share/") }, any()) }
+        } finally {
+            unmockkObject(AnkiquestApi)
+        }
     }
 
     @Test

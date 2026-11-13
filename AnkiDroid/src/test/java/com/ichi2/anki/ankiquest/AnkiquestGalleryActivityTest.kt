@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import io.mockk.every
 import io.mockk.mockkObject
@@ -21,6 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowToast
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -99,6 +101,11 @@ class AnkiquestGalleryActivityTest : RobolectricTest() {
         advanceRobolectricLooper()
         assertTrue(activity.isFinishing)
         verify(exactly = 0) { AnkiquestGallery.save(any(), any(), any()) }
+        assertEquals(
+            activity.getString(R.string.ankiquest_picture_failed),
+            ShadowToast.getTextOfLatestToast(),
+            "a denied permission must say the picture was not saved",
+        )
     }
 
     @Test

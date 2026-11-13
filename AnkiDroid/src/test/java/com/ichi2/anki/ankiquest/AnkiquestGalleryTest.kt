@@ -7,6 +7,7 @@ import android.content.ContentValues
 import android.content.ContextWrapper
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -29,6 +30,7 @@ import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -91,6 +93,19 @@ class AnkiquestGalleryTest : RobolectricTest() {
             verify(exactly = 0) { resolver.update(any(), any(), any(), any()) }
         }
         verify(exactly = 0) { resolver.delete(any(), any(), any()) }
+    }
+
+    @Test
+    @Config(sdk = [24])
+    @Suppress("DEPRECATION") // MediaColumns.DATA and the public folder are the pre-Q API under test.
+    fun `before Android 10 the picture is a PNG in its own folder`() {
+        AnkiquestGallery.save(context, source, account)
+        val name = inserted.captured.getAsString(MediaStore.Images.Media.DISPLAY_NAME)
+
+        // Without a path, MediaProvider names the file Pictures/<millis>.jpg and ignores the display name.
+        val folder = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "AnkiQuest")
+        assertEquals(File(folder, name).path, inserted.captured.getAsString(MediaStore.MediaColumns.DATA))
+        assertTrue(folder.isDirectory, "MediaProvider does not create the folder")
     }
 
     @Test
