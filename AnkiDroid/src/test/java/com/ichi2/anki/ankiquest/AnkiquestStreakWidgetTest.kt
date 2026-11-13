@@ -336,19 +336,31 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun `every streak pose covers the huge layout on a dense screen`() {
         val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
+        // Every pose the big layouts rotate through (poses), and Ankilope's stand-ins for them.
         val poses =
             listOf(
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.UNKNOWN, 0),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.PROTECTED, 3),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 1),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 3),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 7),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 30),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 100),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 0),
-                AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 3),
+                R.drawable.aki_face,
+                R.drawable.aki_welcome,
+                R.drawable.aki_freeze_used,
+                R.drawable.aki_freeze,
+                R.drawable.aki_goal,
+                R.drawable.aki_celebrate,
+                R.drawable.aki_comeback,
+                R.drawable.aki_minimum,
+                R.drawable.aki_streak_legend,
+                R.drawable.aki_streak_milestone,
+                R.drawable.aki_streak_blazing,
+                R.drawable.aki_streak_hot,
+                R.drawable.aki_streak,
+                R.drawable.aki_sleeping,
+                R.drawable.aki_at_risk,
+                R.drawable.aki_review,
+                R.drawable.ankilope_face,
+                R.drawable.ankilope_welcome,
+                R.drawable.ankilope_celebrate,
+                R.drawable.ankilope_study,
             )
-        assertEquals(9, poses.toSet().size)
+        assertEquals(20, poses.toSet().size)
         for (pose in poses) {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeResource(targetContext.resources, pose, bounds)
