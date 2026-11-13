@@ -54,7 +54,13 @@ internal object AnkiquestShare {
     private const val MAX_PICTURE_SIDE = 1080
     private const val IMAGE_SECONDS = 10L
     private val CACHE_LIFETIME = TimeUnit.DAYS.toMillis(1)
-    private val SHAREABLE = setOf("celebration", "challenge_complete", "reminder_weekly_recap")
+
+    /** The notification kind behind a Share button, for its picture's art. */
+    private const val EXTRA_KIND = "ankiquestShareKind"
+    private const val KIND_CELEBRATION = "celebration"
+    private const val KIND_CHALLENGE_COMPLETE = "challenge_complete"
+    private const val KIND_WEEKLY_RECAP = "reminder_weekly_recap"
+    private val SHAREABLE = setOf(KIND_CELEBRATION, KIND_CHALLENGE_COMPLETE, KIND_WEEKLY_RECAP)
 
     private val imageClient =
         AnkiquestHttp.client
@@ -107,6 +113,19 @@ internal object AnkiquestShare {
             .putExtra(EXTRA_SCOPE, AnkiquestHomeData.account()?.scope)
     }
 
+    /**
+     * Aki's pose for the picture of a Share button's [share] intent. Buttons without a kind, such as
+     * a climb to [place] or one posted by an older version, use what they carry.
+     */
+    @DrawableRes
+    fun art(
+        share: Intent,
+        place: Int?,
+    ): Int {
+        val kind = share.getStringExtra(EXTRA_KIND) ?: if (place == null) KIND_CELEBRATION else KIND_WEEKLY_RECAP
+        return AnkiquestArt.forNotice(kind, share.getStringExtra(EXTRA_TOPIC) ?: place?.let { "place:$it" })
+    }
+
     /** Notification kinds that are a player's own win, and so worth sharing. */
     fun shareable(kind: String) = kind in SHAREABLE
 
@@ -114,7 +133,7 @@ internal object AnkiquestShare {
      * The Share button for a win's notification: a [win] the server keeps, or for older servers one of
      * the player's own [notification]s or a [place] they climbed to. Null when the win belongs to an
      * account that is no longer signed in. The button carries the account's [scope], so a tap after
-     * switching accounts shares nothing.
+     * switching accounts shares nothing. [kind] is the notification's, for the picture's art.
      */
     fun action(
         context: Context,
@@ -126,6 +145,7 @@ internal object AnkiquestShare {
         place: Int?,
         scope: String?,
         topic: String? = null,
+        kind: String? = null,
     ): NotificationCompat.Action? {
         val current = AnkiquestHomeData.account() ?: return null
         if (current.token.isEmpty() || (scope != null && current.scope != scope)) return null
@@ -139,6 +159,7 @@ internal object AnkiquestShare {
         notification?.let { intent.putExtra(EXTRA_NOTIFICATION, it) }
         place?.let { intent.putExtra(EXTRA_PLACE, it) }
         topic?.let { intent.putExtra(EXTRA_TOPIC, it) }
+        kind?.let { intent.putExtra(EXTRA_KIND, it) }
         return NotificationCompat.Action
             .Builder(
                 R.drawable.ic_share_notify,

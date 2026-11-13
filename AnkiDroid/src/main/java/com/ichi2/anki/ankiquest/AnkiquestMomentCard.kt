@@ -164,7 +164,7 @@ internal object AnkiquestMomentCard {
                     if (!ownsAccount()) {
                         abandon()
                     } else {
-                        pages?.refresh()
+                        pages?.resumed()
                     }
                 }
             }
@@ -398,6 +398,9 @@ internal object AnkiquestMomentCard {
         val download: MaterialButton = view.findViewById(R.id.aq_moment_download)
     }
 
+    /** Where the player went from the card; only a conquest screen changes what a moment shows. */
+    private enum class Away { NONE, CONQUEST }
+
     /** What the server knows about a moment beyond the inbox row: whether friends heard it, and its picture. */
     private data class Extras(
         val told: Boolean,
@@ -419,6 +422,7 @@ internal object AnkiquestMomentCard {
         private val pictures = mutableMapOf<String, Bitmap>()
         private val told = mutableSetOf<String>()
         private var generation = 0
+        private var away = Away.NONE
 
         /** Conquered cards whose telling friends can still be taken back. */
         private val undoable = mutableSetOf<String>()
@@ -450,7 +454,10 @@ internal object AnkiquestMomentCard {
             holder.date.isVisible = moment.at > 0
             holder.open.isVisible = moment.conquest != null
             holder.open.setOnClickListener {
-                moment.conquest?.let { host.startActivity(AnkiquestConquestActivity.intent(host, account.user, it)) }
+                moment.conquest?.let {
+                    away = Away.CONQUEST
+                    host.startActivity(AnkiquestConquestActivity.intent(host, account.user, it))
+                }
             }
             val known = extras[moment.key]
             val undo = moment.key in undoable
@@ -462,8 +469,19 @@ internal object AnkiquestMomentCard {
             if (known == null) load(moment, position)
         }
 
-        /** Returning from a conquest must forget a label or picture the player removed there. */
-        fun refresh() {
+        /**
+         * Returning from a conquest must forget a label or picture the player removed there. Any
+         * other return, such as from the share sheet or a permission dialog, keeps what was loaded.
+         */
+        fun resumed() {
+            if (away != Away.CONQUEST) {
+                return
+            }
+            away = Away.NONE
+            refresh()
+        }
+
+        private fun refresh() {
             generation++
             extras.clear()
             pictures.clear()
@@ -668,13 +686,17 @@ internal object AnkiquestMomentCard {
             }
         }
 
-        /** The on-screen conquest suggestion is private until its label has been saved. */
+        /**
+         * The picture says what the caption says: the server's share words, else the moment's own.
+         * The on-screen conquest suggestion is private until its label has been saved.
+         */
         private fun publicPicture(moment: Moment): AnkiquestShare.Card {
+            val title = moment.shareTitle ?: moment.title
             if (moment.conquest == null) {
-                return AnkiquestShare.Card(moment.title, moment.detail, art(moment))
+                return AnkiquestShare.Card(title, moment.shareBody ?: moment.detail, art(moment))
             }
             return AnkiquestShare.Card(
-                moment.title,
+                title,
                 host.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses),
                 art(moment),
                 listOfNotNull(

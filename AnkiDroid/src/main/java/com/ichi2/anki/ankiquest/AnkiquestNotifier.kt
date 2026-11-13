@@ -154,6 +154,7 @@ object AnkiquestNotifier {
                                 null,
                                 scope,
                                 if (entry.isNull("topic")) null else entry.optString("topic"),
+                                kind,
                             ),
                         )
                     } else {
