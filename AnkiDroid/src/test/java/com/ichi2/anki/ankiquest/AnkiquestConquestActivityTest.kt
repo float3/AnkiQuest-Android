@@ -3,13 +3,13 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
+import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
@@ -228,7 +228,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         mockkObject(AnkiquestMomentShare, AnkiquestSocial)
         try {
             every { AnkiquestMomentShare.available(identity) } returns true
-            every { AnkiquestShare.render(any(), any()) } returns Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
             coEvery { AnkiquestSocial.overview(identity) } returns
                 AnkiquestSocial.Overview(
                     listOf(AnkiquestSocial.Person("cerro", "Cerro")),

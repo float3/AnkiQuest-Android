@@ -3,12 +3,12 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Looper
 import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -74,7 +74,7 @@ class AnkiquestShareSheetTest : RobolectricTest() {
         mockkObject(AnkiquestHomeData, AnkiquestSocial, AnkiquestSharing, AnkiquestShare)
         every { AnkiquestHomeData.account(any()) } returns account
         coEvery { AnkiquestSocial.overview(account) } answers { overview }
-        every { AnkiquestShare.render(any(), any()) } returns Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
     }
 
     @After

@@ -3,12 +3,12 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Looper
 import android.view.View
 import android.widget.CheckBox
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
+import androidx.core.graphics.createBitmap
 import androidx.core.view.allViews
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -249,7 +249,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     @Test
     fun `a server with share_moments opens AnkiQuest's share sheet, and More apps opens Android's`() {
         every { AnkiquestMomentShare.available(account) } returns true
-        every { AnkiquestShare.render(any(), any()) } returns Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(account) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()
@@ -271,7 +271,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     @Test
     fun `closing AnkiQuest's share sheet closes the share screen`() {
         every { AnkiquestMomentShare.available(account) } returns true
-        every { AnkiquestShare.render(any(), any()) } returns Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(account) } returns
             AnkiquestSocial.Overview(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), true)
         val controller = Robolectric.buildActivity(AnkiquestShareActivity::class.java, intent()).setup()

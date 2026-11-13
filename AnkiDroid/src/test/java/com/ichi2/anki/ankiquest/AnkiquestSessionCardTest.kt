@@ -3,7 +3,6 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -268,7 +268,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
         every { AnkiquestMomentShare.available(any()) } returns true
-        every { AnkiquestShare.render(any(), any()) } returns Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
         coEvery { AnkiquestSocial.overview(any()) } returns
             AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
         coEvery { AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(17), AnkiquestSharing.Audience.Circle, null) } returns

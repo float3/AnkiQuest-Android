@@ -146,7 +146,7 @@ internal class AnkiquestShareSheet(
                 id = R.id.aq_share_status
                 accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             }
-        send = views.button(content, language.getString(R.string.ankiquest_share_send), primary = true) { submit() }
+        send = views.button(content, language.getString(R.string.aq_feed_send), primary = true) { submit() }
         send.id = R.id.aq_share_send
         more = views.button(content, language.getString(R.string.ankiquest_share_more_apps)) { leave() }
         more.id = R.id.aq_share_more

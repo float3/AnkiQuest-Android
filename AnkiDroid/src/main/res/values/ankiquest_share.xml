@@ -62,7 +62,6 @@ I study with AnkiQuest.</string>
     <string name="ankiquest_share_group">Group: %1$s</string>
     <string name="ankiquest_share_no_match">No friend or group has that name.</string>
     <string name="ankiquest_share_note_hint">Add a note (optional)</string>
-    <string name="ankiquest_share_send">Send</string>
     <string name="ankiquest_share_sending">Sending…</string>
     <string name="ankiquest_share_more_apps">More apps…</string>
     <string name="ankiquest_share_loading">Loading your friends…</string>
