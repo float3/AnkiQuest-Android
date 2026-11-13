@@ -154,7 +154,7 @@ class AnkiquestUndoTest : RobolectricTest() {
         val screen = launch().get()
         val dialog = AppCompatDialog(screen).apply { setContentView(FrameLayout(screen)) }
         dialog.show()
-        val undo = AnkiquestUndo(screen) { dialog.findViewById(android.R.id.content) }
+        val undo = AnkiquestUndo(screen) { dialog.findViewById<View>(android.R.id.content)!! }
         undo.apply(identity, "Sent", perform = { it() }, inverse = {})
         idle()
         assertNull(action(screen))
