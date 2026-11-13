@@ -63,8 +63,19 @@ test('the workflow passes its matching run to the artifact download', async () =
   assert.equal(result, 42);
   assert.deepEqual(fixture.queries[0], {
     owner: 'float3', repo: 'AnkiQuest-Android', workflow_id: 'ankiquest_screenshot_store.yml',
-    head_sha: 'base-sha', status: 'success', per_page: 100,
+    head_sha: 'base-sha', per_page: 100,
   });
+});
+
+test('a baseline the API status filter misses is still found', async () => {
+  // GitHub's status=success filter can omit a finished run that head_sha alone returns.
+  const fixture = harness();
+  fixture.github.rest.actions.listWorkflowRuns = async query => {
+    fixture.queries.push(query);
+    return { data: { workflow_runs: query.status ? [] : [run(42)] } };
+  };
+  assert.equal(await waitForBaseline(fixture), 42);
+  assert.deepEqual(fixture.waits, []);
 });
 
 test('overlapping jobs cannot substitute a newer or older commit for a running baseline', async () => {

@@ -24,8 +24,9 @@ module.exports = async function waitForScreenshotBaseline({
         } = await github.rest.actions.listWorkflowRuns({
             ...context.repo,
             workflow_id: WORKFLOW,
+            // No status filter: GitHub's status=success can omit a finished run.
+            // The checks below pick a completed, successful run themselves.
             head_sha: base.sha,
-            status: "success",
             per_page: 100,
         });
         for (const run of runs) {
