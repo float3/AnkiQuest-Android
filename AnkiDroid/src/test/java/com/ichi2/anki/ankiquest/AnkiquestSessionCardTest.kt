@@ -226,7 +226,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         val prepared = AtomicBoolean(false)
         var operation: Job? = null
         coEvery { AnkiquestSharing.win(any(), 17) } returns null
-        coEvery { Ankiquest.shareWinLink(17, any(), AnkiquestApi.Timeout.PICTURE) } coAnswers {
+        coEvery { Ankiquest.shareWinLink(17, any()) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }
@@ -406,7 +406,7 @@ class AnkiquestSessionCardTest : RobolectricTest() {
             }
             recorded.copy(label = sharedLabel, win = null)
         }
-        coEvery { Ankiquest.shareWinLink(any(), any(), any()) } throws IOException("offline")
+        coEvery { Ankiquest.shareWinLink(any(), any()) } throws IOException("offline")
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
             prepared.set(arg(4))
             Intent(Intent.ACTION_CHOOSER)

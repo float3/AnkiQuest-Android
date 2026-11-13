@@ -274,7 +274,7 @@ class AnkiquestShareActivity : AnkiActivity() {
                     val card = AnkiquestShare.Card(share.title, share.body, art)
                     val link =
                         try {
-                            share.win?.let { Ankiquest.shareWinLink(it, share.scope, AnkiquestApi.Timeout.PICTURE) }
+                            share.win?.let { Ankiquest.shareWinLink(it, share.scope) }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: HomeAccountChanged) {

@@ -187,7 +187,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `the owner shares the card's words, deck, picture and page`() {
         val picture = "https://anki.example.test/w/tok.png"
         coEvery { AnkiquestShare.conqueredCardDeck(AT) } returns "Español::Animales"
-        coEvery { Ankiquest.shareWinLink(6, identity.scope, AnkiquestApi.Timeout.PICTURE) } returns
+        coEvery { Ankiquest.shareWinLink(6, identity.scope) } returns
             AnkiquestShare.Link("https://anki.example.test/w/tok", picture, "I just conquered a card")
         every { AnkiquestShare.picture(any(), any(), picture) } answers { createBitmap(2, 2) }
         // Robolectric's cache folder is not always under the provider's root, so the picture's address is made up.
@@ -218,7 +218,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertNotNull(card.contentResolver.openInputStreamSafe(uri).use { BitmapFactory.decodeStream(it) })
         assertTrue(sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty().endsWith("https://anki.example.test/conquered/hill/$AT"))
         coVerify(exactly = 1) { AnkiquestCommunity.conquest(identity, "hill", AT) }
-        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any(), any()) }
+        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
     }
 
     @Test
@@ -252,7 +252,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
             sent.getStringExtra(Intent.EXTRA_TEXT),
         )
         coVerify(exactly = 0) { AnkiquestShare.conqueredCardDeck(any()) }
-        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any(), any()) }
+        coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
     }
 
     private fun AnkiquestConquestActivity.sent(): Intent {
@@ -372,7 +372,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `a share finishing while paused leaves the screen ready after resume`() {
         val answer = CompletableDeferred<AnkiquestShare.Link>()
         val prepared = AtomicBoolean(false)
-        coEvery { Ankiquest.shareWinLink(6, identity.scope, AnkiquestApi.Timeout.PICTURE) } coAnswers { answer.await() }
+        coEvery { Ankiquest.shareWinLink(6, identity.scope) } coAnswers { answer.await() }
         every { AnkiquestShare.cardChooser(any(), any(), any(), any(), any()) } answers {
             prepared.set(true)
             Intent(Intent.ACTION_CHOOSER)

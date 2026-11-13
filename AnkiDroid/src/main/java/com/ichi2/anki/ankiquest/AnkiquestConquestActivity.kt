@@ -512,7 +512,7 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
         card: AnkiquestCommunity.Conquest,
     ): String? =
         try {
-            card.win?.let { Ankiquest.shareWinLink(it, current.scope, AnkiquestApi.Timeout.PICTURE).image }
+            card.win?.let { Ankiquest.shareWinLink(it, current.scope).image }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

@@ -612,7 +612,7 @@ internal object AnkiquestMomentCard {
                     val card = publicPicture(moment)
                     val link =
                         try {
-                            win?.let { Ankiquest.shareWinLink(it, signedIn.scope, AnkiquestApi.Timeout.PICTURE) }
+                            win?.let { Ankiquest.shareWinLink(it, signedIn.scope) }
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: HomeAccountChanged) {

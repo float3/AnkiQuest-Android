@@ -45,7 +45,7 @@ class AnkiquestShareActivityTest : RobolectricTest() {
     fun prepare() {
         mockkObject(AnkiquestHomeData, Ankiquest, AnkiquestShare, AnkiquestSharing)
         every { AnkiquestHomeData.account(any()) } returns account
-        coEvery { Ankiquest.shareWinLink(17, account.scope, AnkiquestApi.Timeout.PICTURE) } coAnswers {
+        coEvery { Ankiquest.shareWinLink(17, account.scope) } coAnswers {
             operation = currentCoroutineContext()[Job]
             answer.await()
         }

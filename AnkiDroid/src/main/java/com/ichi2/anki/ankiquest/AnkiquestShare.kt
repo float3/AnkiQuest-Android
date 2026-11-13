@@ -52,7 +52,6 @@ internal object AnkiquestShare {
     private const val MAX_IMAGE_BYTES = 4L * 1024 * 1024
     private const val MAX_PICTURE_SIDE = 1080
     private const val IMAGE_SECONDS = 10L
-    private const val PICTURE_SECONDS = 1L
     private val CACHE_LIFETIME = TimeUnit.DAYS.toMillis(1)
     private val SHAREABLE = setOf("celebration", "challenge_complete", "reminder_weekly_recap")
 
@@ -61,8 +60,6 @@ internal object AnkiquestShare {
             .newBuilder()
             .callTimeout(IMAGE_SECONDS, TimeUnit.SECONDS)
             .build()
-
-    private val pictureClient = imageClient.newBuilder().callTimeout(PICTURE_SECONDS, TimeUnit.SECONDS).build()
 
     /** A win's public link, its card and the server's invitation text, which includes the link. */
     data class Link(
@@ -186,7 +183,7 @@ internal object AnkiquestShare {
 
     private fun quickPng(url: String): ByteArray? =
         try {
-            val bytes = readImage(url, pictureClient)
+            val bytes = readImage(url, AnkiquestApi.client(AnkiquestApi.Timeout.PICTURE))
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
             bytes.takeIf {
