@@ -12,7 +12,7 @@ AnkiDroid with [AnkiQuest](https://github.com/float3/ankiquest): study, shared g
 
 **Aki and Ankilope.** New poses for challenges (sent, won and lost), nudges, a review backlog and first, second and third place on the leaderboard.
 
-**Share pictures.** Sharing a moment or a conquered card attaches its picture, drawn on the phone when the server's picture is not ready, so it works for cards of other players and on slow connections. The share sheet also offers "Download picture" to save it to your gallery.
+**Share pictures.** Sharing a moment or a conquered card attaches its picture, drawn on the phone when the server's picture is not ready, so it works for cards of other players and on slow connections. "Download picture" on a moment or a conquered card saves the picture to your gallery without sharing anything.
 
 **Conquered cards.** The suggested label comes from the fields on the card's front, without template text or ID fields. Two short fields, such as a word and its reading, are shown together.
 
