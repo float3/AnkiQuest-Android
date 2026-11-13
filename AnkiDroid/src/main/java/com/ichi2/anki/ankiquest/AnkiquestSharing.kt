@@ -147,6 +147,81 @@ internal object AnkiquestSharing {
                 .put("recipients", JSONArray(recipients)),
         ).optInt("recipients")
 
+    /** The capability of servers that send a moment to chosen friends and groups, with a note, and take it back. */
+    const val FEATURE_MOMENTS = "share_moments"
+
+    /** The server keeps a note to one line of this many characters. */
+    const val MAX_NOTE = 140
+
+    /** A moment to send, as `POST /api/share/{user}` names it in `moment`. */
+    sealed class MomentRef {
+        data class Win(
+            val id: Long,
+        ) : MomentRef()
+
+        /** A conquered card by its answer [at]; the server keeps its win if it has none yet. */
+        data class Conquest(
+            val at: Long,
+        ) : MomentRef()
+
+        fun json(): JSONObject =
+            when (this) {
+                is Win -> JSONObject().put("win", id)
+                is Conquest -> JSONObject().put("conquest", at)
+            }
+    }
+
+    /** Who gets a moment: everyone in the player's circle, or the chosen friends and groups. */
+    sealed class Audience {
+        data object Circle : Audience()
+
+        data class Chosen(
+            val friends: List<String>,
+            val groups: List<Long>,
+        ) : Audience()
+
+        fun json(): Any =
+            when (this) {
+                is Circle -> "circle"
+                is Chosen -> JSONObject().put("friends", JSONArray(friends)).put("groups", JSONArray(groups))
+            }
+    }
+
+    /** A sent moment: how many got it now, its [win], and until when (ms) [retract] can take it back. */
+    data class Sent(
+        val recipients: Int,
+        val win: Long,
+        val undoUntil: Long?,
+    ) {
+        fun undoable(now: Long): Boolean = undoUntil != null && undoUntil > now
+    }
+
+    /** Sends [moment] to [audience] with an optional one-line [note]. */
+    suspend fun send(
+        account: HomeAccount,
+        moment: MomentRef,
+        audience: Audience,
+        note: String?,
+    ): Sent {
+        val body = JSONObject().put("moment", moment.json()).put("to", audience.json())
+        note?.let {
+            require(it.length <= MAX_NOTE)
+            body.put("note", it)
+        }
+        val answer = call(account, "POST", "api/share/${account.encodedUser}", body)
+        return Sent(
+            answer.getInt("recipients"),
+            answer.getLong("win"),
+            answer.optLong("undo_until").takeIf { answer.has("undo_until") && it > 0 },
+        )
+    }
+
+    /** Takes [win] back from those it was sent to by hand who have not seen it; answers how many. */
+    suspend fun retract(
+        account: HomeAccount,
+        win: Long,
+    ): Int = call(account, "DELETE", "api/share/${account.encodedUser}/$win").optInt("retracted")
+
     /** One request for the captured [account], which must still be the signed-in one when it is sent and when it answers. */
     private suspend fun call(
         account: HomeAccount,
