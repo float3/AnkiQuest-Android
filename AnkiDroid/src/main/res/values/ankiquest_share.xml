@@ -48,4 +48,23 @@ I study with AnkiQuest.</string>
     </plurals>
     <!-- Below a moment card while swiping through several: "2 of 3". -->
     <string name="aq_moment_position">%1$d of %2$d</string>
+    <!-- The share sheet: a moment's picture, AnkiQuest friends and groups to send it to, and other apps. -->
+    <item name="aq_share_targets" type="id" />
+    <item name="aq_share_search" type="id" />
+    <item name="aq_share_note" type="id" />
+    <item name="aq_share_status" type="id" />
+    <item name="aq_share_send" type="id" />
+    <item name="aq_share_more" type="id" />
+    <string name="ankiquest_share_send_to">Send to</string>
+    <string name="ankiquest_share_all_friends">All friends</string>
+    <string name="ankiquest_share_search">Search friends and groups</string>
+    <!-- Spoken for a group's chip in the share sheet, so it is not taken for a friend. -->
+    <string name="ankiquest_share_group">Group: %1$s</string>
+    <string name="ankiquest_share_no_match">No friend or group has that name.</string>
+    <string name="ankiquest_share_note_hint">Add a note (optional)</string>
+    <string name="ankiquest_share_sending">Sending…</string>
+    <string name="ankiquest_share_more_apps">More apps…</string>
+    <string name="ankiquest_share_targets_failed">Couldn’t load your friends. Check your connection, or share with another app.</string>
+    <string name="ankiquest_share_invite">Invite a friend</string>
+    <string name="ankiquest_share_lonely">Add friends in AnkiQuest to send them your moments.</string>
 </resources>

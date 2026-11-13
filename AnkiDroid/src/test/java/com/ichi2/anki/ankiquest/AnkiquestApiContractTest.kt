@@ -394,6 +394,31 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
 
     @Test
+    fun `a moment sent to chosen friends or a group answers its win and can be taken back`() =
+        runBlocking {
+            val conquest = AnkiquestSharing.MomentRef.Conquest(1_793_097_000_000L)
+            val friends = AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList())
+            val told = AnkiquestSharing.send(account, conquest, friends, "Took me a month!")
+            assertEquals(1, told.recipients)
+            assertEquals(6L, told.win)
+            assertTrue(told.undoable(EXAMPLE_NOW), "Undo while undo_until is ahead")
+
+            val group = AnkiquestSharing.Audience.Chosen(emptyList(), listOf(3L))
+            val shared = AnkiquestSharing.send(account, AnkiquestSharing.MomentRef.Win(3), group, null)
+            assertEquals(3L, shared.win)
+            assertNotNull(shared.undoUntil)
+
+            assertEquals(1, AnkiquestSharing.retract(account, told.win))
+            assertEquals(
+                listOf("POST /api/share/hill", "POST /api/share/hill", "DELETE /api/share/hill/6"),
+                requests.filter {
+                    "/share/" in
+                        it
+                },
+            )
+        }
+
+    @Test
     fun `friends and groups list requests, friends, muted players and groups, and every change answers the list`() =
         runBlocking {
             val overview = AnkiquestSocial.overview(account)
@@ -642,6 +667,8 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/week" -> "week"
             path == "/api/profile/cerro" -> "player_profile"
             parts.size == 2 && parts[0] == "wins" -> "wins"
+            parts.size == 3 && parts[0] == "share" && method == "DELETE" -> "share_undo"
+            parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).has("moment") -> shareMoment(sent)
             parts.firstOrNull() == "share" && sent.isNotBlank() && JSONObject(sent).optString("to") == "link" -> "share_to_link"
             path == "/api/accounts" && method == "POST" -> "sign_up"
             path == "/api/accounts/tokens" && method == "POST" -> "sign_in"
@@ -682,6 +709,12 @@ class AnkiquestApiContractTest : RobolectricTest() {
         }
         val body = JSONObject(sent)
         return body.optBoolean(AnkiquestWidgetSettings.GLOBAL_SETTING) && body.optJSONArray("decks")?.length() == 0
+    }
+
+    /** The recorded answer for sending a moment: to a group, or to chosen friends. */
+    private fun shareMoment(sent: String): String {
+        val groups = JSONObject(sent).optJSONObject("to")?.optJSONArray("groups")
+        return if (groups != null && groups.length() > 0) "share_moment_group" else "share_moment"
     }
 
     /** The recorded answer for one `POST /api/social` action; every action answers the same overview. */

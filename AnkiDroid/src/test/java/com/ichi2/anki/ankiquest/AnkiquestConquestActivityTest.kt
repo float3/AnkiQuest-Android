@@ -9,10 +9,12 @@ import android.view.View
 import android.widget.TextView
 import androidx.core.content.FileProvider
 import androidx.core.content.IntentCompat
+import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.allViews
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
@@ -44,6 +46,7 @@ import org.robolectric.util.ReflectionHelpers
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -218,6 +221,64 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         assertTrue(sent.getStringExtra(Intent.EXTRA_TEXT).orEmpty().endsWith("https://anki.example.test/conquered/hill/$AT"))
         coVerify(exactly = 1) { AnkiquestCommunity.conquest(identity, "hill", AT) }
         coVerify(exactly = 0) { Ankiquest.shareWinLink(any(), any()) }
+    }
+
+    @Test
+    fun `with share_moments the owner's Share opens AnkiQuest's share sheet for the conquest`() {
+        mockkObject(AnkiquestMomentShare, AnkiquestSocial)
+        try {
+            every { AnkiquestMomentShare.available(identity) } returns true
+            every { AnkiquestShare.render(any(), any()) } returns createBitmap(1, 1)
+            coEvery { AnkiquestSocial.overview(identity) } returns
+                AnkiquestSocial.Overview(
+                    listOf(AnkiquestSocial.Person("cerro", "Cerro")),
+                    emptyList(),
+                    emptyList(),
+                    emptyList(),
+                    emptyList(),
+                    true,
+                )
+            val chosen = AnkiquestSharing.Audience.Chosen(listOf("cerro"), emptyList())
+            coEvery { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) } returns
+                AnkiquestSharing.Sent(1, 6, null)
+            val card = launch()
+            card.click(card.getString(R.string.ankiquest_share))
+            val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+            assertNull(shadowOf(card).nextStartedActivity, "nothing leaves the app before a choice")
+
+            advanceRobolectricLooperUntil {
+                sheet.window!!
+                    .decorView.allViews
+                    .any { it is TextView && it.text.toString() == "Cerro" }
+            }
+            sheet.window!!
+                .decorView.allViews
+                .first { it is TextView && it.text.toString() == "Cerro" }
+                .performClick()
+            sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+            card.settle()
+            coVerify(exactly = 1) { AnkiquestSharing.send(identity, AnkiquestSharing.MomentRef.Conquest(AT), chosen, null) }
+            coVerify(exactly = 0) { AnkiquestCommunity.tell(any(), any()) }
+            assertFalse(sheet.isShowing)
+        } finally {
+            unmockkObject(AnkiquestMomentShare, AnkiquestSocial)
+        }
+    }
+
+    @Test
+    fun `with share_moments someone else's card still goes to Android's share sheet`() {
+        mockkObject(AnkiquestMomentShare)
+        try {
+            every { AnkiquestMomentShare.available(identity) } returns true
+            coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
+                recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null, win = null)
+            val card = launch("cerro")
+            card.click(card.getString(R.string.ankiquest_share))
+            assertEquals("image/png", card.sent().type)
+            assertFalse(ShadowDialog.getLatestDialog() is BottomSheetDialog)
+        } finally {
+            unmockkObject(AnkiquestMomentShare)
+        }
     }
 
     @Test

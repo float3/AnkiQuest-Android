@@ -153,6 +153,21 @@ internal class AnkiquestBoardViews(
         )
     }
 
+    /**
+     * A chip that switches on and off, for a [ChipGroup] where several can be on. Screen readers say
+     * whether it is on; [click] re-renders with the new state.
+     */
+    fun toggle(
+        label: String,
+        checked: Boolean,
+        enabled: Boolean,
+        click: () -> Unit,
+    ): Chip =
+        chip(label, checked, enabled, click).apply {
+            isCheckable = true
+            isChecked = checked
+        }
+
     private fun chip(
         label: String,
         checked: Boolean,

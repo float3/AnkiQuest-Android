@@ -25,7 +25,8 @@ import timber.log.Timber
 
 /**
  * Passes on a win from a notification: to friends in AnkiQuest, or anywhere else through Android's
- * share sheet. A conquered card first asks whether to show what the card was.
+ * share sheet, from [AnkiquestShareSheet] where the server allows it. A conquered card first asks
+ * whether to show what the card was.
  */
 class AnkiquestShareActivity : AnkiActivity() {
     private var cardOwner: AnkiquestDialogOwner? = null
@@ -84,10 +85,23 @@ class AnkiquestShareActivity : AnkiActivity() {
     )
 
     /**
-     * Where the win goes. From Android 14 the share sheet itself offers AnkiQuest friends next to
-     * the other apps; older versions ask first, then open the share sheet for other apps.
+     * Where the win goes. Servers that take chosen friends get AnkiQuest's own share sheet, with
+     * other apps one tap away. Otherwise, from Android 14 the share sheet itself offers AnkiQuest
+     * friends next to the other apps; older versions ask first, then open the share sheet for other apps.
      */
     private fun chooseDestination(share: Share) {
+        val account = AnkiquestHomeData.account()?.takeIf { it.scope == share.scope }
+        if (share.win != null && account != null && AnkiquestMomentShare.available(account)) {
+            AnkiquestShareSheet(
+                this,
+                account,
+                AnkiquestSharing.MomentRef.Win(share.win),
+                AnkiquestShare.Card(share.title, share.body, AnkiquestShare.art(intent, share.place)),
+                elsewhere = { shareElsewhere(share, null) },
+                closed = { if (it != AnkiquestShareSheet.Exit.ELSEWHERE) finish() },
+            ).show()
+            return
+        }
         if (AnkiquestShare.sheetOffersFriends()) {
             shareElsewhere(share, AnkiquestShare.friendsTarget(this, intent))
             return

@@ -30,8 +30,11 @@
         "records",
         "reminders",
         "reminders_save",
+        "share_moment",
+        "share_moment_group",
         "share_to_friends",
         "share_to_link",
+        "share_undo",
         "sharing",
         "sign_in",
         "sign_in_browser",
@@ -54,5 +57,5 @@
         "wins"
     ],
     "challenges": [],
-    "not_yet": ["share_moment", "share_moment_group", "share_undo"]
+    "not_yet": []
 }

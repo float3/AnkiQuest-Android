@@ -491,8 +491,31 @@ class AnkiquestConquestActivity : AnkiActivity(R.layout.activity_ankiquest_board
             ),
         )
 
-    /** Share the public card locally; only its owner can add a private deck name. */
+    /**
+     * The owner's own conquest opens AnkiQuest's share sheet where the server takes chosen friends;
+     * anyone else's, or one on an older server, goes straight to Android's share sheet.
+     */
     private fun share(
+        current: HomeAccount,
+        card: AnkiquestCommunity.Conquest,
+    ) {
+        if (busy) return
+        if (!owns(current, card) || !AnkiquestMomentShare.available(current)) {
+            shareElsewhere(current, card)
+            return
+        }
+        AnkiquestShareSheet(
+            this,
+            current,
+            AnkiquestSharing.MomentRef.Conquest(card.at),
+            picture(current, card),
+            elsewhere = { shareElsewhere(current, card) },
+            sent = { load() },
+        ).show()
+    }
+
+    /** Share the public card locally; only its owner can add a private deck name. */
+    private fun shareElsewhere(
         current: HomeAccount,
         card: AnkiquestCommunity.Conquest,
     ) {
