@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
+    <string name="ankiquest_download_picture">Bild herunterladen</string>
+    <string name="ankiquest_picture_saved">Bild in deiner Galerie gespeichert.</string>
+    <string name="ankiquest_picture_failed">Das Bild konnte nicht gespeichert werden. Prüfe den Speicherzugriff und versuche es erneut.</string>
     <string name="ankiquest_share">Teilen</string>
     <string name="ankiquest_share_title">Diesen Erfolg teilen</string>
     <string name="ankiquest_share_friends">Mit meinen AnkiQuest-Freunden</string>

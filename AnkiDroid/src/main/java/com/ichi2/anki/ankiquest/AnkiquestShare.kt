@@ -3,24 +3,32 @@
 package com.ichi2.anki.ankiquest
 
 import android.app.PendingIntent
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.service.chooser.ChooserAction
+import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import androidx.core.text.HtmlCompat
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.R
+import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import kotlinx.coroutines.CancellationException
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /** Passing a win on: to friends through the server, or anywhere through Android's share sheet with the server's card. */
@@ -43,13 +51,18 @@ internal object AnkiquestShare {
     /** Cards are 1080×1080 PNGs; anything far larger is not a card. */
     private const val MAX_IMAGE_BYTES = 4L * 1024 * 1024
     private const val MAX_PICTURE_SIDE = 1080
+    private const val IMAGE_SECONDS = 10L
+    private const val PICTURE_SECONDS = 1L
+    private val CACHE_LIFETIME = TimeUnit.DAYS.toMillis(1)
     private val SHAREABLE = setOf("celebration", "challenge_complete", "reminder_weekly_recap")
 
     private val imageClient =
         AnkiquestHttp.client
             .newBuilder()
-            .callTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(IMAGE_SECONDS, TimeUnit.SECONDS)
             .build()
+
+    private val pictureClient = imageClient.newBuilder().callTimeout(PICTURE_SECONDS, TimeUnit.SECONDS).build()
 
     /** A win's public link, its card and the server's invitation text, which includes the link. */
     data class Link(
@@ -57,6 +70,23 @@ internal object AnkiquestShare {
         val image: String,
         val text: String,
     )
+
+    /** Public display content selected for the picture, with no credentials or hidden fields. */
+    data class Card(
+        val title: String,
+        val body: String,
+        @DrawableRes val art: Int = R.drawable.aki_celebrate,
+        val details: List<String> = emptyList(),
+    )
+
+    /** The same local renderer is used for shares, previews and gallery downloads. */
+    fun picture(
+        context: Context,
+        moment: Card,
+        image: String? = null,
+    ): Bitmap =
+        image?.let(::quickPng)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+            ?: AnkiquestPicture.render(AnkiquestLanguage.context(context), moment)
 
     /** Notification kinds that are a player's own win, and so worth sharing. */
     fun shareable(kind: String) = kind in SHAREABLE
@@ -99,40 +129,48 @@ internal object AnkiquestShare {
     }
 
     /**
-     * The share sheet for a win's [link]: the server's card and its invitation text. When the card
-     * cannot be fetched the text alone is shared, since it carries the link. It downloads, so call it
-     * away from the main thread.
+     * A win's picture and invitation text. A missing server image uses the local [card].
+     * It downloads, so call it away from the main thread.
      */
     fun linkChooser(
         context: Context,
         link: Link,
         friends: PendingIntent? = null,
-    ): Intent = cardChooser(context, link.text, link.image, friends)
+        card: Card = Card("AnkiQuest", link.text),
+    ): Intent = cardChooser(context, link.text, link.image, friends, card)
 
     /**
-     * The share sheet for [text] with the server's card at [image] attached, or the text alone when
-     * there is no card or it cannot be fetched. It downloads, so call it away from the main thread.
+     * Attach the server PNG when quickly available, otherwise draw [fallback] locally. Only a
+     * failure to prepare the picture leaves a text-only share. Call away from the main thread.
      */
     fun cardChooser(
         context: Context,
         text: String,
         image: String?,
         friends: PendingIntent? = null,
+        fallback: Card = Card("AnkiQuest", text),
     ): Intent {
         val send = Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, text)
         val card =
-            image?.let {
-                try {
-                    val directory = File(context.cacheDir, "ankiquest-share").apply { mkdirs() }
-                    val file = File(directory, "win.png").apply { writeBytes(image(it)) }
-                    FileProvider.getUriForFile(context, "${context.packageName}.apkgfileprovider", file)
-                } catch (e: IOException) {
-                    Timber.w(e, "ankiquest card image unavailable; sharing the link only")
-                    null
-                } catch (e: IllegalArgumentException) {
-                    Timber.w(e, "ankiquest card image cannot be shared; sharing the link only")
-                    null
-                }
+            try {
+                val bytes = picturePng(context, fallback, image)
+                val directory = File(context.cacheDir, "ankiquest-share").apply { mkdirs() }
+                val expired = TimeManager.time.intTimeMS() - CACHE_LIFETIME
+                directory.listFiles()?.filter { it.isFile && it.extension == "png" && it.lastModified() < expired }?.forEach { it.delete() }
+                // A second share must never overwrite a picture another app is still reading.
+                val file = File(directory, "${UUID.randomUUID()}.png").apply { writeBytes(bytes) }
+                FileProvider.getUriForFile(context, "${context.packageName}.apkgfileprovider", file)
+            } catch (e: IOException) {
+                Timber.w(e, "AnkiQuest share picture could not be prepared")
+                null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: RuntimeException) {
+                Timber.w(e, "AnkiQuest share picture could not be rendered or exposed")
+                null
+            } catch (e: OutOfMemoryError) {
+                Timber.w(e, "AnkiQuest share picture could not be allocated")
+                null
             }
         if (card == null) {
             send.setType("text/plain")
@@ -141,22 +179,55 @@ internal object AnkiquestShare {
                 .setType("image/png")
                 .putExtra(Intent.EXTRA_STREAM, card)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = ClipData.newRawUri("AnkiQuest", card)
         }
         return chooser(context, send, friends)
     }
 
-    /** The share sheet with a line about the win and an invitation to the server, for servers that keep no wins. */
+    private fun quickPng(url: String): ByteArray? =
+        try {
+            val bytes = readImage(url, pictureClient)
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            bytes.takeIf {
+                bounds.outMimeType == "image/png" && bounds.outWidth in 1..MAX_PICTURE_SIDE && bounds.outHeight in 1..MAX_PICTURE_SIDE
+            }
+        } catch (e: IOException) {
+            Timber.d(e, "AnkiQuest server picture unavailable; drawing locally")
+            null
+        }
+
+    private fun picturePng(
+        context: Context,
+        card: Card,
+        image: String?,
+    ): ByteArray {
+        val bitmap = picture(context, card, image)
+        return try {
+            ByteArrayOutputStream().use { out ->
+                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+                    throw IOException("Could not encode the share picture")
+                }
+                out.toByteArray()
+            }
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    /** A local picture and invitation for servers that keep no win record. */
     fun textChooser(
         context: Context,
         title: String,
         body: String,
         friends: PendingIntent? = null,
+        @DrawableRes art: Int = R.drawable.aki_celebrate,
     ): Intent {
         val language = AnkiquestLanguage.context(context)
         val text =
             Ankiquest.serverUrl()?.let { language.getString(R.string.ankiquest_share_text, title, body, it) }
                 ?: language.getString(R.string.ankiquest_share_text_offline, title, body)
-        return chooser(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), friends)
+        return cardChooser(context, text, null, friends, Card(title, body, art))
     }
 
     /**
@@ -173,6 +244,13 @@ internal object AnkiquestShare {
             Intent
                 .createChooser(send, language.getString(R.string.ankiquest_share_title))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        send.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM)?.let { picture ->
+            val download =
+                Intent(context, AnkiquestGalleryActivity::class.java)
+                    .setDataAndType(picture, "image/png")
+                    .putExtra(EXTRA_SCOPE, AnkiquestHomeData.account()?.scope)
+            chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(download))
+        }
         if (friends != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val action =
                 ChooserAction
@@ -421,13 +499,18 @@ internal object AnkiquestShare {
 
     /**
      * A card image from the server, at most [MAX_IMAGE_BYTES]. Cards are public, so no credentials are
-     * sent with the request. It blocks for up to ten seconds.
+     * sent with the request. Notifications retain their ten-second deadline; shares use the shorter picture deadline.
      *
      * @throws IOException when the address is not a web address, the server refuses, or the image is too large
      */
-    fun image(url: String): ByteArray {
+    fun image(url: String): ByteArray = readImage(url, imageClient)
+
+    private fun readImage(
+        url: String,
+        client: OkHttpClient,
+    ): ByteArray {
         val address = url.toHttpUrlOrNull() ?: throw IOException("Not a card address")
-        return imageClient.newCall(Request.Builder().url(address).build()).execute().use { response ->
+        return client.newCall(Request.Builder().url(address).build()).execute().use { response ->
             if (!response.isSuccessful) throw AnkiquestHttpException(response.code)
             if (response.body.contentLength() > MAX_IMAGE_BYTES) throw IOException("The card image is too large")
             val source = response.body.source()

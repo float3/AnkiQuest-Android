@@ -24,6 +24,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.withResumed
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
@@ -161,6 +162,8 @@ internal object AnkiquestMomentCard {
                 override fun onResume(owner: LifecycleOwner) {
                     if (!ownsAccount()) {
                         abandon()
+                    } else {
+                        pages?.refresh()
                     }
                 }
             }
@@ -400,6 +403,8 @@ internal object AnkiquestMomentCard {
         val win: Long?,
         /** Whether telling friends about a conquered card can still be taken back. */
         val undoable: Boolean = false,
+        /** Only a label already shared by the owner may appear in the exported picture. */
+        val label: String? = null,
     )
 
     private class Pages(
@@ -411,6 +416,7 @@ internal object AnkiquestMomentCard {
         private val extras = mutableMapOf<String, Extras>()
         private val pictures = mutableMapOf<String, Bitmap>()
         private val told = mutableSetOf<String>()
+        private var generation = 0
 
         /** Conquered cards whose telling friends can still be taken back. */
         private val undoable = mutableSetOf<String>()
@@ -453,13 +459,23 @@ internal object AnkiquestMomentCard {
             if (known == null) load(moment, position)
         }
 
-        /** Asks the server whether friends heard [moment] and for its picture, once per card. */
+        /** Returning from a conquest must forget a label or picture the player removed there. */
+        fun refresh() {
+            generation++
+            extras.clear()
+            pictures.clear()
+            undoable.clear()
+            moments.indices.forEach(::changed)
+        }
+
+        /** Asks the server whether friends heard [moment] and for its picture, once per visit. */
         private fun load(
             moment: Moment,
             position: Int,
         ) {
             val scope = scope ?: return
             if (account.token.isEmpty() || (moment.win == null && moment.conquest == null)) return
+            val turn = generation
             extras[moment.key] = Extras(told = false, image = null, win = moment.win)
             scope.launch {
                 val found =
@@ -471,10 +487,13 @@ internal object AnkiquestMomentCard {
                         Timber.w(e, "AnkiQuest moment: no picture or sharing state")
                         null
                     } ?: return@launch
+                if (turn != generation || current() == null) return@launch
                 extras[moment.key] = found
                 if (found.undoable) undoable += moment.key
-                found.image?.let { url -> withContext(Dispatchers.IO) { AnkiquestShare.picture(url) } }?.let { pictures[moment.key] = it }
-                if (!host.isFinishing && !host.isDestroyed) notifyItemChanged(position)
+                val picture = found.image?.let { url -> withContext(Dispatchers.IO) { AnkiquestShare.picture(url) } }
+                if (turn != generation || current() == null) return@launch
+                picture?.let { pictures[moment.key] = it }
+                changed(position)
             }
         }
 
@@ -482,19 +501,30 @@ internal object AnkiquestMomentCard {
             var told = false
             var win = moment.win
             var undo = false
+            var label: String? = null
             moment.conquest?.let { at ->
                 val conquest = AnkiquestCommunity.conquest(account, account.user, at)
                 told = conquest.told == true
                 win = win ?: conquest.win
                 undo = conquest.undoable(TimeManager.time.intTimeMS())
+                label = conquest.label
             }
             val listed = win?.let { AnkiquestSharing.win(account, it) }
             if (listed?.optBoolean("shared_with_friends") == true) told = true
             val image = listed?.optJSONObject("link")?.optString("image")?.ifEmpty { null }
-            return Extras(told, image, win, undo)
+            return Extras(told, image, win, undo, label)
         }
 
         private fun current(): HomeAccount? = AnkiquestHomeData.account()?.takeIf { it.scope == account.scope && it.token.isNotEmpty() }
+
+        /** A cached response may finish inside onBindViewHolder; refresh after that layout. */
+        private fun changed(position: Int) {
+            host.window.decorView.post {
+                if (current() != null && !host.isFinishing && !host.isDestroyed) {
+                    notifyItemChanged(position)
+                }
+            }
+        }
 
         private fun tell(
             moment: Moment,
@@ -514,7 +544,7 @@ internal object AnkiquestMomentCard {
                             }
                         told += moment.key
                         if (moment.conquest != null) undoable += moment.key
-                        notifyItemChanged(position)
+                        changed(position)
                         if (friends == 0) {
                             host.getString(R.string.ankiquest_share_nobody)
                         } else {
@@ -564,7 +594,7 @@ internal object AnkiquestMomentCard {
                         Timber.w(e, "AnkiQuest moment: taking back telling friends failed")
                         host.getString(R.string.ankiquest_share_failed)
                     }
-                if (!host.isFinishing && !host.isDestroyed) notifyItemChanged(position)
+                changed(position)
                 showThemedToast(host, message, shortLength = false)
             }
         }
@@ -579,26 +609,49 @@ internal object AnkiquestMomentCard {
             scope.launch {
                 try {
                     val win = moment.win ?: extras[moment.key]?.win
+                    val card = publicPicture(moment)
+                    val link =
+                        try {
+                            win?.let { Ankiquest.shareWinLink(it, signedIn.scope, AnkiquestApi.Timeout.PICTURE) }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: HomeAccountChanged) {
+                            throw e
+                        } catch (e: Exception) {
+                            Timber.d(e, "AnkiQuest moment: drawing the share picture locally")
+                            null
+                        }
                     val chooser =
                         when {
                             moment.conquest != null -> {
-                                val image = win?.let { Ankiquest.shareWinLink(it, signedIn.scope).image }
                                 withContext(Dispatchers.IO) {
-                                    AnkiquestShare.cardChooser(host.applicationContext, conquestText(host, signedIn, moment), image)
+                                    AnkiquestShare.cardChooser(
+                                        host.applicationContext,
+                                        conquestText(host, signedIn, moment),
+                                        link?.image,
+                                        fallback = card,
+                                    )
                                 }
                             }
-                            win != null -> {
-                                val link = Ankiquest.shareWinLink(win, signedIn.scope)
-                                withContext(Dispatchers.IO) { AnkiquestShare.linkChooser(host.applicationContext, link) }
+                            link != null -> {
+                                withContext(Dispatchers.IO) { AnkiquestShare.linkChooser(host.applicationContext, link, card = card) }
                             }
-                            else ->
-                                AnkiquestShare.textChooser(
-                                    host.applicationContext,
-                                    moment.shareTitle ?: moment.title,
-                                    moment.shareBody ?: moment.detail,
-                                )
+                            else -> {
+                                withContext(Dispatchers.IO) {
+                                    AnkiquestShare.textChooser(
+                                        host.applicationContext,
+                                        moment.shareTitle ?: moment.title,
+                                        moment.shareBody ?: moment.detail,
+                                        art = art(moment),
+                                    )
+                                }
+                            }
                         }
-                    host.startActivity(chooser)
+                    (host as LifecycleOwner).lifecycle.withResumed {
+                        if (current()?.scope == signedIn.scope && !host.isFinishing && !host.isDestroyed) {
+                            host.startActivity(chooser)
+                        }
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: HomeAccountChanged) {
@@ -610,6 +663,22 @@ internal object AnkiquestMomentCard {
                     toast(R.string.ankiquest_share_failed)
                 }
             }
+        }
+
+        /** The on-screen conquest suggestion is private until its label has been saved. */
+        private fun publicPicture(moment: Moment): AnkiquestShare.Card {
+            if (moment.conquest == null) {
+                return AnkiquestShare.Card(moment.title, moment.detail, art(moment))
+            }
+            return AnkiquestShare.Card(
+                moment.title,
+                host.resources.getQuantityString(R.plurals.aq_conquest_share_mine, moment.lapses, moment.lapses),
+                art(moment),
+                listOfNotNull(
+                    extras[moment.key]?.label,
+                    moment.deck?.let { host.getString(R.string.aq_conquest_share_deck, it) },
+                ),
+            )
         }
 
         private fun toast(message: Int) = showThemedToast(host, host.getString(message), shortLength = false)

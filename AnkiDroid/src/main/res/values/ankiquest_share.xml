@@ -2,6 +2,9 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
     <string name="ankiquest_share">Share</string>
+    <string name="ankiquest_download_picture">Download picture</string>
+    <string name="ankiquest_picture_saved">Picture saved to your gallery.</string>
+    <string name="ankiquest_picture_failed">Couldn’t save the picture. Check storage access and try again.</string>
     <string name="ankiquest_share_title">Share this win</string>
     <string name="ankiquest_share_friends">With my AnkiQuest friends</string>
     <string name="ankiquest_share_elsewhere">Somewhere else…</string>
