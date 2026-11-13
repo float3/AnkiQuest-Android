@@ -22,6 +22,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assume.assumeTrue
@@ -280,6 +281,49 @@ class AnkiquestApiContractTest : RobolectricTest() {
             assertEquals(1, other.profile.level)
             assertTrue(other.wins.isEmpty())
             assertEquals(1, requests.count { it == "GET /api/wins/hill" }, "only the player's own profile asks for wins")
+        }
+
+    @Test
+    fun `the Global board reads ranks, the player's listing and strangers' summaries`() =
+        runBlocking {
+            // The player is listed: their full row, then a stranger's summary without today's counts.
+            val day = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.DAY, AnkiquestBoards.Source.Global)
+            assertEquals(listOf("hill", "ana"), day.map { it.user })
+            assertEquals(listOf("Hill", "Ana"), day.map { it.display })
+            assertEquals(listOf(1, 2), day.map { it.rank })
+            assertEquals(listOf(107L, 20L), day.map { it.xp })
+            assertEquals(listOf(true, null), day.map { it.shown })
+            assertEquals(listOf(true, false), day.map { it.hasToday })
+            assertEquals(5L, day.first().todayReviews)
+            assertEquals(listOf(AnkiquestDay.State.STUDIED, AnkiquestDay.State.UNKNOWN), day.map { it.state })
+
+            // A private profile not yet listed: others' summaries, then the player's own row last with its rank.
+            val hidden = AnkiquestBoards.leaderboard(account, AnkiquestBoards.Period.WEEK, AnkiquestBoards.Source.Global)
+            assertEquals(listOf("hill", "cerro", "ana"), hidden.map { it.user })
+            assertEquals(listOf(1, 2, 3), hidden.map { it.rank })
+            assertEquals(listOf(246L, 31L, 20L), hidden.map { it.xp })
+            assertEquals(listOf(null, null, false), hidden.map { it.shown })
+            assertEquals(listOf(false, false, true), hidden.map { it.hasToday })
+            assertEquals(2L, hidden.last().todayReviews)
+            assertEquals(2, requests.count { it == "GET /api/leaderboard" })
+
+            // The widget orders the same rows by rank and takes strangers' XP from `xp`.
+            val widgetDay = AnkiquestWidget.forPeriod(JSONArray(example("leaderboard_global")), "day").objects()
+            assertEquals(listOf(107L, 20L), widgetDay.map { it.getLong("xp") })
+            val widgetWeek = AnkiquestWidget.forPeriod(JSONArray(example("leaderboard_global_hidden")), "week").objects()
+            assertEquals(listOf("hill", "cerro", "ana"), widgetWeek.map { it.getString("user") })
+            assertEquals(listOf(246L, 31L, 20L), widgetWeek.map { it.getLong("xp") })
+        }
+
+    @Test
+    fun `the Global listing switch is offered from the settings and saved with the server's answer`() =
+        runBlocking {
+            val global = AnkiquestWidgetSettings.GLOBAL_SETTING
+            assertTrue(AnkiquestBoards.hasScopes(account))
+            assertTrue(AnkiquestWidgetSettings.hasScopes(account))
+            assertEquals(true, Ankiquest.notificationSwitches().opt(global) as? Boolean)
+            assertTrue(Ankiquest.setNotificationSwitch(global, true).getBoolean(global))
+            assertTrue("POST /api/decks/hill" in requests)
         }
 
     @Test
@@ -582,16 +626,19 @@ class AnkiquestApiContractTest : RobolectricTest() {
         query: String? = null,
     ): String? {
         val parts = path.removePrefix("/api/").split('/')
+        val params = query.orEmpty().split('&')
         return when {
             path == "/api/capabilities" -> "capabilities"
             path == "/api/leaderboard/hidden/hill" -> "leaderboard_hide"
             path == "/api/activity/hill" && method == "GET" ->
-                when (query.orEmpty().split('&').firstOrNull { it.startsWith("before=") }) {
+                when (params.firstOrNull { it.startsWith("before=") }) {
                     null -> "activity"
                     "before=15" -> "activity_older"
                     else -> null
                 }
-            path == "/api/leaderboard" && query.orEmpty().split('&').contains("period=day") -> "leaderboard_day"
+            path == "/api/leaderboard" && "scope=global" in params ->
+                if ("period=day" in params) "leaderboard_global" else "leaderboard_global_hidden"
+            path == "/api/leaderboard" && "period=day" in params -> "leaderboard_day"
             path == "/api/week" -> "week"
             path == "/api/profile/cerro" -> "player_profile"
             parts.size == 2 && parts[0] == "wins" -> "wins"
@@ -602,6 +649,7 @@ class AnkiquestApiContractTest : RobolectricTest() {
             path == "/api/sign-in/hill" && method == "GET" -> "sign_in_methods"
             path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "password" -> "password_change"
             path == "/api/sign-in/hill" && JSONObject(sent).optString("action") == "browser" -> "sign_in_browser"
+            path == "/api/decks/hill" && method == "POST" && isGlobalSwitch(sent) -> "global_leaderboard_on"
             path == "/api/devices/hill" -> if (method == "GET") "devices" else "devices_sign_out"
             path == "/api/accounts/hill" && method == "GET" -> "account"
             path == "/api/records" -> "records"
@@ -625,6 +673,15 @@ class AnkiquestApiContractTest : RobolectricTest() {
             parts.size == 2 && path.startsWith("/api/") -> ROUTES[parts[0]]
             else -> null
         }
+    }
+
+    /** Whether [sent] turns the Global listing on and changes no deck, as `global_leaderboard_on` records. */
+    private fun isGlobalSwitch(sent: String): Boolean {
+        if (sent.isBlank()) {
+            return false
+        }
+        val body = JSONObject(sent)
+        return body.optBoolean(AnkiquestWidgetSettings.GLOBAL_SETTING) && body.optJSONArray("decks")?.length() == 0
     }
 
     /** The recorded answer for one `POST /api/social` action; every action answers the same overview. */

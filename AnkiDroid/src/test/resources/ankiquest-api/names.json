@@ -16,6 +16,7 @@
         "decks",
         "devices",
         "devices_sign_out",
+        "global_leaderboard_on",
         "goal",
         "group_create",
         "invite",
@@ -43,14 +44,15 @@
         "upload"
     ],
     "unused": [],
-    "boards": ["leaderboard_day", "leaderboard_hide", "player_profile", "week", "wins"],
-    "challenges": [],
-    "not_yet": [
-        "global_leaderboard_on",
+    "boards": [
+        "leaderboard_day",
         "leaderboard_global",
         "leaderboard_global_hidden",
-        "share_moment",
-        "share_moment_group",
-        "share_undo"
-    ]
+        "leaderboard_hide",
+        "player_profile",
+        "week",
+        "wins"
+    ],
+    "challenges": [],
+    "not_yet": ["share_moment", "share_moment_group", "share_undo"]
 }
