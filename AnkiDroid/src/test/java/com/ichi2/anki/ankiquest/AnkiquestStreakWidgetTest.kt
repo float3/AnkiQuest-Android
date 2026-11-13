@@ -2,8 +2,11 @@
 
 package com.ichi2.anki.ankiquest
 
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.edit
@@ -17,10 +20,12 @@ import org.json.JSONObject
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [33])
@@ -264,5 +269,81 @@ class AnkiquestStreakWidgetTest : RobolectricTest() {
             setOf(pose(today), pose(today + day)),
             "two days in a row show both poses",
         )
+    }
+
+    /** Edge of the companion bitmap each big layout shows at its largest, from its ImageView maxHeight. */
+    private fun shownPx(size: AnkiquestStreakWidget.Size): Int {
+        val dp = if (size == AnkiquestStreakWidget.Size.LARGE) LARGE_COMPANION_DP else HUGE_COMPANION_DP
+        return minOf((dp * targetContext.resources.displayMetrics.density).toInt(), COMPANION_MAX_PX)
+    }
+
+    /** The companion's bitmap edge in [size], for a first streak day (one pose in every layout). */
+    private fun companionPx(size: AnkiquestStreakWidget.Size): Int {
+        val board = JSONArray().put(me(1, "studied", 20, 30, 10))
+        val widget =
+            AnkiquestStreakWidget
+                .views(targetContext, board, "hill", size)
+                .apply(targetContext, FrameLayout(targetContext))
+        val drawable = widget.findViewById<ImageView>(R.id.ankiquest_streak_companion).drawable
+        val bitmap = assertNotNull((drawable as? BitmapDrawable)?.bitmap, size.name)
+        return minOf(bitmap.width, bitmap.height)
+    }
+
+    @Test
+    @Config(qualifiers = "560dpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `the big companion is never upscaled on a dense screen`() {
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val shown = shownPx(size)
+            val actual = companionPx(size)
+            assertTrue(actual >= shown, "$size shows $shown px from $actual px")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "xhdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `the big companion is decoded for its shown size`() {
+        for (size in listOf(AnkiquestStreakWidget.Size.LARGE, AnkiquestStreakWidget.Size.HUGE)) {
+            val shown = shownPx(size)
+            val actual = companionPx(size)
+            // Power-of-two sampling covers the shown size with less than twice its edge.
+            assertTrue(actual in shown until 2 * shown, "$size shows $shown px from $actual px")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "560dpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `every streak pose covers the huge layout on a dense screen`() {
+        val shown = shownPx(AnkiquestStreakWidget.Size.HUGE)
+        val poses =
+            listOf(
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.UNKNOWN, 0),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.PROTECTED, 3),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 1),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 3),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 7),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 30),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.STUDIED, 100),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 0),
+                AnkiquestStreakWidget.pose(AnkiquestDay.State.PENDING, 3),
+            )
+        assertEquals(9, poses.toSet().size)
+        for (pose in poses) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeResource(targetContext.resources, pose, bounds)
+            val name = targetContext.resources.getResourceEntryName(pose)
+            assertTrue(minOf(bounds.outWidth, bounds.outHeight) >= shown, "$name is ${bounds.outWidth} px for $shown px")
+        }
+    }
+
+    private companion object {
+        /** The ImageView maxHeight of the large and huge layouts. */
+        const val LARGE_COMPANION_DP = 220
+        const val HUGE_COMPANION_DP = 520
+
+        /** The streak widget poses are exported at this size (float3/ankiquest#253). */
+        const val COMPANION_MAX_PX = 1024
     }
 }
