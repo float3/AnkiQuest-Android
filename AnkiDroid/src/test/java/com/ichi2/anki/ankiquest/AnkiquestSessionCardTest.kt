@@ -3,6 +3,8 @@
 package com.ichi2.anki.ankiquest
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
@@ -14,6 +16,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.DeckPicker
@@ -44,12 +47,14 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.util.ReflectionHelpers
 import java.io.IOException
+import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -255,6 +260,49 @@ class AnkiquestSessionCardTest : RobolectricTest() {
         } finally {
             controller.close()
             unmockkObject(Ankiquest, AnkiquestShare, AnkiquestSharing)
+        }
+    }
+
+    @Test
+    fun `with share_moments a moment's Share opens AnkiQuest's share sheet and Undo shows on the card`() {
+        mockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
+        coEvery { AnkiquestSharing.win(any(), 17) } returns null
+        every { AnkiquestMomentShare.available(any()) } returns true
+        every { AnkiquestShare.render(any(), any()) } returns Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        coEvery { AnkiquestSocial.overview(any()) } returns
+            AnkiquestSocial.Overview(listOf(AnkiquestSocial.Person("ana", "Ana")), emptyList(), emptyList(), emptyList(), emptyList(), true)
+        coEvery { AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(17), AnkiquestSharing.Audience.Circle, null) } returns
+            AnkiquestSharing.Sent(1, 17, clock.intTimeMS() + 60_000)
+        val controller = host()
+        try {
+            val host = controller.get()
+            queue(win = 17)
+            finish(host)
+            val card = card()
+            card.findViewById<ViewPager2>(R.id.aq_moment_pager)!!.setCurrentItem(1, false)
+            advanceRobolectricLooper()
+            assertNotNull(card.findViewById<View>(R.id.aq_moment_share)).performClick()
+            val sheet = assertIs<BottomSheetDialog>(ShadowDialog.getLatestDialog())
+            assertNull(shadowOf(host).nextStartedActivity, "nothing leaves the app before a choice")
+
+            val everyone = host.getString(R.string.ankiquest_share_all_friends)
+            advanceRobolectricLooperUntil { views(sheet.window!!.decorView).any { it is TextView && it.text.toString() == everyone } }
+            views(sheet.window!!.decorView).first { it is TextView && it.text.toString() == everyone }.performClick()
+            sheet.findViewById<View>(R.id.aq_share_send)!!.performClick()
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+
+            coVerify(
+                exactly = 1,
+            ) { AnkiquestSharing.send(any(), AnkiquestSharing.MomentRef.Win(17), AnkiquestSharing.Audience.Circle, null) }
+            assertFalse(sheet.isShowing)
+            assertTrue(card.isShowing, "sending keeps the moment open")
+            assertNotNull(
+                card.window!!.decorView.findViewById<View>(com.google.android.material.R.id.snackbar_action),
+                "Undo shows on the card",
+            )
+        } finally {
+            controller.close()
+            unmockkObject(AnkiquestShare, AnkiquestSharing, AnkiquestMomentShare, AnkiquestSocial)
         }
     }
 

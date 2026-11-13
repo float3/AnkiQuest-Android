@@ -134,7 +134,7 @@ internal object AnkiquestMomentCard {
         private val more = content.findViewById<TextView>(R.id.aq_moment_more)
         private val recap = RecapPage(host)
         private val moments = initial.toMutableList()
-        private val pages = account?.let { Pages(host, it, moments, scope) }
+        private val pages = account?.let { Pages(host, it, moments, scope) { content } }
         private val adapter = ConcatAdapter(recap).apply { pages?.let(::addAdapter) }
         private var session: Session? = null
         private var exit = Exit.DONE
@@ -417,6 +417,8 @@ internal object AnkiquestMomentCard {
         private val account: HomeAccount,
         private val moments: List<Moment>,
         private val scope: CoroutineScope?,
+        /** A view in the card's dialog, where Undo shows after sending from the share sheet. */
+        private val root: () -> View,
     ) : RecyclerView.Adapter<Holder>() {
         private val extras = mutableMapOf<String, Extras>()
         private val pictures = mutableMapOf<String, Bitmap>()
@@ -464,7 +466,7 @@ internal object AnkiquestMomentCard {
             holder.tell.isVisible = tellable(moment) && (undo || (moment.key !in told && known?.told != true))
             holder.tell.setText(if (undo) CommonString.undo else R.string.aq_conquest_tell)
             holder.tell.setOnClickListener { if (undo) untell(moment, position) else tell(moment, position) }
-            holder.share.setOnClickListener { share(moment) }
+            holder.share.setOnClickListener { share(moment, position) }
             holder.download.setOnClickListener { download(moment) }
             if (known == null) load(moment, position)
         }
@@ -621,10 +623,44 @@ internal object AnkiquestMomentCard {
         }
 
         /**
-         * The share sheet: the server's picture and first-person invitation with its link for a win,
+         * AnkiQuest's share sheet for a moment the server keeps as a win, where the server takes
+         * chosen friends; Android's share sheet otherwise.
+         */
+        private fun share(
+            moment: Moment,
+            position: Int,
+        ) {
+            val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
+            val win = moment.win ?: extras[moment.key]?.win
+            val ref =
+                when {
+                    moment.conquest != null -> AnkiquestSharing.MomentRef.Conquest(moment.conquest)
+                    win != null -> AnkiquestSharing.MomentRef.Win(win)
+                    else -> null
+                }
+            if (ref == null || !AnkiquestMomentShare.available(signedIn)) {
+                elsewhere(moment)
+                return
+            }
+            AnkiquestShareSheet(
+                host,
+                signedIn,
+                ref,
+                publicPicture(moment),
+                elsewhere = { elsewhere(moment) },
+                sent = {
+                    told += moment.key
+                    changed(position)
+                },
+                root = root,
+            ).show()
+        }
+
+        /**
+         * Android's share sheet: the server's picture and first-person invitation with its link for a win,
          * the card's own words and page for a conquered card, or one line of text otherwise.
          */
-        private fun share(moment: Moment) {
+        private fun elsewhere(moment: Moment) {
             val scope = scope ?: return
             val signedIn = current() ?: return toast(R.string.ankiquest_share_account_changed)
             scope.launch {
