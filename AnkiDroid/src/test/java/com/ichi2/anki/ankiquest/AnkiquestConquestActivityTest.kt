@@ -19,6 +19,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.testutils.ShadowFileProviderPathStrategy
 import com.ichi2.utils.openInputStreamSafe
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -34,7 +35,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -66,7 +69,6 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     @Before
     fun prepareCard() {
         ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
-        mockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
         coEvery { AnkiquestShare.conqueredCardLabels(any()) } returns null
@@ -76,7 +78,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     @After
     fun clearCardMocks() {
         ShadowDialog.getLatestDialog()?.dismiss()
-        unmockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
+
+        // Back to the real objects' behaviour; the spies stay for the next test.
+        clearMocks(*spied)
         unmockkStatic(FileProvider::class)
     }
 
@@ -155,20 +159,15 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     @Test
     fun `showing the card uses its front from the collection without asking`() {
-        mockkObject(AnkiquestShare)
-        try {
-            coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = null)
-            coEvery { AnkiquestShare.conqueredCardText(AT) } returns "la ardilla"
-            coEvery { AnkiquestSharing.setConquestLabel(identity, AT, "la ardilla") } just runs
-            val card = launch()
-            coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = "la ardilla")
-            card.click(card.getString(R.string.aq_conquest_label_add))
-            coVerify(exactly = 1) { AnkiquestSharing.setConquestLabel(identity, AT, "la ardilla") }
-            assertTrue(card.hasText("la ardilla"))
-            assertTrue(card.hasText(card.getString(R.string.aq_conquest_label_remove)))
-        } finally {
-            unmockkObject(AnkiquestShare)
-        }
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = null)
+        coEvery { AnkiquestShare.conqueredCardText(AT) } returns "la ardilla"
+        coEvery { AnkiquestSharing.setConquestLabel(identity, AT, "la ardilla") } just runs
+        val card = launch()
+        coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(label = "la ardilla")
+        card.click(card.getString(R.string.aq_conquest_label_add))
+        coVerify(exactly = 1) { AnkiquestSharing.setConquestLabel(identity, AT, "la ardilla") }
+        assertTrue(card.hasText("la ardilla"))
+        assertTrue(card.hasText(card.getString(R.string.aq_conquest_label_remove)))
     }
 
     @Test
@@ -477,7 +476,26 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
         settle()
     }
 
-    private companion object {
-        const val AT = 1_793_097_000_000L
+    companion object {
+        private const val AT = 1_793_097_000_000L
+
+        /** The objects the card talks to, spied on for the whole class. */
+        private val spied = arrayOf(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
+
+        /**
+         * Spies on [spied] once per class. Each spy re-instruments its class,
+         * which took 10-48 s in a cold sandbox on macOS CI and pushed the first test past its timeout.
+         */
+        @BeforeClass
+        @JvmStatic // required for @BeforeClass
+        fun spy() {
+            mockkObject(*spied)
+        }
+
+        @AfterClass
+        @JvmStatic // required for @AfterClass
+        fun unspy() {
+            unmockkObject(*spied)
+        }
     }
 }
