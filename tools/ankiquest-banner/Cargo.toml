@@ -1,0 +1,16 @@
+[package]
+name = "ankiquest-banner"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "AGPL-3.0-only"
+description = "Composes the README banner from the app's recorded screens"
+publish = false
+
+# Standalone: not part of the Gradle build or any workspace.
+[workspace]
+
+[dependencies]
+image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
+resvg = { version = "0.49", default-features = false, features = ["text"] }
+ttf-parser = { version = "0.25", default-features = false, features = ["std"] }
