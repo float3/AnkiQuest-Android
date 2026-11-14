@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 """Compose the README banner, docs/graphics/logos/banner_readme.png (1280x741).
 
-The banner shows AnkiQuest's title, a tagline, Aki, and five phones in a fan with the
+The banner shows AnkiQuest's title, a tagline, Aki and Ankilope, and five phones in a fan with the
 app's own screens, left to right: a card being reviewed, the deck list with each deck's
 daily status and the review heatmap, Today in front, the week leaderboard and a profile.
 The screens come from AnkiquestBannerScreenshots, which renders them with Robolectric from
@@ -49,7 +49,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "AnkiDroid/build/outputs/roborazzi/AnkiquestBannerScreenshots"
-AKI = ROOT / "AnkiDroid/src/main/res/drawable-nodpi/aki_celebrate.webp"
+# Aki and Ankilope, as on the server repository's banner (float3/ankiquest, xtask banner).
+DUO = ROOT / "AnkiDroid/src/main/res/drawable-nodpi/duo_friends.webp"
 OUT = ROOT / "docs/graphics/logos/banner_readme.png"
 
 TITLE = "AnkiQuest"
@@ -173,15 +174,17 @@ def compose(shots: Path, font_dir: str | None, require_roboto: bool = False) -> 
         canvas.paste((0, 0, 0, 255), (left - 40, PHONE_TOP - 40), shadow(body.size))
         canvas.alpha_composite(body, (left, PHONE_TOP))
 
-    # Aki beside the title and tagline, the three centred together.
+    # The duo beside the title and tagline, the three centred together.
     draw = ImageDraw.Draw(canvas)
-    aki_size, gap = 116, 10
+    duo = Image.open(DUO).convert("RGBA")
+    duo = duo.crop(duo.getchannel("A").getbbox())
+    duo_h, gap = 116, 12  # Aki's former height: the phones start below it
+    duo = duo.resize((round(duo.width * duo_h / duo.height), duo_h), Image.Resampling.LANCZOS)
     text_w = max(draw.textlength(TITLE, font=title_font), draw.textlength(TAGLINE, font=tagline_font))
-    text_x = WIDTH / 2 + (aki_size + gap) / 2
+    text_x = WIDTH / 2 + (duo.width + gap) / 2
     draw.text((text_x, 44), TITLE, font=title_font, fill="white", anchor="mm")
     draw.text((text_x, 96), TAGLINE, font=tagline_font, fill=(255, 240, 224), anchor="mm")
-    aki = Image.open(AKI).convert("RGBA").resize((aki_size, aki_size), Image.Resampling.LANCZOS)
-    canvas.alpha_composite(aki, (round(text_x - text_w / 2 - gap - aki_size), 4))
+    canvas.alpha_composite(duo, (round(text_x - text_w / 2 - gap - duo.width), 4))
     return canvas
 
 
