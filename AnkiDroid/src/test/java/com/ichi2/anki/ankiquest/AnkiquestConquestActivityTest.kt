@@ -35,6 +35,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -57,6 +58,39 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     private val identity = HomeAccount("https://anki.example.test", "hill", "secret")
     private var labelJob: Job? = null
 
+    // DIAGNOSTIC (not for merge): phase timings, reported as a failure on macOS
+    private val marks = java.util.Collections.synchronizedList(mutableListOf<String>())
+    private var origin = 0L
+
+    private fun mark(what: String) {
+        marks += "$what=${(System.nanoTime() - origin) / 1_000_000}ms[${Thread.currentThread().name}]"
+    }
+
+    @get:Rule(order = -1000)
+    val timings =
+        org.junit.rules.TestRule { base, description ->
+            object : org.junit.runners.model.Statement() {
+                override fun evaluate() {
+                    origin = System.nanoTime()
+                    val uptime = java.lang.management.ManagementFactory.getRuntimeMXBean().uptime
+                    marks += "jvmUptimeAtStart=${uptime}ms headless=${System.getProperty("java.awt.headless")} pid=${ProcessHandle.current().pid()}"
+                    var failure: Throwable? = null
+                    try {
+                        base.evaluate()
+                    } catch (t: Throwable) {
+                        failure = t
+                    }
+                    mark("end")
+                    val report = "TIMINGS ${description.methodName}: " + marks.joinToString(" ")
+                    System.err.println(report)
+                    if (System.getProperty("os.name").orEmpty().contains("Mac")) {
+                        throw AssertionError(report, failure)
+                    }
+                    failure?.let { throw it }
+                }
+            }
+        }
+
     /** The server's recorded card: Hill forgot "el murciélago" four times; friends not told yet. */
     private val recorded =
         AnkiquestCommunity.parseConquest(
@@ -65,12 +99,22 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
 
     @Before
     fun prepareCard() {
+        mark("before")
         ReflectionHelpers.getStaticField<MutableMap<String, Any>>(FileProvider::class.java, "sCache").clear()
         mockkObject(AnkiquestHomeData, AnkiquestCommunity, AnkiquestSharing, AnkiquestShare, Ankiquest)
         every { AnkiquestHomeData.account(any()) } returns identity
         coEvery { AnkiquestShare.conqueredCardDeck(any()) } returns null
         coEvery { AnkiquestShare.conqueredCardLabels(any()) } returns null
         coEvery { AnkiquestCommunity.conquest(identity, "hill", AT) } returns recorded.copy(friends = 2)
+        every { AnkiquestShare.render(any(), any()) } answers {
+            mark("render>")
+            callOriginal().also { mark("render<") }
+        }
+        every { AnkiquestShare.cardPng(any(), any(), any()) } answers {
+            mark("cardPng>")
+            callOriginal().also { mark("cardPng<") }
+        }
+        mark("mocked")
     }
 
     @After
@@ -302,8 +346,11 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     fun `someone else's public card shares a picture without a private deck`() {
         coEvery { AnkiquestCommunity.conquest(identity, "cerro", AT) } returns
             recorded.copy(user = "cerro", display = "Cerro", told = null, friends = null, label = null, win = null)
+        mark("body")
         val card = launch("cerro")
+        mark("launched")
         card.click(card.getString(R.string.ankiquest_share))
+        mark("clicked")
         val sent = card.sent()
         assertEquals("image/png", sent.type)
         assertTrue(sent.hasExtra(Intent.EXTRA_STREAM))
@@ -380,7 +427,10 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     private fun launch(user: String = "hill"): AnkiquestConquestActivity =
-        startRegularActivity<AnkiquestConquestActivity>(AnkiquestConquestActivity.intent(targetContext, user, AT)).also { it.settle() }
+        startRegularActivity<AnkiquestConquestActivity>(AnkiquestConquestActivity.intent(targetContext, user, AT)).also {
+            mark("started")
+            it.settle()
+        }
 
     private fun lateLabel(): Pair<ActivityController<AnkiquestConquestActivity>, CompletableDeferred<String?>> {
         val answer = CompletableDeferred<String?>()
@@ -461,6 +511,7 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     }
 
     private fun AnkiquestConquestActivity.settle() {
+        mark("settle")
         advanceRobolectricLooperUntil { !findViewById<View>(R.id.aq_board_loading).isVisible }
         advanceRobolectricLooper()
     }
@@ -473,7 +524,9 @@ class AnkiquestConquestActivityTest : RobolectricTest() {
     private fun AnkiquestConquestActivity.click(label: String) {
         val control = views<TextView>().first { it.text.toString() == label && it.isClickable }
         assertTrue(control.isEnabled, label)
+        mark("click")
         control.performClick()
+        mark("performed")
         settle()
     }
 
