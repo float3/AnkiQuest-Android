@@ -6,8 +6,8 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#FF956F"
-        android:strokeColor="#FF956F"
+        android:fillColor="@color/ankiquest_streak_flame_30"
+        android:strokeColor="@color/ankiquest_streak_flame_30"
         android:strokeWidth="1.6"
         android:pathData="M12,2C13,6 18,8 18,13C18,17 15,20 11,20C7,20 4,17 4,13C4,10 6,7 8,5C8,8 9,9 10,10C12,8 13,5 12,2Z" />
 </vector>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- The streak widget's flame by tier, from amber to crimson; bright for the dark card. -->
+<resources>
+    <color name="ankiquest_streak_flame_1">#FFC15A</color>
+    <color name="ankiquest_streak_flame_7">#FF9A3C</color>
+    <color name="ankiquest_streak_flame_30">#FF7A2F</color>
+    <color name="ankiquest_streak_flame_100">#FF5A3C</color>
+    <color name="ankiquest_streak_flame_365">#FF4F7B</color>
+</resources>

@@ -75,12 +75,16 @@ internal object AnkiquestShare {
         val text: String,
     )
 
-    /** Public display content selected for the picture, with no credentials or hidden fields. */
+    /**
+     * Public display content selected for the picture, with no credentials or hidden fields. A
+     * [streak] makes it a streak picture: the number in front, on its heat's colours.
+     */
     data class Card(
         val title: String,
         val body: String,
         @DrawableRes val art: Int = R.drawable.aki_celebrate,
         val details: List<String> = emptyList(),
+        val streak: Int? = null,
     )
 
     /** [card] drawn on the phone; shares, previews and downloads use this one renderer. */
@@ -270,12 +274,13 @@ internal object AnkiquestShare {
         body: String,
         friends: PendingIntent? = null,
         @DrawableRes art: Int = R.drawable.aki_celebrate,
+        streak: Int? = null,
     ): Intent {
         val language = AnkiquestLanguage.context(context)
         val text =
             Ankiquest.serverUrl()?.let { language.getString(R.string.ankiquest_share_text, title, body, it) }
                 ?: language.getString(R.string.ankiquest_share_text_offline, title, body)
-        return cardChooser(context, text, null, friends, Card(title, body, art))
+        return cardChooser(context, text, null, friends, Card(title, body, art, streak = streak))
     }
 
     /**

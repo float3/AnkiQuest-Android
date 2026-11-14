@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Bitmap
+import android.graphics.drawable.GradientDrawable
 import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
@@ -44,6 +45,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.text.NumberFormat
 
 /**
  * The one card every moment gets: Aki in a pose for the moment (or the server's picture of it, once
@@ -53,6 +55,9 @@ import timber.log.Timber
  */
 internal object AnkiquestMomentCard {
     private const val ART_DP = 128
+    private const val HERO_ART_DP = 168
+    private const val HERO_PAD_DP = 16
+    private const val HERO_CORNER_DP = 24
     private const val RECAP_ART_DP = 112
     private const val MAX_PAGE_HEIGHT_DP = 400
 
@@ -369,6 +374,7 @@ internal object AnkiquestMomentCard {
     @DrawableRes
     fun art(moment: Moment): Int =
         when (moment.kind) {
+            // A milestone has its own pose; a counted day burns as hot as its streak.
             Kind.STREAK -> R.drawable.aki_streak_milestone
             Kind.LEVEL -> R.drawable.aki_level_up
             Kind.RANK -> AnkiquestArt.place(moment.place) ?: R.drawable.aki_winner
@@ -378,7 +384,7 @@ internal object AnkiquestMomentCard {
             Kind.CONQUERED -> R.drawable.aki_deck_conquered
             Kind.GOAL -> R.drawable.aki_goal
             Kind.UNLOCKS -> R.drawable.aki_celebrate
-            Kind.SECURED -> R.drawable.aki_minimum
+            Kind.SECURED -> AnkiquestMood.pose(AnkiquestMood.Mood.FIRE, moment.streak ?: 1)
         }
 
     /** Whether friends can be told about [moment] at all: it needs something the server can pass on. */
@@ -388,7 +394,10 @@ internal object AnkiquestMomentCard {
     private class Holder(
         view: View,
     ) : RecyclerView.ViewHolder(view) {
+        val hero: LinearLayout = view.findViewById(R.id.aq_moment_hero)
         val art: ImageView = view.findViewById(R.id.aq_moment_art)
+        val streak: TextView = view.findViewById(R.id.aq_moment_streak)
+        val next: TextView = view.findViewById(R.id.aq_moment_next)
         val title: TextView = view.findViewById(R.id.aq_moment_title)
         val detail: TextView = view.findViewById(R.id.aq_moment_detail)
         val date: TextView = view.findViewById(R.id.aq_moment_date)
@@ -441,8 +450,17 @@ internal object AnkiquestMomentCard {
             position: Int,
         ) {
             val moment = moments[position]
-            val size = (ART_DP * host.resources.displayMetrics.density).toInt()
             val picture = pictures[moment.key]
+
+            // The server's picture has its own design; otherwise a streak moment gets the hero.
+            val streak = moment.streak?.takeIf { picture == null }
+            showHero(holder, streak)
+            val size = ((if (streak == null) ART_DP else HERO_ART_DP) * host.resources.displayMetrics.density).toInt()
+            holder.art.layoutParams =
+                holder.art.layoutParams.apply {
+                    width = size
+                    height = size
+                }
             if (picture != null) {
                 holder.art.isVisible = true
                 holder.art.setImageBitmap(picture)
@@ -700,6 +718,7 @@ internal object AnkiquestMomentCard {
                                         moment.shareTitle ?: moment.title,
                                         moment.shareBody ?: moment.detail,
                                         art = art(moment),
+                                        streak = moment.streak,
                                     )
                                 }
                             }
@@ -722,6 +741,33 @@ internal object AnkiquestMomentCard {
             }
         }
 
+        /** The streak number on its heat's colours with the next milestone, or nothing without a [streak]. */
+        private fun showHero(
+            holder: Holder,
+            streak: Int?,
+        ) {
+            holder.streak.isVisible = streak != null
+            if (streak == null) {
+                holder.hero.background = null
+                holder.hero.setPadding(0, 0, 0, 0)
+                holder.next.isVisible = false
+                return
+            }
+
+            // The colours deepen with the streak, as on the share picture.
+            val density = host.resources.displayMetrics.density
+            val heat = AnkiquestMood.Heat.of(streak)
+            holder.hero.background =
+                GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(host.getColor(heat.top), host.getColor(heat.bottom)))
+                    .apply { cornerRadius = HERO_CORNER_DP * density }
+            val pad = (HERO_PAD_DP * density).toInt()
+            holder.hero.setPadding(pad, pad, pad, pad)
+            holder.streak.text = NumberFormat.getIntegerInstance(AnkiquestLanguage.locale()).format(streak)
+            val next = AnkiquestMood.nextLine(host, streak)
+            holder.next.text = next.orEmpty()
+            holder.next.isVisible = next != null
+        }
+
         /**
          * The picture says what the caption says: the server's share words, else the moment's own.
          * The on-screen conquest suggestion is private until its label has been saved.
@@ -729,7 +775,7 @@ internal object AnkiquestMomentCard {
         private fun publicPicture(moment: Moment): AnkiquestShare.Card {
             val title = moment.shareTitle ?: moment.title
             if (moment.conquest == null) {
-                return AnkiquestShare.Card(title, moment.shareBody ?: moment.detail, art(moment))
+                return AnkiquestShare.Card(title, moment.shareBody ?: moment.detail, art(moment), streak = moment.streak)
             }
             return AnkiquestShare.Card(
                 title,

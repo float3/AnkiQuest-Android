@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Streak picture and moment card backgrounds by heat, the same in both themes.
+     White text meets 4.5:1 on every gradient end, the gold number 3:1 (AnkiquestMoodTest). -->
+<resources>
+    <color name="aq_heat_ink">#FFFFFF</color>
+    <color name="aq_heat_number">#FFD54F</color>
+    <color name="aq_heat_warm_top">#B45309</color>
+    <color name="aq_heat_warm_bottom">#92400E</color>
+    <color name="aq_heat_hot_top">#C2410C</color>
+    <color name="aq_heat_hot_bottom">#B91C1C</color>
+    <color name="aq_heat_blazing_top">#DC2626</color>
+    <color name="aq_heat_blazing_bottom">#7F1D1D</color>
+    <color name="aq_heat_legend_top">#B91C1C</color>
+    <color name="aq_heat_legend_bottom">#581C87</color>
+</resources>

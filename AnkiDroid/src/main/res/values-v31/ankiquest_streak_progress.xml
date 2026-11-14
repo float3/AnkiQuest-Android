@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: AGPL-3.0-only -->
 <resources>
-    <color name="ankiquest_streak_warm">#A04B00</color>
+    <color name="ankiquest_streak_warm">#C23A0A</color>
     <color name="ankiquest_streak_amber">#8A6700</color>
     <color name="ankiquest_streak_blue">#2266A1</color>
     <color name="ankiquest_streak_gray">#62666B</color>

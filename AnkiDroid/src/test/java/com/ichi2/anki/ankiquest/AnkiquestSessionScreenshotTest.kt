@@ -62,6 +62,13 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
     }
 
     @Test
+    fun streak() {
+        openCard("session_card_recap_streak", streakMoment)
+        selectMoment()
+        captureScreen("session_card_streak_moment")
+    }
+
+    @Test
     fun largeText() {
         RuntimeEnvironment.setFontScale(2f)
         openCard("session_card_recap_200percent")
@@ -80,6 +87,18 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
         selectMoment()
         captureScreen("session_card_small_moment")
     }
+
+    private val levelMoment =
+        AnkiquestMoments.Moment("level:4", AnkiquestMoments.Kind.LEVEL, "Level 4", "You reached level 4.", 1_750_000_000_000)
+    private val streakMoment =
+        AnkiquestMoments.Moment(
+            "minimum:1",
+            AnkiquestMoments.Kind.SECURED,
+            "Streak safe for today",
+            "64 day streak",
+            1_750_000_000_000,
+            streak = 64,
+        )
 
     private fun revealOptOut() {
         val checkbox = assertNotNull(ShadowDialog.getLatestDialog().findViewById<CheckBox>(R.id.aq_recap_opt_out))
@@ -109,7 +128,10 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
         assertEquals(pager.width, page.width)
     }
 
-    private fun openCard(screenshot: String) {
+    private fun openCard(
+        screenshot: String,
+        moment: AnkiquestMoments.Moment = levelMoment,
+    ) {
         val host =
             startActivityNormallyOpenCollectionWithIntent(
                 DeckPicker::class.java,
@@ -120,7 +142,7 @@ class AnkiquestSessionScreenshotTest : ScreenshotTest() {
         AnkiquestMoments.offer(
             prefs,
             account,
-            listOf(AnkiquestMoments.Moment("level:4", AnkiquestMoments.Kind.LEVEL, "Level 4", "You reached level 4.", 1_750_000_000_000)),
+            listOf(moment),
         )
         AnkiquestDeckPickerHooks.onReviewResult(host, AbstractFlashcardViewer.RESULT_DEFAULT) {}
         advanceRobolectricLooperUntil { ShadowDialog.getLatestDialog()?.isShowing == true }

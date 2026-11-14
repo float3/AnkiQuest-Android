@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<!-- Deeper flames for the light card: at least 4.5:1 on its background. -->
+<resources>
+    <color name="ankiquest_streak_flame_1">#A15C00</color>
+    <color name="ankiquest_streak_flame_7">#B54A00</color>
+    <color name="ankiquest_streak_flame_30">#C23A0A</color>
+    <color name="ankiquest_streak_flame_100">#C62828</color>
+    <color name="ankiquest_streak_flame_365">#B0124A</color>
+</resources>

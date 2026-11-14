@@ -284,6 +284,17 @@ class AnkiquestMomentsTest : RobolectricTest() {
     }
 
     @Test
+    fun `a 64-day streak whose day counts shows the blazing pose`() {
+        // Day 64 counts as the minimum is reached; the card and its picture used the calm minimum pose.
+        val server = AnkiquestDay.Server(63, "pending", NOW + DAY, 0, NOW - DAY, 0, 0, 10)
+        val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(NOW, 600_000)), NOW))
+        assertTrue(AnkiquestMoments.claimMinimum(targetContext, prefs, identity, server, met, NOW))
+
+        val card = AnkiquestMoments.pending(prefs, account).single()
+        assertEquals(R.drawable.aki_streak_blazing, AnkiquestMomentCard.art(card))
+    }
+
+    @Test
     fun `a milestone keeps its bigger card`() {
         val server = AnkiquestDay.Server(6, "pending", NOW + DAY, 0, NOW - DAY, 0, 0, 10)
         val met = assertNotNull(AnkiquestDay.judge(server, listOf(AnkiquestDay.Review(NOW, 600_000)), NOW))

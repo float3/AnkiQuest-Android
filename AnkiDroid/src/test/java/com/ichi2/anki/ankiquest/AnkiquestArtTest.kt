@@ -22,7 +22,7 @@ class AnkiquestArtTest {
         assertEquals(R.drawable.aki_achievement, AnkiquestArt.forNotice("celebration", "achievement"))
         assertEquals(R.drawable.aki_achievement, AnkiquestArt.forNotice("celebration", null), "older servers send no topic")
         assertEquals(R.drawable.aki_goal, AnkiquestArt.forNotice("celebration", "goal"))
-        assertEquals(R.drawable.aki_minimum, AnkiquestArt.forNotice("celebration", "secured"))
+        assertEquals(R.drawable.aki_streak, AnkiquestArt.forNotice("celebration", "secured"), "a counted day is on fire")
         assertEquals(R.drawable.aki_deck_conquered, AnkiquestArt.forNotice("celebration", "conquered"))
         assertEquals(R.drawable.aki_challenge, AnkiquestArt.forNotice("challenge_invite", null))
         assertEquals(R.drawable.aki_challenge_won, AnkiquestArt.forNotice("challenge_complete", null))
